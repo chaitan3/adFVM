@@ -1,0 +1,108 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.1.x                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      createPatchDict;
+}
+
+pointSync false;
+
+patches
+(
+    {
+        name midplane1;
+        patchInfo
+        {
+            type cyclicAMI;
+            neighbourPatch midplane2;
+            transform translational;
+            matchTolerance 1e-4;
+            separationVector (0 -0.05749995 0);
+        }
+        constructFrom patches;
+        patches (mid1);
+    }
+    {
+        name midplane2;
+        patchInfo
+        {
+            type cyclicAMI;
+            transform translational;
+            separationVector (0 0.05749995 0);
+            matchTolerance 1e-4;
+            neighbourPatch midplane1;
+        }
+        constructFrom patches;
+        patches (mid2);
+    }
+    {
+        name z1;
+        patchInfo
+        {
+            type empty;
+            /*transform translational;
+            separationVector (0 0 0.001);
+            neighbourPatch z2;*/
+        }
+        constructFrom patches;
+        patches (fluid_2);
+    }
+    {
+        name z2;
+        patchInfo
+        {
+            type empty;
+            /*transform translational;
+            separationVector (0 0 -0.001);
+            neighbourPatch z1;*/
+        }
+        constructFrom patches;
+        patches (wall_fluid);
+    }
+    {
+        name inlet;
+        patchInfo
+        {
+            type patch;
+        }
+        constructFrom patches;
+        patches (in);
+    }
+    {
+        name outlet;
+        patchInfo
+        {
+            type patch;
+        }
+        constructFrom patches;
+        patches (out);
+    }
+    {
+        name pressure;
+        patchInfo
+        {
+            type wall;
+            inGroups 1(walls);
+        }
+        constructFrom patches;
+        patches (pre);
+    }
+    {
+        name suction;
+        patchInfo
+        {
+            type wall;
+            inGroups 1(walls);
+        }
+        constructFrom patches;
+        patches (suc);
+    }
+);
