@@ -13,6 +13,20 @@ class Field:
     def zeros(self, name, mesh, dimensions):
         return self(name, mesh, np.zeros((mesh.nCells, dimensions)))
 
+    def updateGhostCells(self):
+        mesh = self.mesh
+        for patchID in mesh.boundary:
+            patch = mesh.boundary[patchID] 
+            if patch['type'] == 'cyclic':
+                startFace = patch['startFace']
+                nFaces = patch['nFaces']
+                endFace = startFace + nFaces
+                neighbourPatch = mesh.boundary[patch['neighbourPatch']]   
+                neighbourStartFace = neighbourPatch['startFace']
+                neighbourEndFace = neighbourStartFace + nFaces
+                indices = mesh.nInternalCells + range(startFace, endFace) - mesh.nInternalFaces 
+                self.field[indices] = self.field[mesh.owner[neighbourStartFace:neighbourEndFace]]
+
     def write(self, time):
         timeDir = '{0}/{1}/'.format(self.mesh.case, time)
         if not exists(timeDir):
@@ -39,8 +53,8 @@ dimensions      [0 1 -1 0 0 0 0];
 
 internalField   nonuniform List<scalar> 
 ''')
-        handle.write('{0}\n(\n'.format(len(self.field)))
-        np.savetxt(handle, self.field)
+        handle.write('{0}\n(\n'.format(self.mesh.nInternalCells))
+        np.savetxt(handle, self.field[:self.mesh.nInternalCells])
         handle.write(')\n;\n')
         handle.write('''
 boundaryField

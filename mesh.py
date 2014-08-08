@@ -138,14 +138,11 @@ class Mesh:
                 neighbourEndFace = neighbourStartFace + nFaces
                 # append cell centres
                 # apply transformation
-                patch['transform'] = self.faceCentres[neighbourStartFace]-self.faceCentres[startFace]
+                patch['transform'] = self.faceCentres[startFace]-self.faceCentres[neighbourStartFace]
                 indices = self.nInternalCells + range(startFace, endFace) - self.nInternalFaces 
                 self.cellCentres[indices] = patch['transform'] + self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
                 # append neighbour
-                # no need to update ghost cells
-                self.neighbour[neighbourStartFace:neighbourStartFace+nFaces] = self.owner[neighbourStartFace:neighbourStartFace+nFaces]
-                # need to update ghost cells
-                #self.neighbour[startFace:endFace] = self.nInternalCells + range(neighbourStartFace, neighbourEndFace) - self.nInternalFaces
+                self.neighbour[startFace:endFace] = indices
             else:
                 raise Exception('not handled')
 
