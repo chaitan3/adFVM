@@ -1,29 +1,93 @@
 import re
 import numpy as np
+from scipy import sparse as sp
 
 class Mesh:
     def __init__(self, caseDir):
         meshDir = caseDir + '/constant/polyMesh/'
         self.faces = self.read(meshDir + 'faces', int)
         self.points = self.read(meshDir + 'points', float)
-        self.owner = self.read(meshDir + 'owner', int)
-        self.neighbour = self.read(meshDir + 'neighbour', int)
+        self.owner = self.read(meshDir + 'owner', int).ravel()
+        self.neighbour = self.read(meshDir + 'neighbour', int).ravel()
+
+        self.nInternalFaces = len(self.neighbour)
+        self.nFaces = len(self.owner)
+        self.nCells = np.max(self.owner)+1
+
         self.normals = self.getNormals()
-        pass
+        self.areas = self.getAreas()
+        self.volumes = self.getVolumes()
+        self.faceCentres = self.getFaceCentres()
+        self.cellFaces = self.getCellFaces()
+        self.cellCentres = self.getCellCentres()
+        self.deltas = self.getDeltas()
+        self.faceDeltas = self.getFaceDeltas()
+        self.sumOp = self.getSumOp()
 
     def read(self, foamFile, dtype):
+        print 'read', foamFile
         lines = open(foamFile).readlines()
         first, last = 0, -1
         while lines[first][0] != '(': 
             first += 1
         while lines[last][0] != ')': 
             last -= 1
-        f = lambda x: filter(None, re.split('[ ()]+', x)[:-1])
-        return np.array(map(f, lines[first + 1:last]), dtype)
+        f = lambda x: filter(None, re.split('[ ()\n]+', x))
+        return np.array(map(f, lines[first+1:last]), dtype)
 
     def getNormals(self):
-        #correct direcion?
+        print 'generated normals'
+        #correct direcion? mostly yes
         v1 = self.points[self.faces[:,1]]-self.points[self.faces[:,2]]
         v2 = self.points[self.faces[:,2]]-self.points[self.faces[:,3]]
         normals = np.cross(v1, v2)
-        return normals/ np.linalg.norm(normals, axis=1).reshape(-1,1)
+        return normals / np.linalg.norm(normals, axis=1).reshape(-1,1)
+
+    def getAreas(self):
+        print 'generated areas'
+        nFacePoints = self.faces[0, 0]
+        areas = np.cross(self.points[self.faces[:,-1]], self.points[self.faces[:,1]])
+        for i in range(0, nFacePoints-1):
+            areas += np.cross(self.points[self.faces[:,i+1]], self.points[self.faces[:,i+2]])
+        return np.linalg.norm(areas, axis=1)/2
+
+    def getVolumes(self):
+        print 'generated volumes'
+        return 1e-4
+
+    def getCellFaces(self):
+        print 'generated cell faces'
+        #slow
+        cellFaces = []
+        for i in range(0, self.nCells):
+            cellFaces.append(np.concatenate((np.where(self.owner == i)[0], np.where(self.neighbour == i)[0])))
+        return np.array(cellFaces)
+
+    def getCellCentres(self):
+        print 'generated cell centres'
+        return np.mean(self.faceCentres[self.cellFaces], axis=1)
+
+    def getFaceCentres(self):
+        print 'generated face centres'
+        return np.mean(self.points[self.faces[:,1:]], axis=1)
+
+    def getDeltas(self):
+        print 'generated deltas'
+        P = self.cellCentres[self.owner[:self.nInternalFaces]]
+        N = self.cellCentres[self.neighbour]
+        return np.linalg.norm(P-N, axis=1)
+
+    def getFaceDeltas(self):
+        print 'generated face deltas'
+        P = self.faceCentres[:self.nInternalFaces]
+        N = self.cellCentres[self.neighbour]
+        return np.linalg.norm(P-N, axis=1)
+
+    def getSumOp(self):
+        print 'generated sum op'
+        owner = sp.csc_matrix((np.ones(self.nFaces), self.owner, range(0, self.nFaces+1)), shape=(self.nCells, self.nFaces))
+        Nindptr = np.concatenate((range(0, self.nInternalFaces+1), self.nInternalFaces*np.ones(self.nFaces-self.nInternalFaces, int)))
+        neighbour = sp.csc_matrix((-np.ones(self.nInternalFaces), self.neighbour, Nindptr), shape=(self.nCells, self.nFaces))
+        return (owner + neighbour).tocsr()
+
+             
