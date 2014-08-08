@@ -16,10 +16,10 @@ class Mesh:
 
         self.normals = self.getNormals()
         self.areas = self.getAreas()
-        self.volumes = self.getVolumes()
         self.faceCentres = self.getFaceCentres()
         self.cellFaces = self.getCellFaces()
         self.cellCentres = self.getCellCentres()
+        self.volumes = self.getVolumes()
         self.deltas = self.getDeltas()
         self.faceDeltas = self.getFaceDeltas()
         self.sumOp = self.getSumOp()
@@ -53,7 +53,12 @@ class Mesh:
 
     def getVolumes(self):
         print 'generated volumes'
-        return 1e-4
+        nCellFaces = self.cellFaces.shape[1]
+        volumes = 0
+        for i in range(0, nCellFaces):
+            legs = self.points[self.faces[self.cellFaces[:,i], 1:]]-self.cellCentres.reshape((self.nCells, 1, 3))
+            volumes += np.abs(np.sum(np.cross(legs[:,0,:], legs[:,2,:])*(legs[:,1,:]-legs[:,3,:]), axis=1))/6
+        return volumes
 
     def getCellFaces(self):
         print 'generated cell faces'
