@@ -20,7 +20,7 @@ Uf = FaceField('U', mesh, U)
 
 t = 0.1
 dt = 0.005
-for i in range(0, 300):
+for i in range(0, 1):
     if i % 10 == 0:
         T.write(t)
 

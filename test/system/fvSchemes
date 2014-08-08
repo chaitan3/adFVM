@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  2.2.1                                 |
+|  \\    /   O peration     | Version:  2.2.2                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -15,11 +15,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-fluxScheme      Kurganov;
-
 ddtSchemes
 {
-    default         localEuler rDeltaT;
+    default         Euler;
 }
 
 gradSchemes
@@ -30,28 +28,29 @@ gradSchemes
 divSchemes
 {
     default         none;
-    div(tauMC)      Gauss linear;
-    div(phi,epsilon)    bounded Gauss upwind;
-    div(phi,k)          bounded Gauss upwind;
-    div(phi,omega)          bounded Gauss upwind;
+    div(phi,T)      Gauss limitedLinear 1;
 }
 
 laplacianSchemes
 {
-    default         Gauss linear corrected;
+    default         none;
+    laplacian(DT,T) Gauss linear corrected;
 }
 
 interpolationSchemes
 {
     default         linear;
-    reconstruct(rho) vanLeer;
-    reconstruct(U)  vanLeerV;
-    reconstruct(T)  vanLeer;
 }
 
 snGradSchemes
 {
     default         corrected;
+}
+
+fluxRequired
+{
+    default         no;
+    T               ;
 }
 
 

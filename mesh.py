@@ -145,7 +145,4 @@ class Mesh:
                 self.neighbour[startFace:endFace] = indices
             else:
                 raise Exception('not handled')
-
-
-
              
