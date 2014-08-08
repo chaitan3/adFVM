@@ -63,10 +63,10 @@ class Mesh:
     def getCellFaces(self):
         print 'generated cell faces'
         #slow
-        cellFaces = []
+        cellFaces = np.zeros((self.nCells, 6), int)
         for i in range(0, self.nCells):
-            cellFaces.append(np.concatenate((np.where(self.owner == i)[0], np.where(self.neighbour == i)[0])))
-        return np.array(cellFaces)
+            cellFaces[i] = np.concatenate((np.where(self.owner == i)[0], np.where(self.neighbour == i)[0]))
+        return cellFaces
 
     def getCellCentres(self):
         print 'generated cell centres'
