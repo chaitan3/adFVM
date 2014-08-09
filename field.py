@@ -1,4 +1,5 @@
 import numpy as np
+import numpad as ad
 from os import makedirs
 from os.path import exists
 
@@ -7,11 +8,21 @@ class Field:
         self.name = name
         self.mesh = mesh
         self.field = field
+        self.size = field.shape[0]
         self.dimensions = field.shape[1]
 
     @classmethod
-    def zeros(self, name, mesh, dimensions):
-        return self(name, mesh, np.zeros((mesh.nCells, dimensions)))
+    def zeros(self, name, mesh, size, dimensions):
+        return self(name, mesh, ad.zeros((size, dimensions)))
+
+    def setInternalField(self, internalField):
+        mesh = self.mesh
+        self.field[:mesh.nInternalCells] = internalField
+        self.updateGhostCells()
+
+    def getInternalField(self):
+        mesh = self.mesh
+        return self.field[:mesh.nInternalCells]
 
     def updateGhostCells(self):
         mesh = self.mesh
@@ -54,7 +65,7 @@ dimensions      [0 1 -1 0 0 0 0];
 internalField   nonuniform List<scalar> 
 ''')
         handle.write('{0}\n(\n'.format(self.mesh.nInternalCells))
-        np.savetxt(handle, self.field[:self.mesh.nInternalCells])
+        np.savetxt(handle, ad.base(self.getInternalField()))
         handle.write(')\n;\n')
         handle.write('''
 boundaryField
@@ -86,12 +97,4 @@ boundaryField
 }
 ''')
         handle.close()
-
-
-
-class FaceField(Field):
-    @classmethod
-    def zeros(self, name, mesh, dimensions):
-        return self(name, mesh, np.zeros((mesh.nFaces, dimensions)))
-
 
