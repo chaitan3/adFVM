@@ -12,17 +12,19 @@ def interpolate(field):
 
 def div(field, U):
     mesh = field.mesh
-    UFdotn = ad.sum((field.field * U.field) * mesh.normals, axis=1)
-    return ((mesh.sumOp * (UFdotn * mesh.areas))/mesh.volumes).reshape((-1,1))
+    Fdotn = ad.sum((field.field * U) * mesh.normals, axis=1)
+    return ((mesh.sumOp * (Fdotn * mesh.areas))/mesh.volumes).reshape((-1,1))
 
 def grad(field):
     mesh = field.mesh
-    return (mesh.sumOp.dot(field.field * mesh.normals * mesh.areas)/mesh.volumes).reshape(-1,1)
+    return (mesh.sumOp * (field.field * mesh.normals * mesh.areas.reshape((-1,1))))/mesh.volumes.reshape((-1,1))
 
-def laplacian(field):
+def laplacian(field, DT):
     # non orthogonal correction
-    mesh = field.mesh
-    return (mesh.sumOp.dot(1* mesh.areas)/mesh.volumes).reshape(-1,1)
+    #mesh = field.mesh
+    #return mesh.sumOp.dot(1* mesh.areas)/mesh.volumes).reshape(-1,1)
+    # does not work for non cyclic
+    return div(interpolate(DT*grad(field), 1.))
 
 def ddt(field, field0, dt):
     return (field.getInternalField()-ad.value(field0.getInternalField()))/dt

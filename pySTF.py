@@ -2,7 +2,7 @@
 
 from mesh import Mesh
 from field import Field
-from ops import interpolate, div, ddt, solve
+from ops import interpolate, div, ddt, solve, laplacian
 
 import numpy as np
 import numpad as ad
@@ -10,6 +10,7 @@ import numpad as ad
 case = 'test/'
 mesh = Mesh(case)
 
+#initialize
 T = Field.zeros('T', mesh, mesh.nCells, 1)
 mid = np.array([0.5, 0.5, 0.5])
 for i in range(0, mesh.nInternalCells):
@@ -20,12 +21,13 @@ Uf = Field('U', mesh, U)
 
 t = 0.1
 dt = 0.005
+DT = 0.1
 for i in range(0, 300):
     print t
     if i % 20 == 0:
         T.write(t)
     T0 = Field.copy(T)
-    eq = lambda T: ddt(T, T0, dt) + div(interpolate(T), Uf)
+    eq = lambda T: ddt(T, T0, dt) + div(interpolate(T), Uf.field) + laplacian(T, DT)
     solve(eq, T)
     t += dt
     
