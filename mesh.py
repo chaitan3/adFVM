@@ -1,5 +1,7 @@
 import re
 import numpy as np
+import numpad as ad
+from numpad import adsparse
 from scipy import sparse as sp
 
 class Mesh:
@@ -122,7 +124,8 @@ class Mesh:
         owner = sp.csc_matrix((np.ones(self.nFaces), self.owner, range(0, self.nFaces+1)), shape=(self.nInternalCells, self.nFaces))
         Nindptr = np.concatenate((range(0, self.nInternalFaces+1), self.nInternalFaces*np.ones(self.nFaces-self.nInternalFaces, int)))
         neighbour = sp.csc_matrix((-np.ones(self.nInternalFaces), self.neighbour[:self.nInternalFaces], Nindptr), shape=(self.nInternalCells, self.nFaces))
-        return (owner + neighbour).tocsr()
+        sumOp = (owner + neighbour).tocsr()
+        return adsparse.csr_matrix((ad.adarray(sumOp.data), sumOp.indices, sumOp.indptr), sumOp.shape)
 
     def createGhostCells(self):
         self.neighbour = np.concatenate((self.neighbour, np.zeros(self.nBoundaryFaces, int)))

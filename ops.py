@@ -12,12 +12,20 @@ def interpolate(field):
 
 def div(field, U):
     mesh = field.mesh
-    UdotFn = ad.sum((field.field * U.field) * mesh.normals, axis=1)
-    return (mesh.sumOp.dot(UdotFn * mesh.areas)/mesh.volumes).reshape(-1,1)
+    UFdotn = ad.sum((field.field * U.field) * mesh.normals, axis=1)
+    return ((mesh.sumOp * (UFdotn * mesh.areas))/mesh.volumes).reshape((-1,1))
 
-def ddt(field, dt):
-    internalField = field.getInternalField()
-    return (internalField-ad.base(internalField))/dt
+def grad(field):
+    mesh = field.mesh
+    return (mesh.sumOp.dot(field.field * mesh.normals * mesh.areas)/mesh.volumes).reshape(-1,1)
+
+def laplacian(field):
+    # non orthogonal correction
+    mesh = field.mesh
+    return (mesh.sumOp.dot(1* mesh.areas)/mesh.volumes).reshape(-1,1)
+
+def ddt(field, field0, dt):
+    return (field.getInternalField()-ad.value(field0.getInternalField()))/dt
 
 def solve(equation, field):
     def solver(internalField):

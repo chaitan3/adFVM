@@ -15,6 +15,10 @@ class Field:
     def zeros(self, name, mesh, size, dimensions):
         return self(name, mesh, ad.zeros((size, dimensions)))
 
+    @classmethod
+    def copy(self, field):
+        return self(field.name, field.mesh, field.field.copy())
+
     def setInternalField(self, internalField):
         mesh = self.mesh
         self.field[:mesh.nInternalCells] = internalField
@@ -65,7 +69,7 @@ dimensions      [0 1 -1 0 0 0 0];
 internalField   nonuniform List<scalar> 
 ''')
         handle.write('{0}\n(\n'.format(self.mesh.nInternalCells))
-        np.savetxt(handle, ad.base(self.getInternalField()))
+        np.savetxt(handle, ad.value(self.getInternalField()))
         handle.write(')\n;\n')
         handle.write('''
 boundaryField
