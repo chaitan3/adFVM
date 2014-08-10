@@ -131,6 +131,7 @@ class Mesh:
         return adsparse.csr_matrix((ad.adarray(sumOp.data), sumOp.indices, sumOp.indptr), sumOp.shape)
 
     def createGhostCells(self):
+        print 'generated ghost cells'
         self.neighbour = np.concatenate((self.neighbour, np.zeros(self.nBoundaryFaces, int)))
         self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3))))
         for patchID in self.boundary:

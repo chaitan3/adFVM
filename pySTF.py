@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 from mesh import Mesh
 from field import Field
@@ -13,8 +13,7 @@ mesh = Mesh(case)
 #initialize
 T = Field.zeros('T', mesh, mesh.nCells, 1)
 mid = np.array([0.5, 0.5, 0.5])
-for i in range(0, mesh.nInternalCells):
-    T.field[i] = np.exp(-10*np.linalg.norm(mid-mesh.cellCentres[i]))
+T.setInternalField(np.exp(-10*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)).reshape(-1,1))
     
 U = 1.*ad.ones((mesh.nFaces, 3))*np.array([1., 0., 0])
 Uf = Field('U', mesh, U)

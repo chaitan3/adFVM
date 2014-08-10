@@ -23,7 +23,10 @@ def laplacian(field, DT):
     #mesh = field.mesh
     #return mesh.sumOp.dot(1* mesh.areas)/mesh.volumes).reshape(-1,1)
     # does not work for non cyclic
-    return div(interpolate(DT*grad(field), 1.))
+    mesh = field.mesh
+    DTgradF = Field.zeros('grad' + field.name, mesh, mesh.nCells, 3.)
+    DTgradF.setInternalField(DT*grad(field))
+    return div(interpolate(DTgradF), 1.)
 
 def ddt(field, field0, dt):
     return (field.getInternalField()-ad.value(field0.getInternalField()))/dt
