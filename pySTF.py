@@ -26,7 +26,7 @@ for i in range(0, 300):
     if i % 20 == 0:
         T.write(t)
     T0 = Field.copy(T)
-    eq = lambda T: ddt(T, T0, dt) + div(interpolate(T), Uf.field) + laplacian(T, DT)
+    eq = lambda T: ddt(T, T0, dt) + div(interpolate(T), Uf.field) - laplacian(T, DT)
     solve(eq, T)
     t += dt
     
