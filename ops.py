@@ -20,13 +20,16 @@ def grad(field):
 
 def laplacian(field, DT):
     # non orthogonal correction
-    #mesh = field.mesh
-    #return mesh.sumOp.dot(1* mesh.areas)/mesh.volumes).reshape(-1,1)
     # does not work for non cyclic
     mesh = field.mesh
+
     DTgradF = Field.zeros('grad' + field.name, mesh, mesh.nCells, 3.)
     DTgradF.setInternalField(DT*grad(field))
-    return div(interpolate(DTgradF), 1.)
+    laplacian1 = div(interpolate(DTgradF), 1.)
+
+    gradFdotn = (field.field[mesh.neighbour]-field.field[mesh.owner])/mesh.deltas.reshape(-1,1)
+    laplacian2 = (mesh.sumOp * (DT * gradFdotn * mesh.areas.reshape(-1,1)))/mesh.volumes.reshape(-1,1)
+    return laplacian2
 
 def ddt(field, field0, dt):
     return (field.getInternalField()-ad.value(field0.getInternalField()))/dt

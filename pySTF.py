@@ -20,7 +20,7 @@ Uf = Field('U', mesh, U)
 
 t = 0.1
 dt = 0.005
-DT = 0.1
+DT = 0.01
 for i in range(0, 300):
     print t
     if i % 20 == 0:
