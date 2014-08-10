@@ -1,11 +1,12 @@
 #!/usr/bin/python2
+from __future__ import print_function
+import numpy as np
+import numpad as ad
+import time
 
 from mesh import Mesh
 from field import Field
 from ops import interpolate, div, ddt, solve, laplacian
-
-import numpy as np
-import numpad as ad
 
 case = 'test/'
 mesh = Mesh(case)
@@ -22,11 +23,12 @@ t = 0.1
 dt = 0.005
 DT = 0.01
 for i in range(0, 300):
-    print t
+    print('Simulation Time:', t, 'Time step:', dt)
     if i % 20 == 0:
         T.write(t)
     T0 = Field.copy(T)
     eq = lambda T: ddt(T, T0, dt) + div(interpolate(T), Uf.field) - laplacian(T, DT)
     solve(eq, T)
     t += dt
+    print()
     

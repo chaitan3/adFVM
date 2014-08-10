@@ -3,6 +3,8 @@ import numpad as ad
 from os import makedirs
 from os.path import exists
 
+import BCs
+
 class Field:
     def __init__(self, name, mesh, field):
         self.name = name
@@ -43,7 +45,9 @@ class Field:
                 indices = mesh.nInternalCells + range(startFace, endFace) - mesh.nInternalFaces 
                 self.field[indices] = self.field[mesh.owner[neighbourStartFace:neighbourEndFace]]
             else:
-                self.BC[patchID]['type']
+                boundaryCondition = self.boundary[patchID]['type']
+                # pass info
+                getattr(BCs, boundaryCondition)()
 
     def write(self, time):
         timeDir = '{0}/{1}/'.format(self.mesh.case, time)
