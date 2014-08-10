@@ -10,6 +10,7 @@ class Field:
         self.field = field
         self.size = field.shape[0]
         self.dimensions = field.shape[1]
+        #BCs?
 
     @classmethod
     def zeros(self, name, mesh, size, dimensions):
@@ -41,6 +42,8 @@ class Field:
                 neighbourEndFace = neighbourStartFace + nFaces
                 indices = mesh.nInternalCells + range(startFace, endFace) - mesh.nInternalFaces 
                 self.field[indices] = self.field[mesh.owner[neighbourStartFace:neighbourEndFace]]
+            else:
+                self.BC[patchID]['type']
 
     def write(self, time):
         timeDir = '{0}/{1}/'.format(self.mesh.case, time)

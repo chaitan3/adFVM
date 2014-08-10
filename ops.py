@@ -7,7 +7,6 @@ def interpolate(field):
     factor = (mesh.faceDeltas/mesh.deltas).reshape(-1,1)
     faceField = Field.zeros(field.name + 'f', mesh, mesh.nFaces, field.dimensions)
     faceField.field = field.field[mesh.owner]*factor + field.field[mesh.neighbour]*(1-factor)
-    # take care of non cyclic boundaries
     return faceField
 
 def div(field, U):

@@ -85,12 +85,15 @@ class Mesh:
     def getVolumes(self):
         print 'generated volumes'
         nCellFaces = self.cellFaces.shape[1]
+        #initialize
         volumes = 0
         for i in range(0, nCellFaces):
             legs = self.points[self.faces[self.cellFaces[:,i], 1:]]-self.cellCentres[:self.nInternalCells].reshape((self.nInternalCells, 1, 3))
             volumes += np.abs(np.sum(np.cross(legs[:,0,:], legs[:,2,:])*(legs[:,1,:]-legs[:,3,:]), axis=1))/6
         return volumes
-
+    
+    #from numba import jit
+    #@jit
     def getCellFaces(self):
         print 'generated cell faces'
         #slow
@@ -132,20 +135,21 @@ class Mesh:
         self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3))))
         for patchID in self.boundary:
             patch = self.boundary[patchID]
+            startFace = patch['startFace']
+            nFaces = patch['nFaces']
+            endFace = startFace + nFaces
+            indices = self.nInternalCells + range(startFace, endFace) - self.nInternalFaces 
+            self.neighbour[startFace:endFace] = indices
             if patch['type'] == 'cyclic': 
-                startFace = patch['startFace']
-                nFaces = patch['nFaces']
-                endFace = startFace + nFaces
                 neighbourPatch = self.boundary[patch['neighbourPatch']]   
                 neighbourStartFace = neighbourPatch['startFace']
                 neighbourEndFace = neighbourStartFace + nFaces
                 # append cell centres
                 # apply transformation
                 patch['transform'] = self.faceCentres[startFace]-self.faceCentres[neighbourStartFace]
-                indices = self.nInternalCells + range(startFace, endFace) - self.nInternalFaces 
                 self.cellCentres[indices] = patch['transform'] + self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
                 # append neighbour
-                self.neighbour[startFace:endFace] = indices
             else:
-                raise Exception('not handled')
+                self.cellCentres[indices] = self.faceCentres[startFace:EndFace]
+                self.neighbour[startFace:endFace] = indices
              
