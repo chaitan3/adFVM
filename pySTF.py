@@ -22,6 +22,8 @@ Uf = Field('U', mesh, U)
 t = 0.1
 dt = 0.005
 DT = 0.01
+
+#T.read(t)
 for i in range(0, 300):
     print('Simulation Time:', t, 'Time step:', dt)
     if i % 20 == 0:

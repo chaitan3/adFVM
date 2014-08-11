@@ -9,6 +9,8 @@ logging.basicConfig(level=logging.WARNING)
 from numpad import adsparse
 from scipy import sparse as sp
 
+import utils
+
 class Mesh:
     def __init__(self, caseDir):
         start = time.time()
@@ -47,6 +49,7 @@ class Mesh:
 
         end = time.time()
         print('Time for reading mesh:', end-start)
+        print()
 
     def read(self, foamFile, dtype):
         logging.info('read {0}'.format(foamFile))
@@ -61,14 +64,7 @@ class Mesh:
 
     def readBoundary(self, boundaryFile):
         logging.info('read {0}'.format(boundaryFile))
-        content = open(boundaryFile).read()
-        # remove comments and newlines
-        content = re.sub(re.compile('/\*.*\*/',re.DOTALL ) , '' , content)
-        content = re.sub(re.compile('//.*\n' ) , '' , content)
-        content = re.sub(re.compile('\n\n' ) , '\n' , content)
-        # remove header
-        content = re.sub(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), '', content)
-
+        content = utils.removeCruft(open(boundaryFile).read())
         patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n]+{(.*?)}', re.DOTALL), content)
         boundary = {}
         for patch in patches:
@@ -96,22 +92,18 @@ class Mesh:
     def getVolumes(self):
         logging.info('generated volumes')
         nCellFaces = self.cellFaces.shape[1]
-        #initialize
         volumes = 0
         for i in range(0, nCellFaces):
             legs = self.points[self.faces[self.cellFaces[:,i], 1:]]-self.cellCentres[:self.nInternalCells].reshape((self.nInternalCells, 1, 3))
             volumes += np.abs(np.sum(np.cross(legs[:,0,:], legs[:,2,:])*(legs[:,1,:]-legs[:,3,:]), axis=1))/6
         return volumes.reshape(-1, 1)
     
-    #from numba import jit
-    #@jit
     def getCellFaces(self):
         logging.info('generated cell faces')
-        #slow
-        cellFaces = np.zeros((self.nInternalCells, 6), int)
-        for i in range(0, self.nInternalCells):
-            cellFaces[i] = np.concatenate((np.where(self.owner == i)[0], np.where(self.neighbour[:self.nInternalFaces] == i)[0]))
-        return cellFaces
+        enum = lambda x: np.column_stack((np.indices(x.shape)[0], x)) 
+        combined = np.concatenate((enum(self.owner), enum(self.neighbour)))
+        cellFaces = combined[combined[:,1].argsort(), 0]
+        return cellFaces.reshape(self.nInternalCells, len(cellFaces)/self.nInternalCells)
 
     def getCellCentres(self):
         logging.info('generated cell centres')

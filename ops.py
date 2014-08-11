@@ -25,9 +25,9 @@ def laplacian(field, DT):
     mesh = field.mesh
 
     # non orthogonal correction
-    DTgradF = Field.zeros('grad' + field.name, mesh, mesh.nCells, 3.)
-    DTgradF.setInternalField(DT*grad(field))
-    laplacian1 = div(interpolate(DTgradF), 1.)
+    #DTgradF = Field.zeros('grad' + field.name, mesh, mesh.nCells, 3.)
+    #DTgradF.setInternalField(DT*grad(field))
+    #laplacian1 = div(interpolate(DTgradF), 1.)
 
     gradFdotn = (field.field[mesh.neighbour]-field.field[mesh.owner])/mesh.deltas
     laplacian2 = (mesh.sumOp * (DT * gradFdotn * mesh.areas))/mesh.volumes
