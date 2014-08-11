@@ -4,23 +4,29 @@ import numpad as ad
 import time
 
 from field import Field, FaceField
+import utils
+logger = utils.logger(__name__)
 
 def interpolate(field):
+    logger.info('interpolating {0}'.format(field.name))
     mesh = field.mesh
     factor = (mesh.faceDeltas/mesh.deltas)
     faceField = FaceField(field.name + 'f', mesh, field.field[mesh.owner]*factor + field.field[mesh.neighbour]*(1-factor))
     return faceField
 
 def div(field, U):
+    logger.info('divergence of {0}'.format(field.name))
     mesh = field.mesh
     Fdotn = ad.sum((field.field * U) * mesh.normals, axis=1).reshape((-1,1))
     return (mesh.sumOp * (Fdotn * mesh.areas))/mesh.volumes
 
 def grad(field):
+    logger.info('gradient of {0}'.format(field.name))
     mesh = field.mesh
     return (mesh.sumOp * (field.field * mesh.normals * mesh.areas))/mesh.volumes
 
 def laplacian(field, DT):
+    logger.info('laplacian of {0}'.format(field.name))
     mesh = field.mesh
 
     # non orthogonal correction
@@ -33,14 +39,16 @@ def laplacian(field, DT):
     return laplacian2
 
 def ddt(field, field0, dt):
+    logger.info('ddt of {0}'.format(field.name))
     return (field.getInternalField()-ad.value(field0.getInternalField()))/dt
 
 def solve(equation, field):
     start = time.time()
-    
+
     def solver(internalField):
         field.setInternalField(internalField)
         return equation(field)
+    logger.info('solving for {0}'.format(field.name))
     field.setInternalField(ad.solve(solver, field.getInternalField()))
 
     end = time.time()

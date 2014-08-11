@@ -1,3 +1,9 @@
+import logging
+logging.basicConfig(level=logging.WARNING)
+
+def logger(name):
+    return logging.getLogger(name)
+
 import re
 
 foamHeader = '''/*--------------------------------*- C++ -*----------------------------------*\
@@ -9,7 +15,6 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 \*---------------------------------------------------------------------------*/
 '''
 foamFile = {'version':'2.0', 'format': 'ascii', 'class': 'volScalarField', 'object': ''}
-
 
 def removeCruft(content):
     # remove comments and newlines

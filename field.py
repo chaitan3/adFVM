@@ -7,6 +7,7 @@ import re
 
 import BCs
 import utils
+logger = utils.logger(__name__)
 
 class FaceField:
     def __init__(self, name, mesh, field):
@@ -16,6 +17,7 @@ class FaceField:
 
 class Field:
     def __init__(self, name, mesh, internalField, boundary={}):
+        logger.info('initializing field {0}'.format(name))
         self.name = name
         self.mesh = mesh
         self.field = ad.zeros((mesh.nCells, internalField.shape[1]))
@@ -24,6 +26,7 @@ class Field:
 
     @classmethod
     def zeros(self, name, mesh, dimensions):
+        logger.info('initializing zeros field {0}'.format(name))
         boundary = {}
         for patch in mesh.boundary:
             boundary[patch] = {}
@@ -35,10 +38,12 @@ class Field:
 
     @classmethod
     def copy(self, field):
+        logger.info('copying field {0}'.format(field.name))
         return self(field.name, field.mesh, field.getInternalField(), field.boundary.copy())
 
     @classmethod
-    def read(self, name, time):
+    def read(self, name, mesh, time):
+        print('reading field {0}, time {1}\n'.format(name, time))
         timeDir = '{0}/{1}/'.format(mesh.case, time)
         content = utils.removeCruft(open(timeDir + name, 'r').read())
 
@@ -57,6 +62,7 @@ class Field:
         return self(name, mesh, internalField, boundary)
 
     def write(self, time):
+        print('writing field {0}, time {1}\n'.format(self.name, time))
         timeDir = '{0}/{1}/'.format(self.mesh.case, time)
         if not exists(timeDir):
             makedirs(timeDir)

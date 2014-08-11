@@ -3,13 +3,12 @@ import re
 import numpy as np
 import numpad as ad
 import time
-import logging
-logging.basicConfig(level=logging.WARNING)
 
 from numpad import adsparse
 from scipy import sparse as sp
 
 import utils
+logger = utils.logger(__name__)
 
 class Mesh:
     def __init__(self, caseDir):
@@ -52,7 +51,7 @@ class Mesh:
         print()
 
     def read(self, foamFile, dtype):
-        logging.info('read {0}'.format(foamFile))
+        logger.info('read {0}'.format(foamFile))
         lines = open(foamFile).readlines()
         first, last = 0, -1
         while lines[first][0] != '(': 
@@ -63,7 +62,7 @@ class Mesh:
         return np.array(list(map(f, lines[first+1:last])), dtype)
 
     def readBoundary(self, boundaryFile):
-        logging.info('read {0}'.format(boundaryFile))
+        logger.info('read {0}'.format(boundaryFile))
         content = utils.removeCruft(open(boundaryFile).read())
         patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n]+{(.*?)}', re.DOTALL), content)
         boundary = {}
@@ -74,7 +73,7 @@ class Mesh:
         return boundary
 
     def getNormals(self):
-        logging.info('generated normals')
+        logger.info('generated normals')
         #correct direcion? mostly yes
         v1 = self.points[self.faces[:,1]]-self.points[self.faces[:,2]]
         v2 = self.points[self.faces[:,2]]-self.points[self.faces[:,3]]
@@ -82,7 +81,7 @@ class Mesh:
         return normals / np.linalg.norm(normals, axis=1).reshape(-1,1)
 
     def getAreas(self):
-        logging.info('generated areas')
+        logger.info('generated areas')
         nFacePoints = self.faces[0, 0]
         areas = np.cross(self.points[self.faces[:,-1]], self.points[self.faces[:,1]])
         for i in range(0, nFacePoints-1):
@@ -90,7 +89,7 @@ class Mesh:
         return np.linalg.norm(areas, axis=1).reshape(-1, 1)/2
 
     def getVolumes(self):
-        logging.info('generated volumes')
+        logger.info('generated volumes')
         nCellFaces = self.cellFaces.shape[1]
         volumes = 0
         for i in range(0, nCellFaces):
@@ -99,34 +98,34 @@ class Mesh:
         return volumes.reshape(-1, 1)
     
     def getCellFaces(self):
-        logging.info('generated cell faces')
+        logger.info('generated cell faces')
         enum = lambda x: np.column_stack((np.indices(x.shape)[0], x)) 
         combined = np.concatenate((enum(self.owner), enum(self.neighbour)))
         cellFaces = combined[combined[:,1].argsort(), 0]
         return cellFaces.reshape(self.nInternalCells, len(cellFaces)/self.nInternalCells)
 
     def getCellCentres(self):
-        logging.info('generated cell centres')
+        logger.info('generated cell centres')
         return np.mean(self.faceCentres[self.cellFaces], axis=1)
 
     def getFaceCentres(self):
-        logging.info('generated face centres')
+        logger.info('generated face centres')
         return np.mean(self.points[self.faces[:,1:]], axis=1)
 
     def getDeltas(self):
-        logging.info('generated deltas')
+        logger.info('generated deltas')
         P = self.cellCentres[self.owner]
         N = self.cellCentres[self.neighbour]
         return np.linalg.norm(P-N, axis=1).reshape(-1,1)
 
     def getFaceDeltas(self):
-        logging.info('generated face deltas')
+        logger.info('generated face deltas')
         P = self.faceCentres
         N = self.cellCentres[self.neighbour]
         return np.linalg.norm(P-N, axis=1).reshape(-1,1)
 
     def getSumOp(self):
-        logging.info('generated sum op')
+        logger.info('generated sum op')
         owner = sp.csc_matrix((np.ones(self.nFaces), self.owner, range(0, self.nFaces+1)), shape=(self.nInternalCells, self.nFaces))
         Nindptr = np.concatenate((range(0, self.nInternalFaces+1), self.nInternalFaces*np.ones(self.nFaces-self.nInternalFaces, int)))
         neighbour = sp.csc_matrix((-np.ones(self.nInternalFaces), self.neighbour[:self.nInternalFaces], Nindptr), shape=(self.nInternalCells, self.nFaces))
@@ -134,7 +133,7 @@ class Mesh:
         return adsparse.csr_matrix((ad.adarray(sumOp.data), sumOp.indices, sumOp.indptr), sumOp.shape)
 
     def createGhostCells(self):
-        logging.info('generated ghost cells')
+        logger.info('generated ghost cells')
         self.neighbour = np.concatenate((self.neighbour, np.zeros(self.nBoundaryFaces, int)))
         self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3))))
         for patchID in self.boundary:
