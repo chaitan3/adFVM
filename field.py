@@ -44,19 +44,18 @@ class Field:
         mesh = self.mesh
         for patchID in mesh.boundary:
             patch = mesh.boundary[patchID] 
+            startFace = patch['startFace']
+            nFaces = patch['nFaces']
+            endFace = startFace + nFaces
+            indices = mesh.nInternalCells + range(startFace, endFace) - mesh.nInternalFaces 
             if patch['type'] == 'cyclic':
-                startFace = patch['startFace']
-                nFaces = patch['nFaces']
-                endFace = startFace + nFaces
                 neighbourPatch = mesh.boundary[patch['neighbourPatch']]   
                 neighbourStartFace = neighbourPatch['startFace']
                 neighbourEndFace = neighbourStartFace + nFaces
-                indices = mesh.nInternalCells + range(startFace, endFace) - mesh.nInternalFaces 
                 self.field[indices] = self.field[mesh.owner[neighbourStartFace:neighbourEndFace]]
             else:
                 boundaryCondition = self.boundary[patchID]['type']
-                # pass info
-                getattr(BCs, boundaryCondition)()
+                getattr(BCs, boundaryCondition)(self, indices, np.arange(startFace, endFace))
 
     def read(self, time):
         timeDir = '{0}/{1}/'.format(self.mesh.case, time)
