@@ -9,19 +9,20 @@ import BCs
 import utils
 
 class Field:
-    def __init__(self, name, mesh, field):
+    def __init__(self, name, mesh, field, boundary={}):
         self.name = name
         self.mesh = mesh
         self.field = field
         self.size = field.shape[0]
         self.dimensions = field.shape[1]
-        self.boundary = {}
-        for patch in mesh.boundary:
-            self.boundary[patch] = {}
-            if mesh.boundary[patch]['type'] == 'cyclic':
-                self.boundary[patch]['type'] = 'cyclic'
-            else:
-                self.boundary[patch]['type'] = 'zeroGradient'
+        self.boundary = boundary
+        if len(list(boundary.keys())) == 0:
+            for patch in mesh.boundary:
+                self.boundary[patch] = {}
+                if mesh.boundary[patch]['type'] == 'cyclic':
+                    self.boundary[patch]['type'] = 'cyclic'
+                else:
+                    self.boundary[patch]['type'] = 'zeroGradient'
 
     @classmethod
     def zeros(self, name, mesh, size, dimensions):
@@ -29,7 +30,7 @@ class Field:
 
     @classmethod
     def copy(self, field):
-        return self(field.name, field.mesh, field.field.copy())
+        return self(field.name, field.mesh, field.field.copy(), self.boundary.copy())
 
     def setInternalField(self, internalField):
         mesh = self.mesh
@@ -57,50 +58,42 @@ class Field:
                 boundaryCondition = self.boundary[patchID]['type']
                 getattr(BCs, boundaryCondition)(self, indices, np.arange(startFace, endFace))
 
-    def read(self, time):
-        timeDir = '{0}/{1}/'.format(self.mesh.case, time)
-        content = utils.removeCruft(open(timeDir + self.name, 'r').read())
+    @classmethod
+    def read(self, name, time):
+        timeDir = '{0}/{1}/'.format(mesh.case, time)
+        content = utils.removeCruft(open(timeDir + name, 'r').read())
 
         data = re.search(re.compile('internalField[\s\r\na-zA-Z<>]+(.*?);', re.DOTALL), content).group(1)
         start = data.find('(')
         if start >= 0:
             internalField = ad.adarray(re.findall('[0-9\.Ee\-]+', data[start:])).reshape((-1,1))
         else:
-            internalField = ad.ones((self.mesh.nInternalCells, self.dimensions))
+            internalField = ad.ones((mesh.nInternalCells, 1))
         self.setInternalField(internalField)
 
         content = content[content.find('boundaryField'):]
-        self.boundary = {}
-        for patchID in self.mesh.boundary:
+        boundary = {}
+        for patchID i nmesh.boundary:
             patch = re.search(re.compile(patchID + '[\s\r\n]+{(.*?)}', re.DOTALL), content).group(1)
-            self.boundary[patchID] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch))
+            boundary[patchID] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch))
+        return self(name, mesh, field, boundary)
+
 
     def write(self, time):
         timeDir = '{0}/{1}/'.format(self.mesh.case, time)
         if not exists(timeDir):
             makedirs(timeDir)
         handle = open(timeDir + self.name, 'w')
-        handle.write('''
-    /*--------------------------------*- C++ -*----------------------------------*\
-| =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  2.2.2                                 |
-|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \\/     M anipulation  |                                                 |
-\*---------------------------------------------------------------------------*/
-FoamFile
-{
-    version     2.0;
-    format      ascii;
-    class       volScalarField;
-    object      T;
-}
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-dimensions      [0 1 -1 0 0 0 0];
-
-internalField   nonuniform List<scalar> 
-''')
+        handle.write(utils.foamHeader)
+        handle.write('FoamFile\n{\n')
+        foamFile = utils.foamFile.copy()
+        foamFile['object'] = self.name
+        for key in foamFile:
+            handle.write('\t' + key + ' ' + foamFile[key] + ';\n')
+        handle.write('}\n')
+        handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
+        handle.write('dimensions      [0 1 -1 0 0 0 0];\n')
+        handle.write('internalField   nonuniform List<scalar>\n')
         handle.write('{0}\n(\n'.format(self.mesh.nInternalCells))
         np.savetxt(handle, ad.value(self.getInternalField()))
         handle.write(')\n;\n')
