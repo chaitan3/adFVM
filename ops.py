@@ -3,13 +3,12 @@ import numpy as np
 import numpad as ad
 import time
 
-from field import Field
+from field import Field, FaceField
 
 def interpolate(field):
     mesh = field.mesh
     factor = (mesh.faceDeltas/mesh.deltas)
-    faceField = Field.zeros(field.name + 'f', mesh, mesh.nFaces, field.dimensions)
-    faceField.field = field.field[mesh.owner]*factor + field.field[mesh.neighbour]*(1-factor)
+    faceField = FaceField(field.name + 'f', mesh, field.field[mesh.owner]*factor + field.field[mesh.neighbour]*(1-factor))
     return faceField
 
 def div(field, U):
