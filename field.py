@@ -17,7 +17,7 @@ class FaceField:
         self.field = field
 
     def mag(self):
-        return FaceField(self.name, self.mesh, ad.sum(self.field, axis=-1).reshape((-1,1)))
+        return type(self)(self.name, self.mesh, ad.sum(self.field, axis=-1).reshape((-1,1)))
 
     def __neg__(self):
         return FaceField(self.name, self.mesh, -self.field)
@@ -32,13 +32,20 @@ class FaceField:
         return self * field
 
     def __add__(self, field):
-        return FaceField(self.name, self.mesh, self.field + field.field)
+        if isinstance(field, numbers.Number):
+            return FaceField(self.name, self.mesh, self.field + field)
+        else:
+            return FaceField(self.name, self.mesh, self.field + field.field)
+
+    def __radd__(self, field):
+        return self.__add__(field)
 
     def __sub__(self, field):
         return self.__add__(-field)
 
     def __div__(self, field):
-        return FaceField(self.name, self.mesh, self.field / field.field)
+        print(type(self))
+        return type(self)(self.name, self.mesh, self.field / field.field)
 
 class Field(FaceField):
     def __init__(self, name, mesh, internalField, boundary={}):

@@ -7,6 +7,15 @@ from field import Field, FaceField
 import utils
 logger = utils.logger(__name__)
 
+def upwind(field, U):
+    mesh = field.mesh
+    positiveFlux = ad.sum(U.field * mesh.normals, axis=1) > 0
+    negativeFlux = (positiveFlux == False)
+    tmpField = ad.zeros((mesh.nFaces, field.field.shape[1]))
+    tmpField[positiveFlux] = field.field[mesh.owner[positiveFlux]]
+    tmpField[negativeFlux] = field.field[mesh.neighbour[negativeFlux]]
+    return FaceField(field.name + 'f', mesh, tmpField)
+
 def interpolate(field):
     logger.info('interpolating {0}'.format(field.name))
     mesh = field.mesh
@@ -61,6 +70,9 @@ def solve(equation, fields):
     stack = [field.getInternalField() for field in fields]
     solution = ad.solve(solver, ad.hstack(stack))
     setInternalFields(solution)
+    # clear memory usage
+    for field in fields:
+        field.field.obliviate()
 
     end = time.time()
     print('Time for iteration:', end-start)

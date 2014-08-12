@@ -6,7 +6,8 @@ import time
 
 from mesh import Mesh
 from field import Field, FaceField
-from ops import interpolate, div, ddt, solve, laplacian, grad
+from ops import  div, ddt, solve, laplacian, grad
+from ops import interpolate, upwind
 
 gamma = 1.4
 mu = 2.5e-5
@@ -23,7 +24,9 @@ dt = 0.005
 rho = Field.zeros('rho', mesh, 1)
 rhoU = Field.zeros('rhoU', mesh, 3)
 rhoE = Field.zeros('rhoE', mesh, 1)
-
+rho.field += 1
+rhoU.field += 1
+rhoE.field += 1
 
 for i in range(0, 300):
     if i % 20 == 0:
@@ -36,11 +39,13 @@ for i in range(0, 300):
     rhoE0 = Field.copy(rhoE)
 
     def eq(rho, rhoU, rhoE):
+        
+        #best way?
+        Uf = interpolate(rhoU/rho)
 
-        # implement upwind/central
-        rhof = interpolate(rho)
-        rhoUf = interpolate(rhoU)
-        rhoEf = interpolate(rhoE)
+        rhof = upwind(rho, Uf)
+        rhoUf = upwind(rhoU, Uf)
+        rhoEf = upwind(rhoE, Uf)
 
         U = rhoU/rho
         Uf = rhoUf/rhof
