@@ -142,17 +142,17 @@ class Mesh:
             nFaces = patch['nFaces']
             endFace = startFace + nFaces
             indices = self.nInternalCells + range(startFace, endFace) - self.nInternalFaces 
+            # append neighbour
             self.neighbour[startFace:endFace] = indices
             if patch['type'] == 'cyclic': 
                 neighbourPatch = self.boundary[patch['neighbourPatch']]   
                 neighbourStartFace = neighbourPatch['startFace']
                 neighbourEndFace = neighbourStartFace + nFaces
-                # append cell centres
                 # apply transformation
+                # append cell centres
                 patch['transform'] = self.faceCentres[startFace]-self.faceCentres[neighbourStartFace]
                 self.cellCentres[indices] = patch['transform'] + self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
-                # append neighbour
             else:
+                # append cell centres
                 self.cellCentres[indices] = self.faceCentres[startFace:EndFace]
-                self.neighbour[startFace:endFace] = indices
              

@@ -8,6 +8,9 @@ from mesh import Mesh
 from field import Field, FaceField
 from ops import interpolate, div, ddt, solve, laplacian
 
+#from guppy import hpy
+#hp = hpy()
+
 case = 'test/'
 mesh = Mesh(case)
 
@@ -23,14 +26,20 @@ T = Field.read('T', mesh, t)
 U = 1.*ad.ones((mesh.nFaces, 3))*np.array([1., 0., 0])
 Uf = FaceField('U', mesh, U)
 
+#before = hp.heap()
+
 for i in range(0, 300):
     if i % 20 == 0:
         T.write(t)
 
     print('Simulation Time:', t, 'Time step:', dt)
     T0 = Field.copy(T)
-    eq = lambda T: ddt(T, T0, dt) + div(interpolate(T), Uf.field) - laplacian(T, DT)
-    solve(eq, T)
+    eq = lambda T: [ddt(T, T0, dt) + div(interpolate(T), Uf) - laplacian(T, DT)]
+    solve(eq, [T])
     t += dt
+    t = round(t, 6)
     print()
     
+    #after = hp.heap()
+    #leftover = after - before
+    #import pdb; pdb.set_trace()

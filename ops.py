@@ -17,7 +17,7 @@ def interpolate(field):
 def div(field, U):
     logger.info('divergence of {0}'.format(field.name))
     mesh = field.mesh
-    Fdotn = ad.sum((field.field * U) * mesh.normals, axis=1).reshape((-1,1))
+    Fdotn = ad.sum((field.field[:,np.newaxis,:] * U.field[:,:,np.newaxis]) * mesh.normals[:,:,np.newaxis], axis=1)
     return (mesh.sumOp * (Fdotn * mesh.areas))/mesh.volumes
 
 def grad(field):
@@ -42,14 +42,25 @@ def ddt(field, field0, dt):
     logger.info('ddt of {0}'.format(field.name))
     return (field.getInternalField()-ad.value(field0.getInternalField()))/dt
 
-def solve(equation, field):
+def solve(equation, fields):
+    names = [field.name for field in fields]
+    print('Solving for', ' '.join(names))
+
     start = time.time()
 
-    def solver(internalField):
-        field.setInternalField(internalField)
-        return equation(field)
-    logger.info('solving for {0}'.format(field.name))
-    field.setInternalField(ad.solve(solver, field.getInternalField()))
+    nDims = [field.field.shape[1] for field in fields]
+    def setInternalFields(internalFields):
+        curr = 0
+        for index in range(0, len(fields)):
+            fields[index].setInternalField(internalFields[:,curr:curr+nDims[index]])
+
+    def solver(internalFields):
+        setInternalFields(internalFields)
+        return ad.hstack(equation(*fields))
+
+    stack = [field.getInternalField() for field in fields]
+    solution = ad.solve(solver, ad.hstack(stack))
+    setInternalFields(solution)
 
     end = time.time()
     print('Time for iteration:', end-start)

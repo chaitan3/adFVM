@@ -4,6 +4,7 @@ import numpad as ad
 from os import makedirs
 from os.path import exists
 import re
+import numbers
 
 import BCs
 import utils
@@ -15,7 +16,31 @@ class FaceField:
         self.mesh = mesh
         self.field = field
 
-class Field:
+    def mag(self):
+        return FaceField(self.name, self.mesh, ad.sum(self.field, axis=-1).reshape((-1,1)))
+
+    def __neg__(self):
+        return FaceField(self.name, self.mesh, -self.field)
+
+    def __mul__(self, field):
+        if isinstance(field, numbers.Number):
+            return FaceField(self.name, self.mesh, self.field * field)
+        else:
+            return FaceField(self.name, self.mesh, self.field * field.field)
+
+    def __rmul__(self, field):
+        return self * field
+
+    def __add__(self, field):
+        return FaceField(self.name, self.mesh, self.field + field.field)
+
+    def __sub__(self, field):
+        return self.__add__(-field)
+
+    def __div__(self, field):
+        return FaceField(self.name, self.mesh, self.field / field.field)
+
+class Field(FaceField):
     def __init__(self, name, mesh, internalField, boundary={}):
         logger.info('initializing field {0}'.format(name))
         self.name = name
@@ -101,6 +126,7 @@ class Field:
         return self.field[:mesh.nInternalCells]
 
     def updateGhostCells(self):
+        logger.info('updating ghost cells for {0}'.format(self.name))
         mesh = self.mesh
         for patchID in mesh.boundary:
             patch = mesh.boundary[patchID] 
