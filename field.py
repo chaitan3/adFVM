@@ -16,26 +16,29 @@ class FaceField:
         self.mesh = mesh
         self.field = field
 
+    def getInternalField(self):
+        return self.field
+
     def mag(self):
-        return type(self)(self.name, self.mesh, ad.sum(self.field, axis=-1).reshape((-1,1)))
+        return self.__class__(self.name, self.mesh, ad.sum(self.getInternalField(), axis=-1).reshape((-1,1)))
 
     def __neg__(self):
-        return FaceField(self.name, self.mesh, -self.field)
+        return self.__class__(self.name, self.mesh, -self.getInternalField())
 
     def __mul__(self, field):
         if isinstance(field, numbers.Number):
-            return FaceField(self.name, self.mesh, self.field * field)
+            return self.__class__(self.name, self.mesh, self.getInternalField() * field)
         else:
-            return FaceField(self.name, self.mesh, self.field * field.field)
+            return self.__class__(self.name, self.mesh, self.getInternalField() * field.getInternalField())
 
     def __rmul__(self, field):
         return self * field
 
     def __add__(self, field):
         if isinstance(field, numbers.Number):
-            return FaceField(self.name, self.mesh, self.field + field)
+            return self.__class__(self.name, self.mesh, self.getInternalField() + field)
         else:
-            return FaceField(self.name, self.mesh, self.field + field.field)
+            return self.__class__(self.name, self.mesh, self.getInternalField() + field.getInternalField())
 
     def __radd__(self, field):
         return self.__add__(field)
@@ -44,8 +47,7 @@ class FaceField:
         return self.__add__(-field)
 
     def __div__(self, field):
-        print(type(self))
-        return type(self)(self.name, self.mesh, self.field / field.field)
+        return self.__class__(self.name, self.mesh, self.getInternalField() / field.getInternalField())
 
 class Field(FaceField):
     def __init__(self, name, mesh, internalField, boundary={}):

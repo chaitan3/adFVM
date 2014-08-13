@@ -9,8 +9,12 @@ logger = utils.logger(__name__)
 
 def upwind(field, U):
     mesh = field.mesh
-    positiveFlux = ad.sum(U.field * mesh.normals, axis=1) > 0
+    print(ad.sum(U.field * mesh.normals, axis=1))
+    positiveFlux = np.where(ad.sum(U.field * mesh.normals, axis=1) > 0)
     negativeFlux = (positiveFlux == False)
+    print(positiveFlux)
+    print(np.where(positiveFlux))
+    print(np.where(negativeFlux))
     tmpField = ad.zeros((mesh.nFaces, field.field.shape[1]))
     tmpField[positiveFlux] = field.field[mesh.owner[positiveFlux]]
     tmpField[negativeFlux] = field.field[mesh.neighbour[negativeFlux]]
@@ -62,6 +66,7 @@ def solve(equation, fields):
         curr = 0
         for index in range(0, len(fields)):
             fields[index].setInternalField(internalFields[:,curr:curr+nDims[index]])
+            curr += nDims[index]
 
     def solver(internalFields):
         setInternalFields(internalFields)

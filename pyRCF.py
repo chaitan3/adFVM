@@ -25,8 +25,8 @@ rho = Field.zeros('rho', mesh, 1)
 rhoU = Field.zeros('rhoU', mesh, 3)
 rhoE = Field.zeros('rhoE', mesh, 1)
 rho.field += 1
-rhoU.field += 1
-rhoE.field += 1
+rhoU.field += 200
+rhoE.field += 20000
 
 for i in range(0, 300):
     if i % 20 == 0:
@@ -41,6 +41,9 @@ for i in range(0, 300):
     def eq(rho, rhoU, rhoE):
         
         #best way?
+        print(rhoU.field)
+        print(rho.field)
+        print((rhoU/rho).field)
         Uf = interpolate(rhoU/rho)
 
         rhof = upwind(rho, Uf)
@@ -48,11 +51,12 @@ for i in range(0, 300):
         rhoEf = upwind(rhoE, Uf)
 
         U = rhoU/rho
+        print(rhof.field)
         Uf = rhoUf/rhof
         Ef = rhoEf/rhof
+        exit()
         ef = Ef - 0.5*Uf.mag()
         pf = (gamma - 1)*ef
-
         return [ddt(rho, rho0, dt) + div(rhof, Uf),
                 ddt(rhoU, rhoU0, dt) + div(rhoUf, Uf) + grad(pf) - (laplacian(U, mu)), #+ div(grad(U))
                 ddt(rhoE, rhoE0, dt) + div(rhoEf + pf, Uf) - (laplacian(ef, alpha) )] #+ div(sigma, Uf))]
