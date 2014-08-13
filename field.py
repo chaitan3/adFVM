@@ -54,9 +54,9 @@ class Field(FaceField):
         logger.info('initializing field {0}'.format(name))
         self.name = name
         self.mesh = mesh
-        self.field = ad.zeros((mesh.nCells, field.shape[1]))
         self.boundary = boundary
         if field.shape[0] == mesh.nInternalCells:
+            self.field = ad.zeros((mesh.nCells, field.shape[1]))
             self.setInternalField(field)
         else:
             self.field = field
@@ -83,14 +83,24 @@ class Field(FaceField):
     def read(self, name, mesh, time):
         print('reading field {0}, time {1}\n'.format(name, time))
         timeDir = '{0}/{1}/'.format(mesh.case, time)
-        content = utils.removeCruft(open(timeDir + name, 'r').read())
 
-        data = re.search(re.compile('internalField[\s\r\na-zA-Z<>]+(.*?);', re.DOTALL), content).group(1)
-        start = data.find('(')
-        if start >= 0:
-            internalField = ad.adarray(re.findall('[0-9\.Ee\-]+', data[start:])).reshape((-1,1))
+        content = utils.removeCruft(open(timeDir + name, 'r').read(), keepHeader=True)
+        foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
+        dtype = re.search('class[\s\t]+(.*?);', foamFile).group(1)
+        extractScalar = lambda x: re.findall('[0-9\.Ee\-]+', x)
+        if dtype == 'volVectorField':
+            extractVector = lambda y: list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', y)))
+            extractor = extractVector
         else:
-            internalField = ad.ones((mesh.nInternalCells, 1))
+            extractor = extractScalar
+       
+        data = re.search(re.compile('internalField[\s\r\na-zA-Z<>]+(.*?);', re.DOTALL), content).group(1)
+        nonUniform = re.search('[\r\n\s]*[0-9]+[\r\n\s]*\(', data)
+        if nonUniform != None:
+            start = data.find('(')
+            internalField = ad.adarray(extractor(data[start:])).reshape((-1,1))
+        else:
+            internalField = ad.adarray(np.tile(np.array(extractor(data)), (mesh.nInternalCells, 1)))
 
         content = content[content.find('boundaryField'):]
         boundary = {}
@@ -109,15 +119,25 @@ class Field(FaceField):
         handle.write('FoamFile\n{\n')
         foamFile = utils.foamFile.copy()
         foamFile['object'] = self.name
+        if self.field.shape[1] == 3:
+            dtype = 'vector'
+            foamFile['class'] = 'volVectorField'
+        else:
+            dtype = 'scalar'
+            foamFile['class'] = 'volScalarField'
         for key in foamFile:
             handle.write('\t' + key + ' ' + foamFile[key] + ';\n')
         handle.write('}\n')
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
         handle.write('dimensions      [0 1 -1 0 0 0 0];\n')
-        handle.write('internalField   nonuniform List<scalar>\n')
+
+        handle.write('internalField   nonuniform List<'+ dtype +'>\n')
         handle.write('{0}\n(\n'.format(self.mesh.nInternalCells))
         for value in ad.value(self.getInternalField()):
-            handle.write(str(value[0]) + '\n')
+            if dtype == 'scalar':
+                handle.write(str(value[0]) + '\n')
+            else:
+                handle.write('(' + ' '.join(np.char.mod('%f', value)) + ')\n')
         handle.write(')\n;\n')
         handle.write('boundaryField\n{\n')
         for patchID in self.boundary:

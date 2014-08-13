@@ -28,7 +28,7 @@ class Mesh:
         self.nBoundaryFaces = self.nFaces-self.nInternalFaces
         self.nInternalCells = np.max(self.owner)+1
         self.nGhostCells = self.nBoundaryFaces
-        self.nCells = self.nInternalFaces + self.nGhostCells
+        self.nCells = self.nInternalCells + self.nGhostCells
 
         self.normals = self.getNormals()
         self.areas = self.getAreas()
@@ -154,5 +154,5 @@ class Mesh:
                 self.cellCentres[indices] = patch['transform'] + self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
             else:
                 # append cell centres
-                self.cellCentres[indices] = self.faceCentres[startFace:EndFace]
+                self.cellCentres[indices] = self.faceCentres[startFace:endFace]
              
