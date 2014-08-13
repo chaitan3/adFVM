@@ -16,11 +16,14 @@ class FaceField:
         self.mesh = mesh
         self.field = field
 
-    def getInternalField(self):
-        return self.field
-
     def mag(self):
-        return self.__class__(self.name, self.mesh, ad.sum(self.field, axis=-1).reshape((-1,1)))
+        return self.__class__(self.name, self.mesh, ad.sqrt(ad.sum(self.field**2, axis=1).reshape((-1,1))))
+
+    def dotN(self):
+        return self.__class__(self.name, self.mesh, ad.sum(self.field * self.mesh.normals, axis=1).reshape((-1, 1)))
+
+    def outer(self, field):
+        return self.__class__(self.name, self.mesh, self.field[:,np.newaxis,:] * field.field[:,:,np.newaxis])
 
     def __neg__(self):
         return self.__class__(self.name, self.mesh, -self.field)
@@ -29,10 +32,15 @@ class FaceField:
         if isinstance(field, numbers.Number):
             return self.__class__(self.name, self.mesh, self.field * field)
         else:
+            product = self.field * field.field
             return self.__class__(self.name, self.mesh, self.field * field.field)
+
 
     def __rmul__(self, field):
         return self * field
+
+    def __pow__(self, power):
+        return self.__class__(self.name, self.mesh, self.field.__pow__(power))
 
     def __add__(self, field):
         if isinstance(field, numbers.Number):

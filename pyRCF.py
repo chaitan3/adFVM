@@ -6,7 +6,7 @@ import time
 
 from mesh import Mesh
 from field import Field, FaceField
-from ops import  div, ddt, solve, laplacian, grad
+from ops import  div, ddt, laplacian, grad, implicit, explicit
 from ops import interpolate, upwind
 
 gamma = 1.4
@@ -26,6 +26,8 @@ dt = 1e-4
 writeInterval = 5
 
 #initialize
+pos = FaceField('pos', mesh, ad.ones((mesh.nFaces, 1)))
+neg = FaceField('neg', mesh, ad.ones((mesh.nFaces, 1)))
 
 p = Field.read('p', mesh, t)
 T = Field.read('T', mesh, t)
@@ -44,10 +46,9 @@ def conservative(U, e, p):
     E = e + 0.5*U.mag()
     return rho, rho*U, rho*E
 
+
 rho, rhoU, rhoE = conservative(U, e, p)
-rho.name = 'rho'
-rhoU.name = 'rhoU'
-rhoE.name = 'rhoE'
+rho.name, rhoU.name, rhoE.name = 'rho', 'rhoU', 'rhoE'
 
 for timeIndex in range(1, 300):
 
@@ -58,23 +59,32 @@ for timeIndex in range(1, 300):
     rhoE0 = Field.copy(rhoE)
 
     def eq(rho, rhoU, rhoE):
-        
-        #best way?
-        Uf = interpolate(rhoU/rho)
 
-        rhof = upwind(rho, Uf)
-        rhoUf = upwind(rhoU, Uf)
-        rhoEf = upwind(rhoE, Uf)
+        rhoLF, rhoRF = upwind(rho, pos), upwind(rho, neg) 
+        rhoULF, rhoURF = upwind(rhoU, pos), upwind(rhoU, neg) 
+        rhoELF, rhoERF = upwind(rhoE, pos), upwind(rhoE, neg) 
 
-        # fancy interpolatex computation?
-        Uf, ef, pf = primitive(rhof, rhoUf, rhoEf)
+        ULF, eLF, pLF = primitive(rhoLF, rhoULF, rhoELF)
+        URF, eRF, pRF = primitive(rhoRF, rhoURF, rhoERF)
         U, e, p = primitive(rho, rhoU, rhoE)
 
-        return [ddt(rho, rho0, dt) + div(rhof, Uf),
-                ddt(rhoU, rhoU0, dt) + div(rhoUf, Uf) + grad(pf) - (laplacian(U, mu)), #+ div(grad(U))
-                ddt(rhoE, rhoE0, dt) + div(rhoEf + pf, Uf) - (laplacian(e, alpha) )] #+ div(sigma, Uf))]
+        cLF, cRF = (gamma*pLF/rhoLF)**0.5, (gamma*pRF/rhoRF)**0.5
+        UnLF, UnRF = ULF.dotN(), URF.dotN()
+        cF = (cLF + UnLF, cRF + UnRF, cLF - UnLF, cRF - UnRF)
+        #wtf? adjoint? if not, make it readable
+        aF = -FaceField('aF', mesh, ad.adarray(np.max(ad.value(ad.hstack([x.field for x in cF])), axis=1)).reshape((-1,1)))
+
+        rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoLF-rhoRF)
+        rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF) - 0.5*aF*(rhoULF-rhoURF)
+        rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoELF-rhoERF)
+        pF = 0.5*(pLF + pRF)
+
+        return [ddt(rho, rho0, dt) + div(rhoFlux),
+                ddt(rhoU, rhoU0, dt) + div(rhoUFlux) + grad(pF) - (laplacian(U, mu)), #+ div(grad(U))
+                ddt(rhoE, rhoE0, dt) + div(rhoEFlux) - (laplacian(e, alpha) )] #+ div(sigma, Uf))]
     
-    solve(eq, [rho, rhoU, rhoE])
+    #implicit(eq, [rho, rhoU, rhoE])
+    explicit(eq, [rho, rhoU, rhoE])
 
     t += dt
     t = round(t, 6)

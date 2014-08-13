@@ -1,0 +1,131 @@
+/*--------------------------------*- C++ -*----------------------------------*| =========                 |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  2.2.2                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+	version 2.0;
+	class volVectorField;
+	object rhoU;
+	format ascii;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+dimensions      [0 1 -1 0 0 0 0];
+internalField   nonuniform List<vector>
+100
+(
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(-880800138914849733283133310323229450412647689053456766560983056384.000000 118212187236084908618058057983504200448222630510592.000000 -118212187236084908618058057983504200448222630510592.000000)
+(-1728537247133323752850118651269895621219490819899602259281088348160.000000 468903695932792453277503129944760522609897894838272.000000 -468903695932792453277503129944760522609897894838272.000000)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+(nan nan nan)
+)
+;
+boundaryField
+{
+	walls
+	{
+		type zeroGradient;
+	}
+	sides
+	{
+		type zeroGradient;
+	}
+}

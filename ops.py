@@ -23,11 +23,10 @@ def interpolate(field):
     faceField = FaceField(field.name + 'f', mesh, field.field[mesh.owner]*factor + field.field[mesh.neighbour]*(1-factor))
     return faceField
 
-def div(field, U):
+def div(field):
     logger.info('divergence of {0}'.format(field.name))
     mesh = field.mesh
-    Fdotn = ad.sum((field.field[:,np.newaxis,:] * U.field[:,:,np.newaxis]) * mesh.normals[:,:,np.newaxis], axis=1)
-    return (mesh.sumOp * (Fdotn * mesh.areas))/mesh.volumes
+    return (mesh.sumOp * (field.field * mesh.areas))/mesh.volumes
 
 def grad(field):
     logger.info('gradient of {0}'.format(field.name))
@@ -51,7 +50,22 @@ def ddt(field, field0, dt):
     logger.info('ddt of {0}'.format(field.name))
     return (field.getInternalField()-ad.value(field0.getInternalField()))/dt
 
-def solve(equation, fields):
+def explicit(equation, fields):
+    names = [field.name for field in fields]
+    print('Time marching for', ' '.join(names))
+    
+    start = time.time()
+    
+    LHS = equation(*fields)
+    for index in range(0, len(fields)):
+        fields[index].setInternalField(fields[index].getInternalField() - LHS[index])
+        fields[index].field.obliviate()
+
+    end = time.time()
+    print('Time for iteration:', end-start)
+ 
+
+def implicit(equation, fields):
     names = [field.name for field in fields]
     print('Solving for', ' '.join(names))
 
