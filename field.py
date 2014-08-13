@@ -16,8 +16,11 @@ class FaceField:
         self.mesh = mesh
         self.field = field
 
-    def mag(self):
-        return self.__class__(self.name, self.mesh, ad.sqrt(ad.sum(self.field**2, axis=1).reshape((-1,1))))
+    def info(self):
+        print(self.field.
+
+    def magSqr(self):
+        return self.__class__(self.name, self.mesh, ad.sum(self.field**2, axis=1).reshape((-1,1)))
 
     def dotN(self):
         return self.__class__(self.name, self.mesh, ad.sum(self.field * self.mesh.normals, axis=1).reshape((-1, 1)))
@@ -59,7 +62,7 @@ class FaceField:
 
 class Field(FaceField):
     def __init__(self, name, mesh, field, boundary={}):
-        logger.info('initializing field {0}'.format(name))
+        logger.debug('initializing field {0}'.format(name))
         self.name = name
         self.mesh = mesh
         self.boundary = boundary

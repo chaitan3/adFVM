@@ -2,7 +2,7 @@ import logging
 # normal
 #logging.basicConfig(level=logging.WARNING)
 # debug
-#logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.INFO)
 
 def logger(name):
     return logging.getLogger(name)

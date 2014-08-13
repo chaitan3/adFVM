@@ -37,13 +37,13 @@ e = Cv*T
 def primitive(rho, rhoU, rhoE):
     U = rhoU/rho
     E = rhoE/rho
-    e = E - 0.5*U.mag()
+    e = E - 0.5*U.magSqr()
     p = (gamma-1)*rho*e
     return U, e, p
 
 def conservative(U, e, p):
     rho = p/(e*(gamma-1))
-    E = e + 0.5*U.mag()
+    E = e + 0.5*U.magSqr()
     return rho, rho*U, rho*E
 
 
@@ -63,21 +63,35 @@ for timeIndex in range(1, 300):
         rhoLF, rhoRF = upwind(rho, pos), upwind(rho, neg) 
         rhoULF, rhoURF = upwind(rhoU, pos), upwind(rhoU, neg) 
         rhoELF, rhoERF = upwind(rhoE, pos), upwind(rhoE, neg) 
+        print(max(np.isnan(rhoLF.field._value.tolist())))
+        print(max(np.isnan(rhoULF.field._value.ravel().tolist())))
+        print(max(np.isnan(rhoELF.field._value.tolist())))
 
         ULF, eLF, pLF = primitive(rhoLF, rhoULF, rhoELF)
         URF, eRF, pRF = primitive(rhoRF, rhoURF, rhoERF)
         U, e, p = primitive(rho, rhoU, rhoE)
+        print(max(np.isnan(e.field._value.tolist())))
+        print(max(np.isnan(U.field._value.ravel().tolist())))
+        print(max(np.isnan(p.field._value.tolist())))
 
+        
+        print((U.magSqr().field))
+        #print((rhoE/rho-0.5*U.magSqr()).field)
+        print(np.where(ad.value(pLF.field) < 0))
         cLF, cRF = (gamma*pLF/rhoLF)**0.5, (gamma*pRF/rhoRF)**0.5
         UnLF, UnRF = ULF.dotN(), URF.dotN()
         cF = (cLF + UnLF, cRF + UnRF, cLF - UnLF, cRF - UnRF)
         #wtf? adjoint? if not, make it readable
-        aF = -FaceField('aF', mesh, ad.adarray(np.max(ad.value(ad.hstack([x.field for x in cF])), axis=1)).reshape((-1,1)))
+        aF = FaceField('aF', mesh, ad.adarray(np.max(ad.value(ad.hstack([x.field for x in cF])), axis=1)).reshape((-1,1)))
+
 
         rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoLF-rhoRF)
         rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF) - 0.5*aF*(rhoULF-rhoURF)
         rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoELF-rhoERF)
         pF = 0.5*(pLF + pRF)
+        time.sleep(1)
+        print(div(rhoUFlux))
+        print(grad(pF))
 
         return [ddt(rho, rho0, dt) + div(rhoFlux),
                 ddt(rhoU, rhoU0, dt) + div(rhoUFlux) + grad(pF) - (laplacian(U, mu)), #+ div(grad(U))
