@@ -9,12 +9,8 @@ logger = utils.logger(__name__)
 
 def upwind(field, U):
     mesh = field.mesh
-    print(ad.sum(U.field * mesh.normals, axis=1))
-    positiveFlux = np.where(ad.sum(U.field * mesh.normals, axis=1) > 0)
+    positiveFlux = ad.value(ad.sum(U.field * mesh.normals, axis=1)) > 0
     negativeFlux = (positiveFlux == False)
-    print(positiveFlux)
-    print(np.where(positiveFlux))
-    print(np.where(negativeFlux))
     tmpField = ad.zeros((mesh.nFaces, field.field.shape[1]))
     tmpField[positiveFlux] = field.field[mesh.owner[positiveFlux]]
     tmpField[negativeFlux] = field.field[mesh.neighbour[negativeFlux]]

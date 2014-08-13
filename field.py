@@ -20,25 +20,25 @@ class FaceField:
         return self.field
 
     def mag(self):
-        return self.__class__(self.name, self.mesh, ad.sum(self.getInternalField(), axis=-1).reshape((-1,1)))
+        return self.__class__(self.name, self.mesh, ad.sum(self.field, axis=-1).reshape((-1,1)))
 
     def __neg__(self):
-        return self.__class__(self.name, self.mesh, -self.getInternalField())
+        return self.__class__(self.name, self.mesh, -self.field)
 
     def __mul__(self, field):
         if isinstance(field, numbers.Number):
-            return self.__class__(self.name, self.mesh, self.getInternalField() * field)
+            return self.__class__(self.name, self.mesh, self.field * field)
         else:
-            return self.__class__(self.name, self.mesh, self.getInternalField() * field.getInternalField())
+            return self.__class__(self.name, self.mesh, self.field * field.field)
 
     def __rmul__(self, field):
         return self * field
 
     def __add__(self, field):
         if isinstance(field, numbers.Number):
-            return self.__class__(self.name, self.mesh, self.getInternalField() + field)
+            return self.__class__(self.name, self.mesh, self.field + field)
         else:
-            return self.__class__(self.name, self.mesh, self.getInternalField() + field.getInternalField())
+            return self.__class__(self.name, self.mesh, self.field + field.field)
 
     def __radd__(self, field):
         return self.__add__(field)
@@ -47,33 +47,37 @@ class FaceField:
         return self.__add__(-field)
 
     def __div__(self, field):
-        return self.__class__(self.name, self.mesh, self.getInternalField() / field.getInternalField())
+        return self.__class__(self.name, self.mesh, self.field / field.field)
 
 class Field(FaceField):
-    def __init__(self, name, mesh, internalField, boundary={}):
+    def __init__(self, name, mesh, field, boundary={}):
         logger.info('initializing field {0}'.format(name))
         self.name = name
         self.mesh = mesh
-        self.field = ad.zeros((mesh.nCells, internalField.shape[1]))
+        self.field = ad.zeros((mesh.nCells, field.shape[1]))
         self.boundary = boundary
-        self.setInternalField(internalField)
+        if field.shape[0] == mesh.nInternalCells:
+            self.setInternalField(field)
+        else:
+            self.field = field
+        if len(list(boundary.keys())) == 0:
+            self.field = field
+            for patch in mesh.boundary:
+                self.boundary[patch] = {}
+                if mesh.boundary[patch]['type'] == 'cyclic':
+                    self.boundary[patch]['type'] = 'cyclic'
+                else:
+                    self.boundary[patch]['type'] = 'zeroGradient'
 
     @classmethod
     def zeros(self, name, mesh, dimensions):
         logger.info('initializing zeros field {0}'.format(name))
-        boundary = {}
-        for patch in mesh.boundary:
-            boundary[patch] = {}
-            if mesh.boundary[patch]['type'] == 'cyclic':
-                boundary[patch]['type'] = 'cyclic'
-            else:
-                boundary[patch]['type'] = 'zeroGradient'
-        return self(name, mesh, ad.zeros((mesh.nInternalCells, dimensions)), boundary)
+        return self(name, mesh, ad.zeros((mesh.nCells, dimensions)))
 
     @classmethod
     def copy(self, field):
         logger.info('copying field {0}'.format(field.name))
-        return self(field.name, field.mesh, field.getInternalField(), field.boundary.copy())
+        return self(field.name, field.mesh, field.field.copy(), field.boundary.copy())
 
     @classmethod
     def read(self, name, mesh, time):
