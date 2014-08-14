@@ -18,14 +18,13 @@ alpha = mu/Pr
 Cp = 2.5
 Cv = Cp/gamma
 
-
 #case = 'shockTube/'
 case = 'forwardStep/'
 mesh = Mesh(case)
 
 t = 0
-dt = 2e-3
-writeInterval = 50
+dt = 0.000357143
+writeInterval = 100
 nSteps = 2000
 
 #initialize
@@ -82,7 +81,6 @@ for timeIndex in range(1, nSteps):
         rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF) - 0.5*aF*(rhoURF-rhoULF)
         rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoERF-rhoELF)
         pF = 0.5*(pLF + pRF)
-        #FaceField('gradpF', mesh, grad(pF)).info()
         #time.sleep(1)
 
         return [ddt(rhoC, rho, dt) + div(rhoFlux),
