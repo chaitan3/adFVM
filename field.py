@@ -17,43 +17,42 @@ class FaceField:
         self.field = field
 
     def info(self):
-        print(self.name, self.field.shape)
+        print(self.name + ':', self.field.shape, end='')
         #print(max(np.isnan(self.field._value.tolist())))
-        print(ad.value(self.field).min(), ad.value(self.field).max())
-        
         #print(np.where(self.field._value < 0))
+        print(' min:', ad.value(self.field).min(), 'max:', ad.value(self.field).max())
 
     def magSqr(self):
-        return self.__class__(self.name, self.mesh, ad.sum(self.field**2, axis=1).reshape((-1,1)))
+        return self.__class__('magSqr({0}'.format(self.name), self.mesh, ad.sum(self.field**2, axis=1).reshape((-1,1)))
 
     def dotN(self):
-        return self.__class__(self.name, self.mesh, ad.sum(self.field * self.mesh.normals, axis=1).reshape((-1, 1)))
+        return self.__class__('{0}dotN'.format(self.name), self.mesh, ad.sum(self.field * self.mesh.normals, axis=1).reshape((-1, 1)))
 
     def outer(self, field):
-        return self.__class__(self.name, self.mesh, self.field[:,np.newaxis,:] * field.field[:,:,np.newaxis])
+        return self.__class__('{0}outer{1}'.format(self.name, field.name), self.mesh, self.field[:,np.newaxis,:] * field.field[:,:,np.newaxis])
 
     def __neg__(self):
-        return self.__class__(self.name, self.mesh, -self.field)
+        return self.__class__('-{0}'.format(self.name), self.mesh, -self.field)
 
     def __mul__(self, field):
         if isinstance(field, numbers.Number):
-            return self.__class__(self.name, self.mesh, self.field * field)
+            return self.__class__('{0}*{1}'.format(self.name, field), self.mesh, self.field * field)
         else:
             product = self.field * field.field
-            return self.__class__(self.name, self.mesh, self.field * field.field)
+            return self.__class__('{0}*{1}'.format(self.name, field.name), self.mesh, self.field * field.field)
 
 
     def __rmul__(self, field):
         return self * field
 
     def __pow__(self, power):
-        return self.__class__(self.name, self.mesh, self.field.__pow__(power))
+        return self.__class__('{0}**{1}'.format(self.name, power), self.mesh, self.field.__pow__(power))
 
     def __add__(self, field):
         if isinstance(field, numbers.Number):
-            return self.__class__(self.name, self.mesh, self.field + field)
+            return self.__class__('{0}+{1}'.format(self.name, field), self.mesh, self.field + field)
         else:
-            return self.__class__(self.name, self.mesh, self.field + field.field)
+            return self.__class__('{0}+{1}'.format(self.name, field.name), self.mesh, self.field + field.field)
 
     def __radd__(self, field):
         return self.__add__(field)
@@ -62,7 +61,7 @@ class FaceField:
         return self.__add__(-field)
 
     def __div__(self, field):
-        return self.__class__(self.name, self.mesh, self.field / field.field)
+        return self.__class__('{0}/{1}'.format(self.name, field.name), self.mesh, self.field / field.field)
 
 class Field(FaceField):
     def __init__(self, name, mesh, field, boundary={}):
@@ -70,11 +69,6 @@ class Field(FaceField):
         self.name = name
         self.mesh = mesh
         self.boundary = boundary
-        if field.shape[0] == mesh.nInternalCells:
-            self.field = ad.zeros((mesh.nCells, field.shape[1]))
-            self.setInternalField(field)
-        else:
-            self.field = field
         if len(list(boundary.keys())) == 0:
             self.field = field
             for patch in mesh.boundary:
@@ -83,6 +77,11 @@ class Field(FaceField):
                     self.boundary[patch]['type'] = 'cyclic'
                 else:
                     self.boundary[patch]['type'] = 'zeroGradient'
+        if field.shape[0] == mesh.nInternalCells:
+            self.field = ad.zeros((mesh.nCells, field.shape[1]))
+            self.setInternalField(field)
+        else:
+            self.field = field
 
     @classmethod
     def zeros(self, name, mesh, dimensions):

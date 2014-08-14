@@ -39,34 +39,33 @@ def primitive(rho, rhoU, rhoE):
     E = rhoE/rho
     e = E - 0.5*U.magSqr()
     p = (gamma-1)*rho*e
+    U.name, e.name, p.name = 'U', 'e', 'p'
     return U, e, p
 
 def conservative(U, e, p):
     rho = p/(e*(gamma-1))
     E = e + 0.5*U.magSqr()
-    return rho, rho*U, rho*E
+    rhoU = rho*U
+    rhoE = rho*E
+    rho.name, rhoU.name, rhoE.name = 'rho', 'rhoU', 'rhoE'
+    return rho, rhoU, rhoE
 
 
 rho, rhoU, rhoE = conservative(U, e, p)
-rho.name, rhoU.name, rhoE.name = 'rho', 'rhoU', 'rhoE'
 
 for timeIndex in range(1, 300):
 
     print('Simulation Time:', t, 'Time step:', dt)
 
-    rho0 = Field.copy(rho)
-    rhoU0 = Field.copy(rhoU)
-    rhoE0 = Field.copy(rhoE)
+    def eq(rhoC, rhoUC, rhoEC):
 
-    def eq(rho, rhoU, rhoE):
-
-        rhoLF, rhoRF = upwind(rho, pos), upwind(rho, neg) 
-        rhoULF, rhoURF = upwind(rhoU, pos), upwind(rhoU, neg) 
-        rhoELF, rhoERF = upwind(rhoE, pos), upwind(rhoE, neg) 
+        rhoLF, rhoRF = upwind(rhoC, pos), upwind(rhoC, neg) 
+        rhoULF, rhoURF = upwind(rhoUC, pos), upwind(rhoUC, neg) 
+        rhoELF, rhoERF = upwind(rhoEC, pos), upwind(rhoEC, neg) 
 
         ULF, eLF, pLF = primitive(rhoLF, rhoULF, rhoELF)
         URF, eRF, pRF = primitive(rhoRF, rhoURF, rhoERF)
-        U, e, p = primitive(rho, rhoU, rhoE)
+        U, e, p = primitive(rhoC, rhoUC, rhoEC)
 
         cLF, cRF = (gamma*pLF/rhoLF)**0.5, (gamma*pRF/rhoRF)**0.5
         UnLF, UnRF = ULF.dotN(), URF.dotN()
@@ -82,9 +81,9 @@ for timeIndex in range(1, 300):
         #FaceField('gradpF', mesh, grad(pF)).info()
         #time.sleep(1)
 
-        return [ddt(rho, rho0, dt) + div(rhoFlux),
-                ddt(rhoU, rhoU0, dt) + div(rhoUFlux) + grad(pF) - (laplacian(U, mu)), #+ div(grad(U))
-                ddt(rhoE, rhoE0, dt) + div(rhoEFlux) - (laplacian(e, alpha) )] #+ div(sigma, Uf))]
+        return [ddt(rhoC, rho, dt) + div(rhoFlux),
+                ddt(rhoUC, rhoU, dt) + div(rhoUFlux) + grad(pF) - (laplacian(U, mu)), #+ div(grad(U))
+                ddt(rhoEC, rhoE, dt) + div(rhoEFlux) - (laplacian(e, alpha) )] #+ div(sigma, Uf))]
     
     #implicit(eq, [rho, rhoU, rhoE])
     explicit(eq, [rho, rhoU, rhoE], dt)

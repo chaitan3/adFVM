@@ -24,7 +24,7 @@ mid = np.array([0.5, 0.5, 0.5])
 T.setInternalField(np.exp(-10*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)).reshape(-1,1))
 #T = Field.read('T', mesh, t)
 U = 1.*ad.ones((mesh.nFaces, 3))*np.array([1., 0., 0])
-Uf = FaceField('U', mesh, U)
+U = FaceField('U', mesh, U)
 
 #before = hp.heap()
 
@@ -34,7 +34,7 @@ for i in range(0, 300):
 
     print('Simulation Time:', t, 'Time step:', dt)
     T0 = Field.copy(T)
-    eq = lambda T: [ddt(T, T0, dt) + div((interpolate(T)*Uf).dotN()) - laplacian(T, DT)]
+    eq = lambda T: [ddt(T, T0, dt) + div(interpolate(T), U) - laplacian(T, DT)]
     implicit(eq, [T])
     t += dt
     t = round(t, 6)

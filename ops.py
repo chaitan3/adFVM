@@ -15,19 +15,22 @@ def upwind(field, U):
     tmpField = ad.zeros((mesh.nFaces, field.field.shape[1]))
     tmpField[positiveFlux] = field.field[mesh.owner[positiveFlux]]
     tmpField[negativeFlux] = field.field[mesh.neighbour[negativeFlux]]
-    return FaceField(field.name + 'f', mesh, tmpField)
+    return FaceField(field.name + 'F', mesh, tmpField)
 
 def interpolate(field):
     logger.info('interpolating {0}'.format(field.name))
     mesh = field.mesh
     factor = (mesh.faceDeltas/mesh.deltas)
-    faceField = FaceField(field.name + 'f', mesh, field.field[mesh.owner]*factor + field.field[mesh.neighbour]*(1-factor))
+    faceField = FaceField(field.name + 'F', mesh, field.field[mesh.owner]*factor + field.field[mesh.neighbour]*(1-factor))
     return faceField
 
-def div(field):
+def div(field, U=None):
     logger.info('divergence of {0}'.format(field.name))
     mesh = field.mesh
-    return (mesh.sumOp * (field.field * mesh.areas))/mesh.volumes
+    if U == None:
+        return (mesh.sumOp * (field.field * mesh.areas))/mesh.volumes
+    else:
+        return (mesh.sumOp * ((field * U).dotN().field * mesh.areas))/mesh.volumes
 
 def grad(field):
     logger.info('gradient of {0}'.format(field.name))
@@ -59,7 +62,6 @@ def explicit(equation, fields, dt):
     
     LHS = equation(*fields)
     for index in range(0, len(fields)):
-        fields[index].info()
         fields[index].setInternalField(fields[index].getInternalField() - LHS[index]*dt)
         fields[index].info()
         fields[index].field.obliviate()
@@ -90,6 +92,7 @@ def implicit(equation, fields):
     setInternalFields(solution)
     # clear memory usage
     for field in fields:
+        fields[index].info()
         field.field.obliviate()
 
     end = time.time()
