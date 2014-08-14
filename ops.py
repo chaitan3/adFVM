@@ -54,34 +54,38 @@ def ddt(field, field0, dt):
     logger.info('ddt of {0}'.format(field.name))
     return (field.getInternalField()-ad.value(field0.getInternalField()))/dt
 
-def explicit(equation, fields, dt):
+def explicit(equation, boundary, fields, dt):
     names = [field.name for field in fields]
     print('Time marching for', ' '.join(names))
-    
+    for index in range(0, len(fields)):
+        fields[index].info()
+     
     start = time.time()
     
     LHS = equation(*fields)
-    for index in range(0, len(fields)):
-        fields[index].setInternalField(fields[index].getInternalField() - LHS[index]*dt)
-        fields[index].info()
-        fields[index].field.obliviate()
+    internalFields = [(fields[index].getInternalField() - LHS[index]* dt) for index in range(0, len(fields))]
+    boundary(*internalFields)
 
     end = time.time()
     print('Time for iteration:', end-start)
  
 
-def implicit(equation, fields):
+def implicit(equation, boundary, fields):
     names = [field.name for field in fields]
     print('Solving for', ' '.join(names))
+    for index in range(0, len(fields)):
+        fields[index].info()
 
     start = time.time()
 
     nDims = [field.field.shape[1] for field in fields]
-    def setInternalFields(internalFields):
+    def setInternalFields(stackedInternalFields):
         curr = 0
+        internalFields = []
         for index in range(0, len(fields)):
-            fields[index].setInternalField(internalFields[:,curr:curr+nDims[index]])
+            internalFields.append(stackedInternalFields[:,curr:curr+nDims[index]])
             curr += nDims[index]
+        boundary(*internalFields)
 
     def solver(internalFields):
         setInternalFields(internalFields)
@@ -90,11 +94,11 @@ def implicit(equation, fields):
     stack = [field.getInternalField() for field in fields]
     solution = ad.solve(solver, ad.hstack(stack))
     setInternalFields(solution)
-    # clear memory usage
-    for index in range(0, len(fields)):
-        fields[index].info()
-        fields[index].field.obliviate()
 
     end = time.time()
     print('Time for iteration:', end-start)
+
+def forget(fields):
+    for field in fields:
+        field.field.obliviate()
 

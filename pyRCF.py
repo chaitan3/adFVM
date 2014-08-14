@@ -6,7 +6,7 @@ import time
 
 from mesh import Mesh
 from field import Field, FaceField
-from ops import  div, ddt, laplacian, grad, implicit, explicit
+from ops import  div, ddt, laplacian, grad, implicit, explicit, forget
 from ops import interpolate, upwind
 
 gamma = 1.4
@@ -43,7 +43,6 @@ def primitive(rho, rhoU, rhoE):
     e = E - 0.5*U.magSqr()
     p = (gamma-1)*rho*e
     T = e*(1./Cv)
-    U.name, T.name, p.name = 'U', 'T', 'p'
     return U, T, p
 
 def conservative(U, T, p):
@@ -55,14 +54,13 @@ def conservative(U, T, p):
     rho.name, rhoU.name, rhoE.name = 'rho', 'rhoU', 'rhoE'
     return rho, rhoU, rhoE
 
-
-rho, rhoU, rhoE = conservative(U, T, p)
-
 for timeIndex in range(1, nSteps):
 
     print('Simulation Time:', t, 'Time step:', dt)
 
-    def eq(rhoC, rhoUC, rhoEC):
+    rho, rhoU, rhoE = conservative(U, T, p)
+
+    def equation(rhoC, rhoUC, rhoEC):
 
         rhoLF, rhoRF = upwind(rhoC, pos), upwind(rhoC, neg) 
         rhoULF, rhoURF = upwind(rhoUC, pos), upwind(rhoUC, neg) 
@@ -70,8 +68,8 @@ for timeIndex in range(1, nSteps):
 
         ULF, TLF, pLF = primitive(rhoLF, rhoULF, rhoELF)
         URF, TRF, pRF = primitive(rhoRF, rhoURF, rhoERF)
-        U, T, p = primitive(rhoC, rhoUC, rhoEC)
-        e = Cv*T
+        UC, TC, pC = primitive(rhoC, rhoUC, rhoEC)
+        eC = Cv*TC
 
         cLF, cRF = (gamma*pLF/rhoLF)**0.5, (gamma*pRF/rhoRF)**0.5
         UnLF, UnRF = ULF.dotN(), URF.dotN()
@@ -88,16 +86,24 @@ for timeIndex in range(1, nSteps):
         #time.sleep(1)
 
         return [ddt(rhoC, rho, dt) + div(rhoFlux),
-                ddt(rhoUC, rhoU, dt) + div(rhoUFlux) + grad(pF) - (laplacian(U, mu)), #+ div(grad(U))
-                ddt(rhoEC, rhoE, dt) + div(rhoEFlux) - (laplacian(e, alpha) )] #+ div(sigma, Uf))]
+                ddt(rhoUC, rhoU, dt) + div(rhoUFlux) + grad(pF) - (laplacian(UC, mu)), #+ div(grad(U))
+                ddt(rhoEC, rhoE, dt) + div(rhoEFlux) - (laplacian(eC, alpha) )] #+ div(sigma, Uf))]
+
+    def boundary(rhoI, rhoUI, rhoEI):
+        rhoN = FaceField(rho.name, mesh, rhoI)
+        rhoUN = FaceField(rhoU.name, mesh, rhoUI)
+        rhoEN = FaceField(rhoE.name, mesh, rhoEI)
+        UN, TN, pN = primitive(rhoN, rhoUN, rhoEN)
+        U.setInternalField(UN.field)
+        T.setInternalField(TN.field)
+        p.setInternalField(pN.field)
     
-    #implicit(eq, [rho, rhoU, rhoE])
-    explicit(eq, [rho, rhoU, rhoE], dt)
+    explicit(equation, boundary, [rho, rhoU, rhoE], dt)
+    forget([p, T, U])
 
     t += dt
     t = round(t, 6)
     if timeIndex % writeInterval == 0:
-        U, T, p = primitive(rho, rhoU, rhoE)
         rho.write(t)
         rhoU.write(t)
         rhoE.write(t)

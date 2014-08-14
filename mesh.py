@@ -22,6 +22,7 @@ class Mesh:
         self.owner = self.read(meshDir + 'owner', int).ravel()
         self.neighbour = self.read(meshDir + 'neighbour', int).ravel()
         self.boundary = self.readBoundary(meshDir + 'boundary')
+        self.defaultBoundary = self.getDefaultBoundary()
 
         self.nInternalFaces = len(self.neighbour)
         self.nFaces = len(self.owner)
@@ -131,6 +132,17 @@ class Mesh:
         neighbour = sp.csc_matrix((-np.ones(self.nInternalFaces), self.neighbour[:self.nInternalFaces], Nindptr), shape=(self.nInternalCells, self.nFaces))
         sumOp = (owner + neighbour).tocsr()
         return adsparse.csr_matrix((ad.adarray(sumOp.data), sumOp.indices, sumOp.indptr), sumOp.shape)
+
+    def getDefaultBoundary(self):
+        logger.info('generated default boundary')
+        boundary = {}
+        for patch in self.boundary:
+            boundary[patch] = {}
+            if self.boundary[patch]['type'] in ['cyclic', 'symmetryPlane', 'empty']:
+                boundary[patch]['type'] = self.boundary[patch]['type']
+            else:
+                boundary[patch]['type'] = 'zeroGradient'
+        return boundary
 
     def createGhostCells(self):
         logger.info('generated ghost cells')

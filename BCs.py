@@ -24,12 +24,11 @@ def symmetryPlane(field, patch, indices, patchIndices):
         v = -mesh.normals[patchIndices]
         field.field[indices] -= 2*ad.sum(field.field[indices]*v, axis=1).reshape((-1,1))*v
 
+def fixedValue(field, patch, indices, patchIndices):
+    field.field[indices] = field.boundary[patch]['Rvalue']
+
 slip = symmetryPlane
 empty = zeroGradient
-
-def fixedValue(field, patch, indices, patchIndices):
-    field.field[indices] = field.boundary[patch]['value']
-
 inletOutlet = zeroGradient
     
 

@@ -6,7 +6,7 @@ import time
 
 from mesh import Mesh
 from field import Field, FaceField
-from ops import interpolate, div, ddt, implicit, laplacian
+from ops import interpolate, div, ddt, implicit, laplacian, forget
 
 #from guppy import hpy
 #hp = hpy()
@@ -33,9 +33,11 @@ for i in range(0, 300):
         T.write(t)
 
     print('Simulation Time:', t, 'Time step:', dt)
-    T0 = Field.copy(T)
-    eq = lambda T: [ddt(T, T0, dt) + div(interpolate(T), U) - laplacian(T, DT)]
-    implicit(eq, [T])
+    equation = lambda TC: [ddt(TC, T, dt) + div(interpolate(TC), U) - laplacian(TC, DT)]
+    boundary = lambda TI: T.setInternalField(TI)
+    
+    implicit(equation, boundary, [T])
+    forget([T])
     t += dt
     t = round(t, 6)
     print()

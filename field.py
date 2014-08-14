@@ -68,15 +68,11 @@ class Field(FaceField):
         logger.debug('initializing field {0}'.format(name))
         self.name = name
         self.mesh = mesh
-        self.boundary = boundary
         if len(list(boundary.keys())) == 0:
-            self.field = field
-            for patch in mesh.boundary:
-                self.boundary[patch] = {}
-                if mesh.boundary[patch]['type'] in ['cyclic', 'symmetryPlane', 'empty']:
-                    self.boundary[patch]['type'] = mesh.boundary[patch]['type']
-                else:
-                    self.boundary[patch]['type'] = 'zeroGradient'
+            self.boundary = mesh.defaultBoundary
+        else:
+            self.boundary = boundary
+
         if field.shape[0] == mesh.nInternalCells:
             self.field = ad.zeros((mesh.nCells, field.shape[1]))
             self.setInternalField(field)
@@ -109,7 +105,7 @@ class Field(FaceField):
             patch = re.search(re.compile(patchID + '[\s\r\n]+{(.*?)}', re.DOTALL), content).group(1)
             boundary[patchID] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch))
             if 'value' in boundary[patchID]:
-                boundary[patchID]['value'] = utils.extractField(boundary[patchID]['value'], mesh.boundary[patchID]['nFaces'], vector)
+                boundary[patchID]['Rvalue'] = utils.extractField(boundary[patchID]['value'], mesh.boundary[patchID]['nFaces'], vector)
         return self(name, mesh, internalField, boundary)
 
     def write(self, time):
@@ -147,6 +143,8 @@ class Field(FaceField):
             handle.write('\t' + patchID + '\n\t{\n')
             patch = self.boundary[patchID]
             for attr in patch:
+                if attr == 'Rvalue':
+                    continue
                 handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
             handle.write('\t}\n')
         handle.write('}\n')
