@@ -8,9 +8,6 @@ from mesh import Mesh
 from field import Field, FaceField
 from ops import interpolate, div, ddt, implicit, laplacian, forget
 
-#from guppy import hpy
-#hp = hpy()
-
 case = 'cyclic/'
 mesh = Mesh(case)
 
@@ -26,8 +23,6 @@ T.setInternalField(np.exp(-10*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInterna
 U = 1.*ad.ones((mesh.nFaces, 3))*np.array([1., 0., 0])
 U = FaceField('U', mesh, U)
 
-#before = hp.heap()
-
 for i in range(0, 300):
     if i % 20 == 0:
         T.write(t)
@@ -42,6 +37,3 @@ for i in range(0, 300):
     t = round(t, 6)
     print()
     
-    #after = hp.heap()
-    #leftover = after - before
-    #import pdb; pdb.set_trace()

@@ -88,6 +88,8 @@ def implicit(equation, boundary, fields):
         boundary(*internalFields)
 
     def solver(internalFields):
+        print(internalFields._value.max())
+        print(internalFields._value.min())
         setInternalFields(internalFields)
         return ad.hstack(equation(*fields))
 
