@@ -8,6 +8,7 @@ import utils
 logger = utils.logger(__name__)
 
 def upwind(field, U):
+    logger.info('upwinding {0} using {1}'.format(field.name, U.name))
     mesh = field.mesh
     positiveFlux = ad.value(ad.sum(U.field * mesh.normals, axis=1)) > 0
     negativeFlux = (positiveFlux == False)
@@ -50,7 +51,7 @@ def ddt(field, field0, dt):
     logger.info('ddt of {0}'.format(field.name))
     return (field.getInternalField()-ad.value(field0.getInternalField()))/dt
 
-def explicit(equation, fields):
+def explicit(equation, fields, dt):
     names = [field.name for field in fields]
     print('Time marching for', ' '.join(names))
     
@@ -58,7 +59,9 @@ def explicit(equation, fields):
     
     LHS = equation(*fields)
     for index in range(0, len(fields)):
-        fields[index].setInternalField(fields[index].getInternalField() - LHS[index])
+        fields[index].info()
+        fields[index].setInternalField(fields[index].getInternalField() - LHS[index]*dt)
+        fields[index].info()
         fields[index].field.obliviate()
 
     end = time.time()

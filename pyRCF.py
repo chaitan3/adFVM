@@ -26,8 +26,8 @@ dt = 1e-4
 writeInterval = 5
 
 #initialize
-pos = FaceField('pos', mesh, ad.ones((mesh.nFaces, 1)))
-neg = FaceField('neg', mesh, ad.ones((mesh.nFaces, 1)))
+pos = FaceField('pos', mesh, ad.adarray(mesh.normals))
+neg = FaceField('neg', mesh, ad.adarray(-mesh.normals))
 
 p = Field.read('p', mesh, t)
 T = Field.read('T', mesh, t)
@@ -63,21 +63,11 @@ for timeIndex in range(1, 300):
         rhoLF, rhoRF = upwind(rho, pos), upwind(rho, neg) 
         rhoULF, rhoURF = upwind(rhoU, pos), upwind(rhoU, neg) 
         rhoELF, rhoERF = upwind(rhoE, pos), upwind(rhoE, neg) 
-        print(max(np.isnan(rhoLF.field._value.tolist())))
-        print(max(np.isnan(rhoULF.field._value.ravel().tolist())))
-        print(max(np.isnan(rhoELF.field._value.tolist())))
 
         ULF, eLF, pLF = primitive(rhoLF, rhoULF, rhoELF)
         URF, eRF, pRF = primitive(rhoRF, rhoURF, rhoERF)
         U, e, p = primitive(rho, rhoU, rhoE)
-        print(max(np.isnan(e.field._value.tolist())))
-        print(max(np.isnan(U.field._value.ravel().tolist())))
-        print(max(np.isnan(p.field._value.tolist())))
 
-        
-        print((U.magSqr().field))
-        #print((rhoE/rho-0.5*U.magSqr()).field)
-        print(np.where(ad.value(pLF.field) < 0))
         cLF, cRF = (gamma*pLF/rhoLF)**0.5, (gamma*pRF/rhoRF)**0.5
         UnLF, UnRF = ULF.dotN(), URF.dotN()
         cF = (cLF + UnLF, cRF + UnRF, cLF - UnLF, cRF - UnRF)
@@ -85,20 +75,19 @@ for timeIndex in range(1, 300):
         aF = FaceField('aF', mesh, ad.adarray(np.max(ad.value(ad.hstack([x.field for x in cF])), axis=1)).reshape((-1,1)))
 
 
-        rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoLF-rhoRF)
-        rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF) - 0.5*aF*(rhoULF-rhoURF)
-        rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoELF-rhoERF)
+        rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF)
+        rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF) - 0.5*aF*(rhoURF-rhoULF)
+        rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoERF-rhoELF)
         pF = 0.5*(pLF + pRF)
-        time.sleep(1)
-        print(div(rhoUFlux))
-        print(grad(pF))
+        #FaceField('gradpF', mesh, grad(pF)).info()
+        #time.sleep(1)
 
         return [ddt(rho, rho0, dt) + div(rhoFlux),
                 ddt(rhoU, rhoU0, dt) + div(rhoUFlux) + grad(pF) - (laplacian(U, mu)), #+ div(grad(U))
                 ddt(rhoE, rhoE0, dt) + div(rhoEFlux) - (laplacian(e, alpha) )] #+ div(sigma, Uf))]
     
     #implicit(eq, [rho, rhoU, rhoE])
-    explicit(eq, [rho, rhoU, rhoE])
+    explicit(eq, [rho, rhoU, rhoE], dt)
 
     t += dt
     t = round(t, 6)

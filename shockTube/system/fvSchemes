@@ -15,7 +15,8 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-fluxScheme      Kurganov;
+//fluxScheme      Kurganov;
+fluxScheme      Tadmor;
 
 ddtSchemes
 {

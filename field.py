@@ -17,7 +17,11 @@ class FaceField:
         self.field = field
 
     def info(self):
-        print(self.field.
+        print(self.name, self.field.shape)
+        #print(max(np.isnan(self.field._value.tolist())))
+        print(ad.value(self.field).min(), ad.value(self.field).max())
+        
+        #print(np.where(self.field._value < 0))
 
     def magSqr(self):
         return self.__class__(self.name, self.mesh, ad.sum(self.field**2, axis=1).reshape((-1,1)))
