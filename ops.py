@@ -99,6 +99,7 @@ def implicit(equation, boundary, fields):
     print('Time for iteration:', end-start)
 
 def forget(fields):
+    logger.info('forgetting fields')
     for field in fields:
         field.field.obliviate()
 
