@@ -95,7 +95,7 @@ class Field(FaceField):
 
     @classmethod
     def read(self, name, mesh, time):
-        print('reading field {0}, time {1}\n'.format(name, time))
+        print('reading field {0}, time {1}'.format(name, time))
         timeDir = '{0}/{1}/'.format(mesh.case, time)
 
         content = utils.removeCruft(open(timeDir + name, 'r').read(), keepHeader=True)
@@ -124,7 +124,7 @@ class Field(FaceField):
         return self(name, mesh, internalField, boundary)
 
     def write(self, time):
-        print('writing field {0}, time {1}\n'.format(self.name, time))
+        print('writing field {0}, time {1}'.format(self.name, time))
         timeDir = '{0}/{1}/'.format(self.mesh.case, time)
         if not exists(timeDir):
             makedirs(timeDir)

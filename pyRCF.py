@@ -32,17 +32,19 @@ neg = FaceField('neg', mesh, ad.adarray(-mesh.normals))
 p = Field.read('p', mesh, t)
 T = Field.read('T', mesh, t)
 U = Field.read('U', mesh, t)
-e = Cv*T
+print()
 
 def primitive(rho, rhoU, rhoE):
     U = rhoU/rho
     E = rhoE/rho
     e = E - 0.5*U.magSqr()
     p = (gamma-1)*rho*e
-    U.name, e.name, p.name = 'U', 'e', 'p'
-    return U, e, p
+    T = e*(1./Cv)
+    U.name, T.name, p.name = 'U', 'T', 'p'
+    return U, T, p
 
-def conservative(U, e, p):
+def conservative(U, T, p):
+    e = Cv*T
     rho = p/(e*(gamma-1))
     E = e + 0.5*U.magSqr()
     rhoU = rho*U
@@ -51,7 +53,7 @@ def conservative(U, e, p):
     return rho, rhoU, rhoE
 
 
-rho, rhoU, rhoE = conservative(U, e, p)
+rho, rhoU, rhoE = conservative(U, T, p)
 
 for timeIndex in range(1, 300):
 
@@ -63,9 +65,10 @@ for timeIndex in range(1, 300):
         rhoULF, rhoURF = upwind(rhoUC, pos), upwind(rhoUC, neg) 
         rhoELF, rhoERF = upwind(rhoEC, pos), upwind(rhoEC, neg) 
 
-        ULF, eLF, pLF = primitive(rhoLF, rhoULF, rhoELF)
-        URF, eRF, pRF = primitive(rhoRF, rhoURF, rhoERF)
-        U, e, p = primitive(rhoC, rhoUC, rhoEC)
+        ULF, TLF, pLF = primitive(rhoLF, rhoULF, rhoELF)
+        URF, TRF, pRF = primitive(rhoRF, rhoURF, rhoERF)
+        U, T, p = primitive(rhoC, rhoUC, rhoEC)
+        e = Cv*T
 
         cLF, cRF = (gamma*pLF/rhoLF)**0.5, (gamma*pRF/rhoRF)**0.5
         UnLF, UnRF = ULF.dotN(), URF.dotN()
@@ -90,10 +93,14 @@ for timeIndex in range(1, 300):
 
     t += dt
     t = round(t, 6)
-    print()
-
     if timeIndex % writeInterval == 0:
+        U, T, p = primitive(rho, rhoU, rhoE)
         rho.write(t)
         rhoU.write(t)
         rhoE.write(t)
+        U.write(t)
+        T.write(t)
+        p.write(t)
+
+    print()
    

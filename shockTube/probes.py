@@ -11,5 +11,6 @@ for i in range(0, nt):
     data = mlab.csv2rec (fn + ts[i] + '/line_T_p_rho.xy', delimiter=' ', names=['d','T','p','rho'],converterd={'d':float, 'T':float,'p':float,'rho':float})
     print ts[i]
     plt.plot(data['d'], data['rho'])
-    plt.show()
+    plt.savefig('rho' + str(i) + '.png')
+    plt.clf()
 
