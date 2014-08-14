@@ -14,16 +14,19 @@ gamma = 1.4
 mu = 0.
 Pr = 0.7
 alpha = mu/Pr
-Cp = 1007
+#Cp = 1007
+Cp = 2.5
 Cv = Cp/gamma
 
 
-case = 'shockTube/'
+#case = 'shockTube/'
+case = 'forwardStep/'
 mesh = Mesh(case)
 
 t = 0
-dt = 1e-4
-writeInterval = 5
+dt = 2e-3
+writeInterval = 50
+nSteps = 2000
 
 #initialize
 pos = FaceField('pos', mesh, ad.adarray(mesh.normals))
@@ -55,7 +58,7 @@ def conservative(U, T, p):
 
 rho, rhoU, rhoE = conservative(U, T, p)
 
-for timeIndex in range(1, 300):
+for timeIndex in range(1, nSteps):
 
     print('Simulation Time:', t, 'Time step:', dt)
 

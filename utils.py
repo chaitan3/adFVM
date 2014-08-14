@@ -8,6 +8,8 @@ def logger(name):
     return logging.getLogger(name)
 
 import re
+import numpy as np
+import numpad as ad
 
 foamHeader = '''/*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
@@ -28,5 +30,23 @@ def removeCruft(content, keepHeader=False):
     if not keepHeader:
         content = re.sub(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), '', content)
     return content
+
+def extractField(data, size, vector):
+    extractScalar = lambda x: re.findall('[0-9\.Ee\-]+', x)
+    if vector:
+        extractVector = lambda y: list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', y)))
+        extractor = extractVector
+    else:
+        extractor = extractScalar
+    nonUniform = re.search('nonUniform', data)
+    data = re.search(re.compile('[A-Za-z<>\s\r\n]+(.*)', re.DOTALL), data).group(1)
+    if nonUniform != None:
+        start = data.find('(')
+        internalField = ad.adarray(extractor(data[start:])).reshape((-1,1))
+    else:
+        internalField = ad.adarray(np.tile(np.array(extractor(data)), (size, 1)))
+    return internalField
+
+
 
 

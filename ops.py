@@ -91,9 +91,9 @@ def implicit(equation, fields):
     solution = ad.solve(solver, ad.hstack(stack))
     setInternalFields(solution)
     # clear memory usage
-    for field in fields:
+    for index in range(0, len(fields)):
         fields[index].info()
-        field.field.obliviate()
+        fields[index].field.obliviate()
 
     end = time.time()
     print('Time for iteration:', end-start)

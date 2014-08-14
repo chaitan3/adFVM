@@ -73,8 +73,8 @@ class Field(FaceField):
             self.field = field
             for patch in mesh.boundary:
                 self.boundary[patch] = {}
-                if mesh.boundary[patch]['type'] == 'cyclic':
-                    self.boundary[patch]['type'] = 'cyclic'
+                if mesh.boundary[patch]['type'] in ['cyclic', 'symmetryPlane', 'empty']:
+                    self.boundary[patch]['type'] = mesh.boundary[patch]['type']
                 else:
                     self.boundary[patch]['type'] = 'zeroGradient'
         if field.shape[0] == mesh.nInternalCells:
@@ -100,27 +100,16 @@ class Field(FaceField):
 
         content = utils.removeCruft(open(timeDir + name, 'r').read(), keepHeader=True)
         foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
-        dtype = re.search('class[\s\t]+(.*?);', foamFile).group(1)
-        extractScalar = lambda x: re.findall('[0-9\.Ee\-]+', x)
-        if dtype == 'volVectorField':
-            extractVector = lambda y: list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', y)))
-            extractor = extractVector
-        else:
-            extractor = extractScalar
-       
-        data = re.search(re.compile('internalField[\s\r\na-zA-Z<>]+(.*?);', re.DOTALL), content).group(1)
-        nonUniform = re.search('[\r\n\s]*[0-9]+[\r\n\s]*\(', data)
-        if nonUniform != None:
-            start = data.find('(')
-            internalField = ad.adarray(extractor(data[start:])).reshape((-1,1))
-        else:
-            internalField = ad.adarray(np.tile(np.array(extractor(data)), (mesh.nInternalCells, 1)))
-
+        vector = re.search('class[\s\t]+(.*?);', foamFile).group(1) == 'volVectorField'
+        data = re.search(re.compile('internalField[\s\r\n]+(.*?);', re.DOTALL), content).group(1)
+        internalField = utils.extractField(data, mesh.nInternalCells, vector)
         content = content[content.find('boundaryField'):]
         boundary = {}
         for patchID in mesh.boundary:
             patch = re.search(re.compile(patchID + '[\s\r\n]+{(.*?)}', re.DOTALL), content).group(1)
             boundary[patchID] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch))
+            if 'value' in boundary[patchID]:
+                boundary[patchID]['value'] = utils.extractField(boundary[patchID]['value'], mesh.boundary[patchID]['nFaces'], vector)
         return self(name, mesh, internalField, boundary)
 
     def write(self, time):
@@ -181,13 +170,7 @@ class Field(FaceField):
             nFaces = patch['nFaces']
             endFace = startFace + nFaces
             indices = mesh.nInternalCells + range(startFace, endFace) - mesh.nInternalFaces 
-            if patch['type'] == 'cyclic':
-                neighbourPatch = mesh.boundary[patch['neighbourPatch']]   
-                neighbourStartFace = neighbourPatch['startFace']
-                neighbourEndFace = neighbourStartFace + nFaces
-                self.field[indices] = self.field[mesh.owner[neighbourStartFace:neighbourEndFace]]
-            else:
-                boundaryCondition = self.boundary[patchID]['type']
-                getattr(BCs, boundaryCondition)(self, indices, np.arange(startFace, endFace))
+            boundaryCondition = self.boundary[patchID]['type']
+            getattr(BCs, boundaryCondition)(self, patchID, indices, np.arange(startFace, endFace))
 
 
