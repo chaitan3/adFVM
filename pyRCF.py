@@ -25,7 +25,7 @@ mesh = Mesh(case)
 t = 0
 dt = 0.000357143
 writeInterval = 100
-nSteps = 2000
+nSteps = 10000
 
 #initialize
 pos = FaceField('pos', mesh, ad.adarray(mesh.normals))
@@ -76,12 +76,12 @@ for timeIndex in range(1, nSteps):
         #wtf? adjoint? if not, make it readable
         aF = FaceField('aF', mesh, ad.adarray(np.max(ad.value(ad.hstack([x.field for x in cF])), axis=1)).reshape((-1,1)))
 
-
         rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF)
         rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF) - 0.5*aF*(rhoURF-rhoULF)
         rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoERF-rhoELF)
         pF = 0.5*(pLF + pRF)
         #time.sleep(1)
+        #Field('divRho', mesh, div(rhoFlux)).write(t)
 
         return [ddt(rhoC, rho, dt) + div(rhoFlux),
                 ddt(rhoUC, rhoU, dt) + div(rhoUFlux) + grad(pF) - (laplacian(UC, mu)), #+ div(grad(U))
