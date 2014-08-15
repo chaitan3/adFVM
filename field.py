@@ -109,6 +109,7 @@ class Field(FaceField):
         return self(name, mesh, internalField, boundary)
 
     def write(self, time):
+        np.set_printoptions(precision=16)
         print('writing field {0}, time {1}'.format(self.name, time))
         timeDir = '{0}/{1}/'.format(self.mesh.case, time)
         if not exists(timeDir):

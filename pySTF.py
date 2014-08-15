@@ -29,7 +29,7 @@ for i in range(0, 300):
 
     T0 = Field.copy(T)
     print('Simulation Time:', t, 'Time step:', dt)
-    equation = lambda TC: [ddt(TC, T0, dt) + div(interpolate(TC), U) - laplacian(TC, DT)]
+    equation = lambda T: [T, T0, dt) + div(interpolate(T), U) - laplacian(T, DT)]
     boundary = lambda TI: T.setInternalField(TI)
     
     implicit(equation, boundary, [T])

@@ -15,6 +15,14 @@ def upwind(field, U):
     tmpField = ad.zeros((mesh.nFaces, field.field.shape[1]))
     tmpField[positiveFlux] = field.field[mesh.owner[positiveFlux]]
     tmpField[negativeFlux] = field.field[mesh.neighbour[negativeFlux]]
+
+    # correction for ghost cells
+    for patchID in field.boundary:
+        if field.boundary[patchID]['type'] != 'cyclic':
+            startFace = mesh.boundary[patchID]['startFace']
+            endFace = startFace + mesh.boundary[patchID]['nFaces']
+            tmpField[startFace:endFace] = field.field[mesh.neighbour[startFace:endFace]]
+
     return FaceField(field.name + 'F', mesh, tmpField)
 
 def interpolate(field):
@@ -63,7 +71,7 @@ def explicit(equation, boundary, fields, dt):
     start = time.time()
     
     LHS = equation(*fields)
-    internalFields = [(fields[index].getInternalField() - LHS[index]* dt) for index in range(0, len(fields))]
+    internalFields = [(fields[index].getInternalField() - LHS[index]*dt) for index in range(0, len(fields))]
     boundary(*internalFields)
 
     end = time.time()

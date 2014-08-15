@@ -25,7 +25,7 @@ def symmetryPlane(field, patch, indices, patchIndices):
     zeroGradient(field, patch, indices, patchIndices)
     if field.field.shape[1] == 3:
         v = -mesh.normals[patchIndices]
-        field.field[indices] -= 1*ad.sum(field.field[indices]*v, axis=1).reshape((-1,1))*v
+        field.field[indices] -= ad.sum(field.field[indices]*v, axis=1).reshape((-1,1))*v
 
 def fixedValue(field, patch, indices, patchIndices):
     logger.debug('fixedValue BC for {0}'.format(patch))
