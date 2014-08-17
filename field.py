@@ -22,8 +22,14 @@ class FaceField:
         #print(np.where(self.field._value < 0))
         print(' min:', ad.value(self.field).min(), 'max:', ad.value(self.field).max())
 
+    def component(self, component): 
+        return self.__class__('{0}.{1}'.format(self.name, component), self.mesh, self.field[:, component].reshape((-1,1)))
+
     def magSqr(self):
         return self.__class__('magSqr({0}'.format(self.name), self.mesh, ad.sum(self.field**2, axis=1).reshape((-1,1)))
+
+    def mag(self):
+        return self.magSqr()**0.5
 
     def dot(self, field):
         return self.__class__('{0}dot{1}'.format(self.name, field.name), self.mesh, ad.sum(self.field * field.field, axis=1).reshape((-1, 1)))

@@ -11,18 +11,40 @@ def TVD(field, U):
     logger.info('TVD {0} using {1}'.format(field.name, U.name))
     mesh = field.mesh
     positiveFlux = ad.value(ad.sum(U.field * mesh.normals, axis=1)) > 0
-    faceField = ad.zeros((mesh.nFaces, field.field.shape[1]))
-    # negativeFlux?
-    C = mesh.owner[positiveFlux]
-    D = mesh.neighbour[positiveFlux]
-    phi = field.field
+    negativeFlux = (positiveFlux == False)
+
     # van leer
-    gradPhi = grad(interpolate(field))
-    gradPhidotR = ad.sum(gradPhi[C]*(mesh.cellCentres[D]-mesh.cellCentres[C]), axis=1).reshape((-1,1))
-    r = ad.value(2*gradPhidotR/(phi[D] - phi[C] + 1e-16) - 1)
     psi = lambda r: ad.adarray((r + np.abs(r))/(1+np.abs(r)))
-    faceField[positiveFlux] = phi[C] + 0.5*psi(r)*(phi[D] - phi[C])
-    # boundary corrections
+
+    faceField = ad.zeros((mesh.nFaces, field.field.shape[1]))
+    # restructure, cyclic boundaries?
+    for C, D, flux in [[mesh.owner[positiveFlux], mesh.neighbour[positiveFlux], positiveFlux], [mesh.neighbour[negativeFlux], mesh.owner[negativeFlux], negativeFlux]]:
+        def gradient(x):
+            gradx = grad(interpolate(x))
+            return FaceField('grad' + x.name, mesh, ad.concatenate((gradx, ad.zeros((mesh.nGhostCells, 3))))[C])
+        R = FaceField('R', mesh, mesh.cellCentres[D] - mesh.cellCentres[C])
+        gradF = FaceField('gradF', mesh, field.field[D]-field.field[C])
+        if field.field.shape[1] == 1:
+            gradC = gradient(field)
+            r = 2*gradC.dot(R)/(gradF + 1e-16) - 1
+        else:
+            gradCxdotR = gradient(field.component(0)).dot(R)
+            gradCydotR = gradient(field.component(1)).dot(R)
+            gradCzdotR = gradient(field.component(2)).dot(R)
+            gradCdotR = FaceField('gradCdotR', mesh, ad.hstack((gradCxdotR.field, gradCydotR.field, gradCzdotR.field)))
+            r = 2*gradCdotR.dot(gradF)/(gradF.magSqr() + 1e-16) - 1
+        #if r.field.shape[0] > 0:
+        #    r.info()
+        r = ad.value(r.field)
+        faceField[flux] = field.field[C] + 0.5*psi(r)*(field.field[D] - field.field[C])
+
+    # correction for ghost cells
+    for patchID in field.boundary:
+        if field.boundary[patchID]['type'] != 'cyclic':
+            startFace = mesh.boundary[patchID]['startFace']
+            endFace = startFace + mesh.boundary[patchID]['nFaces']
+            faceField[startFace:endFace] = field.field[mesh.neighbour[startFace:endFace]]
+
     return FaceField(field.name + 'F', mesh, faceField)
 
 def upwind(field, U):
@@ -34,7 +56,6 @@ def upwind(field, U):
     faceField[positiveFlux] = field.field[mesh.owner[positiveFlux]]
     faceField[negativeFlux] = field.field[mesh.neighbour[negativeFlux]]
 
-    # correction for ghost cells
     for patchID in field.boundary:
         if field.boundary[patchID]['type'] != 'cyclic':
             startFace = mesh.boundary[patchID]['startFace']
