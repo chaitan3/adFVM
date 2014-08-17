@@ -7,16 +7,19 @@ import time
 from mesh import Mesh
 from field import Field, FaceField
 from ops import  div, ddt, laplacian, grad, implicit, explicit, forget
-from ops import interpolate, upwind
+from ops import interpolate, TVD
 
-gamma = 1.4
+R = 8.314462839935299
+Cp = 2.5
+M = 11.6403
+#gamma = 1./(1.-R/(M*Cp))
+gamma = 1.399997983915712
+Cv = Cp/gamma
+
 #mu = 2.5e-5
 mu = 0.
 Pr = 0.7
 alpha = mu/Pr
-#Cp = 1007
-Cp = 2.5
-Cv = Cp/gamma
 
 #case = 'shockTube/'
 case = 'forwardStep/'
@@ -24,7 +27,7 @@ mesh = Mesh(case)
 
 t = 0
 dt = 0.000357143
-writeInterval = 1
+writeInterval = 100
 nSteps = 10000
 
 #initialize
@@ -63,20 +66,12 @@ for timeIndex in range(1, nSteps):
 
     rho0, rhoU0, rhoE0 = Field.copy(rho), Field.copy(rhoU), Field.copy(rhoE)
 
-    for patch in mesh.boundary:
-        s = mesh.boundary[patch]['startFace']
-        e = s + mesh.boundary[patch]['nFaces']
-        indices = mesh.nInternalCells + range(s, e) - mesh.nInternalFaces 
-        #print(patch, rhoU.field[indices])
-         
-
     def equation(rho, rhoU, rhoE):
         np.set_printoptions(precision=16)
 
-        rhoLF, rhoRF = upwind(rho, pos), upwind(rho, neg) 
-        rhoULF, rhoURF = upwind(rhoU, pos), upwind(rhoU, neg) 
-        rhoELF, rhoERF = upwind(rhoE, pos), upwind(rhoE, neg) 
-        print(rhoELF.field[:100]._value)
+        rhoLF, rhoRF = TVD(rho, pos), TVD(rho, neg) 
+        rhoULF, rhoURF = TVD(rhoU, pos), TVD(rhoU, neg) 
+        rhoELF, rhoERF = TVD(rhoE, pos), TVD(rhoE, neg) 
 
         ULF, TLF, pLF = primitive(rhoLF, rhoULF, rhoELF)
         URF, TRF, pRF = primitive(rhoRF, rhoURF, rhoERF)
@@ -86,7 +81,7 @@ for timeIndex in range(1, nSteps):
 
         #wtf? adjoint? if not, make it readable
         c = (gamma*p/rho)**0.5
-        cLF, cRF = upwind(c, pos), upwind(c, neg)
+        cLF, cRF = TVD(c, pos), TVD(c, neg)
         UnLF, UnRF = ULF.dotN(), URF.dotN()
         c0 = cLF*0
         maxCF = (UnLF + cLF, UnRF + cLF, c0)
@@ -110,10 +105,9 @@ for timeIndex in range(1, nSteps):
         #    print(patch, f[s:e])
            
         #time.sleep(1)
-        print(rhoEFlux.field[:100]._value*mesh.areas[:100])
-        Field('divRho', mesh, div(rhoFlux)).write(t)
-        Field('divRhoU', mesh, div(rhoUFlux) + grad(pF)).write(t)
-        Field('divRhoE', mesh, div(rhoEFlux)).write(t)
+        #Field('divRho', mesh, div(rhoFlux)).write(t)
+        #Field('divRhoU', mesh, div(rhoUFlux) + grad(pF)).write(t)
+        #Field('divRhoE', mesh, div(rhoEFlux)).write(t)
 
         return [ddt(rho, rho0, dt) + div(rhoFlux),
                 ddt(rhoU, rhoU0, dt) + div(rhoUFlux) + grad(pF) - (laplacian(U, mu)), #+ div(grad(U))

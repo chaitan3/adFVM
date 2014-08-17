@@ -7,23 +7,41 @@ from field import Field, FaceField
 import utils
 logger = utils.logger(__name__)
 
+def TVD(field, U):
+    logger.info('TVD {0} using {1}'.format(field.name, U.name))
+    mesh = field.mesh
+    positiveFlux = ad.value(ad.sum(U.field * mesh.normals, axis=1)) > 0
+    faceField = ad.zeros((mesh.nFaces, field.field.shape[1]))
+    # negativeFlux?
+    C = mesh.owner[positiveFlux]
+    D = mesh.neighbour[positiveFlux]
+    phi = field.field
+    # van leer
+    gradPhi = grad(interpolate(field))
+    gradPhidotR = ad.sum(gradPhi[C]*(mesh.cellCentres[D]-mesh.cellCentres[C]), axis=1).reshape((-1,1))
+    r = ad.value(2*gradPhidotR/(phi[D] - phi[C] + 1e-16) - 1)
+    psi = lambda r: ad.adarray((r + np.abs(r))/(1+np.abs(r)))
+    faceField[positiveFlux] = phi[C] + 0.5*psi(r)*(phi[D] - phi[C])
+    # boundary corrections
+    return FaceField(field.name + 'F', mesh, faceField)
+
 def upwind(field, U):
     logger.info('upwinding {0} using {1}'.format(field.name, U.name))
     mesh = field.mesh
     positiveFlux = ad.value(ad.sum(U.field * mesh.normals, axis=1)) > 0
     negativeFlux = (positiveFlux == False)
-    tmpField = ad.zeros((mesh.nFaces, field.field.shape[1]))
-    tmpField[positiveFlux] = field.field[mesh.owner[positiveFlux]]
-    tmpField[negativeFlux] = field.field[mesh.neighbour[negativeFlux]]
+    faceField = ad.zeros((mesh.nFaces, field.field.shape[1]))
+    faceField[positiveFlux] = field.field[mesh.owner[positiveFlux]]
+    faceField[negativeFlux] = field.field[mesh.neighbour[negativeFlux]]
 
     # correction for ghost cells
     for patchID in field.boundary:
         if field.boundary[patchID]['type'] != 'cyclic':
             startFace = mesh.boundary[patchID]['startFace']
             endFace = startFace + mesh.boundary[patchID]['nFaces']
-            tmpField[startFace:endFace] = field.field[mesh.neighbour[startFace:endFace]]
+            faceField[startFace:endFace] = field.field[mesh.neighbour[startFace:endFace]]
 
-    return FaceField(field.name + 'F', mesh, tmpField)
+    return FaceField(field.name + 'F', mesh, faceField)
 
 def interpolate(field):
     logger.info('interpolating {0}'.format(field.name))

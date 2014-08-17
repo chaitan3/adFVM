@@ -25,6 +25,9 @@ class FaceField:
     def magSqr(self):
         return self.__class__('magSqr({0}'.format(self.name), self.mesh, ad.sum(self.field**2, axis=1).reshape((-1,1)))
 
+    def dot(self, field):
+        return self.__class__('{0}dot{1}'.format(self.name, field.name), self.mesh, ad.sum(self.field * field.field, axis=1).reshape((-1, 1)))
+
     def dotN(self):
         return self.__class__('{0}dotN'.format(self.name), self.mesh, ad.sum(self.field * self.mesh.normals, axis=1).reshape((-1, 1)))
 
