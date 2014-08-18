@@ -10,7 +10,7 @@ from scipy import sparse as sp
 import utils
 logger = utils.logger(__name__)
 
-class Mesh:
+class Mesh(object):
     def __init__(self, caseDir):
         start = time.time()
         print('Reading mesh')
@@ -135,12 +135,12 @@ class Mesh:
     def getDefaultBoundary(self):
         logger.info('generated default boundary')
         boundary = {}
-        for patch in self.boundary:
-            boundary[patch] = {}
-            if self.boundary[patch]['type'] in ['cyclic', 'symmetryPlane', 'empty']:
-                boundary[patch]['type'] = self.boundary[patch]['type']
+        for patchID in self.boundary:
+            boundary[patchID] = {}
+            if self.boundary[patchID]['type'] in ['cyclic', 'symmetryPlane', 'empty']:
+                boundary[patchID]['type'] = self.boundary[patchID]['type']
             else:
-                boundary[patch]['type'] = 'zeroGradient'
+                boundary[patchID]['type'] = 'zeroGradient'
         return boundary
 
     def createGhostCells(self):

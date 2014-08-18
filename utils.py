@@ -41,7 +41,7 @@ def extractField(data, size, vector):
         extractor = extractScalar
     nonUniform = re.search('nonUniform', data)
     data = re.search(re.compile('[A-Za-z<>\s\r\n]+(.*)', re.DOTALL), data).group(1)
-    if nonUniform != None:
+    if nonUniform is not None:
         start = data.find('(')
         internalField = ad.adarray(extractor(data[start:])).reshape((-1,1))
     else:

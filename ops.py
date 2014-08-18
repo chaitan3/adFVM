@@ -22,12 +22,11 @@ def TVD_dual(field):
     for C, D in [[owner, neighbour], [neighbour, owner]]:
         R = Field('R', mesh, mesh.cellCentres[D] - mesh.cellCentres[C])
         gradC = Field('gradC({0})'.format(field.name), mesh, gradField.field[C])
-        gradF = Field('gradF({1})'.format(field.name), mesh, field.field[D]-field.field[C])
+        gradF = Field('gradF({0})'.format(field.name), mesh, field.field[D]-field.field[C])
         if field.field.shape[1] == 1:
             r = 2*gradC.dot(R)/(gradF + SMALL) - 1
         else:
             R.field = R.field[:,np.newaxis,:]
-            #R.field = R.field[:,:,np.newaxis]
             r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + SMALL) - 1
         faceFields.append(Field(field.name + 'F', mesh, ad.zeros((mesh.nFaces, field.field.shape[1]))))
         faceFields[-1].field[:mesh.nInternalFaces] = field.field[C] + 0.5*psi(r).field*(field.field[D] - field.field[C])
@@ -39,11 +38,14 @@ def TVD_dual(field):
                 faceFields[-1].field[startFace:endFace] = field.field[mesh.neighbour[startFace:endFace]]
 
     return faceFields
-def upwind(field, U): logger.info('upwinding {0} using {1}'.format(field.name, U.name)) mesh = field.mesh
+
+def upwind(field, U): 
+    logger.info('upwinding {0} using {1}'.format(field.name, U.name)) 
+    mesh = field.mesh
     faceField = ad.zeros((mesh.nFaces, field.field.shape[1]))
     def update(start, end):
         positiveFlux = ad.value(ad.sum(U.field[start:end] * mesh.normals[start:end], axis=1)) > 0
-        negativeFlux = (positiveFlux == False)
+        negativeFlux = 1 - positiveFlux
         faceField[positiveFlux] = field.field[mesh.owner[positiveFlux]]
         faceField[negativeFlux] = field.field[mesh.neighbour[negativeFlux]]
 
@@ -68,7 +70,7 @@ def interpolate(field):
 def div(field, U=None):
     logger.info('divergence of {0}'.format(field.name))
     mesh = field.mesh
-    if U == None:
+    if U is None:
         divField = (mesh.sumOp * (field.field * mesh.areas))/mesh.volumes
     else:
         divField = (mesh.sumOp * ((field * U).dotN().field * mesh.areas))/mesh.volumes

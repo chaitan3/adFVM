@@ -10,7 +10,7 @@ import BCs
 import utils
 logger = utils.logger(__name__)
 
-class Field:
+class Field(object):
     def __init__(self, name, mesh, field):
         self.name = name
         self.mesh = mesh
@@ -96,9 +96,15 @@ class CellField(Field):
 
         if field.shape[0] == mesh.nInternalCells:
             self.field = ad.zeros((mesh.nCells, field.shape[1]))
-            self.setInternalField(field)
         else:
             self.field = field
+
+        self.BC = {}
+        for patchID in self.boundary:
+            self.BC[patchID] = getattr(BCs, self.boundary[patchID]['type'])(self, patchID)
+
+        if field.shape[0] == mesh.nInternalCells:
+            self.setInternalField(field)
 
     @classmethod
     def zeros(self, name, mesh, dimensions):
@@ -185,12 +191,6 @@ class CellField(Field):
         logger.info('updating ghost cells for {0}'.format(self.name))
         mesh = self.mesh
         for patchID in mesh.boundary:
-            patch = mesh.boundary[patchID] 
-            startFace = patch['startFace']
-            nFaces = patch['nFaces']
-            endFace = startFace + nFaces
-            indices = mesh.nInternalCells + range(startFace, endFace) - mesh.nInternalFaces 
-            boundaryCondition = self.boundary[patchID]['type']
-            getattr(BCs, boundaryCondition)(self, patchID, indices, np.arange(startFace, endFace))
+            self.BC[patchID].update()
 
 
