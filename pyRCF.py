@@ -32,9 +32,6 @@ writeInterval = 100
 nSteps = 10000
 
 #initialize
-pos = Field('pos', mesh, ad.adarray(mesh.normals))
-neg = Field('neg', mesh, ad.adarray(-mesh.normals))
-
 p = CellField.read('p', mesh, t)
 T = CellField.read('T', mesh, t)
 U = CellField.read('U', mesh, t)
@@ -97,6 +94,8 @@ for timeIndex in range(1, nSteps):
         aF = cF[0].abs()
         for c in cF[1:]: aF = Field.max(aF, c)
         aF.name = 'aF'
+
+        # CFL based time step
 
         rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF)
         rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF) - 0.5*aF*(rhoURF-rhoULF)

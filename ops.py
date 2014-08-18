@@ -16,27 +16,22 @@ def TVD_dual(field):
 
     faceFields = []
     # restructure, cyclic boundaries?
+    gradField = grad(interpolate(field))
     owner = mesh.owner[:mesh.nInternalFaces]
     neighbour = mesh.neighbour[:mesh.nInternalFaces]
     for C, D in [[owner, neighbour], [neighbour, owner]]:
-        def gradient(x):
-            gradx = grad(interpolate(x))
-            return Field('grad' + x.name, mesh, gradx.field[C])
         R = Field('R', mesh, mesh.cellCentres[D] - mesh.cellCentres[C])
+        gradC = Field('gradC', mesh, gradField.field[C])
         gradF = Field('gradF', mesh, field.field[D]-field.field[C])
         if field.field.shape[1] == 1:
-            gradC = gradient(field)
             r = 2*gradC.dot(R)/(gradF + SMALL) - 1
         else:
-            gradCxdotR = gradient(field.component(0)).dot(R)
-            gradCydotR = gradient(field.component(1)).dot(R)
-            gradCzdotR = gradient(field.component(2)).dot(R)
-            gradCdotR = Field('gradCdotR', mesh, ad.hstack((gradCxdotR.field, gradCydotR.field, gradCzdotR.field)))
-            r = 2*gradCdotR.dot(gradF)/(gradF.magSqr() + SMALL) - 1
+            #R.field = R.field[:,np.newaxis,:]
+            R.field = R.field[:,:,np.newaxis]
+            r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + SMALL) - 1
         faceFields.append(Field(field.name + 'F', mesh, ad.zeros((mesh.nFaces, field.field.shape[1]))))
         faceFields[-1].field[:mesh.nInternalFaces] = field.field[C] + 0.5*psi(r).field*(field.field[D] - field.field[C])
 
-        # correction for ghost cells
         for patchID in field.boundary:
             if field.boundary[patchID]['type'] != 'cyclic':
                 startFace = mesh.boundary[patchID]['startFace']
@@ -50,7 +45,7 @@ def upwind(field, U):
     mesh = field.mesh
     faceField = ad.zeros((mesh.nFaces, field.field.shape[1]))
     def update(start, end):
-        positiveFlux = ad.value(ad.sum(U.field * mesh.normals, axis=1)) > 0
+        positiveFlux = ad.value(ad.sum(U.field[start:end] * mesh.normals[start:end], axis=1)) > 0
         negativeFlux = (positiveFlux == False)
         faceField[positiveFlux] = field.field[mesh.owner[positiveFlux]]
         faceField[negativeFlux] = field.field[mesh.neighbour[negativeFlux]]
@@ -85,7 +80,10 @@ def div(field, U=None):
 def grad(field):
     logger.info('gradient of {0}'.format(field.name))
     mesh = field.mesh
-    gradField = (mesh.sumOp * (field.field * mesh.normals * mesh.areas))/mesh.volumes
+    normals = Field('n', mesh, mesh.normals)
+    gradField = (mesh.sumOp * (field.outer(normals).field * mesh.areas[:,:,np.newaxis]))/mesh.volumes[:,:,np.newaxis]
+    if gradField.shape[1] == 1:
+        gradField = gradField.reshape((gradField.shape[0], gradField.shape[2]))
     return Field('grad' + field.name, mesh, gradField)
 
 def laplacian(field, DT):

@@ -41,13 +41,16 @@ class Field:
         return self.__class__('abs{0}'.format(self.name), self.mesh, self.field * ad.adarray((ad.value(self.field) > 0) - 2))
 
     def dot(self, field):
-        return self.__class__('{0}dot{1}'.format(self.name, field.name), self.mesh, ad.sum(self.field * field.field, axis=1).reshape((-1, 1)))
+        product = ad.sum(self.field * field.field, axis=-1)
+        if len(product.shape) == 1:
+            product = product.reshape((-1,1))
+        return self.__class__('{0}dot{1}'.format(self.name, field.name), self.mesh, product)
 
     def dotN(self):
-        return self.__class__('{0}dotN'.format(self.name), self.mesh, ad.sum(self.field * self.mesh.normals, axis=1).reshape((-1, 1)))
+        return self.dot(self.__class__('n', self.mesh, self.mesh.normals))
 
     def outer(self, field):
-        return self.__class__('{0}outer{1}'.format(self.name, field.name), self.mesh, self.field[:,np.newaxis,:] * field.field[:,:,np.newaxis])
+        return self.__class__('{0}outer{1}'.format(self.name, field.name), self.mesh, self.field[:,:,np.newaxis] * field.field[:,np.newaxis,:])
 
     def __neg__(self):
         return self.__class__('-{0}'.format(self.name), self.mesh, -self.field)
