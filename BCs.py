@@ -6,12 +6,12 @@ import utils
 logger = utils.logger(__name__)
 
 class BoundaryCondition(object):
-    def __init__(self, field, patchID):
+    def __init__(self, phi, patchID):
         logger.info('initializating boundary condition for {0}'.format(patchID))
-        self.patch = field.boundary[patchID]
+        self.patch = phi.boundary[patchID]
         self.patchID = patchID
-        self.mesh = field.mesh
-        self.field = field.field
+        self.mesh = phi.mesh
+        self.field = phi.field
         self.startFace = self.mesh.boundary[patchID]['startFace']
         self.nFaces = self.mesh.boundary[patchID]['nFaces']
         self.endFace = self.startFace + self.nFaces

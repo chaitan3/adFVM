@@ -7,103 +7,103 @@ from field import Field
 import utils
 logger = utils.logger(__name__)
 
-def TVD_dual(field):
-    logger.info('TVD {0}'.format(field.name))
-    mesh = field.mesh
+def TVD_dual(phi):
+    logger.info('TVD {0}'.format(phi.name))
+    mesh = phi.mesh
     # van leer
     psi = lambda r: (r + r.abs())/(1 + r.abs())
     SMALL = 1e-16
 
     faceFields = []
     # restructure, cyclic boundaries?
-    gradField = grad(interpolate(field))
+    gradField = grad(interpolate(phi))
     owner = mesh.owner[:mesh.nInternalFaces]
     neighbour = mesh.neighbour[:mesh.nInternalFaces]
     for C, D in [[owner, neighbour], [neighbour, owner]]:
         R = Field('R', mesh, mesh.cellCentres[D] - mesh.cellCentres[C])
-        gradC = Field('gradC({0})'.format(field.name), mesh, gradField.field[C])
-        gradF = Field('gradF({0})'.format(field.name), mesh, field.field[D]-field.field[C])
-        if field.field.shape[1] == 1:
+        gradC = Field('gradC({0})'.format(phi.name), mesh, gradField.field[C])
+        gradF = Field('gradF({0})'.format(phi.name), mesh, phi.field[D]-phi.field[C])
+        if phi.field.shape[1] == 1:
             r = 2*gradC.dot(R)/(gradF + SMALL) - 1
         else:
             R.field = R.field[:,np.newaxis,:]
             r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + SMALL) - 1
-        faceFields.append(Field(field.name + 'F', mesh, ad.zeros((mesh.nFaces, field.field.shape[1]))))
-        faceFields[-1].field[:mesh.nInternalFaces] = field.field[C] + 0.5*psi(r).field*(field.field[D] - field.field[C])
+        faceFields.append(Field(phi.name + 'F', mesh, ad.zeros((mesh.nFaces, phi.field.shape[1]))))
+        faceFields[-1].field[:mesh.nInternalFaces] = phi.field[C] + 0.5*psi(r).field*(phi.field[D] - phi.field[C])
 
-        for patchID in field.boundary:
-            if field.boundary[patchID]['type'] != 'cyclic':
+        for patchID in phi.boundary:
+            if phi.boundary[patchID]['type'] != 'cyclic':
                 startFace = mesh.boundary[patchID]['startFace']
                 endFace = startFace + mesh.boundary[patchID]['nFaces']
-                faceFields[-1].field[startFace:endFace] = field.field[mesh.neighbour[startFace:endFace]]
+                faceFields[-1].field[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
 
     return faceFields
 
-def upwind(field, U): 
-    logger.info('upwinding {0} using {1}'.format(field.name, U.name)) 
-    mesh = field.mesh
-    faceField = ad.zeros((mesh.nFaces, field.field.shape[1]))
+def upwind(phi, U): 
+    logger.info('upwinding {0} using {1}'.format(phi.name, U.name)) 
+    mesh = phi.mesh
+    faceField = ad.zeros((mesh.nFaces, phi.field.shape[1]))
     def update(start, end):
         positiveFlux = ad.value(ad.sum(U.field[start:end] * mesh.normals[start:end], axis=1)) > 0
         negativeFlux = 1 - positiveFlux
-        faceField[positiveFlux] = field.field[mesh.owner[positiveFlux]]
-        faceField[negativeFlux] = field.field[mesh.neighbour[negativeFlux]]
+        faceField[positiveFlux] = phi.field[mesh.owner[positiveFlux]]
+        faceField[negativeFlux] = phi.field[mesh.neighbour[negativeFlux]]
 
     update(0, mesh.nInternalFaces)
-    for patchID in field.boundary:
+    for patchID in phi.boundary:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        if field.boundary[patchID]['type'] != 'cyclic':
-            faceField[startFace:endFace] = field.field[mesh.neighbour[startFace:endFace]]
+        if phi.boundary[patchID]['type'] != 'cyclic':
+            faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
         else:
             update(startFace, endFace)
 
-    return Field('{0}F'.format(field.name), mesh, faceField)
+    return Field('{0}F'.format(phi.name), mesh, faceField)
 
-def interpolate(field):
-    logger.info('interpolating {0}'.format(field.name))
-    mesh = field.mesh
+def interpolate(phi):
+    logger.info('interpolating {0}'.format(phi.name))
+    mesh = phi.mesh
     factor = (mesh.faceDeltas/mesh.deltas)
-    faceField = Field('{0}F'.format(field.name), mesh, field.field[mesh.owner]*factor + field.field[mesh.neighbour]*(1-factor))
+    faceField = Field('{0}F'.format(phi.name), mesh, phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1-factor))
     return faceField
 
-def div(field, U=None):
-    logger.info('divergence of {0}'.format(field.name))
-    mesh = field.mesh
+def div(phi, U=None):
+    logger.info('divergence of {0}'.format(phi.name))
+    mesh = phi.mesh
     if U is None:
-        divField = (mesh.sumOp * (field.field * mesh.areas))/mesh.volumes
+        divField = (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
     else:
         divField = (mesh.sumOp * ((field * U).dotN().field * mesh.areas))/mesh.volumes
-    return Field('div({0})'.format(field.name), mesh, divField)
+    return Field('div({0})'.format(phi.name), mesh, divField)
 
-def grad(field):
-    logger.info('gradient of {0}'.format(field.name))
-    mesh = field.mesh
+def grad(phi):
+    logger.info('gradient of {0}'.format(phi.name))
+    mesh = phi.mesh
     normals = Field('n', mesh, mesh.normals)
-    gradField = (mesh.sumOp * (field.outer(normals).field * mesh.areas[:,:,np.newaxis]))/mesh.volumes[:,:,np.newaxis]
+    gradField = (mesh.sumOp * (phi.outer(normals).field * mesh.areas[:,:,np.newaxis]))/mesh.volumes[:,:,np.newaxis]
     if gradField.shape[1] == 1:
         gradField = gradField.reshape((gradField.shape[0], gradField.shape[2]))
-    return Field('grad({0})'.format(field.name), mesh, gradField)
+    return Field('grad({0})'.format(phi.name), mesh, gradField)
 
-def laplacian(field, DT):
-    logger.info('laplacian of {0}'.format(field.name))
-    mesh = field.mesh
+def laplacian(phi, DT):
+    logger.info('laplacian of {0}'.format(phi.name))
+    mesh = phi.mesh
 
     # non orthogonal correction
-    #DTgradF = Field.zeros('grad' + field.name, mesh, mesh.nCells, 3.)
+    #DTgradF = Field.zeros('grad' + phi.name, mesh, mesh.nCells, 3.)
     #DTgradF.setInternalField(DT*grad(field))
     #laplacian1 = div(interpolate(DTgradF), 1.)
 
-    gradFdotn = (field.field[mesh.neighbour]-field.field[mesh.owner])/mesh.deltas
+    gradFdotn = (phi.field[mesh.neighbour]-phi.field[mesh.owner])/mesh.deltas
     laplacian2 = (mesh.sumOp * (DT * gradFdotn * mesh.areas))/mesh.volumes
-    return Field('laplacian' + field.name, mesh, laplacian2)
+    return Field('laplacian' + phi.name, mesh, laplacian2)
 
-def ddt(field, field0, dt):
-    logger.info('ddt of {0}'.format(field.name))
-    return Field('ddt' + field.name, field.mesh, (field.getInternalField()-ad.value(field0.getInternalField()))/dt)
+def ddt(phi, phi0, dt):
+    logger.info('ddt of {0}'.format(phi.name))
+    return Field('ddt' + phi.name, phi.mesh, (phi.getInternalField()-ad.value(phi0.getInternalField()))/dt)
 
 def explicit(equation, boundary, fields, dt):
-    names = [field.name for field in fields]
+    names = [phi.name for phi in fields]
     print('Time marching for', ' '.join(names))
     for index in range(0, len(fields)):
         fields[index].info()
@@ -119,14 +119,14 @@ def explicit(equation, boundary, fields, dt):
  
 
 def implicit(equation, boundary, fields):
-    names = [field.name for field in fields]
+    names = [phi.name for phi in fields]
     print('Solving for', ' '.join(names))
     for index in range(0, len(fields)):
         fields[index].info()
 
     start = time.time()
 
-    nDims = [field.field.shape[1] for field in fields]
+    nDims = [phi.field.shape[1] for phi in fields]
     def setInternalFields(stackedInternalFields):
         curr = 0
         internalFields = []
@@ -137,10 +137,10 @@ def implicit(equation, boundary, fields):
 
     def solver(internalFields):
         setInternalFields(internalFields)
-        equationFields = [field.field for field in equation(*fields)]
+        equationFields = [phi.field for phi in equation(*fields)]
         return ad.hstack(equationFields)
 
-    stack = [field.getInternalField() for field in fields]
+    stack = [phi.getInternalField() for phi in fields]
     solution = ad.solve(solver, ad.hstack(stack))
     setInternalFields(solution)
 
@@ -149,6 +149,6 @@ def implicit(equation, boundary, fields):
 
 def forget(fields):
     logger.info('forgetting fields')
-    for field in fields:
-        field.field.obliviate()
+    for phi in fields:
+        phi.field.obliviate()
 

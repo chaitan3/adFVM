@@ -40,49 +40,49 @@ class Field(object):
     def abs(self):
         return self.__class__('abs({0})'.format(self.name), self.mesh, self.field * ad.adarray(2*((ad.value(self.field) > 0) - 0.5)))
 
-    def dot(self, field):
-        product = ad.sum(self.field * field.field, axis=-1)
+    def dot(self, phi):
+        product = ad.sum(self.field * phi.field, axis=-1)
         if len(product.shape) == 1:
             product = product.reshape((-1,1))
-        return self.__class__('dot({0},{1})'.format(self.name, field.name), self.mesh, product)
+        return self.__class__('dot({0},{1})'.format(self.name, phi.name), self.mesh, product)
 
     def dotN(self):
         return self.dot(self.__class__('n', self.mesh, self.mesh.normals))
 
-    def outer(self, field):
-        return self.__class__('outer({0},{1})'.format(self.name, field.name), self.mesh, self.field[:,:,np.newaxis] * field.field[:,np.newaxis,:])
+    def outer(self, phi):
+        return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.mesh, self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:])
 
     def __neg__(self):
         return self.__class__('-{0}'.format(self.name), self.mesh, -self.field)
 
-    def __mul__(self, field):
-        if isinstance(field, numbers.Number):
-            return self.__class__('{0}*{1}'.format(self.name, field), self.mesh, self.field * field)
+    def __mul__(self, phi):
+        if isinstance(phi, numbers.Number):
+            return self.__class__('{0}*{1}'.format(self.name, phi), self.mesh, self.field * phi)
         else:
-            product = self.field * field.field
-            return self.__class__('{0}*{1}'.format(self.name, field.name), self.mesh, self.field * field.field)
+            product = self.field * phi.field
+            return self.__class__('{0}*{1}'.format(self.name, phi.name), self.mesh, self.field * phi.field)
 
 
-    def __rmul__(self, field):
-        return self * field
+    def __rmul__(self, phi):
+        return self * phi
 
     def __pow__(self, power):
         return self.__class__('{0}**{1}'.format(self.name, power), self.mesh, self.field.__pow__(power))
 
-    def __add__(self, field):
-        if isinstance(field, numbers.Number):
-            return self.__class__('{0}+{1}'.format(self.name, field), self.mesh, self.field + field)
+    def __add__(self, phi):
+        if isinstance(phi, numbers.Number):
+            return self.__class__('{0}+{1}'.format(self.name, phi), self.mesh, self.field + phi)
         else:
-            return self.__class__('{0}+{1}'.format(self.name, field.name), self.mesh, self.field + field.field)
+            return self.__class__('{0}+{1}'.format(self.name, phi.name), self.mesh, self.field + phi.field)
 
-    def __radd__(self, field):
-        return self.__add__(field)
+    def __radd__(self, phi):
+        return self.__add__(phi)
 
-    def __sub__(self, field):
-        return self.__add__(-field)
+    def __sub__(self, phi):
+        return self.__add__(-phi)
 
-    def __div__(self, field):
-        return self.__class__('{0}/{1}'.format(self.name, field.name), self.mesh, self.field / field.field)
+    def __div__(self, phi):
+        return self.__class__('{0}/{1}'.format(self.name, phi.name), self.mesh, self.field / phi.field)
 
 class CellField(Field):
     def __init__(self, name, mesh, field, boundary={}):
@@ -112,9 +112,9 @@ class CellField(Field):
         return self(name, mesh, ad.zeros((mesh.nCells, dimensions)))
 
     @classmethod
-    def copy(self, field):
-        logger.info('copying field {0}'.format(field.name))
-        return self(field.name, field.mesh, field.field.copy(), field.boundary.copy())
+    def copy(self, phi):
+        logger.info('copying field {0}'.format(phi.name))
+        return self(phi.name, phi.mesh, phi.field.copy(), phi.boundary.copy())
 
     @classmethod
     def read(self, name, mesh, time):
