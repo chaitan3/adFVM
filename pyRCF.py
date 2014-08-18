@@ -90,7 +90,7 @@ for timeIndex in range(1, nSteps):
         for c in cF[1:]: aF = Field.max(aF, c.abs())
         aF.name = 'aF'
 
-        # CFL based time step
+        # CFL based time step: sparse update?
         aF2 = Field.max((UnLF + aF).abs(), (UnRF - aF).abs())*0.5
         timeStep(ad.value(aF2.field)/mesh.deltas)
 

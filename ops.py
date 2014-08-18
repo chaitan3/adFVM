@@ -14,30 +14,38 @@ def TVD_dual(phi):
     psi = lambda r: (r + r.abs())/(1 + r.abs())
     SMALL = 1e-16
 
-    faceFields = []
-    # restructure, cyclic boundaries?
+    faceField = ad.zeros((mesh.nFaces, phi.field.shape[1]))
+    faceFields = [faceField, faceField.copy()]
+    # cyclic grad phi will not work
     gradField = grad(interpolate(phi))
-    owner = mesh.owner[:mesh.nInternalFaces]
-    neighbour = mesh.neighbour[:mesh.nInternalFaces]
-    for C, D in [[owner, neighbour], [neighbour, owner]]:
-        R = Field('R', mesh, mesh.cellCentres[D] - mesh.cellCentres[C])
-        gradC = Field('gradC({0})'.format(phi.name), mesh, gradField.field[C])
-        gradF = Field('gradF({0})'.format(phi.name), mesh, phi.field[D]-phi.field[C])
-        if phi.field.shape[1] == 1:
-            r = 2*gradC.dot(R)/(gradF + SMALL) - 1
+
+    def update(start, end):
+        owner = mesh.owner[start:end]
+        neighbour = mesh.neighbour[start:end]
+        index = 0
+        for C, D in [[owner, neighbour], [neighbour, owner]]:
+            R = Field('R', mesh, mesh.cellCentres[D] - mesh.cellCentres[C])
+            gradC = Field('gradC({0})'.format(phi.name), mesh, gradField.field[C])
+            gradF = Field('gradF({0})'.format(phi.name), mesh, phi.field[D]-phi.field[C])
+            if phi.field.shape[1] == 1:
+                r = 2*gradC.dot(R)/(gradF + SMALL) - 1
+            else:
+                R.field = R.field[:,np.newaxis,:]
+                r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + SMALL) - 1
+            faceFields[index][start:end] = phi.field[C] + 0.5*psi(r).field*(phi.field[D] - phi.field[C])
+            index += 1
+
+    update(0, mesh.nInternalFaces)
+    for patchID in phi.boundary:
+        startFace = mesh.boundary[patchID]['startFace']
+        endFace = startFace + mesh.boundary[patchID]['nFaces']
+        if phi.boundary[patchID]['type'] == 'cyclic':
+            update(startFace, endFace)
         else:
-            R.field = R.field[:,np.newaxis,:]
-            r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + SMALL) - 1
-        faceFields.append(Field(phi.name + 'F', mesh, ad.zeros((mesh.nFaces, phi.field.shape[1]))))
-        faceFields[-1].field[:mesh.nInternalFaces] = phi.field[C] + 0.5*psi(r).field*(phi.field[D] - phi.field[C])
+            for faceField in faceFields:
+                faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
 
-        for patchID in phi.boundary:
-            if phi.boundary[patchID]['type'] != 'cyclic':
-                startFace = mesh.boundary[patchID]['startFace']
-                endFace = startFace + mesh.boundary[patchID]['nFaces']
-                faceFields[-1].field[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
-
-    return faceFields
+    return [Field('{0}F'.format(phi.name), mesh, faceField) for faceField in faceFields]
 
 def upwind(phi, U): 
     logger.info('upwinding {0} using {1}'.format(phi.name, U.name)) 
@@ -53,10 +61,10 @@ def upwind(phi, U):
     for patchID in phi.boundary:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        if phi.boundary[patchID]['type'] != 'cyclic':
-            faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
-        else:
+        if phi.boundary[patchID]['type'] == 'cyclic':
             update(startFace, endFace)
+        else:
+            faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
 
     return Field('{0}F'.format(phi.name), mesh, faceField)
 
@@ -73,6 +81,7 @@ def div(phi, U=None):
     if U is None:
         divField = (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
     else:
+        # multi dimensional?
         divField = (mesh.sumOp * ((field * U).dotN().field * mesh.areas))/mesh.volumes
     return Field('div({0})'.format(phi.name), mesh, divField)
 
