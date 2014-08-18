@@ -5,7 +5,7 @@ import numpad as ad
 import time
 
 from mesh import Mesh
-from field import Field, FaceField
+from field import Field, CellField
 from ops import interpolate, div, ddt, implicit, laplacian, forget
 
 case = 'cyclic/'
@@ -16,20 +16,20 @@ dt = 0.005
 DT = 0.01
 
 #initialize
-T = Field.zeros('T', mesh, 1)
+T = CellField.zeros('T', mesh, 1)
 mid = np.array([0.5, 0.5, 0.5])
 T.setInternalField(np.exp(-10*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)).reshape(-1,1))
 #T = Field.read('T', mesh, t)
 U = 1.*ad.ones((mesh.nFaces, 3))*np.array([1., 0., 0])
-U = FaceField('U', mesh, U)
+U = Field('U', mesh, U)
 
 for i in range(0, 300):
     if i % 20 == 0:
         T.write(t)
 
-    T0 = Field.copy(T)
+    T0 = CellField.copy(T)
     print('Simulation Time:', t, 'Time step:', dt)
-    equation = lambda T: [T, T0, dt) + div(interpolate(T), U) - laplacian(T, DT)]
+    equation = lambda T: [ddt(T, T0, dt) + div(interpolate(T), U) - laplacian(T, DT)]
     boundary = lambda TI: T.setInternalField(TI)
     
     implicit(equation, boundary, [T])

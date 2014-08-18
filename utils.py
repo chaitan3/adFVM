@@ -49,5 +49,3 @@ def extractField(data, size, vector):
     return internalField
 
 
-
-
