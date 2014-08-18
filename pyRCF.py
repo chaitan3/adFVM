@@ -22,8 +22,8 @@ mu = 0.
 Pr = 0.7
 alpha = mu/Pr
 
-#case = 'shockTube/'
-case = 'forwardStep/'
+#case = 'tests/shockTube/'
+case = 'tests/forwardStep/'
 mesh = Mesh(case)
 
 t = 0

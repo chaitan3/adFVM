@@ -21,9 +21,9 @@ class BoundaryCondition(object):
 class cyclic(BoundaryCondition):
     def __init__(self, field, patchID):
         super(self.__class__, self).__init__(field, patchID)
-        neighbourPatch = self.mesh.boundary[patch]['neighbourPatch']
-        self.neighbourStartFace = neighbourPatch['startFace']
-        self.neighbourEndFace = neighbourStartFace + self.nFaces
+        neighbourPatch = self.mesh.boundary[patchID]['neighbourPatch']
+        self.neighbourStartFace = self.mesh.boundary[neighbourPatch]['startFace']
+        self.neighbourEndFace = self.neighbourStartFace + self.nFaces
     def update(self):
         logger.debug('cyclic BC for {0}'.format(self.patchID))
         self.field[self.cellStartFace:self.cellEndFace] = self.field[self.mesh.owner[self.neighbourStartFace:self.neighbourEndFace]]

@@ -8,7 +8,7 @@ from mesh import Mesh
 from field import Field, CellField
 from ops import interpolate, div, ddt, implicit, laplacian, forget
 
-case = 'cyclic/'
+case = 'tests/cyclic/'
 mesh = Mesh(case)
 
 t = 0.1

@@ -82,7 +82,7 @@ def div(phi, U=None):
         divField = (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
     else:
         # multi dimensional?
-        divField = (mesh.sumOp * ((field * U).dotN().field * mesh.areas))/mesh.volumes
+        divField = (mesh.sumOp * ((phi * U).dotN().field * mesh.areas))/mesh.volumes
     return Field('div({0})'.format(phi.name), mesh, divField)
 
 def grad(phi):
