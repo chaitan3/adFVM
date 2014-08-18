@@ -20,7 +20,7 @@ class Field:
     def max(self, a, b):
         a_gt_b = ad.value(a.field) > ad.value(b.field)
         b_gt_a = 1 - a_gt_b
-        return self('max{0}{1}'.format(a.name, b.name), a.mesh, a.field * ad.adarray(a_gt_b) + b.field * ad.adarray(b_gt_a))
+        return self('max({0},{1})'.format(a.name, b.name), a.mesh, a.field * ad.adarray(a_gt_b) + b.field * ad.adarray(b_gt_a))
 
     def info(self):
         print(self.name + ':', self.field.shape, end='')
@@ -32,25 +32,25 @@ class Field:
         return self.__class__('{0}.{1}'.format(self.name, component), self.mesh, self.field[:, component].reshape((-1,1)))
 
     def magSqr(self):
-        return self.__class__('magSqr({0}'.format(self.name), self.mesh, ad.sum(self.field**2, axis=1).reshape((-1,1)))
+        return self.__class__('magSqr({0})'.format(self.name), self.mesh, ad.sum(self.field**2, axis=1).reshape((-1,1)))
 
     def mag(self):
         return self.magSqr()**0.5
 
     def abs(self):
-        return self.__class__('abs{0}'.format(self.name), self.mesh, self.field * ad.adarray((ad.value(self.field) > 0) - 2))
+        return self.__class__('abs({0})'.format(self.name), self.mesh, self.field * ad.adarray(2*((ad.value(self.field) > 0) - 0.5)))
 
     def dot(self, field):
         product = ad.sum(self.field * field.field, axis=-1)
         if len(product.shape) == 1:
             product = product.reshape((-1,1))
-        return self.__class__('{0}dot{1}'.format(self.name, field.name), self.mesh, product)
+        return self.__class__('dot({0},{1})'.format(self.name, field.name), self.mesh, product)
 
     def dotN(self):
         return self.dot(self.__class__('n', self.mesh, self.mesh.normals))
 
     def outer(self, field):
-        return self.__class__('{0}outer{1}'.format(self.name, field.name), self.mesh, self.field[:,:,np.newaxis] * field.field[:,np.newaxis,:])
+        return self.__class__('outer({0},{1})'.format(self.name, field.name), self.mesh, self.field[:,:,np.newaxis] * field.field[:,np.newaxis,:])
 
     def __neg__(self):
         return self.__class__('-{0}'.format(self.name), self.mesh, -self.field)

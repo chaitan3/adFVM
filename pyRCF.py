@@ -76,18 +76,7 @@ for timeIndex in range(1, nSteps):
         U, T, p= primitive(rho, rhoU, rhoE)
         e = Cv*T
 
-        #wtf? adjoint? if not, make it readable
-        #c = (gamma*p/rho)**0.5
-        #cLF, cRF = TVD(c, pos), TVD(c, neg)
-        #UnLF, UnRF = ULF.dotN(), URF.dotN()
-        #c0 = cLF*0
-        #maxCF = (UnLF + cLF, UnRF + cLF, c0)
-        #minCF = (UnLF - cLF, UnRF - cLF, c0)
-        #stack = lambda x: np.hstack([ad.value(y.field) for y in x])
-        #maxCF = np.max(stack(maxCF), axis=1).reshape(-1,1)
-        #minCF = np.min(stack(minCF), axis=1).reshape(-1,1)
-        #aF = Field('aF', mesh, ad.adarray(np.max(np.abs(np.hstack((minCF, maxCF))), axis=1)).reshape((-1,1)))
-
+        # numerical viscosity
         cLF, cRF = (gamma*pLF/rhoLF)**0.5, (gamma*pRF/rhoRF)**0.5
         UnLF, UnRF = ULF.dotN(), URF.dotN()
         cF = (UnLF + cLF, UnRF + cLF, UnLF - cLF, UnRF - cLF)
@@ -97,6 +86,7 @@ for timeIndex in range(1, nSteps):
 
         # CFL based time step
 
+        # flux reconstruction
         rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF)
         rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF) - 0.5*aF*(rhoURF-rhoULF)
         rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoERF-rhoELF)

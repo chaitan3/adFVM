@@ -75,7 +75,6 @@ class Mesh:
 
     def getNormals(self):
         logger.info('generated normals')
-        #correct direcion? mostly yes
         v1 = self.points[self.faces[:,1]]-self.points[self.faces[:,2]]
         v2 = self.points[self.faces[:,2]]-self.points[self.faces[:,3]]
         normals = np.cross(v1, v2)

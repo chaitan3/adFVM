@@ -21,13 +21,13 @@ def TVD_dual(field):
     neighbour = mesh.neighbour[:mesh.nInternalFaces]
     for C, D in [[owner, neighbour], [neighbour, owner]]:
         R = Field('R', mesh, mesh.cellCentres[D] - mesh.cellCentres[C])
-        gradC = Field('gradC', mesh, gradField.field[C])
-        gradF = Field('gradF', mesh, field.field[D]-field.field[C])
+        gradC = Field('gradC({0})'.format(field.name), mesh, gradField.field[C])
+        gradF = Field('gradF({1})'.format(field.name), mesh, field.field[D]-field.field[C])
         if field.field.shape[1] == 1:
             r = 2*gradC.dot(R)/(gradF + SMALL) - 1
         else:
-            #R.field = R.field[:,np.newaxis,:]
-            R.field = R.field[:,:,np.newaxis]
+            R.field = R.field[:,np.newaxis,:]
+            #R.field = R.field[:,:,np.newaxis]
             r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + SMALL) - 1
         faceFields.append(Field(field.name + 'F', mesh, ad.zeros((mesh.nFaces, field.field.shape[1]))))
         faceFields[-1].field[:mesh.nInternalFaces] = field.field[C] + 0.5*psi(r).field*(field.field[D] - field.field[C])
@@ -39,10 +39,7 @@ def TVD_dual(field):
                 faceFields[-1].field[startFace:endFace] = field.field[mesh.neighbour[startFace:endFace]]
 
     return faceFields
-
-def upwind(field, U):
-    logger.info('upwinding {0} using {1}'.format(field.name, U.name))
-    mesh = field.mesh
+def upwind(field, U): logger.info('upwinding {0} using {1}'.format(field.name, U.name)) mesh = field.mesh
     faceField = ad.zeros((mesh.nFaces, field.field.shape[1]))
     def update(start, end):
         positiveFlux = ad.value(ad.sum(U.field[start:end] * mesh.normals[start:end], axis=1)) > 0
@@ -59,13 +56,13 @@ def upwind(field, U):
         else:
             update(startFace, endFace)
 
-    return Field(field.name + 'F', mesh, faceField)
+    return Field('{0}F'.format(field.name), mesh, faceField)
 
 def interpolate(field):
     logger.info('interpolating {0}'.format(field.name))
     mesh = field.mesh
     factor = (mesh.faceDeltas/mesh.deltas)
-    faceField = Field(field.name + 'F', mesh, field.field[mesh.owner]*factor + field.field[mesh.neighbour]*(1-factor))
+    faceField = Field('{0}F'.format(field.name), mesh, field.field[mesh.owner]*factor + field.field[mesh.neighbour]*(1-factor))
     return faceField
 
 def div(field, U=None):
@@ -75,7 +72,7 @@ def div(field, U=None):
         divField = (mesh.sumOp * (field.field * mesh.areas))/mesh.volumes
     else:
         divField = (mesh.sumOp * ((field * U).dotN().field * mesh.areas))/mesh.volumes
-    return Field('div' + field.name, mesh, divField)
+    return Field('div({0})'.format(field.name), mesh, divField)
 
 def grad(field):
     logger.info('gradient of {0}'.format(field.name))
@@ -84,7 +81,7 @@ def grad(field):
     gradField = (mesh.sumOp * (field.outer(normals).field * mesh.areas[:,:,np.newaxis]))/mesh.volumes[:,:,np.newaxis]
     if gradField.shape[1] == 1:
         gradField = gradField.reshape((gradField.shape[0], gradField.shape[2]))
-    return Field('grad' + field.name, mesh, gradField)
+    return Field('grad({0})'.format(field.name), mesh, gradField)
 
 def laplacian(field, DT):
     logger.info('laplacian of {0}'.format(field.name))
