@@ -131,8 +131,6 @@ class CellField(Field):
         for patchID in mesh.boundary:
             patch = re.search(re.compile(patchID + '[\s\r\n]+{(.*?)}', re.DOTALL), content).group(1)
             boundary[patchID] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch))
-            if 'value' in boundary[patchID]:
-                boundary[patchID]['Rvalue'] = utils.extractField(boundary[patchID]['value'], mesh.boundary[patchID]['nFaces'], vector)
         return self(name, mesh, internalField, boundary)
 
     def write(self, time):
@@ -171,8 +169,6 @@ class CellField(Field):
             handle.write('\t' + patchID + '\n\t{\n')
             patch = self.boundary[patchID]
             for attr in patch:
-                if attr == 'Rvalue':
-                    continue
                 handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
             handle.write('\t}\n')
         handle.write('}\n')
