@@ -27,7 +27,9 @@ case = 'forwardStep/'
 mesh = Mesh(case)
 
 t = 0
-dt = 0.000357143
+CFL = 0.2
+dt = 1e-4
+stepFactor = 1.2
 writeInterval = 100
 nSteps = 10000
 
@@ -64,6 +66,10 @@ for timeIndex in range(1, nSteps):
 
     rho0, rhoU0, rhoE0 = CellField.copy(rho), CellField.copy(rhoU), CellField.copy(rhoE)
 
+    def timeStep(aFbyD):
+        global dt
+        dt = min(dt*stepFactor, CFL/np.max(aFbyD))
+
     def equation(rho, rhoU, rhoE):
 
         rhoLF, rhoRF = TVD_dual(rho)
@@ -73,7 +79,7 @@ for timeIndex in range(1, nSteps):
         ULF, TLF, pLF = primitive(rhoLF, rhoULF, rhoELF)
         URF, TRF, pRF = primitive(rhoRF, rhoURF, rhoERF)
         # not needed
-        U, T, p= primitive(rho, rhoU, rhoE)
+        U, T, p = primitive(rho, rhoU, rhoE)
         e = Cv*T
 
         # numerical viscosity
@@ -81,10 +87,12 @@ for timeIndex in range(1, nSteps):
         UnLF, UnRF = ULF.dotN(), URF.dotN()
         cF = (UnLF + cLF, UnRF + cLF, UnLF - cLF, UnRF - cLF)
         aF = cF[0].abs()
-        for c in cF[1:]: aF = Field.max(aF, c)
+        for c in cF[1:]: aF = Field.max(aF, c.abs())
         aF.name = 'aF'
 
         # CFL based time step
+        aF2 = Field.max((UnLF + aF).abs(), (UnRF - aF).abs())*0.5
+        timeStep(ad.value(aF2.field)/mesh.deltas)
 
         # flux reconstruction
         rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF)
