@@ -103,8 +103,8 @@ for timeIndex in range(1, nSteps):
         # viscous part
         UnF = 0.5*(UnLF + UnRF)
         UF = 0.5*(ULF + URF)
-        snGradU = snGrad(U)
-        sigmaF = mu*(snGradU + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
+        # zeroGrad interp on boundary for div and grad, ok?
+        sigmaF = mu*(snGrad(U) + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
         
         return [ddt(rho, rho0, dt) + div(rhoFlux),
                 ddt(rhoU, rhoU0, dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
