@@ -35,17 +35,17 @@ class Mesh(object):
         self.areas = self.getAreas()
         self.faceCentres = self.getFaceCentres()
         # uses neighbour
-        self.cellFaces = self.getCellFaces()
-        self.cellCentres = self.getCellCentres()
+        self.cellFaces = self.getCellFaces()     # nInternalCells
+        self.cellCentres = self.getCellCentres() # nCells after ghost cell mod
         # uses cell centres
-        self.volumes = self.getVolumes()
+        self.volumes = self.getVolumes()         # nInternalCells
         # uses neighbour
-        self.sumOp = self.getSumOp()
+        self.sumOp = self.getSumOp()             # (nInternalCells, nFaces)
         
         # ghost cell modification
         self.createGhostCells()
-        self.deltas = self.getDeltas()
-        self.faceDeltas = self.getFaceDeltas()
+        self.deltas = self.getDeltas()           # nFaces
+        self.faceDeltas = self.getFaceDeltas()   # nFaces
 
         end = time.time()
         print('Time for reading mesh:', end-start)
@@ -94,6 +94,11 @@ class Mesh(object):
         volumes = 0
         for i in range(0, nCellFaces):
             legs = self.points[self.faces[self.cellFaces[:,i], 1:]]-self.cellCentres[:self.nInternalCells].reshape((self.nInternalCells, 1, 3))
+            # get one leg
+            # dot the leg with face normal to get the shortest distance
+            #                                     from cell center to face
+            # multiply that distance with face area
+            # you get the volume
             volumes += np.abs(np.sum(np.cross(legs[:,0,:], legs[:,2,:])*(legs[:,1,:]-legs[:,3,:]), axis=1))/6
         return volumes.reshape(-1, 1)
     
@@ -102,13 +107,16 @@ class Mesh(object):
         enum = lambda x: np.column_stack((np.indices(x.shape)[0], x)) 
         combined = np.concatenate((enum(self.owner), enum(self.neighbour)))
         cellFaces = combined[combined[:,1].argsort(), 0]
+        # todo: make it a list ( investigate np.diff )
         return cellFaces.reshape(self.nInternalCells, len(cellFaces)/self.nInternalCells)
 
     def getCellCentres(self):
+        # todo: check openFOAM to see if they weigh the face centers with face areas
         logger.info('generated cell centres')
         return np.mean(self.faceCentres[self.cellFaces], axis=1)
 
     def getFaceCentres(self):
+        # todo: check openFOAM to see if they weigh the edge centers with edge lengths
         logger.info('generated face centres')
         return np.mean(self.points[self.faces[:,1:]], axis=1)
 
