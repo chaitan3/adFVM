@@ -37,7 +37,7 @@ class symmetryPlane(zeroGradient):
     def update(self):
         logger.debug('symmetryPlane BC for {0}'.format(self.patchID))
         super(self.__class__, self).update()
-        if self.field.shape[1] == 3:
+        if (len(self.field.shape[1:]) == 1) and (self.field.shape[1] == 3):
             v = -self.mesh.normals[self.startFace:self.endFace]
             self.field[self.cellStartFace:self.cellEndFace] -= ad.sum(self.field[self.cellStartFace:self.cellEndFace]*v, axis=1).reshape((-1,1))*v
 

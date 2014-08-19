@@ -6,7 +6,7 @@ import time
 
 from mesh import Mesh
 from field import Field, CellField
-from ops import  div, ddt, laplacian, grad, implicit, explicit, forget
+from ops import  div, ddt, snGrad, laplacian, grad, implicit, explicit, forget
 from ops import interpolate, upwind, TVD_dual
 import utils
 
@@ -100,9 +100,15 @@ for timeIndex in range(1, nSteps):
         rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoERF-rhoELF)
         pF = 0.5*(pLF + pRF)
         
+        # viscous part
+        UnF = 0.5*(UnLF + UnRF)
+        UF = 0.5*(ULF + URF)
+        snGradU = snGrad(U)
+        sigmaF = mu*(snGradU + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
+        
         return [ddt(rho, rho0, dt) + div(rhoFlux),
-                ddt(rhoU, rhoU0, dt) + div(rhoUFlux) + grad(pF) - (laplacian(U, mu)), #+ div(grad(U))
-                ddt(rhoE, rhoE0, dt) + div(rhoEFlux) - (laplacian(e, alpha) )] #+ div(sigma, Uf))]
+                ddt(rhoU, rhoU0, dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
+                ddt(rhoE, rhoE0, dt) + div(rhoEFlux) - (laplacian(e, alpha) + div(sigmaF.dot(UF)))]
 
     def boundary(rhoI, rhoUI, rhoEI):
         rhoN = Field(rho.name, mesh, rhoI)

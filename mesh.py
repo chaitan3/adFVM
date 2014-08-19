@@ -7,6 +7,7 @@ import time
 from numpad import adsparse
 from scipy import sparse as sp
 
+from field import Field
 import utils
 logger = utils.logger(__name__)
 
@@ -32,6 +33,7 @@ class Mesh(object):
         self.nCells = self.nInternalCells + self.nGhostCells
 
         self.normals = self.getNormals()
+        self.Normals = Field('nF', self, ad.array(self.normals))
         self.areas = self.getAreas()
         self.faceCentres = self.getFaceCentres()
         # uses neighbour
@@ -138,7 +140,7 @@ class Mesh(object):
         Nindptr = np.concatenate((range(0, self.nInternalFaces+1), self.nInternalFaces*np.ones(self.nFaces-self.nInternalFaces, int)))
         neighbour = sp.csc_matrix((-np.ones(self.nInternalFaces), self.neighbour[:self.nInternalFaces], Nindptr), shape=(self.nInternalCells, self.nFaces))
         sumOp = (owner + neighbour).tocsr()
-        return adsparse.csr_matrix((ad.adarray(sumOp.data), sumOp.indices, sumOp.indptr), sumOp.shape)
+        return adsparse.csr_matrix((ad.array(sumOp.data), sumOp.indices, sumOp.indptr), sumOp.shape)
 
     def getDefaultBoundary(self):
         logger.info('generated default boundary')

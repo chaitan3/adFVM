@@ -20,7 +20,7 @@ class Field(object):
     def max(self, a, b):
         a_gt_b = ad.value(a.field) > ad.value(b.field)
         b_gt_a = 1 - a_gt_b
-        return self('max({0},{1})'.format(a.name, b.name), a.mesh, a.field * ad.adarray(a_gt_b) + b.field * ad.adarray(b_gt_a))
+        return self('max({0},{1})'.format(a.name, b.name), a.mesh, a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a))
 
     def info(self):
         print(self.name + ':', self.field.shape, end='')
@@ -38,19 +38,24 @@ class Field(object):
         return self.magSqr()**0.5
 
     def abs(self):
-        return self.__class__('abs({0})'.format(self.name), self.mesh, self.field * ad.adarray(2*((ad.value(self.field) > 0) - 0.5)))
+        return self.__class__('abs({0})'.format(self.name), self.mesh, self.field * ad.array(2*((ad.value(self.field) > 0) - 0.5)))
 
     def dot(self, phi):
+        if len(self.field.shape) > 2:
+            phi = self.__class__(phi.name, phi.mesh, phi.field[:,np.newaxis,:])
         product = ad.sum(self.field * phi.field, axis=-1)
         if len(product.shape) == 1:
             product = product.reshape((-1,1))
         return self.__class__('dot({0},{1})'.format(self.name, phi.name), self.mesh, product)
 
     def dotN(self):
-        return self.dot(self.__class__('n', self.mesh, self.mesh.normals))
+        return self.dot(self.mesh.Normals)
 
     def outer(self, phi):
         return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.mesh, self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:])
+    
+    def transpose(self):
+        return self.__class__('{0}.T'.format(self.name), self.mesh, self.field.transpose((0,2,1)))
 
     def __neg__(self):
         return self.__class__('-{0}'.format(self.name), self.mesh, -self.field)
@@ -87,17 +92,15 @@ class Field(object):
 class CellField(Field):
     def __init__(self, name, mesh, field, boundary={}):
         logger.debug('initializing field {0}'.format(name))
-        self.name = name
-        self.mesh = mesh
+        super(self.__class__, self).__init__(name, mesh, field)
+
         if len(list(boundary.keys())) == 0:
             self.boundary = mesh.defaultBoundary
         else:
             self.boundary = boundary
 
         if field.shape[0] == mesh.nInternalCells:
-            self.field = ad.zeros((mesh.nCells, field.shape[1]))
-        else:
-            self.field = field
+            self.field = ad.zeros((mesh.nCells,) + field.shape[1:])
 
         self.BC = {}
         for patchID in self.boundary:
@@ -188,5 +191,6 @@ class CellField(Field):
         mesh = self.mesh
         for patchID in mesh.boundary:
             self.BC[patchID].update()
+
 
 
