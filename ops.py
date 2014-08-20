@@ -12,7 +12,7 @@ def TVD_dual(phi):
     logger.info('TVD {0}'.format(phi.name))
     mesh = phi.mesh
     # van leer
-    psi = lambda r: (r + r.abs())/(1 + r.abs())
+    psi = lambda r, rabs: (r + rabs)/(1 + rabs)
 
     faceField = ad.zeros((mesh.nFaces, phi.dimensions[0]))
     faceFields = [faceField, faceField.copy()]
@@ -23,14 +23,17 @@ def TVD_dual(phi):
         neighbour = mesh.neighbour[start:end]
         index = 0
         for C, D in [[owner, neighbour], [neighbour, owner]]:
+            phiC = phi.field[C]
+            phiD = phi.field[D]
+            phiDC = phiD-phiC
             R = Field('R', mesh, ad.array(mesh.cellCentres[D] - mesh.cellCentres[C]))
             gradC = Field('gradC({0})'.format(phi.name), mesh, gradField.field[C])
-            gradF = Field('gradF({0})'.format(phi.name), mesh, phi.field[D]-phi.field[C])
+            gradF = Field('gradF({0})'.format(phi.name), mesh, phiDC)
             if phi.dimensions[0] == 1:
                 r = 2*gradC.dot(R)/(gradF + utils.SMALL) - 1
             else:
                 r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + utils.SMALL) - 1
-            faceFields[index][start:end] = phi.field[C] + 0.5*psi(r).field*(phi.field[D] - phi.field[C])
+            faceFields[index][start:end] = phiC + 0.5*psi(r, r.abs()).field*phiDC
             index += 1
 
     update(0, mesh.nInternalFaces)

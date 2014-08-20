@@ -30,10 +30,10 @@ mesh = Mesh(case)
 
 t = 0
 CFL = 0.2
-dt = 1e-4
+dt = 1e-9
 stepFactor = 1.2
 writeInterval = 100
-nSteps = 10000
+nSteps = 10
 
 #initialize
 p = CellField.read('p', mesh, t)
