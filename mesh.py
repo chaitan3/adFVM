@@ -34,13 +34,10 @@ class Mesh(object):
 
         self.normals = self.getNormals()
         self.Normals = Field('nF', self, ad.array(self.normals))
-        self.areas = self.getAreas()
-        self.faceCentres = self.getFaceCentres()
+        self.faceCentres, self.areas = self.getFaceCentresAndAreas()
         # uses neighbour
         self.cellFaces = self.getCellFaces()     # nInternalCells
-        self.cellCentres = self.getCellCentres() # nCells after ghost cell mod
-        # uses cell centres
-        self.volumes = self.getVolumes()         # nInternalCells
+        self.cellCentres, self.volumes = self.getCellCentresAndVolumes() # nCells after ghost cell mod
         # uses neighbour
         self.sumOp = self.getSumOp()             # (nInternalCells, nFaces)
         
@@ -82,28 +79,6 @@ class Mesh(object):
         normals = np.cross(v1, v2)
         return normals / np.linalg.norm(normals, axis=1).reshape(-1,1)
 
-    def getAreas(self):
-        logger.info('generated areas')
-        nFacePoints = self.faces[0, 0]
-        areas = np.cross(self.points[self.faces[:,-1]], self.points[self.faces[:,1]])
-        for i in range(0, nFacePoints-1):
-            areas += np.cross(self.points[self.faces[:,i+1]], self.points[self.faces[:,i+2]])
-        return np.linalg.norm(areas, axis=1).reshape(-1, 1)/2
-
-    def getVolumes(self):
-        logger.info('generated volumes')
-        nCellFaces = self.cellFaces.shape[1]
-        volumes = 0
-        for i in range(0, nCellFaces):
-            legs = self.points[self.faces[self.cellFaces[:,i], 1:]]-self.cellCentres[:self.nInternalCells].reshape((self.nInternalCells, 1, 3))
-            # get one leg
-            # dot the leg with face normal to get the shortest distance
-            #                                     from cell center to face
-            # multiply that distance with face area
-            # you get the volume
-            volumes += np.abs(np.sum(np.cross(legs[:,0,:], legs[:,2,:])*(legs[:,1,:]-legs[:,3,:]), axis=1))/6
-        return volumes.reshape(-1, 1)
-    
     def getCellFaces(self):
         logger.info('generated cell faces')
         enum = lambda x: np.column_stack((np.indices(x.shape)[0], x)) 
@@ -112,15 +87,38 @@ class Mesh(object):
         # todo: make it a list ( investigate np.diff )
         return cellFaces.reshape(self.nInternalCells, len(cellFaces)/self.nInternalCells)
 
-    def getCellCentres(self):
-        # todo: check openFOAM to see if they weigh the face centers with face areas
-        logger.info('generated cell centres')
-        return np.mean(self.faceCentres[self.cellFaces], axis=1)
+    def getCellCentresAndVolumes(self):
+        logger.info('generated cell centres and volumes')
+        cellCentres = np.mean(self.faceCentres[self.cellFaces], axis=1)
+        sumCentres = cellCentres*0
+        sumVolumes = np.sum(sumCentres, axis=1).reshape(-1,1)
+        def computeCentresAndVolumes(indices, end):
+            volumes = np.sum((self.areas[:end] * self.normals[:end])*(self.faceCentres[:end]-cellCentres[indices])/3, axis=1).reshape(-1,1)
+            volumes = np.max(np.hstack((volumes, utils.VSMALL*np.ones((end, 1)))), axis=1).reshape(-1,1)
+            centres = (3./4)*self.faceCentres[:end] + (1./4)*cellCentres[indices]
+            sumCentres[indices] += volumes * centres
+            sumVolumes[indices] += volumes
+        computeCentresAndVolumes(self.owner, self.nFaces)
+        computeCentresAndVolumes(self.neighbour[:self.nInternalFaces], self.nInternalFaces)
+        cellCentres = sumCentres/sumVolumes
+        return cellCentres, sumVolumes
 
-    def getFaceCentres(self):
-        # todo: check openFOAM to see if they weigh the edge centers with edge lengths
-        logger.info('generated face centres')
-        return np.mean(self.points[self.faces[:,1:]], axis=1)
+    def getFaceCentresAndAreas(self):
+        logger.info('generated face centres and areas')
+        nFacePoints = self.faces[0, 0]
+        faceCentres = np.mean(self.points[self.faces[:,1:]], axis=1)
+        sumAreas = 0
+        sumCentres = 0
+        for index in range(1, nFacePoints+1):
+            points = self.points[self.faces[:, index]]
+            nextPoints = self.points[self.faces[:, (index % nFacePoints)+1]]
+            centres = (points + nextPoints + faceCentres)/3
+            normals = np.cross((nextPoints - points), (faceCentres - points))
+            areas = (np.linalg.norm(normals, axis=1)/2).reshape(-1,1)
+            sumAreas += areas
+            sumCentres += areas*centres
+        faceCentres = sumCentres/sumAreas
+        return faceCentres, sumAreas
 
     def getDeltas(self):
         logger.info('generated deltas')

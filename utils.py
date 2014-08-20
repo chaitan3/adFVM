@@ -22,6 +22,9 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 '''
 foamFile = {'version':'2.0', 'format': 'ascii', 'class': 'volScalarField', 'object': ''}
 
+SMALL = 1e-15
+VSMALL = 1e-300
+
 def removeCruft(content, keepHeader=False):
     # remove comments and newlines
     content = re.sub(re.compile('/\*.*\*/',re.DOTALL ) , '' , content)

@@ -13,7 +13,6 @@ def TVD_dual(phi):
     mesh = phi.mesh
     # van leer
     psi = lambda r: (r + r.abs())/(1 + r.abs())
-    SMALL = 1e-16
 
     faceField = ad.zeros((mesh.nFaces, phi.dimensions[0]))
     faceFields = [faceField, faceField.copy()]
@@ -29,9 +28,9 @@ def TVD_dual(phi):
             gradF = Field('gradF({0})'.format(phi.name), mesh, phi.field[D]-phi.field[C])
             # todo: compute gradC.dot(R) in internal cells, then update them to cyclic ghost cells
             if phi.dimensions[0] == 1:
-                r = 2*gradC.dot(R)/(gradF + SMALL) - 1
+                r = 2*gradC.dot(R)/(gradF + utils.SMALL) - 1
             else:
-                r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + SMALL) - 1
+                r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + utils.SMALL) - 1
             faceFields[index][start:end] = phi.field[C] + 0.5*psi(r).field*(phi.field[D] - phi.field[C])
             index += 1
 

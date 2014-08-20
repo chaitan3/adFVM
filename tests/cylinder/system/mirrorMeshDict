@@ -44,4 +44,4 @@ pointAndNormalDict
     normalVector    (0 -1 0); 
 }
 
-planeTolerance      1e-3;
+planeTolerance      1e-7;
