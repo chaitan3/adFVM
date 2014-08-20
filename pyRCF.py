@@ -11,19 +11,21 @@ from ops import interpolate, upwind, TVD_dual
 import utils
 
 R = 8.314462839935299
-Cp = 2.5
-M = 11.6403
+#Cp = 2.5
+#M = 11.6403
 #gamma = 1./(1.-R/(M*Cp))
-gamma = 1.399997983915712
+Cp = 1006.
+gamma = 1.4
 Cv = Cp/gamma
 
-#mu = 2.5e-5
-mu = 0.
+mu = 2.5e-5
+#mu = 0.
 Pr = 0.7
 alpha = mu/Pr
 
 #case = 'tests/shockTube/'
-case = 'tests/forwardStep/'
+#case = 'tests/forwardStep/'
+case = 'tests/cylinder/'
 mesh = Mesh(case)
 
 t = 0

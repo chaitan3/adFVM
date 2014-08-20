@@ -20,11 +20,6 @@ internalField   uniform 101325;
 
 boundaryField
 {
-    down
-    {
-        type            zeroGradient;
-    }
-
     right
     {
         type            fixedValue;
@@ -46,9 +41,13 @@ boundaryField
         type            zeroGradient;
     }
 
-    defaultFaces
+    z1
     {
-        type            empty;
+        type            cyclic;
+    }
+    z2
+    {
+        type            cyclic;
     }
 }
 

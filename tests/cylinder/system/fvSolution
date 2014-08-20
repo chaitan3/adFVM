@@ -31,7 +31,7 @@ solvers
         relTol          0.01;
     }
 
-    h
+    "(h|e)"
     {
         $U;
         tolerance       1e-10;
