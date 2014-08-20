@@ -8,13 +8,14 @@ import utils
 logger = utils.logger(__name__)
 
 def TVD_dual(phi):
+    assert len(phi.dimensions) == 1
     logger.info('TVD {0}'.format(phi.name))
     mesh = phi.mesh
     # van leer
     psi = lambda r: (r + r.abs())/(1 + r.abs())
     SMALL = 1e-16
 
-    faceField = ad.zeros((mesh.nFaces, phi.field.shape[1]))
+    faceField = ad.zeros((mesh.nFaces, phi.dimensions[0]))
     faceFields = [faceField, faceField.copy()]
     gradField = grad(phi, ghost=True)
 
@@ -27,7 +28,7 @@ def TVD_dual(phi):
             gradC = Field('gradC({0})'.format(phi.name), mesh, gradField.field[C])
             gradF = Field('gradF({0})'.format(phi.name), mesh, phi.field[D]-phi.field[C])
             # todo: compute gradC.dot(R) in internal cells, then update them to cyclic ghost cells
-            if phi.field.shape[1] == 1:
+            if phi.dimensions[0] == 1:
                 r = 2*gradC.dot(R)/(gradF + SMALL) - 1
             else:
                 r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + SMALL) - 1
@@ -47,9 +48,10 @@ def TVD_dual(phi):
     return [Field('{0}F'.format(phi.name), mesh, faceField) for faceField in faceFields]
 
 def upwind(phi, U): 
+    assert len(phi.dimensions) == 1
     logger.info('upwinding {0} using {1}'.format(phi.name, U.name)) 
     mesh = phi.mesh
-    faceField = ad.zeros((mesh.nFaces, phi.field.shape[1]))
+    faceField = ad.zeros((mesh.nFaces, phi.dimensions[0]))
     def update(start, end):
         positiveFlux = ad.value(ad.sum(U.field[start:end] * mesh.normals[start:end], axis=1)) > 0
         negativeFlux = 1 - positiveFlux
@@ -72,7 +74,8 @@ def interpolate(phi):
     mesh = phi.mesh
     # todo: check the synmetry of openFOAM's interpolate
     factor = (mesh.faceDeltas/mesh.deltas)
-    if len(factor.shape) < len(phi.field.shape):
+    # for tensor
+    if len(factor.shape)-1 < len(phi.dimensions):
         factor = factor.reshape((factor.shape[0], 1, 1))
     faceField = Field('{0}F'.format(phi.name), mesh, phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1-factor))
     return faceField
@@ -80,13 +83,13 @@ def interpolate(phi):
 def div(phi, U=None, ghost=False):
     logger.info('divergence of {0}'.format(phi.name))
     mesh = phi.mesh
-    if phi.field.shape[0] == mesh.nCells:
+    if phi.size == mesh.nCells:
         phi = interpolate(phi)
     if U is None:
         divField = (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
     else:
-        # multi dimensional?
-        if U.field.shape[0] == mesh.nCells:
+        assert phi.dimensions == (1,)
+        if U.size == mesh.nCells:
             U = interpolate(U)
         divField = (mesh.sumOp * ((phi * U).dotN().field * mesh.areas))/mesh.volumes
     if ghost:
@@ -95,14 +98,16 @@ def div(phi, U=None, ghost=False):
         return Field('div({0})'.format(phi.name), mesh, divField)
 
 def grad(phi, ghost=False):
+    assert len(phi.dimensions) == 1
     logger.info('gradient of {0}'.format(phi.name))
     mesh = phi.mesh
-    if phi.field.shape[0] == mesh.nCells:
+    if phi.size == mesh.nCells:
         phi = interpolate(phi)
     product = phi.outer(mesh.Normals)
     gradField = (mesh.sumOp * (product.field * mesh.areas[:,:,np.newaxis]))/mesh.volumes[:,:,np.newaxis]
-    if gradField.shape[1] == 1:
-        gradField = gradField.reshape((gradField.shape[0], gradField.shape[2]))
+    # if grad of scalar
+    if phi.dimensions[0] == 1:
+        gradField = gradField.reshape((mesh.nInternalCells, 3))
     if ghost:
         return CellField('grad({0})'.format(phi.name), mesh, gradField)
     else:
@@ -155,7 +160,7 @@ def implicit(equation, boundary, fields):
 
     start = time.time()
 
-    nDims = [phi.field.shape[1] for phi in fields]
+    nDims = [phi.dimensions[0] for phi in fields]
     def setInternalFields(stackedInternalFields):
         curr = 0
         internalFields = []

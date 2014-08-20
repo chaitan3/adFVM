@@ -15,6 +15,11 @@ class Field(object):
         self.name = name
         self.mesh = mesh
         self.field = field
+        self.size = field.shape[0]
+        self.dimensions = field.shape[1:]
+
+        if self.dimensions not in [(1,), (3,), (3,3), (1,3), (3,1), (1,1)]:
+            raise Exception('field dimensions {0} not supported'.format(self.dimensions))
 
     @classmethod
     def max(self, a, b):
@@ -29,9 +34,11 @@ class Field(object):
         print(' min:', ad.value(self.field).min(), 'max:', ad.value(self.field).max())
 
     def component(self, component): 
+        assert self.dimensions == (3,)
         return self.__class__('{0}.{1}'.format(self.name, component), self.mesh, self.field[:, component].reshape((-1,1)))
 
     def magSqr(self):
+        assert self.dimensions == (3,)
         return self.__class__('magSqr({0})'.format(self.name), self.mesh, ad.sum(self.field**2, axis=1).reshape((-1,1)))
 
     def mag(self):
@@ -41,9 +48,12 @@ class Field(object):
         return self.__class__('abs({0})'.format(self.name), self.mesh, self.field * ad.array(2*((ad.value(self.field) > 0) - 0.5)))
 
     def dot(self, phi):
-        if len(self.field.shape) > 2:
+        assert self.dimensions[0] == 3
+        # if tensor
+        if len(self.dimensions) > 1:
             phi = self.__class__(phi.name, phi.mesh, phi.field[:,np.newaxis,:])
         product = ad.sum(self.field * phi.field, axis=-1)
+        # if summed over vector
         if len(product.shape) == 1:
             product = product.reshape((-1,1))
         return self.__class__('dot({0},{1})'.format(self.name, phi.name), self.mesh, product)
@@ -55,6 +65,7 @@ class Field(object):
         return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.mesh, self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:])
     
     def transpose(self):
+        assert len(self.dimensions) == 2
         return self.__class__('{0}.T'.format(self.name), self.mesh, self.field.transpose((0,2,1)))
 
     def __neg__(self):
@@ -99,14 +110,14 @@ class CellField(Field):
         else:
             self.boundary = boundary
 
-        if field.shape[0] == mesh.nInternalCells:
-            self.field = ad.zeros((mesh.nCells,) + field.shape[1:])
+        if self.size == mesh.nInternalCells:
+            self.field = ad.zeros((mesh.nCells,) + self.dimensions)
 
         self.BC = {}
         for patchID in self.boundary:
             self.BC[patchID] = getattr(BCs, self.boundary[patchID]['type'])(self, patchID)
 
-        if field.shape[0] == mesh.nInternalCells:
+        if self.size == mesh.nInternalCells:
             self.setInternalField(field)
 
     @classmethod
@@ -137,6 +148,7 @@ class CellField(Field):
         return self(name, mesh, internalField, boundary)
 
     def write(self, time):
+        assert len(self.dimensions) == 1
         np.set_printoptions(precision=16)
         print('writing field {0}, time {1}'.format(self.name, time))
         timeDir = '{0}/{1}/'.format(self.mesh.case, time)
@@ -147,7 +159,7 @@ class CellField(Field):
         handle.write('FoamFile\n{\n')
         foamFile = utils.foamFile.copy()
         foamFile['object'] = self.name
-        if self.field.shape[1] == 3:
+        if self.dimensions[0] == 3:
             dtype = 'vector'
             foamFile['class'] = 'volVectorField'
         else:
