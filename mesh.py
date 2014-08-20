@@ -44,7 +44,7 @@ class Mesh(object):
         # ghost cell modification
         self.createGhostCells()
         self.deltas = self.getDeltas()           # nFaces
-        self.faceDeltas = self.getFaceDeltas()   # nFaces
+        self.weights = self.getWeights()   # nFaces
 
         end = time.time()
         print('Time for reading mesh:', end-start)
@@ -89,17 +89,18 @@ class Mesh(object):
 
     def getCellCentresAndVolumes(self):
         logger.info('generated cell centres and volumes')
+        nCellFaces = self.cellFaces.shape[1]
         cellCentres = np.mean(self.faceCentres[self.cellFaces], axis=1)
         sumCentres = cellCentres*0
         sumVolumes = np.sum(sumCentres, axis=1).reshape(-1,1)
-        def computeCentresAndVolumes(indices, end):
-            volumes = np.sum((self.areas[:end] * self.normals[:end])*(self.faceCentres[:end]-cellCentres[indices])/3, axis=1).reshape(-1,1)
-            volumes = np.max(np.hstack((volumes, utils.VSMALL*np.ones((end, 1)))), axis=1).reshape(-1,1)
-            centres = (3./4)*self.faceCentres[:end] + (1./4)*cellCentres[indices]
-            sumCentres[indices] += volumes * centres
-            sumVolumes[indices] += volumes
-        computeCentresAndVolumes(self.owner, self.nFaces)
-        computeCentresAndVolumes(self.neighbour[:self.nInternalFaces], self.nInternalFaces)
+        areaNormals = self.areas * self.normals
+        for index in range(0, nCellFaces):
+            indices = self.cellFaces[:,index]
+            height = cellCentres-self.faceCentres[indices]
+            volumes = np.abs(np.sum(areaNormals[indices]*height, axis=1)).reshape(-1,1)/3
+            centres = (3./4)*self.faceCentres[indices] + (1./4)*cellCentres
+            sumCentres += volumes * centres
+            sumVolumes += volumes
         cellCentres = sumCentres/sumVolumes
         return cellCentres, sumVolumes
 
@@ -126,11 +127,15 @@ class Mesh(object):
         N = self.cellCentres[self.neighbour]
         return np.linalg.norm(P-N, axis=1).reshape(-1,1)
 
-    def getFaceDeltas(self):
+    def getWeights(self):
         logger.info('generated face deltas')
-        P = self.faceCentres
+        P = self.cellCentres[self.owner]
         N = self.cellCentres[self.neighbour]
-        return np.linalg.norm(P-N, axis=1).reshape(-1,1)
+        F = self.faceCentres
+        neighbourDist = np.abs(np.sum((F-N)*self.normals, axis=1))
+        ownerDist = np.abs(np.sum((F-P)*self.normals, axis=1))
+        weights = neighbourDist/(neighbourDist + ownerDist)
+        return weights.reshape(-1,1)
 
     def getSumOp(self):
         logger.info('generated sum op')

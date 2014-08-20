@@ -26,7 +26,6 @@ def TVD_dual(phi):
             R = Field('R', mesh, ad.array(mesh.cellCentres[D] - mesh.cellCentres[C]))
             gradC = Field('gradC({0})'.format(phi.name), mesh, gradField.field[C])
             gradF = Field('gradF({0})'.format(phi.name), mesh, phi.field[D]-phi.field[C])
-            # todo: compute gradC.dot(R) in internal cells, then update them to cyclic ghost cells
             if phi.dimensions[0] == 1:
                 r = 2*gradC.dot(R)/(gradF + utils.SMALL) - 1
             else:
@@ -71,8 +70,7 @@ def upwind(phi, U):
 def interpolate(phi):
     logger.info('interpolating {0}'.format(phi.name))
     mesh = phi.mesh
-    # todo: check the synmetry of openFOAM's interpolate
-    factor = (mesh.faceDeltas/mesh.deltas)
+    factor = mesh.weights
     # for tensor
     if len(factor.shape)-1 < len(phi.dimensions):
         factor = factor.reshape((factor.shape[0], 1, 1))
