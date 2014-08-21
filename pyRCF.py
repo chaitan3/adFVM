@@ -120,10 +120,11 @@ for timeIndex in range(1, nSteps):
         U.setInternalField(UN.field)
         T.setInternalField(TN.field)
         p.setInternalField(pN.field)
+        rhoN, rhoUN, rhoEN = conservative(U, T, p)
+        rho.field, rhoU.field, rhoE.field = rhoN.field, rhoUN.field, rhoEN.field
     
     explicit(equation, boundary, [rho, rhoU, rhoE], dt)
     forget([p, T, U])
-    rho, rhoU, rhoE = conservative(U, T, p)
 
     if timeIndex % writeInterval == 0:
         rho.write(t)
