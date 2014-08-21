@@ -123,7 +123,7 @@ class CellField(Field):
     @classmethod
     def zeros(self, name, mesh, dimensions):
         logger.info('initializing zeros field {0}'.format(name))
-        return self(name, mesh, ad.zeros((mesh.nCells, dimensions)))
+        return self(name, mesh, ad.zeros((mesh.nCells,) + dimensions))
 
     @classmethod
     def copy(self, phi):

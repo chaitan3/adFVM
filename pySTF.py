@@ -32,7 +32,7 @@ for i in range(0, 300):
     equation = lambda T: [ddt(T, T0, dt) + div(T, U) - laplacian(T, DT)]
     boundary = lambda TI: T.setInternalField(TI)
     
-    implicit(equation, boundary, [T])
+    implicit(equation, boundary, [T], dt)
     forget([T])
     t += dt
     t = round(t, 6)

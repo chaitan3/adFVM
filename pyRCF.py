@@ -17,7 +17,6 @@ class Solver(object):
         self.Cp = config['Cp']
         self.gamma = config['gamma']
         self.Cv = self.Cp/self.gamma
-
         self.mu = config['mu']
         self.Pr = config['Pr']
         self.alpha = self.mu/self.Pr
@@ -44,7 +43,8 @@ class Solver(object):
         rho.name, rhoU.name, rhoE.name = 'rho', 'rhoU', 'rhoE'
         return rho, rhoU, rhoE
     
-    def run(self, t, dt, nSteps, writeInterval=utils.LARGE, adjoint=False):
+    def run(self, timeStep, nSteps, writeInterval=utils.LARGE, adjoint=False):
+        t, dt = timeStep
         mesh = self.mesh
         #initialize
         self.p = CellField.read('p', mesh, t)
@@ -56,13 +56,14 @@ class Solver(object):
         print()
         mesh = self.mesh
 
-        jacobians = []
+        timeSteps = np.zeros((nSteps, 2))
+        jacobians = np.zeros(nSteps).tolist()
         for timeIndex in range(1, nSteps):
+            timeSteps[timeIndex-1] = np.array([t, dt])
             t += self.dt
-            t = round(t, 6)
+            t = round(t, 9)
             print('Simulation Time:', t, 'Time step:', self.dt)
-            jacobian = explicit(self.equation, self.boundary, [self.rho, self.rhoU, self.rhoE], self.dt)
-            jacobians.append(jacobian)
+            jacobians[timeIndex-1] = explicit(self.equation, self.boundary, [self.rho, self.rhoU, self.rhoE], self.dt)
             forget([self.p, self.T, self.U])
             if timeIndex % writeInterval == 0:
                 self.rho.write(t)
@@ -72,7 +73,7 @@ class Solver(object):
                 self.T.write(t)
                 self.p.write(t)
             print()
-        return jacobians
+        return timeSteps, jacobians
 
            
     def timeStep(self, aFbyD):
@@ -139,7 +140,7 @@ class Solver(object):
 
 if __name__ == "__main__":
 
-    #solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
-    solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
-    solver.run(0, 1e-4, 100)
+    solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
+    #solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
+    solver.run([1.8, 1e-9], 10000, 100)
 
