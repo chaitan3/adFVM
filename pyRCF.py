@@ -10,82 +10,88 @@ from ops import  div, ddt, snGrad, laplacian, grad, implicit, explicit, forget
 from ops import interpolate, upwind, TVD_dual
 import utils
 
-R = 8.314462839935299
-#Cp = 2.5
-#M = 11.6403
-#gamma = 1./(1.-R/(M*Cp))
-Cp = 1006.
-gamma = 1.4
-Cv = Cp/gamma
 
-mu = 2.5e-5
-#mu = 0.
-Pr = 0.7
-alpha = mu/Pr
+class Solver(object):
+    def __init__(self, case, config):
+        self.R = config['R']
+        self.Cp = config['Cp']
+        self.gamma = config['gamma']
+        self.Cv = self.Cp/self.gamma
 
-#case = 'tests/shockTube/'
-#case = 'tests/forwardStep/'
-case = 'tests/cylinder/'
-mesh = Mesh(case)
+        self.mu = config['mu']
+        self.Pr = config['Pr']
+        self.alpha = self.mu/self.Pr
 
-t = 0
-CFL = 0.2
-dt = 1e-9
-stepFactor = 1.2
-writeInterval = 100
-nSteps = 10
+        self.mesh = Mesh(case)
 
-#initialize
-p = CellField.read('p', mesh, t)
-T = CellField.read('T', mesh, t)
-U = CellField.read('U', mesh, t)
-print()
+        self.stepFactor = 1.2
+        self.CFL = config['CFL']
 
-def primitive(rho, rhoU, rhoE):
-    U = rhoU/rho
-    E = rhoE/rho
-    e = E - 0.5*U.magSqr()
-    p = (gamma-1)*rho*e
-    T = e*(1./Cv)
-    return U, T, p
+    def primitive(self, rho, rhoU, rhoE):
+        U = rhoU/rho
+        E = rhoE/rho
+        e = E - 0.5*U.magSqr()
+        p = (self.gamma-1)*rho*e
+        T = e*(1./self.Cv)
+        return U, T, p
 
-def conservative(U, T, p):
-    e = Cv*T
-    rho = p/(e*(gamma-1))
-    E = e + 0.5*U.magSqr()
-    rhoU = rho*U
-    rhoE = rho*E
-    rho.name, rhoU.name, rhoE.name = 'rho', 'rhoU', 'rhoE'
-    return rho, rhoU, rhoE
+    def conservative(self, U, T, p):
+        e = self.Cv*T
+        rho = p/(e*(self.gamma-1))
+        E = e + 0.5*U.magSqr()
+        rhoU = rho*U
+        rhoE = rho*E
+        rho.name, rhoU.name, rhoE.name = 'rho', 'rhoU', 'rhoE'
+        return rho, rhoU, rhoE
+    
+    def run(self, t, dt, nSteps, writeInterval=utils.LARGE, adjoint=False):
+        mesh = self.mesh
+        #initialize
+        self.p = CellField.read('p', mesh, t)
+        self.T = CellField.read('T', mesh, t)
+        self.U = CellField.read('U', mesh, t)
+        self.rho, self.rhoU, self.rhoE = self.conservative(self.U, self.T, self.p)
+        self.dt = dt
+        self.adjoint = adjoint
+        print()
+        mesh = self.mesh
 
-rho, rhoU, rhoE = conservative(U, T, p)
+        jacobians = []
+        for timeIndex in range(1, nSteps):
+            t += self.dt
+            t = round(t, 6)
+            print('Simulation Time:', t, 'Time step:', self.dt)
+            jacobian = explicit(self.equation, self.boundary, [self.rho, self.rhoU, self.rhoE], self.dt)
+            jacobians.append(jacobian)
+            forget([self.p, self.T, self.U])
+            if timeIndex % writeInterval == 0:
+                self.rho.write(t)
+                self.rhoU.write(t)
+                self.rhoE.write(t)
+                self.U.write(t)
+                self.T.write(t)
+                self.p.write(t)
+            print()
+        return jacobians
 
-for timeIndex in range(1, nSteps):
+           
+    def timeStep(self, aFbyD):
+        self.dt = min(self.dt*self.stepFactor, self.CFL/np.max(aFbyD))
 
-    t += dt
-    t = round(t, 6)
-    print('Simulation Time:', t, 'Time step:', dt)
-
-    rho0, rhoU0, rhoE0 = CellField.copy(rho), CellField.copy(rhoU), CellField.copy(rhoE)
-
-    def timeStep(aFbyD):
-        global dt
-        dt = min(dt*stepFactor, CFL/np.max(aFbyD))
-
-    def equation(rho, rhoU, rhoE):
+    def equation(self, rho, rhoU, rhoE):
+        mesh = self.mesh
 
         rhoLF, rhoRF = TVD_dual(rho)
         rhoULF, rhoURF = TVD_dual(rhoU)
         rhoELF, rhoERF = TVD_dual(rhoE)
 
-        ULF, TLF, pLF = primitive(rhoLF, rhoULF, rhoELF)
-        URF, TRF, pRF = primitive(rhoRF, rhoURF, rhoERF)
-        # not needed
-        U, T, p = primitive(rho, rhoU, rhoE)
-        e = Cv*T
+        ULF, TLF, pLF = self.primitive(rhoLF, rhoULF, rhoELF)
+        URF, TRF, pRF = self.primitive(rhoRF, rhoURF, rhoERF)
+        U, T, p = self.primitive(rho, rhoU, rhoE)
+        e = self.Cv*T
 
         # numerical viscosity
-        cLF, cRF = (gamma*pLF/rhoLF)**0.5, (gamma*pRF/rhoRF)**0.5
+        cLF, cRF = (self.gamma*pLF/rhoLF)**0.5, (self.gamma*pRF/rhoRF)**0.5
         UnLF, UnRF = ULF.dotN(), URF.dotN()
         cF = (UnLF + cLF, UnRF + cLF, UnLF - cLF, UnRF - cLF)
         aF = cF[0].abs()
@@ -94,7 +100,7 @@ for timeIndex in range(1, nSteps):
 
         # CFL based time step: sparse update?
         aF2 = Field.max((UnLF + aF).abs(), (UnRF - aF).abs())*0.5
-        timeStep(ad.value(aF2.field)/mesh.deltas)
+        self.timeStep(ad.value(aF2.field)/mesh.deltas)
 
         # flux reconstruction
         rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF)
@@ -106,33 +112,34 @@ for timeIndex in range(1, nSteps):
         UnF = 0.5*(UnLF + UnRF)
         UF = 0.5*(ULF + URF)
         # zeroGrad interp on boundary for div and grad, ok?
-        sigmaF = mu*(snGrad(U) + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
+        sigmaF = self.mu*(snGrad(U) + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
         
-        return [ddt(rho, rho0, dt) + div(rhoFlux),
-                ddt(rhoU, rhoU0, dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
-                ddt(rhoE, rhoE0, dt) + div(rhoEFlux) - (laplacian(e, alpha) + div(sigmaF.dot(UF)))]
+        return [ddt(rho, rho.old, self.dt) + div(rhoFlux),
+                ddt(rhoU, rhoU.old, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
+                ddt(rhoE, rhoE.old, self.dt) + div(rhoEFlux) - (laplacian(e, self.alpha) + div(sigmaF.dot(UF)))]
 
-    def boundary(rhoI, rhoUI, rhoEI):
-        rhoN = Field(rho.name, mesh, rhoI)
-        rhoUN = Field(rhoU.name, mesh, rhoUI)
-        rhoEN = Field(rhoE.name, mesh, rhoEI)
-        UN, TN, pN = primitive(rhoN, rhoUN, rhoEN)
-        U.setInternalField(UN.field)
-        T.setInternalField(TN.field)
-        p.setInternalField(pN.field)
-        rhoN, rhoUN, rhoEN = conservative(U, T, p)
-        rho.field, rhoU.field, rhoE.field = rhoN.field, rhoUN.field, rhoEN.field
+    def boundary(self, rhoI, rhoUI, rhoEI):
+        mesh = self.mesh
+        rhoN = Field(self.rho.name, mesh, rhoI)
+        rhoUN = Field(self.rhoU.name, mesh, rhoUI)
+        rhoEN = Field(self.rhoE.name, mesh, rhoEI)
+        UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
+        self.U.setInternalField(UN.field)
+        self.T.setInternalField(TN.field)
+        self.p.setInternalField(pN.field)
+        rhoN, rhoUN, rhoEN = self.conservative(self.U, self.T, self.p)
+        if self.adjoint:
+            newFields = ad.hstack((rhoN.field, rhoUN.field, rhoEN.field))
+            jacobian = [newFields.diff(self.rho.field), newFields.diff(self.rhoU.field), newFields.diff(self.rhoE.field)]
+        else:
+            jacobian = 0
+        self.rho.field, self.rhoU.field, self.rhoE.field = rhoN.field, rhoUN.field, rhoEN.field
+        return jacobian
     
-    explicit(equation, boundary, [rho, rhoU, rhoE], dt)
-    forget([p, T, U])
 
-    if timeIndex % writeInterval == 0:
-        rho.write(t)
-        rhoU.write(t)
-        rhoE.write(t)
-        U.write(t)
-        T.write(t)
-        p.write(t)
+if __name__ == "__main__":
 
-    print()
-   
+    #solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
+    solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
+    solver.run(0, 1e-4, 100)
+

@@ -137,28 +137,32 @@ def ddt(phi, phi0, dt):
     return Field('ddt' + phi.name, phi.mesh, (phi.getInternalField()-ad.value(phi0.getInternalField()))/dt)
 
 def explicit(equation, boundary, fields, dt):
+    start = time.time()
+
     names = [phi.name for phi in fields]
     print('Time marching for', ' '.join(names))
     for index in range(0, len(fields)):
+        fields[index].old = CellField.copy(fields[index])
         fields[index].info()
-     
-    start = time.time()
     
     LHS = equation(*fields)
     internalFields = [(fields[index].getInternalField() - LHS[index].field*dt) for index in range(0, len(fields))]
-    boundary(*internalFields)
+    jacobian = boundary(*internalFields)
 
     end = time.time()
     print('Time for iteration:', end-start)
+    return jacobian
  
 
-def implicit(equation, boundary, fields):
+def implicit(equation, boundary, fields, dt):
+    start = time.time()
+
     names = [phi.name for phi in fields]
     print('Solving for', ' '.join(names))
     for index in range(0, len(fields)):
+        fields[index].old = CellField.copy(fields[index])
         fields[index].info()
 
-    start = time.time()
 
     nDims = [phi.dimensions[0] for phi in fields]
     def setInternalFields(stackedInternalFields):

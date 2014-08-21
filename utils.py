@@ -24,6 +24,7 @@ foamFile = {'version':'2.0', 'format': 'ascii', 'class': 'volScalarField', 'obje
 
 SMALL = 1e-15
 VSMALL = 1e-300
+LARGE = 1e30
 
 def removeCruft(content, keepHeader=False):
     # remove comments and newlines
