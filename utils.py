@@ -39,15 +39,16 @@ def removeCruft(content, keepHeader=False):
 def extractField(data, size, vector):
     extractScalar = lambda x: re.findall('[0-9\.Ee\-]+', x)
     if vector:
-        extractVector = lambda y: list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', y)))
-        extractor = extractVector
+        extractor = lambda y: list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', y)))
     else:
         extractor = extractScalar
-    nonUniform = re.search('nonUniform', data)
+    nonUniform = re.search('nonuniform', data)
     data = re.search(re.compile('[A-Za-z<>\s\r\n]+(.*)', re.DOTALL), data).group(1)
     if nonUniform is not None:
         start = data.find('(')
-        internalField = ad.adarray(extractor(data[start:])).reshape((-1,1))
+        internalField = ad.adarray(extractor(data[start:]))
+        if not vector:
+            internalField = internalField.reshape((-1, 1))
     else:
         internalField = ad.adarray(np.tile(np.array(extractor(data)), (size, 1)))
     return internalField

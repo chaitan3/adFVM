@@ -2,6 +2,7 @@ from __future__ import print_function
 import numpy as np
 import numpad as ad
 import time
+import scipy.sparse as sp
 
 from field import Field, CellField
 import utils
@@ -163,14 +164,14 @@ def implicit(equation, boundary, fields, dt):
         fields[index].old = CellField.copy(fields[index])
         fields[index].info()
 
+    nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in adjointFields]))))
+    nDimensions = zip(nDimensions[:-1], nDimensions[1:])
 
-    nDims = [phi.dimensions[0] for phi in fields]
     def setInternalFields(stackedInternalFields):
-        curr = 0
+        location = 0
         internalFields = []
         for index in range(0, len(fields)):
-            internalFields.append(stackedInternalFields[:,curr:curr+nDims[index]])
-            curr += nDims[index]
+            internalFields.append(stackedInternalFields[:, range(*nDimensions[index])])
         boundary(*internalFields)
 
     def solver(internalFields):
@@ -184,6 +185,17 @@ def implicit(equation, boundary, fields, dt):
 
     end = time.time()
     print('Time for iteration:', end-start)
+
+def derivative(newFields, oldFields):
+    start = time.time()
+
+    names = [phi.name for phi in oldFields]
+    stackedNewFields = ad.hstack([phi.field for phi in newFields])
+    jacobian = sp.hstack([stackedNewFields.diff(phi.field) for phi in oldFields])
+
+    end = time.time()
+    print('Time for computing jacobian:', end-start)
+    return jacobian
 
 def forget(fields):
     logger.info('forgetting fields')

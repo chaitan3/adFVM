@@ -6,7 +6,7 @@ import time
 
 from mesh import Mesh
 from field import Field, CellField
-from ops import  div, ddt, snGrad, laplacian, grad, implicit, explicit, forget
+from ops import  div, ddt, snGrad, laplacian, grad, implicit, explicit, forget, derivative
 from ops import interpolate, upwind, TVD_dual
 import utils
 
@@ -51,6 +51,7 @@ class Solver(object):
         self.T = CellField.read('T', mesh, t)
         self.U = CellField.read('U', mesh, t)
         self.rho, self.rhoU, self.rhoE = self.conservative(self.U, self.T, self.p)
+        self.fields = [self.rho, self.rhoU, self.rhoE]
         self.dt = dt
         self.adjoint = adjoint
         print()
@@ -58,7 +59,7 @@ class Solver(object):
 
         timeSteps = np.zeros((nSteps, 2))
         jacobians = np.zeros(nSteps).tolist()
-        for timeIndex in range(1, nSteps):
+        for timeIndex in range(1, nSteps+1):
             timeSteps[timeIndex-1] = np.array([t, dt])
             t += self.dt
             t = round(t, 9)
@@ -130,8 +131,7 @@ class Solver(object):
         self.p.setInternalField(pN.field)
         rhoN, rhoUN, rhoEN = self.conservative(self.U, self.T, self.p)
         if self.adjoint:
-            newFields = ad.hstack((rhoN.field, rhoUN.field, rhoEN.field))
-            jacobian = [newFields.diff(self.rho.field), newFields.diff(self.rhoU.field), newFields.diff(self.rhoE.field)]
+            jacobian = derivative((rhoN, rhoUN, rhoEN), (self.rho, self.rhoU, self.rhoE))
         else:
             jacobian = 0
         self.rho.field, self.rhoU.field, self.rhoE.field = rhoN.field, rhoUN.field, rhoEN.field
