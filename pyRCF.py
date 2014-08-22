@@ -6,7 +6,7 @@ import time
 
 from mesh import Mesh
 from field import Field, CellField
-from ops import  div, ddt, snGrad, laplacian, grad, implicit, explicit, forget, derivative
+from ops import  div, ddt, snGrad, laplacian, grad, implicit, explicit, forget
 from ops import interpolate, upwind, TVD_dual
 import utils
 
@@ -26,6 +26,9 @@ class Solver(object):
         self.stepFactor = 1.2
         self.CFL = config['CFL']
 
+        self.names = ['rho', 'rhoU', 'rhoE']
+        self.dimensions = [(1,), (3,), (1,)]
+
     def primitive(self, rho, rhoU, rhoE):
         U = rhoU/rho
         E = rhoE/rho
@@ -40,43 +43,44 @@ class Solver(object):
         E = e + 0.5*U.magSqr()
         rhoU = rho*U
         rhoE = rho*E
-        rho.name, rhoU.name, rhoE.name = 'rho', 'rhoU', 'rhoE'
+        rho.name, rhoU.name, rhoE.name = self.names
         return rho, rhoU, rhoE
     
-    def run(self, timeStep, nSteps, writeInterval=utils.LARGE, adjoint=False, objective=None):
+    def run(self, timeStep, nSteps, writeInterval=utils.LARGE, adjoint=False):
         t, dt = timeStep
         mesh = self.mesh
         #initialize
         self.p = CellField.read('p', mesh, t)
         self.T = CellField.read('T', mesh, t)
         self.U = CellField.read('U', mesh, t)
-        self.rho, self.rhoU, self.rhoE = self.conservative(self.U, self.T, self.p)
-        self.fields = [self.rho, self.rhoU, self.rhoE]
+        fields = self.conservative(self.U, self.T, self.p)
         self.dt = dt
-        self.adjoint = adjoint
-        self.objective = objective
         print()
         mesh = self.mesh
 
         timeSteps = np.zeros((nSteps, 2))
-        jacobians = np.zeros(nSteps).tolist()
-        sensitivities = np.zeros(nSteps).tolist()
+        solutions = [fields]
         for timeIndex in range(1, nSteps+1):
             timeSteps[timeIndex-1] = np.array([t, dt])
             t += self.dt
             t = round(t, 9)
             print('Simulation Time:', t, 'Time step:', self.dt)
-            jacobians[timeIndex-1], sensitivities[timeIndex-1] = explicit(self.equation, self.boundary, [self.rho, self.rhoU, self.rhoE], self.dt)
-            forget([self.p, self.T, self.U])
+            fields = explicit(self.equation, self.boundary, fields, self.dt)
+            #forget([self.p, self.T, self.U])
+            if adjoint:
+                solutions.append(fields)
             if timeIndex % writeInterval == 0:
-                self.rho.write(t)
-                self.rhoU.write(t)
-                self.rhoE.write(t)
+                for phi in fields:
+                    phi.write(t)
                 self.U.write(t)
                 self.T.write(t)
                 self.p.write(t)
             print()
-        return timeSteps, jacobians, sensitivities
+
+        if adjoint:
+            return solutions
+        else:
+            return timeSteps
 
            
     def timeStep(self, aFbyD):
@@ -124,24 +128,14 @@ class Solver(object):
 
     def boundary(self, rhoI, rhoUI, rhoEI):
         mesh = self.mesh
-        rhoN = Field(self.rho.name, mesh, rhoI)
-        rhoUN = Field(self.rhoU.name, mesh, rhoUI)
-        rhoEN = Field(self.rhoE.name, mesh, rhoEI)
+        rhoN = Field(self.names[0], mesh, rhoI)
+        rhoUN = Field(self.names[1], mesh, rhoUI)
+        rhoEN = Field(self.names[2], mesh, rhoEI)
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
         self.U.setInternalField(UN.field)
         self.T.setInternalField(TN.field)
         self.p.setInternalField(pN.field)
-        rhoN, rhoUN, rhoEN = self.conservative(self.U, self.T, self.p)
-        if self.adjoint:
-            jacobian = derivative((rhoN, rhoUN, rhoEN), (self.rho, self.rhoU, self.rhoE))
-        else:
-            jacobian = 0
-        if self.objective is not None:
-            sensitivity = derivative(self.objective(self), (self.rho, self.rhoU, self.rhoE)).todense()
-        else:
-            sensitivity = 0
-        self.rho.field, self.rhoU.field, self.rhoE.field = rhoN.field, rhoUN.field, rhoEN.field
-        return jacobian, sensitivity
+        return self.conservative(self.U, self.T, self.p)
     
 
 if __name__ == "__main__":
