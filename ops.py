@@ -148,11 +148,11 @@ def explicit(equation, boundary, fields, dt):
     
     LHS = equation(*fields)
     internalFields = [(fields[index].getInternalField() - LHS[index].field*dt) for index in range(0, len(fields))]
-    jacobian = boundary(*internalFields)
+    derivatives = boundary(*internalFields)
 
     end = time.time()
     print('Time for iteration:', end-start)
-    return jacobian
+    return derivatives
  
 
 def implicit(equation, boundary, fields, dt):
@@ -190,12 +190,15 @@ def derivative(newFields, oldFields):
     start = time.time()
 
     names = [phi.name for phi in oldFields]
-    stackedNewFields = ad.hstack([phi.field for phi in newFields])
-    jacobian = sp.hstack([stackedNewFields.diff(phi.field) for phi in oldFields])
+    if type(newFields) is tuple:
+        stackedNewFields = ad.hstack([phi.field for phi in newFields])
+    else:
+        stackedNewFields = newFields
+    result = sp.hstack([stackedNewFields.diff(phi.field) for phi in oldFields])
 
     end = time.time()
-    print('Time for computing jacobian:', end-start)
-    return jacobian
+    print('Time for computing derivative:', end-start)
+    return result
 
 def forget(fields):
     logger.info('forgetting fields')

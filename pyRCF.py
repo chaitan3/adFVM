@@ -43,7 +43,7 @@ class Solver(object):
         rho.name, rhoU.name, rhoE.name = 'rho', 'rhoU', 'rhoE'
         return rho, rhoU, rhoE
     
-    def run(self, timeStep, nSteps, writeInterval=utils.LARGE, adjoint=False):
+    def run(self, timeStep, nSteps, writeInterval=utils.LARGE, adjoint=False, objective=None):
         t, dt = timeStep
         mesh = self.mesh
         #initialize
@@ -54,17 +54,19 @@ class Solver(object):
         self.fields = [self.rho, self.rhoU, self.rhoE]
         self.dt = dt
         self.adjoint = adjoint
+        self.objective = objective
         print()
         mesh = self.mesh
 
         timeSteps = np.zeros((nSteps, 2))
         jacobians = np.zeros(nSteps).tolist()
+        sensitivities = np.zeros(nSteps).tolist()
         for timeIndex in range(1, nSteps+1):
             timeSteps[timeIndex-1] = np.array([t, dt])
             t += self.dt
             t = round(t, 9)
             print('Simulation Time:', t, 'Time step:', self.dt)
-            jacobians[timeIndex-1] = explicit(self.equation, self.boundary, [self.rho, self.rhoU, self.rhoE], self.dt)
+            jacobians[timeIndex-1], sensitivities[timeIndex-1] = explicit(self.equation, self.boundary, [self.rho, self.rhoU, self.rhoE], self.dt)
             forget([self.p, self.T, self.U])
             if timeIndex % writeInterval == 0:
                 self.rho.write(t)
@@ -74,7 +76,7 @@ class Solver(object):
                 self.T.write(t)
                 self.p.write(t)
             print()
-        return timeSteps, jacobians
+        return timeSteps, jacobians, sensitivities
 
            
     def timeStep(self, aFbyD):
@@ -134,13 +136,18 @@ class Solver(object):
             jacobian = derivative((rhoN, rhoUN, rhoEN), (self.rho, self.rhoU, self.rhoE))
         else:
             jacobian = 0
+        if self.objective is not None:
+            sensitivity = derivative(self.objective(self), (self.rho, self.rhoU, self.rhoE)).todense()
+        else:
+            sensitivity = 0
         self.rho.field, self.rhoU.field, self.rhoE.field = rhoN.field, rhoUN.field, rhoEN.field
-        return jacobian
+        return jacobian, sensitivity
     
 
 if __name__ == "__main__":
 
-    solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
-    #solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
-    solver.run([1.8, 1e-9], 10000, 100)
+    #solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
+    #solver.run([1.8, 1e-9], 10000, 100)
+    solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
+    solver.run([0, 1e-4], 40000, 500)
 
