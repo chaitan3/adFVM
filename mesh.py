@@ -14,10 +14,10 @@ logger = utils.logger(__name__)
 class Mesh(object):
     def __init__(self, caseDir):
         start = time.time()
-        print('Reading mesh')
+        utils.pprint('Reading mesh')
 
-        self.case = caseDir
-        meshDir = caseDir + '/constant/polyMesh/'
+        self.case = caseDir + utils.mpi_processorDirectory
+        meshDir = self.case + '/constant/polyMesh/'
         self.faces = self.read(meshDir + 'faces', int)
         self.points = self.read(meshDir + 'points', float)
         self.owner = self.read(meshDir + 'owner', int).ravel()
@@ -47,8 +47,8 @@ class Mesh(object):
         self.weights = self.getWeights()   # nFaces
 
         end = time.time()
-        print('Time for reading mesh:', end-start)
-        print()
+        utils.pprint('Time for reading mesh:', end-start)
+        utils.pprint()
 
     def read(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
@@ -150,7 +150,7 @@ class Mesh(object):
         boundary = {}
         for patchID in self.boundary:
             boundary[patchID] = {}
-            if self.boundary[patchID]['type'] in ['cyclic', 'symmetryPlane', 'empty']:
+            if self.boundary[patchID]['type'] in ['cyclic', 'symmetryPlane', 'empty', 'processor']:
                 boundary[patchID]['type'] = self.boundary[patchID]['type']
             else:
                 boundary[patchID]['type'] = 'zeroGradient'
@@ -164,6 +164,9 @@ class Mesh(object):
             patch = self.boundary[patchID]
             startFace = patch['startFace']
             nFaces = patch['nFaces']
+            # empty patches
+            if nFaces == 0:
+                continue
             endFace = startFace + nFaces
             indices = self.nInternalCells + range(startFace, endFace) - self.nInternalFaces 
             # append neighbour
@@ -176,6 +179,16 @@ class Mesh(object):
                 # append cell centres
                 patch['transform'] = self.faceCentres[startFace]-self.faceCentres[neighbourStartFace]
                 self.cellCentres[indices] = patch['transform'] + self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
+            elif patch['type'] == 'processor':
+                patch['neighbProcNo'] = int(patch['neighbProcNo'])
+                patch['myProcNo'] = int(patch['myProcNo'])
+                local = patch['myProcNo']
+                remote = patch['neighbProcNo']
+                # exchange data
+                sendData = self.cellCentres[self.owner[startFace:endFace]]
+                recvData = sendData.copy()
+                utils.mpi.Sendrecv(sendData, remote, 0, recvData, remote, 0)
+                self.cellCentres[indices] = recvData
             else:
                 # append cell centres
                 self.cellCentres[indices] = self.faceCentres[startFace:endFace]

@@ -28,6 +28,19 @@ class cyclic(BoundaryCondition):
         logger.debug('cyclic BC for {0}'.format(self.patchID))
         self.field[self.cellStartFace:self.cellEndFace] = self.field[self.mesh.owner[self.neighbourStartFace:self.neighbourEndFace]]
 
+class processor(BoundaryCondition):
+    def __init__(self, field, patchID):
+        super(self.__class__, self).__init__(field, patchID)
+        self.local = self.mesh.boundary[patchID]['myProcNo']
+        self.remote = self.mesh.boundary[patchID]['neighbProcNo']
+
+    def update(self):
+        logger.debug('processor BC for {0}'.format(self.patchID))
+        sendData = ad.value(self.field[self.mesh.owner[self.startFace:self.endFace]])
+        recvData = sendData.copy()
+        utils.mpi.Sendrecv(sendData, self.remote, 0, recvData, self.remote, 0)
+        self.field[self.cellStartFace:self.cellEndFace] = recvData
+
 class zeroGradient(BoundaryCondition):
     def update(self):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))

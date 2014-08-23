@@ -1,9 +1,13 @@
 #!/usr/bin/python2
+from __future__ import print_function
 
-from field import CellField
-from mesh import Mesh
+from mpi4py import MPI
+import numpy as np
 
-mesh = Mesh('tests/forwardStep/')
-U = CellField.read('U', mesh, 0.000771531)
-p = CellField.read('p', mesh, 0.000771531)
-T = CellField.read('T', mesh, 0.000771531)
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
+a = np.random.rand(1)[0]
+b =comm.allreduce(a, op=MPI.MIN)
+print(b)

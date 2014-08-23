@@ -28,10 +28,10 @@ class Field(object):
         return self('max({0},{1})'.format(a.name, b.name), a.mesh, a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a))
 
     def info(self):
-        print(self.name + ':', self.field.shape, end='')
-        #print(max(np.isnan(self.field._value.tolist())))
-        #print(np.where(self.field._value < 0))
-        print(' min:', ad.value(self.field).min(), 'max:', ad.value(self.field).max())
+        utils.pprint(self.name + ':', self.field.shape, end='')
+        #utils.pprint(max(np.isnan(self.field._value.tolist())))
+        #utils.pprint(np.where(self.field._value < 0))
+        utils.pprint(' min:', utils.min(ad.value(self.field)), 'max:', utils.max(ad.value(self.field)))
 
     def component(self, component): 
         assert self.dimensions == (3,)
@@ -115,6 +115,9 @@ class CellField(Field):
 
         self.BC = {}
         for patchID in self.boundary:
+            # skip empty patches
+            if mesh.boundary[patchID]['nFaces'] == 0:
+                continue
             self.BC[patchID] = getattr(BCs, self.boundary[patchID]['type'])(self, patchID)
 
         if self.size == mesh.nInternalCells:
@@ -134,7 +137,7 @@ class CellField(Field):
     def read(self, name, mesh, time):
         if time == 0.0:
             time = 0
-        print('reading field {0}, time {1}'.format(name, time))
+        utils.pprint('reading field {0}, time {1}'.format(name, time))
         timeDir = '{0}/{1}/'.format(mesh.case, time)
 
         content = utils.removeCruft(open(timeDir + name, 'r').read(), keepHeader=True)
@@ -154,7 +157,7 @@ class CellField(Field):
             time = 0
         assert len(self.dimensions) == 1
         np.set_printoptions(precision=16)
-        print('writing field {0}, time {1}'.format(self.name, time))
+        utils.pprint('writing field {0}, time {1}'.format(self.name, time))
         timeDir = '{0}/{1}/'.format(self.mesh.case, time)
         if not exists(timeDir):
             makedirs(timeDir)
@@ -205,7 +208,7 @@ class CellField(Field):
     def updateGhostCells(self):
         logger.info('updating ghost cells for {0}'.format(self.name))
         mesh = self.mesh
-        for patchID in mesh.boundary:
+        for patchID in self.BC:
             self.BC[patchID].update()
 
 

@@ -1,3 +1,6 @@
+from __future__ import print_function
+
+# LOGGING
 import logging
 # normal
 #logging.basicConfig(level=logging.WARNING)
@@ -8,6 +11,39 @@ import logging
 def logger(name):
     return logging.getLogger(name)
 
+# MPI
+from mpi4py import MPI
+mpi = MPI.COMM_WORLD
+mpi_nProcs = mpi.Get_size()
+mpi_Rank = mpi.Get_rank()
+mpi_processorDirectory = ''
+if mpi_nProcs > 1:
+    mpi_processorDirectory = 'processor{0}'.format(mpi_Rank)
+
+def pprint(*args, **kwargs):
+    if mpi_Rank == 0:
+        print(*args, **kwargs)
+def max(data):
+    maxData = np.max(data)
+    if mpi_nProcs > 1:
+        return mpi.allreduce(maxData, op=MPI.MAX)
+    else:
+        return maxData
+
+def min(data):
+    minData = np.min(data)
+    if mpi_nProcs > 1:
+        return mpi.allreduce(minData, op=MPI.MIN)
+    else:
+        return minData
+
+# CONSTANTS
+
+SMALL = 1e-15
+VSMALL = 1e-300
+LARGE = 1e30
+
+# FILE READING
 import re
 import numpy as np
 import numpad as ad
@@ -21,10 +57,6 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 \*---------------------------------------------------------------------------*/
 '''
 foamFile = {'version':'2.0', 'format': 'ascii', 'class': 'volScalarField', 'object': ''}
-
-SMALL = 1e-15
-VSMALL = 1e-300
-LARGE = 1e30
 
 def removeCruft(content, keepHeader=False):
     # remove comments and newlines

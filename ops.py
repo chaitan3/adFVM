@@ -141,7 +141,7 @@ def explicit(equation, boundary, fields, solver):
     start = time.time()
 
     names = [phi.name for phi in fields]
-    print('Time marching for', ' '.join(names))
+    utils.pprint('Time marching for', ' '.join(names))
     for index in range(0, len(fields)):
         fields[index].old = CellField.copy(fields[index])
         fields[index].info()
@@ -154,14 +154,14 @@ def explicit(equation, boundary, fields, solver):
         #newFields[index].old = fields[index]
 
     end = time.time()
-    print('Time for iteration:', end-start)
+    utils.pprint('Time for iteration:', end-start)
     return newFields
 
 def implicit(equation, boundary, fields, dt):
     start = time.time()
 
     names = [phi.name for phi in fields]
-    print('Solving for', ' '.join(names))
+    utils.pprint('Solving for', ' '.join(names))
     for index in range(0, len(fields)):
         fields[index].old = CellField.copy(fields[index])
         fields[index].info()
@@ -186,7 +186,7 @@ def implicit(equation, boundary, fields, dt):
     setInternalFields(solution)
 
     end = time.time()
-    print('Time for iteration:', end-start)
+    utils.pprint('Time for iteration:', end-start)
 
 def derivative(newField, oldFields):
     start = time.time()
@@ -198,7 +198,7 @@ def derivative(newField, oldFields):
     result = sp.hstack(diffs).toarray().ravel()
 
     end = time.time()
-    print('Time for computing derivative:', end-start)
+    utils.pprint('Time for computing derivative:', end-start)
     return result
 
 def forget(fields):

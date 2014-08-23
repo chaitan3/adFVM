@@ -55,7 +55,7 @@ class Solver(object):
         self.U = CellField.read('U', mesh, t)
         fields = self.conservative(self.U, self.T, self.p)
         self.dt = dt
-        print()
+        utils.pprint()
         mesh = self.mesh
 
         timeSteps = np.zeros((nSteps, 2))
@@ -67,10 +67,10 @@ class Solver(object):
             else:
                 forget([self.p, self.T, self.U])
 
-            timeSteps[timeIndex-1] = np.array([t, dt])
+            timeSteps[timeIndex-1] = np.array([t, self.dt])
             t += self.dt
             t = round(t, 9)
-            print('Simulation Time:', t, 'Time step:', self.dt)
+            utils.pprint('Simulation Time:', t, 'Time step:', self.dt)
 
             if timeIndex % writeInterval == 0:
                 for phi in fields:
@@ -78,7 +78,7 @@ class Solver(object):
                 self.U.write(t)
                 self.T.write(t)
                 self.p.write(t)
-            print()
+            utils.pprint()
 
         if adjoint:
             return solutions
@@ -86,7 +86,7 @@ class Solver(object):
             return timeSteps
            
     def timeStep(self, aFbyD):
-        self.dt = min(self.dt*self.stepFactor, self.CFL/np.max(aFbyD))
+        self.dt = min(self.dt*self.stepFactor, self.CFL/utils.max(aFbyD))
 
     def equation(self, rho, rhoU, rhoE):
         mesh = self.mesh
@@ -142,8 +142,8 @@ class Solver(object):
 
 if __name__ == "__main__":
 
-    solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
-    solver.run([1.8, 1e-9], 100000, 1000)
-    #solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
-    #solver.run([0, 1e-4], 40000, 500)
+    #solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
+    #solver.run([1.8, 1e-9], 100000, 1000)
+    solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
+    solver.run([0, 1e-3], 40000, 500)
 
