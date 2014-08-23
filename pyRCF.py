@@ -61,14 +61,17 @@ class Solver(object):
         timeSteps = np.zeros((nSteps, 2))
         solutions = [fields]
         for timeIndex in range(1, nSteps+1):
+            fields = explicit(self.equation, self.boundary, fields, self)
+            if adjoint:
+                solutions.append(fields)
+            else:
+                forget([self.p, self.T, self.U])
+
             timeSteps[timeIndex-1] = np.array([t, dt])
             t += self.dt
             t = round(t, 9)
             print('Simulation Time:', t, 'Time step:', self.dt)
-            fields = explicit(self.equation, self.boundary, fields, self.dt)
-            #forget([self.p, self.T, self.U])
-            if adjoint:
-                solutions.append(fields)
+
             if timeIndex % writeInterval == 0:
                 for phi in fields:
                     phi.write(t)
@@ -81,7 +84,6 @@ class Solver(object):
             return solutions
         else:
             return timeSteps
-
            
     def timeStep(self, aFbyD):
         self.dt = min(self.dt*self.stepFactor, self.CFL/np.max(aFbyD))
@@ -140,8 +142,8 @@ class Solver(object):
 
 if __name__ == "__main__":
 
-    #solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
-    #solver.run([1.8, 1e-9], 10000, 100)
-    solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
-    solver.run([0, 1e-4], 40000, 500)
+    solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
+    solver.run([1.8, 1e-9], 100000, 1000)
+    #solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
+    #solver.run([0, 1e-4], 40000, 500)
 

@@ -137,7 +137,7 @@ def ddt(phi, phi0, dt):
     logger.info('ddt of {0}'.format(phi.name))
     return Field('ddt' + phi.name, phi.mesh, (phi.getInternalField()-ad.value(phi0.getInternalField()))/dt)
 
-def explicit(equation, boundary, fields, dt):
+def explicit(equation, boundary, fields, solver):
     start = time.time()
 
     names = [phi.name for phi in fields]
@@ -147,7 +147,7 @@ def explicit(equation, boundary, fields, dt):
         fields[index].info()
     
     LHS = equation(*fields)
-    internalFields = [(fields[index].getInternalField() - LHS[index].field*dt) for index in range(0, len(fields))]
+    internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields))]
     newFields = boundary(*internalFields)
     for index in range(0, len(fields)):
         newFields[index].name = fields[index].name
@@ -192,16 +192,24 @@ def derivative(newField, oldFields):
     start = time.time()
 
     names = [phi.name for phi in oldFields]
-    print([newField.diff(phi.field) for phi in oldFields])
-    result = sp.hstack([newField.diff(phi.field) for phi in oldFields])
+    diffs = []
+    for phi in oldFields:
+        diffs.append(newField.diff(phi.field))
+    result = sp.hstack(diffs).toarray().ravel()
 
     end = time.time()
     print('Time for computing derivative:', end-start)
-    result = result.toarray().ravel()
     return result
 
 def forget(fields):
     logger.info('forgetting fields')
     for phi in fields:
         phi.field.obliviate()
+
+def strip(fields):
+    logger.info('forgetting fields')
+    newFields = [CellField.copy(phi) for phi in fields]
+    for phi in newFields:
+        phi.field = ad.array(ad.value(phi.field))
+    return newFields
 

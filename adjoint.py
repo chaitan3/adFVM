@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 from __future__ import print_function
 from field import CellField
-from ops import derivative, forget
+from ops import derivative, forget, strip
 import numpad as ad
 import numpy as np
 import time
@@ -18,12 +18,12 @@ def objective(fields):
     return ad.sum(field*areas)
 primal = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
 
-nSteps = 2
-writeInterval = 1
+nSteps = 10
+writeInterval = 2
 
 print('PRIMAL INITIAL SWEEP: {0} Steps\n'.format(nSteps))
 mesh = primal.mesh
-timeSteps = primal.run([0, 1e-4], nSteps, writeInterval)
+timeSteps = primal.run([0, 1e-2], nSteps, writeInterval)
 
 adjointFields = [CellField.zeros('{0}a'.format(name), mesh, dimensions) for name, dimensions in zip(primal.names, primal.dimensions)]
 nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in adjointFields]))))
@@ -45,8 +45,10 @@ for checkpoint in range(0, nSteps/writeInterval):
         adjointIndex = writeInterval-1 - step
         stackedFields = ad.ravel(ad.hstack([phi.field for phi in solutions[adjointIndex + 1]]))
         jacobian = derivative(ad.sum(stackedFields*adjoint), solutions[adjointIndex])
-        forget(solutions[adjointIndex])
-        sensitivity = derivative(objective(solutions[adjointIndex]), solutions[adjointIndex])
+        strippedSolution = strip(solutions[adjointIndex])
+        sensitivity = derivative(objective(strippedSolution), strippedSolution)/nSteps
+        print(jacobian.min(), jacobian.max())
+        print(sensitivity.min(), sensitivity.max())
         adjoint = jacobian + sensitivity
 
         end = time.time()
