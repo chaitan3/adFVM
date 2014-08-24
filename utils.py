@@ -1,4 +1,7 @@
 from __future__ import print_function
+import numpy as np
+import numpad as ad
+import time
 
 # LOGGING
 import logging
@@ -29,13 +32,38 @@ def max(data):
         return mpi.allreduce(maxData, op=MPI.MAX)
     else:
         return maxData
-
 def min(data):
     minData = np.min(data)
     if mpi_nProcs > 1:
         return mpi.allreduce(minData, op=MPI.MIN)
     else:
         return minData
+
+class Exchanger(object):
+    def __init__(self, field):
+        self.field = field
+        self.requests = []
+        self.data = []
+        self.start = time.time()
+
+    def exchange(self, remote, sendIndices, recvIndices):
+        sendData = self.field[sendIndices]
+        if isinstance(sendData, ad.adarray):
+            sendData = ad.value(sendData)
+        recvData = sendData.copy()
+        sendRequest = mpi.Isend([sendData, MPI.DOUBLE], remote, 0)
+        recvRequest = mpi.Irecv([recvData, MPI.DOUBLE], remote, 0)
+        #utils.mpi.Sendrecv(sendData, remote, 0, recvData, remote, 0)
+        self.requests.extend([sendRequest, recvRequest])
+        self.data.append([recvIndices, recvData])
+
+    def wait(self):
+        if mpi_nProcs == 1:
+            return
+        MPI.Request.Waitall(self.requests)
+        for recvIndices, recvData in self.data:
+            self.field[recvIndices] = recvData
+        pprint('Finished exchange', time.time() - self.start)
 
 # CONSTANTS
 
@@ -45,8 +73,6 @@ LARGE = 1e30
 
 # FILE READING
 import re
-import numpy as np
-import numpad as ad
 
 foamHeader = '''/*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |

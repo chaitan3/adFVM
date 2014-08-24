@@ -160,6 +160,9 @@ class Mesh(object):
         logger.info('generated ghost cells')
         self.neighbour = np.concatenate((self.neighbour, np.zeros(self.nBoundaryFaces, int)))
         self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3))))
+        mpi_Requests = []
+        mpi_Data = []
+        exchanger = utils.Exchanger(self.cellCentres)
         for patchID in self.boundary:
             patch = self.boundary[patchID]
             startFace = patch['startFace']
@@ -185,11 +188,8 @@ class Mesh(object):
                 local = patch['myProcNo']
                 remote = patch['neighbProcNo']
                 # exchange data
-                sendData = self.cellCentres[self.owner[startFace:endFace]]
-                recvData = sendData.copy()
-                utils.mpi.Sendrecv(sendData, remote, 0, recvData, remote, 0)
-                self.cellCentres[indices] = recvData
+                exchanger.exchange(remote, self.owner[startFace:endFace], indices)
             else:
                 # append cell centres
                 self.cellCentres[indices] = self.faceCentres[startFace:endFace]
-             
+        exchanger.wait()

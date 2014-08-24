@@ -142,8 +142,8 @@ class Solver(object):
 
 if __name__ == "__main__":
 
-    #solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
-    #solver.run([1.8, 1e-9], 100000, 1000)
-    solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
-    solver.run([0, 1e-3], 40000, 500)
+    solver = Solver('tests/cylinder-par/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
+    solver.run([1.8, 1e-8], 100000, 1000)
+    #solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
+    #solver.run([0, 1e-3], 40000, 500)
 

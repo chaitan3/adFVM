@@ -17,34 +17,35 @@ class BoundaryCondition(object):
         self.endFace = self.startFace + self.nFaces
         self.cellStartFace = self.mesh.nInternalCells + self.startFace - self.mesh.nInternalFaces
         self.cellEndFace = self.mesh.nInternalCells + self.endFace - self.mesh.nInternalFaces
+        self.internalIndices = self.mesh.owner[self.startFace:self.endFace]
 
 class cyclic(BoundaryCondition):
     def __init__(self, field, patchID):
         super(self.__class__, self).__init__(field, patchID)
         neighbourPatch = self.mesh.boundary[patchID]['neighbourPatch']
-        self.neighbourStartFace = self.mesh.boundary[neighbourPatch]['startFace']
-        self.neighbourEndFace = self.neighbourStartFace + self.nFaces
+        neighbourStartFace = self.mesh.boundary[neighbourPatch]['startFace']
+        neighbourEndFace = neighbourStartFace + self.nFaces
+        self.neighbourIndices = self.mesh.owner[neighbourStartFace:neighbourEndFace]
+
     def update(self):
         logger.debug('cyclic BC for {0}'.format(self.patchID))
-        self.field[self.cellStartFace:self.cellEndFace] = self.field[self.mesh.owner[self.neighbourStartFace:self.neighbourEndFace]]
+        self.field[self.cellStartFace:self.cellEndFace] = self.field[self.neighbourIndices]
 
 class processor(BoundaryCondition):
     def __init__(self, field, patchID):
         super(self.__class__, self).__init__(field, patchID)
         self.local = self.mesh.boundary[patchID]['myProcNo']
         self.remote = self.mesh.boundary[patchID]['neighbProcNo']
+        self.recvIndices = range(self.cellStartFace, self.cellEndFace)
 
-    def update(self):
+    def update(self, exchanger):
         logger.debug('processor BC for {0}'.format(self.patchID))
-        sendData = ad.value(self.field[self.mesh.owner[self.startFace:self.endFace]])
-        recvData = sendData.copy()
-        utils.mpi.Sendrecv(sendData, self.remote, 0, recvData, self.remote, 0)
-        self.field[self.cellStartFace:self.cellEndFace] = recvData
+        exchanger.exchange(self.remote, self.internalIndices, self.recvIndices)
 
 class zeroGradient(BoundaryCondition):
     def update(self):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))
-        self.field[self.cellStartFace:self.cellEndFace] = self.field[self.mesh.owner[self.startFace:self.endFace]]
+        self.field[self.cellStartFace:self.cellEndFace] = self.field[self.internalIndices]
 
 class symmetryPlane(zeroGradient):
     def update(self):

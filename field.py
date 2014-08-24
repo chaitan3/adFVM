@@ -208,8 +208,14 @@ class CellField(Field):
     def updateGhostCells(self):
         logger.info('updating ghost cells for {0}'.format(self.name))
         mesh = self.mesh
+        exchanger = utils.Exchanger(self.field)
         for patchID in self.BC:
-            self.BC[patchID].update()
+            if self.boundary[patchID]['type'] == 'processor':
+                self.BC[patchID].update(exchanger)
+            else:
+                self.BC[patchID].update()
+        exchanger.wait()
+
 
 
 
