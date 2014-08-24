@@ -1,12 +1,13 @@
 from __future__ import print_function
 import numpy as np
-import numpad as ad
 import time
 import scipy.sparse as sp
 
 from field import Field, CellField
+from utils import ad, pprint
+from utils import Logger
+logger = Logger(__name__)
 import utils
-logger = utils.logger(__name__)
 
 def TVD_dual(phi):
     assert len(phi.dimensions) == 1
@@ -104,11 +105,15 @@ def grad(phi, ghost=False):
     mesh = phi.mesh
     if phi.size == mesh.nCells:
         phi = interpolate(phi)
-    product = phi.outer(mesh.Normals)
-    gradField = (mesh.sumOp * (product.field * mesh.areas[:,:,np.newaxis]))/mesh.volumes[:,:,np.newaxis]
-    # if grad of scalar
     if phi.dimensions[0] == 1:
-        gradField = gradField.reshape((mesh.nInternalCells, 3))
+        product = phi * mesh.Normals
+    else:
+        product = phi.outer(mesh.Normals)
+        product.field = product.field.reshape((phi.size, 9))
+    gradField = (mesh.sumOp * (product.field * mesh.areas))/mesh.volumes
+    # if grad of scalar
+    if phi.dimensions[0] == 3:
+        gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
     if ghost:
         return CellField('grad({0})'.format(phi.name), mesh, gradField)
     else:
@@ -141,7 +146,7 @@ def explicit(equation, boundary, fields, solver):
     start = time.time()
 
     names = [phi.name for phi in fields]
-    utils.pprint('Time marching for', ' '.join(names))
+    pprint('Time marching for', ' '.join(names))
     for index in range(0, len(fields)):
         fields[index].old = CellField.copy(fields[index])
         fields[index].info()
@@ -154,14 +159,15 @@ def explicit(equation, boundary, fields, solver):
         #newFields[index].old = fields[index]
 
     end = time.time()
-    utils.pprint('Time for iteration:', end-start)
+    pprint('Time for iteration:', end-start)
     return newFields
 
 def implicit(equation, boundary, fields, dt):
+    assert ad.__name__ == 'numpad'
     start = time.time()
 
     names = [phi.name for phi in fields]
-    utils.pprint('Solving for', ' '.join(names))
+    pprint('Solving for', ' '.join(names))
     for index in range(0, len(fields)):
         fields[index].old = CellField.copy(fields[index])
         fields[index].info()
@@ -186,7 +192,7 @@ def implicit(equation, boundary, fields, dt):
     setInternalFields(solution)
 
     end = time.time()
-    utils.pprint('Time for iteration:', end-start)
+    pprint('Time for iteration:', end-start)
 
 def derivative(newField, oldFields):
     start = time.time()
@@ -198,10 +204,12 @@ def derivative(newField, oldFields):
     result = sp.hstack(diffs).toarray().ravel()
 
     end = time.time()
-    utils.pprint('Time for computing derivative:', end-start)
+    pprint('Time for computing derivative:', end-start)
     return result
 
 def forget(fields):
+    if ad.__name__ != 'numpad':
+        return
     logger.info('forgetting fields')
     for phi in fields:
         phi.field.obliviate()

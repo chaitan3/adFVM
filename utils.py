@@ -1,6 +1,13 @@
 from __future__ import print_function
 import numpy as np
-import numpad as ad
+
+# switch between numpy and numpad
+#import numpad as ad
+#from numpad import adsparse
+import numpy as ad
+from scipy import sparse as adsparse
+ad.value = lambda x: x
+
 import time
 
 # LOGGING
@@ -11,7 +18,7 @@ import logging
 #logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.INFO)
 #logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
 
-def logger(name):
+def Logger(name):
     return logging.getLogger(name)
 
 # MPI
@@ -48,8 +55,8 @@ class Exchanger(object):
 
     def exchange(self, remote, sendIndices, recvIndices):
         sendData = self.field[sendIndices]
-        if isinstance(sendData, ad.adarray):
-            sendData = ad.value(sendData)
+        #if isinstance(sendData, ad.adarray):
+        #    sendData = ad.value(sendData)
         recvData = sendData.copy()
         sendRequest = mpi.Isend([sendData, MPI.DOUBLE], remote, 0)
         recvRequest = mpi.Irecv([recvData, MPI.DOUBLE], remote, 0)
@@ -104,11 +111,11 @@ def extractField(data, size, vector):
     data = re.search(re.compile('[A-Za-z<>\s\r\n]+(.*)', re.DOTALL), data).group(1)
     if nonUniform is not None:
         start = data.find('(')
-        internalField = ad.adarray(extractor(data[start:]))
+        internalField = ad.array(np.array(extractor(data[start:]), dtype=float))
         if not vector:
             internalField = internalField.reshape((-1, 1))
     else:
-        internalField = ad.adarray(np.tile(np.array(extractor(data)), (size, 1)))
+        internalField = ad.array(np.tile(np.array(extractor(data)), (size, 1)))
     return internalField
 
 

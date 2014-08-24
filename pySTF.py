@@ -1,12 +1,15 @@
 #!/usr/bin/python2
 from __future__ import print_function
 import numpy as np
-import numpad as ad
 import time
 
 from mesh import Mesh
 from field import Field, CellField
 from ops import interpolate, div, ddt, implicit, laplacian, forget
+
+from utils import ad, pprint
+from utils import Logger
+logger = Logger(__name__)
 
 case = 'tests/cyclic/'
 mesh = Mesh(case)

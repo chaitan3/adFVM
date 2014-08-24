@@ -1,20 +1,19 @@
 from __future__ import print_function
-import re
 import numpy as np
-import numpad as ad
+from scipy import sparse as sp
+import re
 import time
 
-from numpad import adsparse
-from scipy import sparse as sp
-
 from field import Field
+from utils import ad, adsparse, pprint
+from utils import Logger, Exchanger
+logger = Logger(__name__)
 import utils
-logger = utils.logger(__name__)
 
 class Mesh(object):
     def __init__(self, caseDir):
         start = time.time()
-        utils.pprint('Reading mesh')
+        pprint('Reading mesh')
 
         self.case = caseDir + utils.mpi_processorDirectory
         meshDir = self.case + '/constant/polyMesh/'
@@ -47,8 +46,8 @@ class Mesh(object):
         self.weights = self.getWeights()   # nFaces
 
         end = time.time()
-        utils.pprint('Time for reading mesh:', end-start)
-        utils.pprint()
+        pprint('Time for reading mesh:', end-start)
+        pprint()
 
     def read(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
@@ -162,7 +161,7 @@ class Mesh(object):
         self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3))))
         mpi_Requests = []
         mpi_Data = []
-        exchanger = utils.Exchanger(self.cellCentres)
+        exchanger = Exchanger(self.cellCentres)
         for patchID in self.boundary:
             patch = self.boundary[patchID]
             startFace = patch['startFace']

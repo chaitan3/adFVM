@@ -1,9 +1,10 @@
 from __future__ import print_function
 import numpy as np
-import numpad as ad
 
+from utils import ad
+from utils import Logger
+logger = Logger(__name__)
 import utils
-logger = utils.logger(__name__)
 
 class BoundaryCondition(object):
     def __init__(self, phi, patchID):

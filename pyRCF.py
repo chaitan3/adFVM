@@ -1,13 +1,16 @@
 #!/usr/bin/python2
 from __future__ import print_function
 import numpy as np
-import numpad as ad
 import time
 
 from mesh import Mesh
 from field import Field, CellField
 from ops import  div, ddt, snGrad, laplacian, grad, implicit, explicit, forget
 from ops import interpolate, upwind, TVD_dual
+
+from utils import ad, pprint
+from utils import Logger
+logger = Logger(__name__)
 import utils
 
 
@@ -55,7 +58,7 @@ class Solver(object):
         self.U = CellField.read('U', mesh, t)
         fields = self.conservative(self.U, self.T, self.p)
         self.dt = dt
-        utils.pprint()
+        pprint()
         mesh = self.mesh
 
         timeSteps = np.zeros((nSteps, 2))
@@ -70,7 +73,7 @@ class Solver(object):
             timeSteps[timeIndex-1] = np.array([t, self.dt])
             t += self.dt
             t = round(t, 9)
-            utils.pprint('Simulation Time:', t, 'Time step:', self.dt)
+            pprint('Simulation Time:', t, 'Time step:', self.dt)
 
             if timeIndex % writeInterval == 0:
                 for phi in fields:
@@ -78,7 +81,7 @@ class Solver(object):
                 self.U.write(t)
                 self.T.write(t)
                 self.p.write(t)
-            utils.pprint()
+            pprint()
 
         if adjoint:
             return solutions
@@ -142,7 +145,7 @@ class Solver(object):
 
 if __name__ == "__main__":
 
-    solver = Solver('tests/cylinder-par/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
+    solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
     solver.run([1.8, 1e-8], 100000, 1000)
     #solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
     #solver.run([0, 1e-3], 40000, 500)

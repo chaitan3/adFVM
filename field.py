@@ -1,14 +1,15 @@
 from __future__ import print_function
 import numpy as np
-import numpad as ad
 from os import makedirs
 from os.path import exists
+from numbers import Number
 import re
-import numbers
 
 import BCs
+from utils import ad, pprint
+from utils import Logger, Exchanger
+logger = Logger(__name__)
 import utils
-logger = utils.logger(__name__)
 
 class Field(object):
     def __init__(self, name, mesh, field):
@@ -28,8 +29,8 @@ class Field(object):
         return self('max({0},{1})'.format(a.name, b.name), a.mesh, a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a))
 
     def info(self):
-        utils.pprint(self.name + ':', end='')
-        utils.pprint(' min:', utils.min(ad.value(self.field)), 'max:', utils.max(ad.value(self.field)))
+        pprint(self.name + ':', end='')
+        pprint(' min:', utils.min(ad.value(self.field)), 'max:', utils.max(ad.value(self.field)))
 
     def component(self, component): 
         assert self.dimensions == (3,)
@@ -70,7 +71,7 @@ class Field(object):
         return self.__class__('-{0}'.format(self.name), self.mesh, -self.field)
 
     def __mul__(self, phi):
-        if isinstance(phi, numbers.Number):
+        if isinstance(phi, Number):
             return self.__class__('{0}*{1}'.format(self.name, phi), self.mesh, self.field * phi)
         else:
             product = self.field * phi.field
@@ -84,7 +85,7 @@ class Field(object):
         return self.__class__('{0}**{1}'.format(self.name, power), self.mesh, self.field.__pow__(power))
 
     def __add__(self, phi):
-        if isinstance(phi, numbers.Number):
+        if isinstance(phi, Number):
             return self.__class__('{0}+{1}'.format(self.name, phi), self.mesh, self.field + phi)
         else:
             return self.__class__('{0}+{1}'.format(self.name, phi.name), self.mesh, self.field + phi.field)
@@ -135,7 +136,7 @@ class CellField(Field):
     def read(self, name, mesh, time):
         if time == 0.0:
             time = 0
-        utils.pprint('reading field {0}, time {1}'.format(name, time))
+        pprint('reading field {0}, time {1}'.format(name, time))
         timeDir = '{0}/{1}/'.format(mesh.case, time)
 
         content = utils.removeCruft(open(timeDir + name, 'r').read(), keepHeader=True)
@@ -155,7 +156,7 @@ class CellField(Field):
             time = 0
         assert len(self.dimensions) == 1
         np.set_printoptions(precision=16)
-        utils.pprint('writing field {0}, time {1}'.format(self.name, time))
+        pprint('writing field {0}, time {1}'.format(self.name, time))
         timeDir = '{0}/{1}/'.format(self.mesh.case, time)
         if not exists(timeDir):
             makedirs(timeDir)
@@ -206,7 +207,7 @@ class CellField(Field):
     def updateGhostCells(self):
         logger.info('updating ghost cells for {0}'.format(self.name))
         mesh = self.mesh
-        exchanger = utils.Exchanger(self.field)
+        exchanger = Exchanger(self.field)
         for patchID in self.BC:
             if self.boundary[patchID]['type'] == 'processor':
                 self.BC[patchID].update(exchanger)
