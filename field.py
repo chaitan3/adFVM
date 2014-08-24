@@ -28,9 +28,7 @@ class Field(object):
         return self('max({0},{1})'.format(a.name, b.name), a.mesh, a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a))
 
     def info(self):
-        utils.pprint(self.name + ':', self.field.shape, end='')
-        #utils.pprint(max(np.isnan(self.field._value.tolist())))
-        #utils.pprint(np.where(self.field._value < 0))
+        utils.pprint(self.name + ':', end='')
         utils.pprint(' min:', utils.min(ad.value(self.field)), 'max:', utils.max(ad.value(self.field)))
 
     def component(self, component): 

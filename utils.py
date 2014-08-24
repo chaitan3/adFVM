@@ -63,7 +63,7 @@ class Exchanger(object):
         MPI.Request.Waitall(self.requests)
         for recvIndices, recvData in self.data:
             self.field[recvIndices] = recvData
-        pprint('Finished exchange', time.time() - self.start)
+        #pprint('Finished exchange', time.time() - self.start)
 
 # CONSTANTS
 
