@@ -60,7 +60,6 @@ class Exchanger(object):
         recvData = sendData.copy()
         sendRequest = mpi.Isend([sendData, MPI.DOUBLE], remote, 0)
         recvRequest = mpi.Irecv([recvData, MPI.DOUBLE], remote, 0)
-        #utils.mpi.Sendrecv(sendData, remote, 0, recvData, remote, 0)
         self.requests.extend([sendRequest, recvRequest])
         self.data.append([recvIndices, recvData])
 
