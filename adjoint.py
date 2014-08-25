@@ -1,10 +1,14 @@
 #!/usr/bin/python2
 from __future__ import print_function
-from field import CellField
-from ops import derivative, forget, strip
-import numpad as ad
+
 import numpy as np
 import time
+
+from field import CellField
+from ops import derivative, forget, strip
+from utils import ad
+
+assert ad.__name__ == 'numpad'
 
 from pyRCF import Solver
 def objective(fields):
@@ -18,8 +22,8 @@ def objective(fields):
     return ad.sum(field*areas)
 primal = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
 
-nSteps = 10
-writeInterval = 2
+nSteps = 2
+writeInterval = 1
 
 print('PRIMAL INITIAL SWEEP: {0} Steps\n'.format(nSteps))
 mesh = primal.mesh

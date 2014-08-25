@@ -9,5 +9,5 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 a = np.random.rand(1)[0]
-b =comm.allreduce(a, op=MPI.MIN)
+b = comm.allreduce(a, op=MPI.MIN)
 print(b)
