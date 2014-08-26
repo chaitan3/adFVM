@@ -16,7 +16,7 @@ class Mesh(object):
         pprint('Reading mesh')
 
         self.case = caseDir + utils.mpi_processorDirectory
-        meshDir = self.case + '/constant/polyMesh/'
+        meshDir = self.case + 'constant/polyMesh/'
         self.faces = self.read(meshDir + 'faces', int)
         self.points = self.read(meshDir + 'points', float)
         self.owner = self.read(meshDir + 'owner', int).ravel()
@@ -161,7 +161,7 @@ class Mesh(object):
         self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3))))
         mpi_Requests = []
         mpi_Data = []
-        exchanger = Exchanger(self.cellCentres)
+        exchanger = Exchanger()
         for patchID in self.boundary:
             patch = self.boundary[patchID]
             startFace = patch['startFace']
@@ -170,9 +170,10 @@ class Mesh(object):
             if nFaces == 0:
                 continue
             endFace = startFace + nFaces
-            indices = self.nInternalCells + range(startFace, endFace) - self.nInternalFaces 
+            cellStartFace = self.nInternalCells + startFace - self.nInternalFaces
+            cellEndFace = self.nInternalCells + endFace - self.nInternalFaces
             # append neighbour
-            self.neighbour[startFace:endFace] = indices
+            self.neighbour[startFace:endFace] = range(cellStartFace, cellEndFace)
             if patch['type'] == 'cyclic': 
                 neighbourPatch = self.boundary[patch['neighbourPatch']]   
                 neighbourStartFace = neighbourPatch['startFace']
@@ -180,15 +181,16 @@ class Mesh(object):
                 # apply transformation
                 # append cell centres
                 patch['transform'] = self.faceCentres[startFace]-self.faceCentres[neighbourStartFace]
-                self.cellCentres[indices] = patch['transform'] + self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
+                self.cellCentres[cellStartFace:cellEndFace] = patch['transform'] + self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
             elif patch['type'] == 'processor':
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
                 local = patch['myProcNo']
                 remote = patch['neighbProcNo']
                 # exchange data
-                exchanger.exchange(remote, self.owner[startFace:endFace], indices)
+                exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace])
             else:
                 # append cell centres
-                self.cellCentres[indices] = self.faceCentres[startFace:endFace]
+                self.cellCentres[cellStartFace:cellEndFace] = self.faceCentres[startFace:endFace]
         exchanger.wait()
+

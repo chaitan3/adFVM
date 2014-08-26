@@ -1,13 +1,22 @@
 #!/usr/bin/python2
 from __future__ import print_function
 
-from mpi4py import MPI
-import numpy as np
+from mesh import Mesh
+from field import CellField
+from ops import interpolate
+import time
 
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-size = comm.Get_size()
+case = 'tests/cylinder/'
+mesh = Mesh(case)
+U = CellField.read('U', mesh, 2)
+p = CellField.read('p', mesh, 2)
+Uf = interpolate(U).field
+pf = interpolate(p).field
 
-a = np.random.rand(1)[0]
-b = comm.allreduce(a, op=MPI.MIN)
-print(b)
+print(mesh.sumOp.shape)
+print(pf.shape)
+print(Uf.shape)
+
+x = lambda t: mesh.sumOp * pf
+y = lambda t: mesh.sumOp * Uf
+

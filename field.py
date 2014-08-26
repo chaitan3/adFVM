@@ -19,9 +19,6 @@ class Field(object):
         self.size = field.shape[0]
         self.dimensions = field.shape[1:]
 
-        if self.dimensions not in [(1,), (3,), (3,3), (1,3), (3,1), (1,1)]:
-            raise Exception('field dimensions {0} not supported'.format(self.dimensions))
-
     @classmethod
     def max(self, a, b):
         a_gt_b = ad.value(a.field) > ad.value(b.field)
@@ -32,6 +29,7 @@ class Field(object):
         pprint(self.name + ':', end='')
         pprint(' min:', utils.min(ad.value(self.field)), 'max:', utils.max(ad.value(self.field)))
 
+    # creates a view
     def component(self, component): 
         assert self.dimensions == (3,)
         return self.__class__('{0}.{1}'.format(self.name, component), self.mesh, self.field[:, component].reshape((-1,1)))
@@ -63,6 +61,7 @@ class Field(object):
     def outer(self, phi):
         return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.mesh, self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:])
     
+    # creates a view
     def transpose(self):
         assert len(self.dimensions) == 2
         return self.__class__('{0}.T'.format(self.name), self.mesh, self.field.transpose((0,2,1)))
@@ -176,38 +175,29 @@ class CellField(Field):
         handle.write('}\n')
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
         handle.write('dimensions      [0 1 -1 0 0 0 0];\n')
-
-        handle.write('internalField   nonuniform List<'+ dtype +'>\n')
-        handle.write('{0}\n(\n'.format(self.mesh.nInternalCells))
-        for value in ad.value(self.getInternalField()):
-            if dtype == 'scalar':
-                handle.write(str(value[0]) + '\n')
-            else:
-                handle.write('(' + ' '.join(np.char.mod('%f', value)) + ')\n')
-        handle.write(')\n;\n')
+        utils.writeField(handle, ad.value(self.getInternalField()), dtype, 'internalField')
         handle.write('boundaryField\n{\n')
         for patchID in self.boundary:
             handle.write('\t' + patchID + '\n\t{\n')
             patch = self.boundary[patchID]
             for attr in patch:
                 handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
+            if patch['type'] == 'processor':
+                utils.writeField(handle, self.BC[patchID].value, dtype, 'value')
             handle.write('\t}\n')
         handle.write('}\n')
         handle.close()
 
     def setInternalField(self, internalField):
-        mesh = self.mesh
-        self.field[:mesh.nInternalCells] = internalField
+        self.field[:self.mesh.nInternalCells] = internalField
         self.updateGhostCells()
 
     def getInternalField(self):
-        mesh = self.mesh
-        return self.field[:mesh.nInternalCells]
+        return self.field[:self.mesh.nInternalCells]
 
     def updateGhostCells(self):
         logger.info('updating ghost cells for {0}'.format(self.name))
-        mesh = self.mesh
-        exchanger = Exchanger(self.field)
+        exchanger = Exchanger()
         for patchID in self.BC:
             if self.boundary[patchID]['type'] == 'processor':
                 self.BC[patchID].update(exchanger)

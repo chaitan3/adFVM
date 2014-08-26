@@ -150,7 +150,6 @@ def explicit(equation, boundary, fields, solver):
     for index in range(0, len(fields)):
         fields[index].old = CellField.copy(fields[index])
         fields[index].info()
-    
     LHS = equation(*fields)
     internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields))]
     newFields = boundary(*internalFields)
@@ -171,22 +170,19 @@ def implicit(equation, boundary, fields, dt):
     for index in range(0, len(fields)):
         fields[index].old = CellField.copy(fields[index])
         fields[index].info()
-
     nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in adjointFields]))))
     nDimensions = zip(nDimensions[:-1], nDimensions[1:])
-
     def setInternalFields(stackedInternalFields):
         location = 0
         internalFields = []
+        # range creates a copy on the array
         for index in range(0, len(fields)):
             internalFields.append(stackedInternalFields[:, range(*nDimensions[index])])
         boundary(*internalFields)
-
     def solver(internalFields):
         setInternalFields(internalFields)
         equationFields = [phi.field for phi in equation(*fields)]
         return ad.hstack(equationFields)
-
     stack = [phi.getInternalField() for phi in fields]
     solution = ad.solve(solver, ad.hstack(stack))
     setInternalFields(solution)
@@ -198,9 +194,12 @@ def derivative(newField, oldFields):
     start = time.time()
 
     names = [phi.name for phi in oldFields]
+    logger.info('computing derivative with respect to {0}'.format(names))
     diffs = []
     for phi in oldFields:
         diffs.append(newField.diff(phi.field))
+        print(diffs[-1].todense().min())
+        print(diffs[-1].todense().max())
     result = sp.hstack(diffs).toarray().ravel()
 
     end = time.time()

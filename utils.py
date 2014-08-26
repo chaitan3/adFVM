@@ -10,25 +10,14 @@ from numpad import adsparse
 
 import time
 
-# LOGGING
-import logging
-# normal
-#logging.basicConfig(level=logging.WARNING)
-# debug
-#logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.INFO)
-#logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
-
-def Logger(name):
-    return logging.getLogger(name)
-
 # MPI
 from mpi4py import MPI
 mpi = MPI.COMM_WORLD
 mpi_nProcs = mpi.Get_size()
 mpi_Rank = mpi.Get_rank()
-mpi_processorDirectory = ''
+mpi_processorDirectory = '/'
 if mpi_nProcs > 1:
-    mpi_processorDirectory = 'processor{0}'.format(mpi_Rank)
+    mpi_processorDirectory = '/processor{0}/'.format(mpi_Rank)
 
 def pprint(*args, **kwargs):
     if mpi_Rank == 0:
@@ -42,34 +31,39 @@ def max(data):
 def min(data):
     minData = np.min(data)
     if mpi_nProcs > 1:
+        start = time.time()
         return mpi.allreduce(minData, op=MPI.MIN)
     else:
         return minData
 
 class Exchanger(object):
-    def __init__(self, field):
-        self.field = field
+    def __init__(self):
         self.requests = []
-        self.data = []
-        self.start = time.time()
 
-    def exchange(self, remote, sendIndices, recvIndices):
-        sendData = self.field[sendIndices]
+    def exchange(self, remote, sendData, recvData):
         #if isinstance(sendData, ad.adarray):
         #    sendData = ad.value(sendData)
-        recvData = sendData.copy()
         sendRequest = mpi.Isend([sendData, MPI.DOUBLE], remote, 0)
         recvRequest = mpi.Irecv([recvData, MPI.DOUBLE], remote, 0)
         self.requests.extend([sendRequest, recvRequest])
-        self.data.append([recvIndices, recvData])
 
     def wait(self):
         if mpi_nProcs == 1:
             return
         MPI.Request.Waitall(self.requests)
-        for recvIndices, recvData in self.data:
-            self.field[recvIndices] = recvData
-        #pprint('Finished exchange', time.time() - self.start)
+
+# LOGGING
+import logging
+# normal
+#logging.basicConfig(level=logging.WARNING)
+# debug
+logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.INFO)
+#logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
+
+def Logger(name):
+    return logging.getLogger('processor{0}:{1}'.format(mpi_Rank, name))
+
+
 
 # CONSTANTS
 
@@ -116,5 +110,16 @@ def extractField(data, size, vector):
     else:
         internalField = ad.array(np.tile(np.array(extractor(data)), (size, 1)))
     return internalField
+
+def writeField(handle, field, dtype, initial):
+    handle.write(initial + ' nonuniform List<'+ dtype +'>\n')
+    handle.write('{0}\n(\n'.format(len(field)))
+    for value in field:
+        if dtype == 'scalar':
+            handle.write(str(value[0]) + '\n')
+        else:
+            handle.write('(' + ' '.join(np.char.mod('%f', value)) + ')\n')
+    handle.write(')\n;\n')
+
 
 

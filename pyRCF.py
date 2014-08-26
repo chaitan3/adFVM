@@ -1,6 +1,7 @@
 #!/usr/bin/python2
 from __future__ import print_function
 import numpy as np
+import sys
 import time
 
 from mesh import Mesh
@@ -16,6 +17,7 @@ import utils
 
 class Solver(object):
     def __init__(self, case, config):
+        logger.info('initializing solver for {0}'.format(case))
         self.R = config['R']
         self.Cp = config['Cp']
         self.gamma = config['gamma']
@@ -33,6 +35,7 @@ class Solver(object):
         self.dimensions = [(1,), (3,), (1,)]
 
     def primitive(self, rho, rhoU, rhoE):
+        logger.info('converting fields to primitive')
         U = rhoU/rho
         E = rhoE/rho
         e = E - 0.5*U.magSqr()
@@ -41,6 +44,7 @@ class Solver(object):
         return U, T, p
 
     def conservative(self, U, T, p):
+        logger.info('converting fields to conservative')
         e = self.Cv*T
         rho = p/(e*(self.gamma-1))
         E = e + 0.5*U.magSqr()
@@ -50,6 +54,7 @@ class Solver(object):
         return rho, rhoU, rhoE
     
     def run(self, timeStep, nSteps, writeInterval=utils.LARGE, adjoint=False):
+        logger.info('running solver for {0}'.format(nSteps))
         t, dt = timeStep
         mesh = self.mesh
         #initialize
@@ -69,12 +74,10 @@ class Solver(object):
                 solutions.append(fields)
             else:
                 forget([self.p, self.T, self.U])
-
             timeSteps[timeIndex-1] = np.array([t, self.dt])
             t += self.dt
             t = round(t, 9)
             pprint('Simulation Time:', t, 'Time step:', self.dt)
-
             if timeIndex % writeInterval == 0:
                 for phi in fields:
                     phi.write(t)
@@ -89,9 +92,11 @@ class Solver(object):
             return timeSteps
            
     def timeStep(self, aFbyD):
+        logger.info('computing new time step')
         self.dt = min(self.dt*self.stepFactor, self.CFL/utils.max(aFbyD))
 
     def equation(self, rho, rhoU, rhoE):
+        logger.info('computing RHS/LHS')
         mesh = self.mesh
 
         rhoLF, rhoRF = TVD_dual(rho)
@@ -132,6 +137,7 @@ class Solver(object):
                 ddt(rhoE, rhoE.old, self.dt) + div(rhoEFlux) - (laplacian(e, self.alpha) + div(sigmaF.dot(UF)))]
 
     def boundary(self, rhoI, rhoUI, rhoEI):
+        logger.info('correcting boundary')
         mesh = self.mesh
         rhoN = Field(self.names[0], mesh, rhoI)
         rhoUN = Field(self.names[1], mesh, rhoUI)
@@ -142,11 +148,14 @@ class Solver(object):
         self.p.setInternalField(pN.field)
         return self.conservative(self.U, self.T, self.p)
     
-
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        case = sys.argv[1]
+    else:
+        case = 'tests/cylinder'
 
-    solver = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
-    solver.run([1.8, 1e-8], 100000, 1000)
+    solver = Solver(case, {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
+    solver.run([2, 1e-8], 100, 10)
     #solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
     #solver.run([0, 1e-3], 40000, 500)
 

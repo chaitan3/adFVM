@@ -49,7 +49,7 @@ for checkpoint in range(0, nSteps/writeInterval):
         adjointIndex = writeInterval-1 - step
         stackedFields = ad.ravel(ad.hstack([phi.field for phi in solutions[adjointIndex + 1]]))
         jacobian = derivative(ad.sum(stackedFields*adjoint), solutions[adjointIndex])
-        strippedSolution = strip(solutions[adjointIndex])
+        strippedSolution = solutions[adjointIndex]#strip(solutions[adjointIndex])
         sensitivity = derivative(objective(strippedSolution), strippedSolution)/nSteps
         print(jacobian.min(), jacobian.max())
         print(sensitivity.min(), sensitivity.max())
@@ -61,5 +61,6 @@ for checkpoint in range(0, nSteps/writeInterval):
     adjointMat = adjoint.reshape((mesh.nCells, 5))
     for index in range(0, len(nDimensions)):
         phi = adjointFields[index]
+        # range creates a copy
         phi.field = adjointMat[:, range(*nDimensions[index])]
         phi.write(timeSteps[primalIndex][0])

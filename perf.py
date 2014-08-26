@@ -1,11 +1,11 @@
-from numba import jit,double
+#from numba import jit,double
 import numpy as np
 import theano.tensor as T
 import theano
 import numexpr as ne
 import math
 
-@jit('f8[:](f8[:])')
+#@jit('f8[:](f8[:])')
 def test_numba(x):
     res = np.zeros_like(x)
     n = x.shape[0]
