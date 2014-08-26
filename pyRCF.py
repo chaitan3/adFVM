@@ -6,7 +6,7 @@ import time
 
 from mesh import Mesh
 from field import Field, CellField
-from ops import  div, ddt, snGrad, laplacian, grad, implicit, explicit, forget
+from ops import  div, ddt, snGrad, laplacian, grad, implicit, explicit, forget, strip
 from ops import interpolate, upwind, TVD_dual
 
 from utils import ad, pprint
@@ -67,12 +67,18 @@ class Solver(object):
         mesh = self.mesh
 
         timeSteps = np.zeros((nSteps, 2))
-        solutions = [fields]
+        solutions = []
         for timeIndex in range(1, nSteps+1):
-            fields = explicit(self.equation, self.boundary, fields, self)
             if adjoint:
-                solutions.append(fields)
+                oldFields = strip(fields)
+                solutions.append([fields, oldFields])
+                fields = explicit(self.equation, self.boundary, oldFields, self)
+                x = fields[2].field[16560:16768]
+                print(x.diff(oldFields[0].field))
+                print(x.diff(oldFields[1].field))
+                print(x.diff(oldFields[2].field))
             else:
+                fields = explicit(self.equation, self.boundary, fields, self)
                 forget([self.p, self.T, self.U])
             timeSteps[timeIndex-1] = np.array([t, self.dt])
             t += self.dt
@@ -85,8 +91,8 @@ class Solver(object):
                 self.T.write(t)
                 self.p.write(t)
             pprint()
-
         if adjoint:
+            solutions.append([fields])
             return solutions
         else:
             return timeSteps

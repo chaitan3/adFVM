@@ -18,6 +18,7 @@ def objective(fields):
     start, end = bc[patch].startFace, bc[patch].endFace
     areas = rhoE.mesh.areas[start:end]
     start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
+    print(start, end)
     field = rhoE.field[start:end]
     return ad.sum(field*areas)
 primal = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
@@ -47,13 +48,13 @@ for checkpoint in range(0, nSteps/writeInterval):
         start = time.time()
 
         adjointIndex = writeInterval-1 - step
-        stackedFields = ad.ravel(ad.hstack([phi.field for phi in solutions[adjointIndex + 1]]))
-        jacobian = derivative(ad.sum(stackedFields*adjoint), solutions[adjointIndex])
-        strippedSolution = solutions[adjointIndex]#strip(solutions[adjointIndex])
-        sensitivity = derivative(objective(strippedSolution), strippedSolution)/nSteps
+        stackedFields = ad.ravel(ad.hstack([phi.field for phi in solutions[adjointIndex + 1][0]]))
+        jacobian = derivative(ad.sum(stackedFields*adjoint), solutions[adjointIndex][-1])
+        sensitivity = derivative(objective(solutions[adjointIndex][-1]), solutions[adjointIndex][-1])/nSteps
         print(jacobian.min(), jacobian.max())
         print(sensitivity.min(), sensitivity.max())
         adjoint = jacobian + sensitivity
+        print(adjoint.min(), adjoint.max())
 
         end = time.time()
         print('Time for iteration: {0}\n'.format(end-start))

@@ -198,8 +198,6 @@ def derivative(newField, oldFields):
     diffs = []
     for phi in oldFields:
         diffs.append(newField.diff(phi.field))
-        print(diffs[-1].todense().min())
-        print(diffs[-1].todense().max())
     result = sp.hstack(diffs).toarray().ravel()
 
     end = time.time()
