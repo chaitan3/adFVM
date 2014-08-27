@@ -197,8 +197,8 @@ def derivative(newField, oldFields):
     logger.info('computing derivative with respect to {0}'.format(names))
     diffs = []
     for phi in oldFields:
-        diffs.append(newField.diff(phi.field))
-    result = sp.hstack(diffs).toarray().ravel()
+        diffs.append(newField.diff(phi.field).toarray().reshape(phi.field.shape))
+    result = np.hstack(diffs).ravel()
 
     end = time.time()
     pprint('Time for computing derivative:', end-start)

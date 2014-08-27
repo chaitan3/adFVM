@@ -18,13 +18,12 @@ def objective(fields):
     start, end = bc[patch].startFace, bc[patch].endFace
     areas = rhoE.mesh.areas[start:end]
     start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
-    print(start, end)
     field = rhoE.field[start:end]
     return ad.sum(field*areas)
 primal = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
 
-nSteps = 2
-writeInterval = 1
+nSteps = 10
+writeInterval = 5
 
 print('PRIMAL INITIAL SWEEP: {0} Steps\n'.format(nSteps))
 mesh = primal.mesh
@@ -55,6 +54,7 @@ for checkpoint in range(0, nSteps/writeInterval):
         print(sensitivity.min(), sensitivity.max())
         adjoint = jacobian + sensitivity
         print(adjoint.min(), adjoint.max())
+        forget(solutions[adjointIndex+1][0])
 
         end = time.time()
         print('Time for iteration: {0}\n'.format(end-start))

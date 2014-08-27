@@ -73,10 +73,6 @@ class Solver(object):
                 oldFields = strip(fields)
                 solutions.append([fields, oldFields])
                 fields = explicit(self.equation, self.boundary, oldFields, self)
-                x = fields[2].field[16560:16768]
-                print(x.diff(oldFields[0].field))
-                print(x.diff(oldFields[1].field))
-                print(x.diff(oldFields[2].field))
             else:
                 fields = explicit(self.equation, self.boundary, fields, self)
                 forget([self.p, self.T, self.U])

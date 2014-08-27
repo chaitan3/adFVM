@@ -30,7 +30,8 @@ class cyclic(BoundaryCondition):
 
     def update(self):
         logger.debug('cyclic BC for {0}'.format(self.patchID))
-        self.value[:] = self.field[self.neighbourIndices]
+        #self.value[:] = self.field[self.neighbourIndices]
+        self.field[self.cellStartFace:self.cellEndFace] = self.field[self.neighbourIndices]
 
 class processor(BoundaryCondition):
     def __init__(self, field, patchID):
@@ -45,7 +46,8 @@ class processor(BoundaryCondition):
 class zeroGradient(BoundaryCondition):
     def update(self):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))
-        self.value[:] = self.field[self.internalIndices]
+        #self.value[:] = self.field[self.internalIndices]
+        self.field[self.cellStartFace:self.cellEndFace] = self.field[self.internalIndices]
 
 class symmetryPlane(zeroGradient):
     def update(self):
@@ -54,7 +56,8 @@ class symmetryPlane(zeroGradient):
         # if vector
         if self.field.shape[1:] == (3,):
             v = -self.mesh.normals[self.startFace:self.endFace]
-            self.value -= ad.sum(self.value*v, axis=1).reshape((-1,1))*v
+            #self.value -= ad.sum(self.value*v, axis=1).reshape((-1,1))*v
+            self.field[self.cellStartFace:self.cellEndFace] -= ad.sum(self.field[self.cellStartFace:self.cellEndFace]*v, axis=1).reshape((-1,1))*v
 
 class fixedValue(BoundaryCondition):
     def __init__(self, field, patchID):
@@ -63,7 +66,8 @@ class fixedValue(BoundaryCondition):
 
     def update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
-        self.value[:] = self.fixedValue
+        #self.value[:] = self.fixedValue
+        self.field[self.cellStartFace:self.cellEndFace] = self.fixedValue
 
 slip = symmetryPlane
 empty = zeroGradient
