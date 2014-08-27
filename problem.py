@@ -6,6 +6,7 @@ import sys
 
 from pyRCF import Solver
 from utils import ad
+from field import CellField
 
 nSteps = 1000
 writeInterval = 20
@@ -34,6 +35,7 @@ def writeResult(result):
         f.write('{0}\n'.format(result))
 
 if __name__ == "__main__":
+    mesh = primal.mesh
     option = sys.argv[1]
     if option == 'orig':
         timeSteps, result = primal.run([0, 1e-2], nSteps, writeInterval, objective=objective)
@@ -45,6 +47,7 @@ if __name__ == "__main__":
     elif option == 'adjoint':
         adjointFields = [CellField.read('{0}a'.format(name), mesh, 0) for name in primal.names]
         stackedAdjointFields = np.hstack([ad.value(phi.field) for phi in adjointFields])
+        # write the perturbation
         result = np.sum(stackedAdjointFields*perturb())
         print(result)
     else:
