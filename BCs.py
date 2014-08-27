@@ -20,9 +20,20 @@ class BoundaryCondition(object):
         self.internalIndices = self.mesh.owner[self.startFace:self.endFace]
         self.value = self.field[self.cellStartFace:self.cellEndFace]
 
+class calculated(BoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        if 'value' in self.patch:
+            self.field[self.cellStartFace:self.cellEndFace] = utils.extractField(self.patch['value'], self.nFaces, self.field.shape == 3)
+        else:
+            self.field[self.cellStartFace:self.cellEndFace] = 0.
+
+    def update():
+        pass
+
 class cyclic(BoundaryCondition):
-    def __init__(self, field, patchID):
-        super(self.__class__, self).__init__(field, patchID)
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
         neighbourPatch = self.mesh.boundary[patchID]['neighbourPatch']
         neighbourStartFace = self.mesh.boundary[neighbourPatch]['startFace']
         neighbourEndFace = neighbourStartFace + self.nFaces
@@ -34,8 +45,8 @@ class cyclic(BoundaryCondition):
         self.field[self.cellStartFace:self.cellEndFace] = self.field[self.neighbourIndices]
 
 class processor(BoundaryCondition):
-    def __init__(self, field, patchID):
-        super(self.__class__, self).__init__(field, patchID)
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
         self.local = self.mesh.boundary[patchID]['myProcNo']
         self.remote = self.mesh.boundary[patchID]['neighbProcNo']
 
@@ -60,8 +71,8 @@ class symmetryPlane(zeroGradient):
             self.field[self.cellStartFace:self.cellEndFace] -= ad.sum(self.field[self.cellStartFace:self.cellEndFace]*v, axis=1).reshape((-1,1))*v
 
 class fixedValue(BoundaryCondition):
-    def __init__(self, field, patchID):
-        super(self.__class__, self).__init__(field, patchID)
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
         self.fixedValue = utils.extractField(self.patch['value'], self.nFaces, self.field.shape == 3)
 
     def update(self):

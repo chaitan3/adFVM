@@ -23,6 +23,7 @@ class Mesh(object):
         self.neighbour = self.read(meshDir + 'neighbour', int).ravel()
         self.boundary = self.readBoundary(meshDir + 'boundary')
         self.defaultBoundary = self.getDefaultBoundary()
+        self.calculatedBoundary = self.getCalculatedBoundary()
 
         self.nInternalFaces = len(self.neighbour)
         self.nFaces = len(self.owner)
@@ -153,6 +154,17 @@ class Mesh(object):
                 boundary[patchID]['type'] = self.boundary[patchID]['type']
             else:
                 boundary[patchID]['type'] = 'zeroGradient'
+        return boundary
+
+    def getCalculatedBoundary(self):
+        logger.info('generated calculated boundary')
+        boundary = {}
+        for patchID in self.boundary:
+            boundary[patchID] = {}
+            if self.boundary[patchID]['type'] in ['cyclic', 'processor']:
+                boundary[patchID]['type'] = self.boundary[patchID]['type']
+            else:
+                boundary[patchID]['type'] = 'calculated'
         return boundary
 
     def createGhostCells(self):

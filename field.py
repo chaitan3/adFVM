@@ -182,7 +182,7 @@ class CellField(Field):
             patch = self.boundary[patchID]
             for attr in patch:
                 handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
-            if patch['type'] == 'processor':
+            if (patch['type'] == 'processor') or (patch['type'] == 'calculated':
                 utils.writeField(handle, self.BC[patchID].value, dtype, 'value')
             handle.write('\t}\n')
         handle.write('}\n')

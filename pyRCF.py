@@ -66,7 +66,7 @@ class Solver(object):
         pprint()
         mesh = self.mesh
 
-        timeSteps = np.zeros((nSteps, 2))
+        timeSteps = np.zeros((nSteps + 1, 2))
         solutions = []
         for timeIndex in range(1, nSteps+1):
             if adjoint:
@@ -87,6 +87,7 @@ class Solver(object):
                 self.T.write(t)
                 self.p.write(t)
             pprint()
+        timeSteps[nSteps] = np.array([t, self.dt])
         if adjoint:
             solutions.append([fields, strip(fields)])
             return solutions
