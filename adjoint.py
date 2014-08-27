@@ -9,38 +9,23 @@ from field import CellField
 from ops import derivative, forget, strip
 from utils import ad
 
-assert ad.__name__ == 'numpad'
-
-from pyRCF import Solver
-primal = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
-def objective(fields):
-    rho, rhoU, rhoE = fields
-    patch = 'obstacle'
-    bc = rhoE.BC
-    start, end = bc[patch].startFace, bc[patch].endFace
-    areas = rhoE.mesh.areas[start:end]
-    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
-    field = rhoE.field[start:end]
-    return ad.sum(field*areas)
-
-nSteps = 1000
-writeInterval = 20
-
 firstCheckpoint = 0
 if len(sys.argv) > 1:
     timeSteps = np.loadtxt(sys.argv[1])
     if len(sys.argv) > 2:
         firstCheckpoint = int(sys.argv[2])
 else:
-    print('PRIMAL INITIAL SWEEP: {0} Steps\n'.format(nSteps))
-    timeSteps = primal.run([0, 1e-2], nSteps, writeInterval)
-    np.savetxt(primal.mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval), timeSteps)
+    print('Primal run time step file not specified')
+    exit()
 
+from problem import primal, nSteps, writeInterval, objective
+assert ad.__name__ == 'numpad'
 mesh = primal.mesh
+
 if firstCheckpoint == 0:
     adjointFields = [CellField('{0}a'.format(name), mesh, ad.zeros((mesh.nInternalCells, dimensions[0])), mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
 else:
-    adjointFields = [CellField.read('{0}a'.format(name), mesh, timeSteps[nSteps - first*writeInterval][0]) for name in primal.names]
+    adjointFields = [CellField.read('{0}a'.format(name), mesh, timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in primal.names]
 stackedAdjointFields = np.hstack([ad.value(phi.field) for phi in adjointFields])
 nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in adjointFields]))))
 nDimensions = zip(nDimensions[:-1], nDimensions[1:])
@@ -48,7 +33,7 @@ nDimensions = zip(nDimensions[:-1], nDimensions[1:])
 print('STARTING ADJOINT\n')
 
 def writeAdjointFields(writeTime):
-    for index in range(first, len(nDimensions)):
+    for index in range(0, len(nDimensions)):
         phi = adjointFields[index]
         # range creates a copy
         phi.field = stackedAdjointFields[:, range(*nDimensions[index])]
@@ -56,7 +41,7 @@ def writeAdjointFields(writeTime):
         phi.write(writeTime)
     print()
 
-for checkpoint in range(first, nSteps/writeInterval):
+for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
     print('PRIMAL FORWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     primalIndex = nSteps - (checkpoint + 1)*writeInterval
     solutions = primal.run(timeSteps[primalIndex], nSteps=writeInterval, adjoint=True)
@@ -64,7 +49,7 @@ for checkpoint in range(first, nSteps/writeInterval):
     print('ADJOINT BACKWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     if checkpoint == 0:
         lastSolution = solutions[-1][-1]
-        stackedAdjointFields = derivative(objective(lastSolution), lastSolution)/nSteps
+        stackedAdjointFields = derivative(objective(lastSolution), lastSolution)
         writeAdjointFields(timeSteps[-1][0])
 
     for step in range(0, writeInterval):
@@ -75,7 +60,7 @@ for checkpoint in range(first, nSteps/writeInterval):
         previousSolution = solutions[adjointIndex][-1]
         stackedFields = ad.hstack([phi.field for phi in currentSolution])
         jacobians = derivative(ad.sum(stackedFields*stackedAdjointFields), previousSolution)
-        sensitivities = derivative(objective(previousSolution), previousSolution)/nSteps
+        sensitivities = derivative(objective(previousSolution), previousSolution)
         stackedAdjointFields = jacobians + sensitivities
         forget(currentSolution)
 

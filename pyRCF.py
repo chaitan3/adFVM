@@ -53,7 +53,7 @@ class Solver(object):
         rho.name, rhoU.name, rhoE.name = self.names
         return rho, rhoU, rhoE
     
-    def run(self, timeStep, nSteps, writeInterval=utils.LARGE, adjoint=False):
+    def run(self, timeStep, nSteps, writeInterval=utils.LARGE, adjoint=False, objective=lambda x: 0, perturb=None):
         logger.info('running solver for {0}'.format(nSteps))
         t, dt = timeStep
         mesh = self.mesh
@@ -62,11 +62,14 @@ class Solver(object):
         self.T = CellField.read('T', mesh, t)
         self.U = CellField.read('U', mesh, t)
         fields = self.conservative(self.U, self.T, self.p)
+        if perturb is not None:
+            perturb(fields)
         self.dt = dt
         pprint()
         mesh = self.mesh
 
         timeSteps = np.zeros((nSteps + 1, 2))
+        result = 0
         solutions = []
         for timeIndex in range(1, nSteps+1):
             if adjoint:
@@ -74,9 +77,10 @@ class Solver(object):
                 solutions.append([fields, oldFields])
                 fields = explicit(self.equation, self.boundary, oldFields, self)
             else:
+                result += objective(fields)
                 fields = explicit(self.equation, self.boundary, fields, self)
                 forget([self.p, self.T, self.U])
-            timeSteps[timeIndex-1] = np.array([t, self.dt])
+                timeSteps[timeIndex-1] = np.array([t, self.dt])
             t += self.dt
             t = round(t, 9)
             pprint('Simulation Time:', t, 'Time step:', self.dt)
@@ -87,12 +91,13 @@ class Solver(object):
                 self.T.write(t)
                 self.p.write(t)
             pprint()
-        timeSteps[nSteps] = np.array([t, self.dt])
         if adjoint:
             solutions.append([fields, strip(fields)])
             return solutions
         else:
-            return timeSteps
+            timeSteps[nSteps] = np.array([t, self.dt])
+            result += objective(fields)
+            return timeSteps, result
            
     def timeStep(self, aFbyD):
         logger.info('computing new time step')
