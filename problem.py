@@ -1,7 +1,9 @@
 #!/usr/bin/python2
 from __future__ import print_function
 
+import numpy as np
 import sys
+
 from pyRCF import Solver
 from utils import ad
 

@@ -28,7 +28,7 @@ class calculated(BoundaryCondition):
         else:
             self.field[self.cellStartFace:self.cellEndFace] = 0.
 
-    def update():
+    def update(self):
         pass
 
 class cyclic(BoundaryCondition):

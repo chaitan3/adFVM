@@ -114,7 +114,7 @@ def extractField(data, size, vector):
 def writeField(handle, field, dtype, initial):
     handle.write(initial + ' nonuniform List<'+ dtype +'>\n')
     handle.write('{0}\n(\n'.format(len(field)))
-    for value in field:
+    for value in ad.value(field):
         if dtype == 'scalar':
             handle.write(str(value[0]) + '\n')
         else:
