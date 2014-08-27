@@ -1,6 +1,7 @@
 *.pyc
 *.log
 *.output
+*.avi
 
 faces
 owner

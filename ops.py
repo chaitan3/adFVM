@@ -191,17 +191,10 @@ def implicit(equation, boundary, fields, dt):
     pprint('Time for iteration:', end-start)
 
 def derivative(newField, oldFields):
-    start = time.time()
-
     names = [phi.name for phi in oldFields]
     logger.info('computing derivative with respect to {0}'.format(names))
-    diffs = []
-    for phi in oldFields:
-        diffs.append(newField.diff(phi.field).toarray().reshape(phi.field.shape))
-    result = np.hstack(diffs).ravel()
-
-    end = time.time()
-    pprint('Time for computing derivative:', end-start)
+    diffs = [newField.diff(phi.field).toarray().reshape(phi.field.shape) for phi in oldFields]
+    result = np.hstack(diffs)
     return result
 
 def forget(fields):

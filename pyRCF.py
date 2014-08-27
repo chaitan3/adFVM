@@ -88,7 +88,7 @@ class Solver(object):
                 self.p.write(t)
             pprint()
         if adjoint:
-            solutions.append([fields])
+            solutions.append([fields, strip(fields)])
             return solutions
         else:
             return timeSteps
