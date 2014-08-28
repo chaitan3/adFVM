@@ -2,6 +2,7 @@
 *.log
 *.output
 *.avi
+*.txt
 
 faces
 owner

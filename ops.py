@@ -140,7 +140,7 @@ def laplacian(phi, DT):
 
 def ddt(phi, phi0, dt):
     logger.info('ddt of {0}'.format(phi.name))
-    return Field('ddt' + phi.name, phi.mesh, (phi.getInternalField()-ad.value(phi0.getInternalField()))/dt)
+    return Field('ddt' + phi.name, phi.mesh, (phi.getInternalField()-phi0.getInternalField())/dt)
 
 def explicit(equation, boundary, fields, solver):
     start = time.time()
@@ -148,7 +148,7 @@ def explicit(equation, boundary, fields, solver):
     names = [phi.name for phi in fields]
     pprint('Time marching for', ' '.join(names))
     for index in range(0, len(fields)):
-        fields[index].old = CellField.copy(fields[index])
+        fields[index].old = fields[index]
         fields[index].info()
     LHS = equation(*fields)
     internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields))]
@@ -161,7 +161,7 @@ def explicit(equation, boundary, fields, solver):
     pprint('Time for iteration:', end-start)
     return newFields
 
-def implicit(equation, boundary, fields, dt):
+def implicit(equation, boundary, fields, garbage):
     assert ad.__name__ == 'numpad'
     start = time.time()
 
@@ -170,25 +170,29 @@ def implicit(equation, boundary, fields, dt):
     for index in range(0, len(fields)):
         fields[index].old = CellField.copy(fields[index])
         fields[index].info()
-    nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in adjointFields]))))
+    nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in fields]))))
     nDimensions = zip(nDimensions[:-1], nDimensions[1:])
     def setInternalFields(stackedInternalFields):
-        location = 0
         internalFields = []
         # range creates a copy on the array
         for index in range(0, len(fields)):
             internalFields.append(stackedInternalFields[:, range(*nDimensions[index])])
-        boundary(*internalFields)
+        return boundary(*internalFields)
     def solver(internalFields):
-        setInternalFields(internalFields)
-        equationFields = [phi.field for phi in equation(*fields)]
-        return ad.hstack(equationFields)
-    stack = [phi.getInternalField() for phi in fields]
-    solution = ad.solve(solver, ad.hstack(stack))
-    setInternalFields(solution)
+        newFields = setInternalFields(internalFields)
+        for index in range(0, len(fields)):
+            newFields[index].old = fields[index].old
+        return ad.hstack([phi.field for phi in equation(*newFields)])
+
+    internalFields = ad.hstack([phi.getInternalField() for phi in fields])
+    solution = ad.solve(solver, internalFields)
+    newFields = setInternalFields(solution)
+    for index in range(0, len(fields)):
+        newFields[index].name = fields[index].name
 
     end = time.time()
     pprint('Time for iteration:', end-start)
+    return newFields
 
 def derivative(newField, oldFields):
     names = [phi.name for phi in oldFields]
@@ -207,7 +211,5 @@ def forget(fields):
 def strip(fields):
     logger.info('forgetting fields')
     newFields = [CellField.copy(phi) for phi in fields]
-    for phi in newFields:
-        phi.field = ad.array(ad.value(phi.field))
     return newFields
 

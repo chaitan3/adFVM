@@ -79,8 +79,8 @@ class Solver(object):
             else:
                 result += objective(fields)
                 fields = explicit(self.equation, self.boundary, fields, self)
-                forget([self.p, self.T, self.U])
                 timeSteps[timeIndex-1] = np.array([t, self.dt])
+                forget([self.p, self.T, self.U])
             t += self.dt
             t = round(t, 9)
             pprint('Simulation Time:', t, 'Time step:', self.dt)
@@ -137,7 +137,6 @@ class Solver(object):
         # viscous part
         UnF = 0.5*(UnLF + UnRF)
         UF = 0.5*(ULF + URF)
-        # zeroGrad interp on boundary for div and grad, ok?
         sigmaF = self.mu*(snGrad(U) + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
         
         return [ddt(rho, rho.old, self.dt) + div(rhoFlux),
@@ -163,7 +162,7 @@ if __name__ == "__main__":
         case = 'tests/cylinder'
 
     solver = Solver(case, {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
-    solver.run([2, 1e-8], 100, 10)
+    solver.run([0, 1e-3], 1000, 100)
     #solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
     #solver.run([0, 1e-3], 40000, 500)
 

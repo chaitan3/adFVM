@@ -19,7 +19,7 @@ dt = 0.005
 DT = 0.01
 
 #initialize
-T = CellField.zeros('T', mesh, 1)
+T = CellField.zeros('T', mesh, (1,))
 mid = np.array([0.5, 0.5, 0.5])
 T.setInternalField(np.exp(-10*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)).reshape(-1,1))
 #T = Field.read('T', mesh, t)
@@ -30,10 +30,13 @@ for i in range(0, 300):
     if i % 20 == 0:
         T.write(t)
 
-    T0 = CellField.copy(T)
     print('Simulation Time:', t, 'Time step:', dt)
-    equation = lambda T: [ddt(T, T0, dt) + div(T, U) - laplacian(T, DT)]
-    boundary = lambda TI: T.setInternalField(TI)
+    def equation(T):
+        return [ddt(T, T.old, dt) + div(T, U) - laplacian(T, DT)]
+    def boundary(TI):
+        TN = CellField.copy(T)
+        TN.setInternalField(TI)
+        return [TN]
     
     implicit(equation, boundary, [T], dt)
     forget([T])

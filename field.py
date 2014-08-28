@@ -129,7 +129,7 @@ class CellField(Field):
     @classmethod
     def copy(self, phi):
         logger.info('copying field {0}'.format(phi.name))
-        return self(phi.name, phi.mesh, phi.field.copy(), phi.boundary.copy())
+        return self(phi.name, phi.mesh, ad.array(ad.value(phi.field).copy()), phi.boundary.copy())
 
     @classmethod
     def read(self, name, mesh, time):

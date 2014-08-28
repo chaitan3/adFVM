@@ -61,6 +61,8 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         stackedFields = ad.hstack([phi.field for phi in currentSolution])
         jacobians = derivative(ad.sum(stackedFields*stackedAdjointFields), previousSolution)
         sensitivities = derivative(objective(previousSolution), previousSolution)
+        print(jacobians.min(), jacobians.max())
+        print(sensitivities.min(), sensitivities.max())
         stackedAdjointFields = jacobians + sensitivities
         forget(currentSolution)
 
