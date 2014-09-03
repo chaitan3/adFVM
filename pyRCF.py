@@ -7,7 +7,7 @@ import time
 from mesh import Mesh
 from field import Field, CellField
 from ops import  div, ddt, snGrad, laplacian, grad, implicit, explicit, forget, strip
-from ops import interpolate, upwind, TVD_dual
+from ops import interpolate, TVD_dual
 
 from utils import ad, pprint
 from utils import Logger
