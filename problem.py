@@ -9,10 +9,10 @@ from utils import ad
 from field import CellField
 from ops import strip, explicit, derivative
 
-nSteps = 1
-writeInterval = 1
+nSteps = 1000
+writeInterval = 100
 
-primal = Solver('tests/convection2/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 1000})
+primal = Solver('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 
 def objective(fields):
     rho, rhoU, rhoE = fields
@@ -80,10 +80,10 @@ dt = 1
 if __name__ == "__main__":
     mesh = primal.mesh
     option = sys.argv[1]
-    if option == 'test':
-        pass
+    if option == 'orig':
+        timeSteps, result = primal.run([startTime, dt], nSteps, writeInterval=writeInterval, objective=objective)
 
-    elif option == 'orig':
+    elif option == 'test':
         eps = ad.array(1E-6)
         mid = np.array([0.5, 0.5, 0.5])
 

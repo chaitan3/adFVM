@@ -147,7 +147,7 @@ class CellField(Field):
         boundary = {}
         for patchID in mesh.boundary:
             patch = re.search(re.compile(patchID + '[\s\r\n]+{(.*?)}', re.DOTALL), content).group(1)
-            boundary[patchID] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch))
+            boundary[patchID] = dict(re.findall(re.compile('[\n \t]*([a-zA-Z]+)[ ]+(.*?);', re.DOTALL), patch))
         return self(name, mesh, internalField, boundary)
 
     def write(self, time):

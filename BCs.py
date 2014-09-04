@@ -73,7 +73,7 @@ class symmetryPlane(zeroGradient):
 class fixedValue(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        self.fixedValue = utils.extractField(self.patch['value'], self.nFaces, self.field.shape == 3)
+        self.fixedValue = utils.extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,))
 
     def update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
