@@ -9,10 +9,10 @@ from utils import ad
 from field import CellField
 from ops import strip, explicit, derivative
 
-nSteps = 1000
-writeInterval = 100
+nSteps = 1
+writeInterval = 1
 
-primal = Solver('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
+primal = Solver('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 1000})
 
 def objective(fields):
     rho, rhoU, rhoE = fields
@@ -74,7 +74,7 @@ def perturb(fields, eps=1E-2):
 #    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
 #    rhoU.field[start:end][:,0] += 0.1
 
-startTime = 0
+startTime = 1
 dt = 1
 
 if __name__ == "__main__":
@@ -106,7 +106,7 @@ if __name__ == "__main__":
         G_subset = eps*ad.array(np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
         oldFields[0].field[indices] += G_subset
         oldFields[0].field[indices] += G_subset1
-        file('old.dot', 'w').write(ad.dot(oldFields[0].field))
+        #file('old.dot', 'w').write(ad.dot(oldFields[0].field))
         fields = explicit(primal.equation, primal.boundary, oldFields, primal)
         J0 = objective(fields)
 
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         indices = range(0, mesh.nInternalCells)
         G_subset2 = ad.zeros(G[indices].shape)
         oldFields0[0].field[indices] += G_subset2
-        file('old0.dot', 'w').write(ad.dot(oldFields0[0].field))
+        #file('old0.dot', 'w').write(ad.dot(oldFields0[0].field))
         fields = explicit(primal.equation, primal.boundary, oldFields0, primal)
         J00 = objective(fields)
 
