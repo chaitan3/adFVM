@@ -11,7 +11,8 @@ from utils import ad
 
 firstCheckpoint = 0
 if len(sys.argv) > 1:
-    timeSteps = np.loadtxt(sys.argv[1])
+    timeSteps = np.loadtxt(sys.argv[1], ndmin=2)
+    timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(9), 0]])))
     if len(sys.argv) > 2:
         firstCheckpoint = int(sys.argv[2])
 else:
@@ -44,11 +45,11 @@ def writeAdjointFields(writeTime):
 for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
     print('PRIMAL FORWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     primalIndex = nSteps - (checkpoint + 1)*writeInterval
-    solutions = primal.run(timeSteps[primalIndex], nSteps=writeInterval, adjoint=True)
+    solutions = primal.run(timeSteps[primalIndex], nSteps=writeInterval, mode='forward')
 
     print('ADJOINT BACKWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     if checkpoint == 0:
-        lastSolution = solutions[-1][-1]
+        lastSolution = solutions[-1]
         stackedAdjointFields = derivative(objective(lastSolution), lastSolution)
         writeAdjointFields(timeSteps[-1][0])
 
@@ -56,15 +57,15 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         start = time.time()
 
         adjointIndex = writeInterval-1 - step
-        currentSolution = solutions[adjointIndex + 1][0]
-        previousSolution = solutions[adjointIndex][-1]
+        previousSolution = solutions[adjointIndex]
+        currentSolution = primal.run(timeSteps[primalIndex + adjointIndex], 1, mode='adjoint', initialFields=previousSolution)
         stackedFields = ad.hstack([phi.field for phi in currentSolution])
         jacobians = derivative(ad.sum(stackedFields*stackedAdjointFields), previousSolution)
         sensitivities = derivative(objective(previousSolution), previousSolution)
         print(jacobians.min(), jacobians.max())
         print(sensitivities.min(), sensitivities.max())
         stackedAdjointFields = jacobians + sensitivities
-        forget(currentSolution)
+        primal.clean()
 
         end = time.time()
         print('Time for iteration: {0}'.format(end-start))

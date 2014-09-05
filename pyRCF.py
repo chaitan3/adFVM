@@ -53,34 +53,40 @@ class Solver(object):
         rho.name, rhoU.name, rhoE.name = self.names
         return rho, rhoU, rhoE
     
-    def run(self, timeStep, nSteps, writeInterval=utils.LARGE, adjoint=False, objective=lambda x: 0, perturb=None):
+    def run(self, timeStep, nSteps, writeInterval=utils.LARGE, mode=None, initialFields=None, objective=lambda x: 0, perturb=None):
         logger.info('running solver for {0}'.format(nSteps))
         t, dt = timeStep
         mesh = self.mesh
         #initialize
-        self.p = CellField.read('p', mesh, t)
-        self.T = CellField.read('T', mesh, t)
-        self.U = CellField.read('U', mesh, t)
-        fields = self.conservative(self.U, self.T, self.p)
+        if initialFields is None:
+            self.p = CellField.read('p', mesh, t)
+            self.T = CellField.read('T', mesh, t)
+            self.U = CellField.read('U', mesh, t)
+            fields = self.conservative(self.U, self.T, self.p)
+        else:
+            fields = initialFields
         if perturb is not None:
             perturb(fields)
         self.dt = dt
         pprint()
         mesh = self.mesh
 
-        timeSteps = np.zeros((nSteps + 1, 2))
-        result = 0
-        solutions = []
+        timeSteps = np.zeros((nSteps, 2))
+        result = objective(fields)
+        solutions = [strip(fields)]
         for timeIndex in range(1, nSteps+1):
-            if adjoint:
-                oldFields = strip(fields)
-                solutions.append([fields, oldFields])
-                fields = explicit(self.equation, self.boundary, oldFields, self)
-            else:
+            fields = explicit(self.equation, self.boundary, fields, self)
+            if mode is None:
                 result += objective(fields)
-                fields = explicit(self.equation, self.boundary, fields, self)
                 timeSteps[timeIndex-1] = np.array([t, self.dt])
-                forget([self.p, self.T, self.U])
+                self.clean()
+            elif mode == 'forward':
+                self.clean()
+                solutions.append(strip(fields))
+            elif mode == 'adjoint':
+                assert nSteps == 1
+                solutions = fields
+
             t += self.dt
             t = round(t, 9)
             pprint('Simulation Time:', t, 'Time step:', self.dt)
@@ -91,13 +97,13 @@ class Solver(object):
                 self.T.write(t)
                 self.p.write(t)
             pprint()
-        if adjoint:
-            solutions.append([fields, strip(fields)])
-            return solutions
-        else:
-            timeSteps[nSteps] = np.array([t, self.dt])
-            result += objective(fields)
+        if mode is None:
             return timeSteps, result
+        else:
+            return solutions
+
+    def clean(self):
+        forget([self.U, self.T, self.p])
            
     def timeStep(self, aFbyD):
         logger.info('computing new time step')
@@ -167,7 +173,7 @@ if __name__ == "__main__":
         case = 'tests/cylinder'
 
     solver = Solver(case, {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
-    solver.run([0, 1e-3], 1000, 100)
+    solver.run([0.0, 1e-3], 1000, 100)
     #solver = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0, 'Pr': 0.7, 'CFL': 0.2})
-    #solver.run([0, 1e-3], 40000, 500)
+    #solver.run([0.0, 1e-3], 40000, 500)
 

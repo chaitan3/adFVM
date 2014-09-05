@@ -133,8 +133,8 @@ class CellField(Field):
 
     @classmethod
     def read(self, name, mesh, time):
-        if time == 0.0:
-            time = 0
+        if time.is_integer():
+            time = int(time)
         pprint('reading field {0}, time {1}'.format(name, time))
         timeDir = '{0}/{1}/'.format(mesh.case, time)
 
@@ -151,8 +151,8 @@ class CellField(Field):
         return self(name, mesh, internalField, boundary)
 
     def write(self, time):
-        if time == 0.0:
-            time = 0
+        if time.is_integer():
+            time = int(time)
         assert len(self.dimensions) == 1
         np.set_printoptions(precision=16)
         pprint('writing field {0}, time {1}'.format(self.name, time))

@@ -9,10 +9,10 @@ from utils import ad
 from field import CellField
 from ops import strip, explicit, derivative
 
-nSteps = 1
-writeInterval = 1
+nSteps = 1000
+writeInterval = 20
 
-primal = Solver('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 1000})
+primal = Solver('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 
 def objective(fields):
     rho, rhoU, rhoE = fields
@@ -74,16 +74,14 @@ def perturb(fields, eps=1E-2):
 #    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
 #    rhoU.field[start:end][:,0] += 0.1
 
-startTime = 1
+startTime = 1.0
 dt = 1
 
 if __name__ == "__main__":
     mesh = primal.mesh
     option = sys.argv[1]
-    if option == 'orig':
-        timeSteps, result = primal.run([startTime, dt], nSteps, writeInterval=writeInterval, objective=objective)
 
-    elif option == 'test':
+    if option == 'test':
         eps = ad.array(1E-6)
         mid = np.array([0.5, 0.5, 0.5])
 
@@ -103,43 +101,59 @@ if __name__ == "__main__":
         G = ad.zeros(oldFields[0].field.shape)
         indices = range(0, mesh.nInternalCells)
         G_subset1 = ad.zeros(G[indices].shape)
-        G_subset = eps*ad.array(np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
-        oldFields[0].field[indices] += G_subset
         oldFields[0].field[indices] += G_subset1
         #file('old.dot', 'w').write(ad.dot(oldFields[0].field))
+        J0 = objective(oldFields)
         fields = explicit(primal.equation, primal.boundary, oldFields, primal)
-        J0 = objective(fields)
+        J0 += objective(fields)
 
-        G = ad.zeros(oldFields[0].field.shape)
-        indices = range(0, mesh.nInternalCells)
-        G_subset2 = ad.zeros(G[indices].shape)
-        oldFields0[0].field[indices] += G_subset2
         #file('old0.dot', 'w').write(ad.dot(oldFields0[0].field))
+        J00 = objective(oldFields0)
         fields = explicit(primal.equation, primal.boundary, oldFields0, primal)
-        J00 = objective(fields)
+        J00 += objective(fields)
+
+        Jt1 = objective(oldFields0)
+        fields = explicit(primal.equation, primal.boundary, oldFields0, primal)
+        newFields = strip(fields)
+        Jt2 = objective(newFields)
+        adjt = derivative(Jt2, newFields)
+        stackedFields = ad.hstack([phi.field for phi in fields])
+        prod = ad.sum(stackedFields*adjt)
+        j = derivative(prod, oldFields0)
+        s = derivative(Jt1, oldFields0)
+        print(j.min(), j.max())
+        print(s.min(), s.max())
+        adj2 = j + s
 
         # adjRho_subset = J0.diff(G_subset).toarray().ravel()
         adjRho_subset1 = J0.diff(G_subset1).toarray().ravel()
-        adjRho_subset2 = J00.diff(G_subset2).toarray().ravel()
+        adj = derivative(J00, oldFields0)
         adjRho = J0.diff(G).toarray().ravel()
         zeroFields = [CellField.zeros(name, mesh, dimension) for name, dimension in zip(primal.names, primal.dimensions)]
-        zeroFields = strip(zeroFields)
         perturb(zeroFields, 1)
+        stackedZeroFields = np.hstack([ad.value(phi.field) for phi in zeroFields])
 
         eps = ad.array(1E-6)
         G = eps*ad.array(np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
         oldFields[0].field[indices] += G
 
+        J1 = objective(oldFields)
         fields = explicit(primal.equation, primal.boundary, oldFields, primal)
-        J1 = objective(fields)
+        J1 += objective(fields)
 
+        print('J0: ', J0, 'J1: ', J1)
         print('finite difference:', ad.value((J1 - J0) / eps))
         print('automatic diff adjoint:', J1.diff(eps, 'adjoint').toarray())
         print('automatic diff tangent:', J1.diff(eps, 'tangent').toarray())
         print('semi-automatic diff:', np.dot(J1.diff(G).toarray().ravel(), ad.value(G).ravel()) / ad.value(eps))
         # print('semi-automatic diff:', np.dot(adjRho_subset, ad.value(zeroFields[0].field[indices]).ravel()))
         print('semi-automatic diff:', np.dot(adjRho_subset1, ad.value(zeroFields[0].field[indices]).ravel()))
-        print('semi-automatic diff:', np.dot(adjRho_subset2, ad.value(zeroFields[0].field[indices]).ravel()))
+        print('semi-automatic diff:', np.sum(adj*stackedZeroFields))
+        print('semi-automatic diff:', np.sum(-adj2*stackedZeroFields))
+
+    elif option == 'orig':
+        timeSteps, result = primal.run([startTime, dt], nSteps, writeInterval=writeInterval, objective=objective)
+        np.savetxt(mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval), timeSteps)
     elif option == 'perturb':
         timeSteps, result = primal.run([startTime, dt], nSteps, objective=objective, perturb=perturb)
     elif option == 'adjoint':

@@ -24,7 +24,7 @@ class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         if 'value' in self.patch:
-            self.field[self.cellStartFace:self.cellEndFace] = utils.extractField(self.patch['value'], self.nFaces, self.field.shape == 3)
+            self.field[self.cellStartFace:self.cellEndFace] = utils.extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,))
         else:
             self.field[self.cellStartFace:self.cellEndFace] = 0.
 
