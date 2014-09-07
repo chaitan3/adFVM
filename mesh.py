@@ -77,7 +77,7 @@ class Mesh(object):
         v1 = self.points[self.faces[:,1]]-self.points[self.faces[:,2]]
         v2 = self.points[self.faces[:,2]]-self.points[self.faces[:,3]]
         normals = np.cross(v1, v2)
-        return normals / np.linalg.norm(normals, axis=1).reshape(-1,1)
+        return normals / utils.norm(normals, axis=1).reshape(-1,1)
 
     def getCellFaces(self):
         logger.info('generated cell faces')
@@ -115,7 +115,7 @@ class Mesh(object):
             nextPoints = self.points[self.faces[:, (index % nFacePoints)+1]]
             centres = (points + nextPoints + faceCentres)/3
             normals = np.cross((nextPoints - points), (faceCentres - points))
-            areas = (np.linalg.norm(normals, axis=1)/2).reshape(-1,1)
+            areas = (utils.norm(normals, axis=1)/2).reshape(-1,1)
             sumAreas += areas
             sumCentres += areas*centres
         faceCentres = sumCentres/sumAreas
@@ -125,7 +125,7 @@ class Mesh(object):
         logger.info('generated deltas')
         P = self.cellCentres[self.owner]
         N = self.cellCentres[self.neighbour]
-        return np.linalg.norm(P-N, axis=1).reshape(-1,1)
+        return utils.norm(P-N, axis=1).reshape(-1,1)
 
     def getWeights(self):
         logger.info('generated face deltas')

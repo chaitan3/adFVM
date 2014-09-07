@@ -8,6 +8,10 @@ import numpy as ad
 from scipy import sparse as adsparse
 ad.value = lambda x: x
 
+def norm(a, axis):
+    #return np.linalg.norm(a, axis=axis)
+    return np.einsum('ij,ij->i', a, a)
+
 import time
 
 # MPI
