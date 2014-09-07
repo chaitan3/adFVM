@@ -9,26 +9,26 @@ from utils import ad
 from field import CellField
 from ops import strip, explicit, derivative
 
-nSteps = 1000
-writeInterval = 20
+nSteps = 20000
+writeInterval = 100
 
-primal = Solver('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
-
-def objective(fields):
-    rho, rhoU, rhoE = fields
-    mesh = rho.mesh
-    mid = np.array([0.75, 0.5, 0.5])
-    indices = range(0, mesh.nInternalCells)
-    G = np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1)*mesh.volumes[indices]
-    return ad.sum(rho.field[indices]*G)/(nSteps + 1)
-
-def perturb(fields, eps=1E-2):
-    rho, rhoU, rhoE = fields
-    mesh = rho.mesh
-    mid = np.array([0.5, 0.5, 0.5])
-    indices = range(0, mesh.nInternalCells)
-    G = eps*ad.array(np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
-    rho.field[indices] += G
+#primal = Solver('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
+#
+#def objective(fields):
+#    rho, rhoU, rhoE = fields
+#    mesh = rho.mesh
+#    mid = np.array([0.75, 0.5, 0.5])
+#    indices = range(0, mesh.nInternalCells)
+#    G = np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1)*mesh.volumes[indices]
+#    return ad.sum(rho.field[indices]*G)/(nSteps + 1)
+#
+#def perturb(fields, eps=1E-2):
+#    rho, rhoU, rhoE = fields
+#    mesh = rho.mesh
+#    mid = np.array([0.5, 0.5, 0.5])
+#    indices = range(0, mesh.nInternalCells)
+#    G = eps*ad.array(np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
+#    rho.field[indices] += G
 
 #primal = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 #
@@ -51,30 +51,30 @@ def perturb(fields, eps=1E-2):
 #
 #
 #
-#primal = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006, 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
-#
-#def objective(fields):
-#    rho, rhoU, rhoE = fields
-#    mesh = rhoE.mesh
-#    patchID = 'cylinder'
-#    patch = rhoE.BC[patchID]
-#    start, end = patch.startFace, patch.endFace
-#    areas = mesh.areas[start:end]
-#    nx = mesh.normals[start:end, 0]
-#    start, end = patch.cellStartFace, patch.cellEndFace
-#    p = rhoE.field[start:end]*(primal.gamma-1)
-#    deltas = np.linalg.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
-#    mungUx = primal.mu*(rhoU.field[start:end, 0]/rho.field[start:end]-rhoU.field[patch.internalIndices, 0]/rho.field[patch.internalIndices])/deltas
-#    return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
-#
-#def perturb(fields):
-#    rho, rhoU, rhoE = fields
-#    patch = 'inlet'
-#    bc = rhoU.BC
-#    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
-#    rhoU.field[start:end][:,0] += 0.1
+primal = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006, 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
 
-startTime = 1.0
+def objective(fields):
+    rho, rhoU, rhoE = fields
+    mesh = rhoE.mesh
+    patchID = 'cylinder'
+    patch = rhoE.BC[patchID]
+    start, end = patch.startFace, patch.endFace
+    areas = mesh.areas[start:end]
+    nx = mesh.normals[start:end, 0]
+    start, end = patch.cellStartFace, patch.cellEndFace
+    p = rhoE.field[start:end]*(primal.gamma-1)
+    deltas = np.linalg.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
+    mungUx = primal.mu*(rhoU.field[start:end, 0]/rho.field[start:end]-rhoU.field[patch.internalIndices, 0]/rho.field[patch.internalIndices])/deltas
+    return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
+
+def perturb(fields):
+    rho, rhoU, rhoE = fields
+    patch = 'inlet'
+    bc = rhoU.BC
+    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
+    rhoU.field[start:end][:,0] += 0.1
+
+startTime = 2.0
 dt = 1
 
 if __name__ == "__main__":

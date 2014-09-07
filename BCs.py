@@ -27,6 +27,7 @@ class calculated(BoundaryCondition):
             self.field[self.cellStartFace:self.cellEndFace] = utils.extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,))
         else:
             self.field[self.cellStartFace:self.cellEndFace] = 0.
+        self.patch.pop('value', None)
 
     def update(self):
         pass
@@ -49,6 +50,7 @@ class processor(BoundaryCondition):
         super(self.__class__, self).__init__(phi, patchID)
         self.local = self.mesh.boundary[patchID]['myProcNo']
         self.remote = self.mesh.boundary[patchID]['neighbProcNo']
+        self.patch.pop('value', None)
 
     def update(self, exchanger):
         logger.debug('processor BC for {0}'.format(self.patchID))
