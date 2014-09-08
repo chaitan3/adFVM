@@ -167,12 +167,13 @@ class Solver(object):
         return self.conservative(self.U, self.T, self.p)
     
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 2:
         case = sys.argv[1]
+        time = sys.argv[2]
     else:
         print('WTF')
         exit()
 
     solver = Solver(case, {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
-    solver.run([2.0, 1e-3], 10000, 200)
+    solver.run([time, 1e-3], 10000, 200)
 

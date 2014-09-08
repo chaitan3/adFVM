@@ -8,6 +8,7 @@ import numpy as ad
 from scipy import sparse as adsparse
 ad.value = lambda x: x
 
+# custom norm for numpy 1.7
 def norm(a, axis):
     #return np.linalg.norm(a, axis=axis)
     return np.einsum('ij,ij->i', a, a)
