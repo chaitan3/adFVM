@@ -45,11 +45,11 @@ class Exchanger(object):
     def __init__(self):
         self.requests = []
 
-    def exchange(self, remote, sendData, recvData):
+    def exchange(self, remote, sendData, recvData, tag):
         #if isinstance(sendData, ad.adarray):
         #    sendData = ad.value(sendData)
-        sendRequest = mpi.Isend([sendData, MPI.DOUBLE], remote, 0)
-        recvRequest = mpi.Irecv([recvData, MPI.DOUBLE], remote, 0)
+        sendRequest = mpi.Isend([sendData, MPI.DOUBLE], remote, tag)
+        recvRequest = mpi.Irecv([recvData, MPI.DOUBLE], remote, tag)
         self.requests.extend([sendRequest, recvRequest])
 
     def wait(self):
@@ -89,6 +89,9 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 '''
 foamFile = {'version':'2.0', 'format': 'ascii', 'class': 'volScalarField', 'object': ''}
 
+fileFormat = 'binary'
+#fileFormat = 'ascii'
+
 def removeCruft(content, keepHeader=False):
     # remove comments and newlines
     content = re.sub(re.compile('/\*.*\*/',re.DOTALL ) , '' , content)
@@ -108,8 +111,14 @@ def extractField(data, size, vector):
     nonUniform = re.search('nonuniform', data)
     data = re.search(re.compile('[A-Za-z<>\s\r\n]+(.*)', re.DOTALL), data).group(1)
     if nonUniform is not None:
-        start = data.find('(')
-        internalField = ad.array(np.array(extractor(data[start:]), dtype=float))
+        start = data.find('(') + 1
+        end = data.rfind(')')
+        if fileFormat == 'binary':
+            internalField = ad.array(np.fromstring(data[start:end], dtype=float))
+            if vector:
+                internalField = internalField.reshape((len(internalField)/3, 3))
+        else:
+            internalField = ad.array(np.array(extractor(data[start:end]), dtype=float))
         if not vector:
             internalField = internalField.reshape((-1, 1))
     else:

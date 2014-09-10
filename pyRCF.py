@@ -169,7 +169,7 @@ class Solver(object):
 if __name__ == "__main__":
     if len(sys.argv) > 2:
         case = sys.argv[1]
-        time = sys.argv[2]
+        time = float(sys.argv[2])
     else:
         print('WTF')
         exit()

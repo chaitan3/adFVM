@@ -17,11 +17,12 @@ class Mesh(object):
 
         self.case = caseDir + utils.mpi_processorDirectory
         meshDir = self.case + 'constant/polyMesh/'
-        self.faces = self.read(meshDir + 'faces', int)
+        self.faces = self.read(meshDir + 'faces', np.int32)
         self.points = self.read(meshDir + 'points', float)
-        self.owner = self.read(meshDir + 'owner', int).ravel()
-        self.neighbour = self.read(meshDir + 'neighbour', int).ravel()
+        self.owner = self.read(meshDir + 'owner', np.int32).ravel()
+        self.neighbour = self.read(meshDir + 'neighbour', np.int32).ravel()
         self.boundary = self.readBoundary(meshDir + 'boundary')
+        self.origPatches = self.getOrigPatches()
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
 
@@ -52,14 +53,27 @@ class Mesh(object):
 
     def read(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
-        lines = open(foamFile).readlines()
-        first, last = 0, -1
-        while lines[first][0] != '(': 
-            first += 1
-        while lines[last][0] != ')': 
-            last -= 1
-        f = lambda x: list(filter(None, re.split('[ ()\n]+', x)))
-        return np.array(list(map(f, lines[first+1:last])), dtype)
+        content = open(foamFile).read()
+        start = content.find('(') + 1
+        end = content.rfind(')')
+        if utils.fileFormat == 'binary':
+            if foamFile[-5:] == 'faces':
+                nFaces1 = int(re.search('[0-9]+', content[start-2:0:-1]).group(0)[::-1])
+                endIndices = start + nFaces1*4
+                faceIndices = np.fromstring(content[start:endIndices], dtype)
+                faceIndices = faceIndices[1:] - faceIndices[:-1]
+                startData = content.find('(', endIndices) + 1
+                data = np.fromstring(content[startData:end], dtype)
+                nCellFaces = faceIndices[0] 
+                return np.hstack((faceIndices.reshape(-1, 1), data.reshape(len(data)/nCellFaces, nCellFaces)))
+            else:
+                data = np.fromstring(content[start:end], dtype)
+                if foamFile[-6:] == 'points':
+                    data = data.reshape(len(data)/3, 3)
+                return data
+        else:
+            f = lambda x: list(filter(None, re.split('[ ()\n]+', x)))
+            return np.array(list(map(f, filter(None, re.split('\n', content[start:end])))), dtype)
 
     def readBoundary(self, boundaryFile):
         logger.info('read {0}'.format(boundaryFile))
@@ -150,7 +164,7 @@ class Mesh(object):
         boundary = {}
         for patchID in self.boundary:
             boundary[patchID] = {}
-            if self.boundary[patchID]['type'] in ['cyclic', 'symmetryPlane', 'empty', 'processor']:
+            if self.boundary[patchID]['type'] in ['cyclic', 'symmetryPlane', 'empty', 'processor', 'processorCyclic']:
                 boundary[patchID]['type'] = self.boundary[patchID]['type']
             else:
                 boundary[patchID]['type'] = 'zeroGradient'
@@ -161,11 +175,19 @@ class Mesh(object):
         boundary = {}
         for patchID in self.boundary:
             boundary[patchID] = {}
-            if self.boundary[patchID]['type'] in ['cyclic', 'processor']:
+            if self.boundary[patchID]['type'] in ['cyclic', 'processor', 'processorCyclic']:
                 boundary[patchID]['type'] = self.boundary[patchID]['type']
             else:
                 boundary[patchID]['type'] = 'calculated'
         return boundary
+
+    def getOrigPatches(self):
+        origPatches = []
+        for patchID in self.boundary:
+            if self.boundary[patchID]['type'] not in ['processor', 'processorCyclic']:
+                origPatches.append(patchID)
+        origPatches.sort()
+        return origPatches
 
     def createGhostCells(self):
         logger.info('generated ghost cells')
@@ -194,13 +216,20 @@ class Mesh(object):
                 # append cell centres
                 patch['transform'] = self.faceCentres[startFace]-self.faceCentres[neighbourStartFace]
                 self.cellCentres[cellStartFace:cellEndFace] = patch['transform'] + self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
-            elif patch['type'] == 'processor':
+            elif patch['type'] in ['processor', 'processorCyclic']:
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
                 local = patch['myProcNo']
                 remote = patch['neighbProcNo']
                 # exchange data
-                exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace])
+                tag = 0
+                if patch['type'] == 'processorCyclic':
+                    commonPatch = self.boundary[patchID]['referPatch']
+                    if local > remote:
+                        commonPatch = self.boundary[commonPatch]['neighbourPatch']
+                    tag = 1 + self.origPatches.index(commonPatch)
+
+                exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
             else:
                 # append cell centres
                 self.cellCentres[cellStartFace:cellEndFace] = self.faceCentres[startFace:endFace]

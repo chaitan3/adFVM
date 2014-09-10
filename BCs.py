@@ -51,10 +51,27 @@ class processor(BoundaryCondition):
         self.local = self.mesh.boundary[patchID]['myProcNo']
         self.remote = self.mesh.boundary[patchID]['neighbProcNo']
         self.patch.pop('value', None)
+        self.tag = 0
 
     def update(self, exchanger):
         logger.debug('processor BC for {0}'.format(self.patchID))
-        exchanger.exchange(self.remote, self.field[self.internalIndices], self.value)
+        exchanger.exchange(self.remote, self.field[self.internalIndices], self.value, self.tag)
+
+class processorCyclic(BoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        self.local = self.mesh.boundary[patchID]['myProcNo']
+        self.remote = self.mesh.boundary[patchID]['neighbProcNo']
+        self.patch.pop('value', None)
+        
+        commonPatch = self.mesh.boundary[patchID]['referPatch']
+        if self.local > self.remote:
+            commonPatch = self.mesh.boundary[commonPatch]['neighbourPatch']
+        self.tag = 1 + self.mesh.origPatches.index(commonPatch)
+
+    def update(self, exchanger):
+        logger.debug('processor BC for {0}'.format(self.patchID))
+        exchanger.exchange(self.remote, self.field[self.internalIndices], self.value, self.tag)
 
 class zeroGradient(BoundaryCondition):
     def update(self):
@@ -81,6 +98,19 @@ class fixedValue(BoundaryCondition):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
         #self.value[:] = self.fixedValue
         self.field[self.cellStartFace:self.cellEndFace] = self.fixedValue
+
+class turbulentInletVeloctiy(BoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        self.Umean = utils.extractField(self.patch['Umean'], self.nFaces, self.field.shape[1:] == (3,))
+        self.lengthScale = self.patch['lengthScale']
+        self.turbulentIntensity = self.patch['turbulentIntensity']
+
+    def update(self):
+        logger.debug('turbulentInletVelocity BC for {0}'.format(self.patchID))
+        #self.value[:] = self.fixedValue
+        self.field[self.cellStartFace:self.cellEndFace] = self.Umean
+
 
 slip = symmetryPlane
 empty = zeroGradient

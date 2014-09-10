@@ -138,14 +138,16 @@ class CellField(Field):
         pprint('reading field {0}, time {1}'.format(name, time))
         timeDir = '{0}/{1}/'.format(mesh.case, time)
 
-        content = utils.removeCruft(open(timeDir + name, 'r').read(), keepHeader=True)
+        content = open(timeDir + name).read()
         foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
         vector = re.search('class[\s\t]+(.*?);', foamFile).group(1) == 'volVectorField'
-        data = re.search(re.compile('internalField[\s\r\n]+(.*?);', re.DOTALL), content).group(1)
+        startBoundary = content.find('boundaryField')
+        data = re.search(re.compile('internalField[\s\r\n]+(.*)', re.DOTALL), content[:startBoundary]).group(1)
         internalField = utils.extractField(data, mesh.nInternalCells, vector)
-        content = content[content.find('boundaryField'):]
+        content = content[startBoundary:]
         boundary = {}
         for patchID in mesh.boundary:
+            # binary support?
             patch = re.search(re.compile(patchID + '[\s\r\n]+{(.*?)}', re.DOTALL), content).group(1)
             boundary[patchID] = dict(re.findall(re.compile('[\n \t]*([a-zA-Z]+)[ ]+(.*?);', re.DOTALL), patch))
         return self(name, mesh, internalField, boundary)
@@ -182,7 +184,7 @@ class CellField(Field):
             patch = self.boundary[patchID]
             for attr in patch:
                 handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
-            if (patch['type'] == 'processor') or (patch['type'] == 'calculated'):
+            if patch['type'] in ['processor', 'calculated', 'processorCyclic']:
                 utils.writeField(handle, self.BC[patchID].value, dtype, 'value')
             handle.write('\t}\n')
         handle.write('}\n')
@@ -199,7 +201,7 @@ class CellField(Field):
         logger.info('updating ghost cells for {0}'.format(self.name))
         exchanger = Exchanger()
         for patchID in self.BC:
-            if self.boundary[patchID]['type'] == 'processor':
+            if self.boundary[patchID]['type'] in ['processor', 'processorCyclic']:
                 self.BC[patchID].update(exchanger)
             else:
                 self.BC[patchID].update()
