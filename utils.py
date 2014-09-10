@@ -128,11 +128,14 @@ def extractField(data, size, vector):
 def writeField(handle, field, dtype, initial):
     handle.write(initial + ' nonuniform List<'+ dtype +'>\n')
     handle.write('{0}\n(\n'.format(len(field)))
-    for value in ad.value(field):
-        if dtype == 'scalar':
-            handle.write(str(value[0]) + '\n')
-        else:
-            handle.write('(' + ' '.join(np.char.mod('%f', value)) + ')\n')
+    if fileFormat == 'binary':
+        handle.write(ad.value(field).tostring())
+    else:
+        for value in ad.value(field):
+            if dtype == 'scalar':
+                handle.write(str(value[0]) + '\n')
+            else:
+                handle.write('(' + ' '.join(np.char.mod('%f', value)) + ')\n')
     handle.write(')\n;\n')
 
 
