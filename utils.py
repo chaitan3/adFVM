@@ -11,7 +11,7 @@ ad.value = lambda x: x
 # custom norm for numpy 1.7
 def norm(a, axis):
     #return np.linalg.norm(a, axis=axis)
-    return np.einsum('ij,ij->i', a, a)
+    return np.einsum('ij,ij->i', a, a)**0.5
 
 import time
 
