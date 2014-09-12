@@ -147,17 +147,32 @@ class CellField(Field):
         internalField = utils.extractField(data, mesh.nInternalCells, vector)
         content = content[startBoundary:]
         boundary = {}
-        #field = re.search(re.compile('value[ ]+nonuniform[ ]+List<[a-z]>[\s\r\n]+\(', re.DOTALL), 'HEY;', content)
-        #while field is not None:
-        #    for patchID in mesh.boundary:
-        #        nBytes = mesh.boundary[patchID]['nFaces']*bytesPerField
-        #        exists = re.match('\)[\s\r\n]+;', content[field.end + 1 + nBytes:])
-        #        if exists is not None:
-        #            boundary[patchID] = 
-        #    field = re.search(re.compile('value[ ]+nonuniform[ ]+List<[a-z]>[\s\r\n]+\(', re.DOTALL), 'HEY;', content)
+        def getToken(x): 
+            token = re.match('[\s\r\n\t]+([a-zA-Z0-9_\.\-\+<>\{\}]+)', x)
+            return token.group(1), token.end()
         for patchID in mesh.boundary:
-            patch = re.search(re.compile(patchID + '[\s\r\n]+{(.*?)}', re.DOTALL), content).group(1)
-            boundary[patchID] = dict(re.findall(re.compile('[\n \t]*([a-zA-Z]+)[ ]+(.*?);', re.DOTALL), patch))
+            patch = re.search(re.compile(patchID + '[\s\r\n]+{', re.DOTALL), content)
+            boundary[patchID] = {}
+            start = patch.end()
+            while 1:
+                key, end = getToken(content[start:])
+                start += end
+                if key == '}':
+                    break
+                elif key == 'value' and utils.fileFormat == 'binary' and getToken(content[start:])[0] != 'uniform':
+                    match = re.search(re.compile('[ ]+(nonuniform[ ]+List<[a-z]>[\s\r\n\t]+\()', re.DOTALL), content[start:])
+                    nBytes = bytesPerField * mesh.boundary[patchID]['nFaces']
+                    start += match.end()
+                    prefix = match.group(1)
+                    boundary[patchID][key] = prefix + content[start:start+nBytes]
+                    start += nBytes
+                    match = re.search('\)[\s\r\n\t]+;', content[start:])
+                    start += match.end()
+                else:
+                    match = re.search(re.compile('[ ]+(.*?);', re.DOTALL), content[start:])
+                    start += match.end() 
+                    boundary[patchID][key] = match.group(1)
+
         return self(name, mesh, internalField, boundary)
 
     def write(self, time):
