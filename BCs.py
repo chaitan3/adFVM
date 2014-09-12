@@ -99,7 +99,7 @@ class fixedValue(BoundaryCondition):
         #self.value[:] = self.fixedValue
         self.field[self.cellStartFace:self.cellEndFace] = self.fixedValue
 
-class turbulentInletVeloctiy(BoundaryCondition):
+class turbulentInletVelocity(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         self.Umean = utils.extractField(self.patch['Umean'], self.nFaces, self.field.shape[1:] == (3,))
