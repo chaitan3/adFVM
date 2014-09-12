@@ -141,13 +141,21 @@ class CellField(Field):
         content = open(timeDir + name).read()
         foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
         vector = re.search('class[\s\t]+(.*?);', foamFile).group(1) == 'volVectorField'
+        bytesPerField = 8*(1 + 2*vector)
         startBoundary = content.find('boundaryField')
         data = re.search(re.compile('internalField[\s\r\n]+(.*)', re.DOTALL), content[:startBoundary]).group(1)
         internalField = utils.extractField(data, mesh.nInternalCells, vector)
         content = content[startBoundary:]
         boundary = {}
+        #field = re.search(re.compile('value[ ]+nonuniform[ ]+List<[a-z]>[\s\r\n]+\(', re.DOTALL), 'HEY;', content)
+        #while field is not None:
+        #    for patchID in mesh.boundary:
+        #        nBytes = mesh.boundary[patchID]['nFaces']*bytesPerField
+        #        exists = re.match('\)[\s\r\n]+;', content[field.end + 1 + nBytes:])
+        #        if exists is not None:
+        #            boundary[patchID] = 
+        #    field = re.search(re.compile('value[ ]+nonuniform[ ]+List<[a-z]>[\s\r\n]+\(', re.DOTALL), 'HEY;', content)
         for patchID in mesh.boundary:
-            # binary support?
             patch = re.search(re.compile(patchID + '[\s\r\n]+{(.*?)}', re.DOTALL), content).group(1)
             boundary[patchID] = dict(re.findall(re.compile('[\n \t]*([a-zA-Z]+)[ ]+(.*?);', re.DOTALL), patch))
         return self(name, mesh, internalField, boundary)

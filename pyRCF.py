@@ -175,5 +175,6 @@ if __name__ == "__main__":
         exit()
 
     solver = Solver(case, {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
+    #solver = Solver(case, {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
     solver.run([time, 1e-3], 10000, 200)
 

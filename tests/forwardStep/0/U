@@ -8,50 +8,47 @@
 FoamFile
 {
     version     2.0;
-    format      ascii;
+    format      binary;
     class       volVectorField;
+    location    "0";
     object      U;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 1 -1 0 0 0 0];
+dimensions      [ 0 1 -1 0 0 0 0 ];
 
-internalField   uniform (3 0 0);
+internalField   uniform ( 3 0 0 );
 
 boundaryField
 {
     inlet
     {
         type            fixedValue;
-        value           uniform (3 0 0);
+        value           uniform ( 3 0 0 );
     }
-
     outlet
     {
         type            inletOutlet;
-        inletValue      uniform (3 0 0);
-        value           uniform (3 0 0);
+        inletValue      uniform ( 3 0 0 );
+        value           uniform ( 3 0 0 );
     }
-
     bottom
     {
         type            symmetryPlane;
     }
-
     top
     {
         type            symmetryPlane;
     }
-
     obstacle
     {
         type            slip;
     }
-
     defaultFaces
     {
         type            empty;
     }
 }
+
 
 // ************************************************************************* //

@@ -8,13 +8,14 @@
 FoamFile
 {
     version     2.0;
-    format      ascii;
+    format      binary;
     class       volScalarField;
+    location    "0";
     object      p;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [1 -1 -2 0 0 0 0];
+dimensions      [ 1 -1 -2 0 0 0 0 ];
 
 internalField   uniform 1;
 
@@ -25,31 +26,27 @@ boundaryField
         type            fixedValue;
         value           uniform 1;
     }
-
     outlet
     {
         type            zeroGradient;
     }
-
     bottom
     {
         type            symmetryPlane;
     }
-
     top
     {
         type            symmetryPlane;
     }
-
     obstacle
     {
         type            zeroGradient;
     }
-
     defaultFaces
     {
         type            empty;
     }
 }
+
 
 // ************************************************************************* //

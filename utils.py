@@ -87,10 +87,10 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 '''
-foamFile = {'version':'2.0', 'format': 'ascii', 'class': 'volScalarField', 'object': ''}
 
 fileFormat = 'binary'
 #fileFormat = 'ascii'
+foamFile = {'version':'2.0', 'format': fileFormat, 'class': 'volScalarField', 'object': ''}
 
 def removeCruft(content, keepHeader=False):
     # remove comments and newlines
@@ -127,10 +127,11 @@ def extractField(data, size, vector):
 
 def writeField(handle, field, dtype, initial):
     handle.write(initial + ' nonuniform List<'+ dtype +'>\n')
-    handle.write('{0}\n(\n'.format(len(field)))
+    handle.write('{0}\n('.format(len(field)))
     if fileFormat == 'binary':
         handle.write(ad.value(field).tostring())
     else:
+        handle.write('\n')
         for value in ad.value(field):
             if dtype == 'scalar':
                 handle.write(str(value[0]) + '\n')
