@@ -5,9 +5,9 @@ import numpy as np
 import sys
 
 from pyRCF import Solver
+from solver import explicit, derivative, copy
 from utils import ad
 from field import CellField
-from ops import strip, explicit, derivative
 import utils
 
 nSteps = 20000
@@ -70,7 +70,7 @@ def objective(fields):
 
 def perturb(fields):
     rho, rhoU, rhoE = fields
-    patch = 'inlet'
+    patch = 'left'
     bc = rhoU.BC
     start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
     rhoU.field[start:end][:,0] += 0.1
@@ -94,8 +94,8 @@ if __name__ == "__main__":
         U = CellField.read('U', mesh, t)
         primal.p, primal.T, primal.U = p, T, U
         fields = primal.conservative(U, T, p)
-        oldFields = strip(fields)
-        oldFields0 = strip(fields)
+        oldFields = copy(fields)
+        oldFields0 = copy(fields)
         fields = explicit(primal.equation, primal.boundary, oldFields, primal)
         J0 = objective(fields)
 
@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
         Jt1 = objective(oldFields0)
         fields = explicit(primal.equation, primal.boundary, oldFields0, primal)
-        newFields = strip(fields)
+        newFields = copy(fields)
         Jt2 = objective(newFields)
         adjt = derivative(Jt2, newFields)
         stackedFields = ad.hstack([phi.field for phi in fields])

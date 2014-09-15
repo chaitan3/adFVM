@@ -6,7 +6,7 @@ import time
 import sys
 
 from field import CellField
-from ops import derivative, forget, strip
+from solver import derivative, forget, copy
 from utils import ad
 
 firstCheckpoint = 0
