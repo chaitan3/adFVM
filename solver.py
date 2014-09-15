@@ -1,3 +1,5 @@
+import numpy as np
+
 from field import CellField
 
 from utils import ad, pprint

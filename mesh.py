@@ -53,6 +53,8 @@ class Mesh(object):
     def read(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
         content = open(foamFile).read()
+        foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
+        assert re.search('format[\s\t]+(.*?);', foamFile).group(1) == utils.fileFormat
         start = content.find('(') + 1
         end = content.rfind(')')
         if utils.fileFormat == 'binary':

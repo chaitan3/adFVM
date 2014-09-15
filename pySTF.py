@@ -5,9 +5,10 @@ import time
 
 from mesh import Mesh
 from field import Field, CellField
-from ops import div, ddt, laplacian
-from solver import implicit
-from utils import forget
+#from op import div, ddt, laplacian
+from op import div
+from matop import ddt, laplacian
+from solver import implicit, forget
 
 from utils import ad, pprint
 from utils import Logger

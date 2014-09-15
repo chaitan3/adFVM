@@ -139,6 +139,7 @@ class CellField(Field):
 
         content = open(timeDir + name).read()
         foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
+        assert re.search('format[\s\t]+(.*?);', foamFile).group(1) == utils.fileFormat
         vector = re.search('class[\s\t]+(.*?);', foamFile).group(1) == 'volVectorField'
         bytesPerField = 8*(1 + 2*vector)
         startBoundary = content.find('boundaryField')
