@@ -10,8 +10,10 @@ ad.value = lambda x: x
 
 # custom norm for numpy 1.7
 def norm(a, axis):
-    #return np.linalg.norm(a, axis=axis)
-    return np.einsum('ij,ij->i', a, a)**0.5
+    try:
+        return np.linalg.norm(a, axis=axis)
+    except:
+        return np.einsum('ij,ij->i', a, a)**0.5
 
 import time
 
@@ -27,6 +29,7 @@ if mpi_nProcs > 1:
 def pprint(*args, **kwargs):
     if mpi_Rank == 0:
         print(*args, **kwargs)
+
 def max(data):
     maxData = np.max(data)
     if mpi_nProcs > 1:

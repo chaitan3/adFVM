@@ -3,7 +3,7 @@ from __future__ import print_function
 
 from mesh import Mesh
 from field import CellField
-from ops import interpolate
+from interp import interpolate
 import time
 
 case = 'tests/cylinder/'

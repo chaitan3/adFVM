@@ -5,7 +5,7 @@ import scipy.sparse as sp
 
 from field import Field, CellField
 from interp import interpolate
-from utils import ad, pprint
+from utils import ad
 from utils import Logger
 logger = Logger(__name__)
 
@@ -13,13 +13,13 @@ def div(phi, U=None, ghost=False):
     logger.info('divergence of {0}'.format(phi.name))
     mesh = phi.mesh
     if phi.size == mesh.nCells:
-        phi = central(phi)
+        phi = interpolate(phi)
     if U is None:
         divField = (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
     else:
         assert phi.dimensions == (1,)
         if U.size == mesh.nCells:
-            U = central(U)
+            U = interpolate(U)
         divField = (mesh.sumOp * ((phi * U).dotN().field * mesh.areas))/mesh.volumes
     if ghost:
         return CellField('div({0})'.format(phi.name), mesh, divField)
@@ -31,7 +31,7 @@ def grad(phi, ghost=False):
     logger.info('gradient of {0}'.format(phi.name))
     mesh = phi.mesh
     if phi.size == mesh.nCells:
-        phi = central(phi)
+        phi = interpolate(phi)
     if phi.dimensions[0] == 1:
         product = phi * mesh.Normals
     else:
@@ -59,7 +59,7 @@ def laplacian(phi, DT):
     # non orthogonal correction
     #DTgradF = Field.zeros('grad' + phi.name, mesh, mesh.nCells, 3.)
     #DTgradF.setInternalField(DT*grad(field))
-    #laplacian1 = div(central(DTgradF), 1.)
+    #laplacian1 = div(interpolate(DTgradF), 1.)
 
     gradFdotn = snGrad(phi).field
     laplacian2 = (mesh.sumOp * (DT * gradFdotn * mesh.areas))/mesh.volumes

@@ -1,13 +1,12 @@
-from __future__ import print_function
 from field import Field, CellField
 
-from utils import ad, pprint
+from utils import ad
 from utils import Logger
 logger = Logger(__name__)
 import utils
 
 def TVD_dual(phi):
-    from ops import grad
+    from op import grad
     assert len(phi.dimensions) == 1
     logger.info('TVD {0}'.format(phi.name))
     mesh = phi.mesh

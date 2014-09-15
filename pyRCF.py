@@ -1,12 +1,11 @@
 #!/usr/bin/python2
-from __future__ import print_function
 import numpy as np
 import sys
 import time
 
 from mesh import Mesh
 from field import Field, CellField
-from ops import  div, ddt, snGrad, laplacian, grad
+from op import  div, ddt, snGrad, laplacian, grad
 from solver import implicit, explicit, forget, copy
 from interp import interpolate, TVD_dual
 
@@ -144,7 +143,7 @@ class Solver(object):
         # viscous part
         UnF = 0.5*(UnLF + UnRF)
         UF = 0.5*(ULF + URF)
-        sigmaF = self.mu*(snGrad(U) + central(grad(UF, ghost=True).transpose()).dotN() - (2./3)*central(div(UnF, ghost=True))*mesh.Normals)
+        sigmaF = self.mu*(snGrad(U) + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
         
         #return [ddt(rho, rho.old, self.dt) + div(rhoFlux),
         #        ddt(rhoU, rhoU.old, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
@@ -172,7 +171,7 @@ if __name__ == "__main__":
         case = sys.argv[1]
         time = float(sys.argv[2])
     else:
-        print('WTF')
+        pprint('WTF')
         exit()
 
     solver = Solver(case, {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})

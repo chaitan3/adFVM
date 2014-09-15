@@ -1,4 +1,3 @@
-from __future__ import print_function
 from field import CellField
 
 from utils import ad, pprint
