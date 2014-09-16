@@ -17,9 +17,9 @@ class Matrix(object):
 
     def __add__(self, b):
         if isinstance(b, Matrix):
-            return self.__class__(self.A + b.A, self.b - b.b)
+            return self.__class__(self.A + b.A, self.b + b.b)
         elif isinstance(b, Field):
-            return self.__class__(self.A, self.b - b.field.reshape(np.prod(b.field.shape)))
+            return self.__class__(self.A, self.b + b.field.reshape(np.prod(b.field.shape)))
         else:
             raise Exception("WTF")
 
@@ -30,7 +30,7 @@ class Matrix(object):
         return self.__class__(-self.A, -self.b)
     
     def __rsub__(self, b):
-        pass
+        raise Exception("WTF")
 
     def __radd__(self, b):
         return self.__add__(self, b)
@@ -45,7 +45,15 @@ class Matrix(object):
         return self.__mul__(self, b)
 
     def solve(self):
-        return sp.linalg.spsolve(self.A, ad.value(self.b))
+        return sp.linalg.spsolve(self.A, -ad.value(self.b))
+
+def div(phi, U):
+    if not hasattr(div, 'A'):
+        internalField = phi.getInternalField()
+        phi.setInternalField(internalField)
+        res = op.div(phi, U)
+        div.A = res.field.diff(internalField)
+    return Matrix(div.A)
 
 def laplacian(phi, DT):
     if not hasattr(laplacian, 'A'):
@@ -59,7 +67,7 @@ def ddt(phi, dt):
     shape = phi.getInternalField().shape
     n = np.prod(shape)
     A = sp.eye(n)*(1./dt)
-    b = phi.old.getInternalField().reshape(n)/dt
+    b = -phi.old.getInternalField().reshape(n)/dt
     return Matrix(A, b)
 
 def hybrid(equation, boundary, fields, solver):

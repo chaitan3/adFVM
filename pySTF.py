@@ -6,8 +6,7 @@ import time
 from mesh import Mesh
 from field import Field, CellField
 #from op import div, ddt, laplacian
-from op import div
-from matop import ddt, laplacian, hybrid
+from matop import div, ddt, laplacian, hybrid
 from solver import implicit, forget
 
 from utils import ad, pprint
@@ -19,7 +18,7 @@ case = 'tests/cyclic/'
 mesh = Mesh(case)
 
 t = 0.1
-dt = 0.005
+dt = 0.001
 DT = 0.01
 
 #initialize
@@ -42,7 +41,7 @@ for i in range(0, 300):
         TN.setInternalField(TI)
         return [TN]
     
-    hybrid(equation, boundary, [T], dt)
+    T = hybrid(equation, boundary, [T], dt)[0]
     forget([T])
     t += dt
     t = round(t, 6)
