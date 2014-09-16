@@ -208,7 +208,7 @@ class CellField(Field):
             for attr in patch:
                 handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
             if patch['type'] in ['processor', 'calculated', 'processorCyclic']:
-                utils.writeField(handle, self.BC[patchID].value, dtype, 'value')
+                utils.writeField(handle, self.BC[patchID].getValue(), dtype, 'value')
             handle.write('\t}\n')
         handle.write('}\n')
         handle.close()

@@ -17,6 +17,9 @@ class BoundaryCondition(object):
         self.cellStartFace = self.mesh.nInternalCells + self.startFace - self.mesh.nInternalFaces
         self.cellEndFace = self.mesh.nInternalCells + self.endFace - self.mesh.nInternalFaces
         self.internalIndices = self.mesh.owner[self.startFace:self.endFace]
+        # used by field writer
+        self.getValue = lambda x: self.field[self.cellStartFace:self.cellEndFace]
+        # used by processor patches
         self.value = self.field[self.cellStartFace:self.cellEndFace]
 
 class calculated(BoundaryCondition):
