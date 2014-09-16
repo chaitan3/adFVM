@@ -36,21 +36,24 @@ class Matrix(object):
         return self.__add__(self, b)
 
     def __mul__(self, b):
-        return self.__class__(self.A * b.field, self.b * b.field)
+        if isinstance(b, Field):
+            return self.__class__(self.A * b.field, self.b * b.field)
+        else:
+            raise Exception("WTF")
 
     def __rmul__(self, b):
         return self.__mul__(self, b)
 
     def solve(self):
-        # reshape
         return sp.linalg.spsolve(self.A, ad.value(self.b))
 
 def laplacian(phi, DT):
-    internalField = phi.getInternalField()
-    phi.setInternalField(internalField)
-    res = op.laplacian(phi, DT)
-    A = res.field.diff(internalField)
-    return Matrix(A)
+    if not hasattr(laplacian, 'A'):
+        internalField = phi.getInternalField()
+        phi.setInternalField(internalField)
+        res = op.laplacian(phi, DT)
+        laplacian.A = res.field.diff(internalField)
+    return Matrix(laplacian.A)
 
 def ddt(phi, dt):
     shape = phi.getInternalField().shape
