@@ -1,7 +1,11 @@
 import op
+from field import Field
 import numpy as np
 import scipy.sparse as sp
+import time
+from utils import ad, pprint
 
+# TAKING ADJOINT??????
 class Matrix(object):
     def __init__(self, A, b=None):
         self.A = A
@@ -9,19 +13,21 @@ class Matrix(object):
         assert m == n
         self.b = b
         if b is None:
-            self.b = np.zeros(m)
+            self.b = ad.zeros(m)
 
     def __add__(self, b):
         if isinstance(b, Matrix):
-            return self(self.A + b.A, self.b - b)
+            return self.__class__(self.A + b.A, self.b - b)
+        elif isinstance(b, Field):
+            return self.__class__(self.A, self.b - b.field.ravel())
         else:
-            return self(self.A, self.b - b)
+            raise Exception("WTF")
 
     def __sub__(self, b):
         return self.__add__(-b)
 
     def __neg__(self):
-        return self(-A, -b)
+        return self.__class__(-A, -b)
     
     def __rsub__(self, b):
         pass
@@ -30,21 +36,42 @@ class Matrix(object):
         return self.__add__(self, b)
 
     def __mul__(self, b):
-        return self(self.A * b, self.b * b)
+        return self.__class__(self.A * b, self.b * b)
 
     def __rmul__(self, b):
         return self.__mul__(self, b)
 
     def solve(self):
-        return sp.linalg.solve(self.A, self.b)  
+        # reshape
+        return sp.linalg.spsolve(self.A, ad.value(self.b))
 
-def laplacian(phi):
-    return op.laplacian(phi)
+def laplacian(phi, DT):
+    return op.laplacian(phi, DT)
 
-def ddt(phi, phi0, dt):
+def ddt(phi, dt):
     shape = phi.getInternalField().shape
     n = np.prod(shape)
     A = sp.eye(n)*(1./dt)
-    b = phi0.getInternalField()/dt
+    b = phi.old.getInternalField().ravel()/dt
     return Matrix(A, b)
+
+def hybrid(equation, boundary, fields, solver):
+    start = time.time()
+
+    names = [phi.name for phi in fields]
+    pprint('Time marching for', ' '.join(names))
+    for index in range(0, len(fields)):
+        fields[index].old = fields[index]
+        fields[index].info()
+
+    LHS = equation(*fields)
+    internalFields = [LHS[index].solve().reshape(fields[index].shape) for index in range(0, len(fields))]
+    newFields = boundary(*internalFields)
+    for index in range(0, len(fields)):
+        newFields[index].name = fields[index].name
+
+    end = time.time()
+    pprint('Time for iteration:', end-start)
+    return newFields
+
 

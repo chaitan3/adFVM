@@ -145,9 +145,9 @@ class Solver(object):
         UF = 0.5*(ULF + URF)
         sigmaF = self.mu*(snGrad(U) + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
         
-        #return [ddt(rho, rho.old, self.dt) + div(rhoFlux),
-        #        ddt(rhoU, rhoU.old, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
-        #        ddt(rhoE, rhoE.old, self.dt) + div(rhoEFlux) - (laplacian(e, self.alpha) + div(sigmaF.dot(UF)))]
+        #return [ddt(rho, self.dt) + div(rhoFlux),
+        #        ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
+        #        ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(e, self.alpha) + div(sigmaF.dot(UF)))]
         return [div(rhoFlux),
                 div(rhoUFlux) + grad(pF) - div(sigmaF),
                 div(rhoEFlux) - (laplacian(e, self.alpha) + div(sigmaF.dot(UF)))]

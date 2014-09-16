@@ -65,8 +65,8 @@ def laplacian(phi, DT):
     laplacian2 = (mesh.sumOp * (DT * gradFdotn * mesh.areas))/mesh.volumes
     return Field('laplacian({0})'.format(phi.name), mesh, laplacian2)
 
-def ddt(phi, phi0, dt):
+def ddt(phi, dt):
     logger.info('ddt of {0}'.format(phi.name))
-    return Field('ddt' + phi.name, phi.mesh, (phi.getInternalField()-phi0.getInternalField())/dt)
+    return Field('ddt' + phi.name, phi.mesh, (phi.getInternalField()-phi.old.getInternalField())/dt)
 
 

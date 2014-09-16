@@ -7,7 +7,7 @@ from mesh import Mesh
 from field import Field, CellField
 #from op import div, ddt, laplacian
 from op import div
-from matop import ddt, laplacian
+from matop import ddt, laplacian, hybrid
 from solver import implicit, forget
 
 from utils import ad, pprint
@@ -36,13 +36,13 @@ for i in range(0, 300):
 
     print('Simulation Time:', t, 'Time step:', dt)
     def equation(T):
-        return [ddt(T, T.old, dt) + div(T, U) - laplacian(T, DT)]
+        return [ddt(T, dt) + div(T, U) - laplacian(T, DT)]
     def boundary(TI):
         TN = CellField.copy(T)
         TN.setInternalField(TI)
         return [TN]
     
-    implicit(equation, boundary, [T], dt)
+    hybrid(equation, boundary, [T], dt)
     forget([T])
     t += dt
     t = round(t, 6)
