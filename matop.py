@@ -19,7 +19,7 @@ class Matrix(object):
         if isinstance(b, Matrix):
             return self.__class__(self.A + b.A, self.b - b)
         elif isinstance(b, Field):
-            return self.__class__(self.A, self.b - b.field.ravel())
+            return self.__class__(self.A, self.b - b.field.reshape(np.prod(b.field.shape)))
         else:
             raise Exception("WTF")
 
@@ -52,7 +52,7 @@ def ddt(phi, dt):
     shape = phi.getInternalField().shape
     n = np.prod(shape)
     A = sp.eye(n)*(1./dt)
-    b = phi.old.getInternalField().ravel()/dt
+    b = phi.old.getInternalField().reshape(np.prod(shape))/dt
     return Matrix(A, b)
 
 def hybrid(equation, boundary, fields, solver):
@@ -65,7 +65,7 @@ def hybrid(equation, boundary, fields, solver):
         fields[index].info()
 
     LHS = equation(*fields)
-    internalFields = [LHS[index].solve().reshape(fields[index].shape) for index in range(0, len(fields))]
+    internalFields = [LHS[index].solve().reshape(fields[index].getInternalField().shape) for index in range(0, len(fields))]
     newFields = boundary(*internalFields)
     for index in range(0, len(fields)):
         newFields[index].name = fields[index].name
