@@ -17,7 +17,7 @@ class Matrix(object):
 
     def __add__(self, b):
         if isinstance(b, Matrix):
-            return self.__class__(self.A + b.A, self.b - b)
+            return self.__class__(self.A + b.A, self.b - b.b)
         elif isinstance(b, Field):
             return self.__class__(self.A, self.b - b.field.reshape(np.prod(b.field.shape)))
         else:
@@ -27,7 +27,7 @@ class Matrix(object):
         return self.__add__(-b)
 
     def __neg__(self):
-        return self.__class__(-A, -b)
+        return self.__class__(-self.A, -self.b)
     
     def __rsub__(self, b):
         pass
@@ -36,7 +36,7 @@ class Matrix(object):
         return self.__add__(self, b)
 
     def __mul__(self, b):
-        return self.__class__(self.A * b, self.b * b)
+        return self.__class__(self.A * b.field, self.b * b.field)
 
     def __rmul__(self, b):
         return self.__mul__(self, b)
@@ -46,26 +46,31 @@ class Matrix(object):
         return sp.linalg.spsolve(self.A, ad.value(self.b))
 
 def laplacian(phi, DT):
-    return op.laplacian(phi, DT)
+    internalField = phi.getInternalField()
+    phi.setInternalField(internalField)
+    res = op.laplacian(phi, DT)
+    A = res.field.diff(internalField)
+    return Matrix(A)
 
 def ddt(phi, dt):
     shape = phi.getInternalField().shape
     n = np.prod(shape)
     A = sp.eye(n)*(1./dt)
-    b = phi.old.getInternalField().reshape(np.prod(shape))/dt
+    b = phi.old.getInternalField().reshape(n)/dt
     return Matrix(A, b)
 
 def hybrid(equation, boundary, fields, solver):
     start = time.time()
 
     names = [phi.name for phi in fields]
+    shapes = [phi.getInternalField().shape for phi in fields]
     pprint('Time marching for', ' '.join(names))
     for index in range(0, len(fields)):
         fields[index].old = fields[index]
         fields[index].info()
 
     LHS = equation(*fields)
-    internalFields = [LHS[index].solve().reshape(fields[index].getInternalField().shape) for index in range(0, len(fields))]
+    internalFields = [LHS[index].solve().reshape(shapes[index]) for index in range(0, len(fields))]
     newFields = boundary(*internalFields)
     for index in range(0, len(fields)):
         newFields[index].name = fields[index].name
