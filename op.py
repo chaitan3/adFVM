@@ -61,8 +61,8 @@ def laplacian(phi, DT):
     #DTgradF.setInternalField(DT*grad(field))
     #laplacian1 = div(interpolate(DTgradF), 1.)
 
-    gradFdotn = snGrad(phi).field
-    laplacian2 = (mesh.sumOp * (DT * gradFdotn * mesh.areas))/mesh.volumes
+    gradFdotn = snGrad(phi)
+    laplacian2 = (mesh.sumOp * ((DT * gradFdotn).field * mesh.areas))/mesh.volumes
     return Field('laplacian({0})'.format(phi.name), mesh, laplacian2)
 
 def ddt(phi, dt):

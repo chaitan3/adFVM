@@ -5,9 +5,7 @@ import time
 
 from mesh import Mesh
 from field import Field, CellField
-from op import  div, snGrad, grad
-from op import ddt, laplacian
-#from matop import ddt, laplacian, hybrid
+from op import  div, snGrad, grad, ddt, laplacian
 from solver import implicit, explicit, forget, copy
 from interp import interpolate, TVD_dual
 
@@ -26,7 +24,7 @@ class Solver(object):
         self.Cv = self.Cp/self.gamma
         self.mu = config['mu']
         self.Pr = config['Pr']
-        self.alpha = self.mu/self.Pr
+        self.alpha = lambda mu, T: mu*(1./self.Pr)
 
         self.mesh = Mesh(case)
 
@@ -77,8 +75,8 @@ class Solver(object):
         result = objective(fields)
         solutions = [copy(fields)]
         for timeIndex in range(1, nSteps+1):
-            #fields = explicit(self.equation, self.boundary, fields, self)
-            fields = implicit(self.equation, self.boundary, fields, self)
+            fields = explicit(self.equation, self.boundary, fields, self)
+            #fields = implicit(self.equation, self.boundary, fields, self)
             if mode is None:
                 result += objective(fields)
                 timeSteps[timeIndex-1] = np.array([t, self.dt])
@@ -144,13 +142,16 @@ class Solver(object):
         pF = 0.5*(pLF + pRF)
         
         # viscous part
+        TF = 0.5*(TLF + TRF)
+        mu = self.mu(TF)
+        alpha = self.alpha(mu, TF)
         UnF = 0.5*(UnLF + UnRF)
         UF = 0.5*(ULF + URF)
-        sigmaF = self.mu*(snGrad(U) + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
+        sigmaF = mu*(snGrad(U) + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
         
         return [ddt(rho, self.dt) + div(rhoFlux),
                 ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
-                ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(e, self.alpha) + div(sigmaF.dot(UF)))]
+                ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(e, alpha) + div(sigmaF.dot(UF)))]
 
         #partialSigmaF = self.mu*(interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
         #sigmaF = self.mu*snGrad(U) + partialSigmaF
@@ -179,7 +180,7 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = Solver(case, {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
+    solver = Solver(case, {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 'Pr': 0.7, 'CFL': 0.2})
     #solver = Solver(case, {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
     solver.run([time, 1e-3], 10000, 200)
 
