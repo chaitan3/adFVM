@@ -6,8 +6,8 @@ import time
 from mesh import Mesh
 from field import Field, CellField
 from op import  div, snGrad, grad
-#from op import ddt, laplacian
-from matop import ddt, laplacian, hybrid
+from op import ddt, laplacian
+#from matop import ddt, laplacian, hybrid
 from solver import implicit, explicit, forget, copy
 from interp import interpolate, TVD_dual
 
@@ -77,7 +77,8 @@ class Solver(object):
         result = objective(fields)
         solutions = [copy(fields)]
         for timeIndex in range(1, nSteps+1):
-            fields = explicit(self.equation, self.boundary, fields, self)
+            #fields = explicit(self.equation, self.boundary, fields, self)
+            fields = implicit(self.equation, self.boundary, fields, self)
             if mode is None:
                 result += objective(fields)
                 timeSteps[timeIndex-1] = np.array([t, self.dt])
@@ -145,18 +146,18 @@ class Solver(object):
         # viscous part
         UnF = 0.5*(UnLF + UnRF)
         UF = 0.5*(ULF + URF)
-        #sigmaF = self.mu*(snGrad(U) + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
-        #
-        #return [ddt(rho, self.dt) + div(rhoFlux),
-        #        ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
-        #        ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(e, self.alpha) + div(sigmaF.dot(UF)))]
-
-        partialSigmaF = self.mu*(interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
-        sigmaF = self.mu*snGrad(U) + partialSigmaF
+        sigmaF = self.mu*(snGrad(U) + interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
         
         return [ddt(rho, self.dt) + div(rhoFlux),
-                rho*ddt(U, self.dt) + div(rhoUFlux) + grad(pF) - laplacian(U, mu) - div(partialSigmaF),
+                ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
                 ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(e, self.alpha) + div(sigmaF.dot(UF)))]
+
+        #partialSigmaF = self.mu*(interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
+        #sigmaF = self.mu*snGrad(U) + partialSigmaF
+        #
+        #return [ddt(rho, self.dt) + div(rhoFlux),
+        #        rho*ddt(U, self.dt) + div(rhoUFlux) + grad(pF) - laplacian(U, mu) - div(partialSigmaF),
+        #        ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(e, self.alpha) + div(sigmaF.dot(UF)))]
 
     def boundary(self, rhoI, rhoUI, rhoEI):
         logger.info('correcting boundary')
