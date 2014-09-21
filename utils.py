@@ -91,8 +91,8 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 \*---------------------------------------------------------------------------*/
 '''
 
-#fileFormat = 'binary'
-fileFormat = 'ascii'
+fileFormat = 'binary'
+#fileFormat = 'ascii'
 foamFile = {'version':'2.0', 'format': fileFormat, 'class': 'volScalarField', 'object': ''}
 
 def removeCruft(content, keepHeader=False):
