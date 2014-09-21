@@ -159,14 +159,15 @@ class CellField(Field):
                 start += end
                 if key == '}':
                     break
-                elif key == 'value' and utils.fileFormat == 'binary' and getToken(content[start:])[0] != 'uniform':
-                    match = re.search(re.compile('[ ]+(nonuniform[ ]+List<[a-z]>[\s\r\n\t]+\()', re.DOTALL), content[start:])
+                # skip non binary, non value, uniform or empty patches
+                elif key == 'value' and utils.fileFormat == 'binary' and getToken(content[start:])[0] != 'uniform' and mesh.boundary[patchID]['nFaces'] != 0:
+                    match = re.search(re.compile('[ ]+(nonuniform[ ]+List<[a-z]+>[\s\r\n\t0-9]*\()', re.DOTALL), content[start:])
                     nBytes = bytesPerField * mesh.boundary[patchID]['nFaces']
                     start += match.end()
                     prefix = match.group(1)
                     boundary[patchID][key] = prefix + content[start:start+nBytes]
                     start += nBytes
-                    match = re.search('\)[\s\r\n\t]+;', content[start:])
+                    match = re.search('\)[\s\r\n\t]*;', content[start:])
                     start += match.end()
                 else:
                     match = re.search(re.compile('[ ]+(.*?);', re.DOTALL), content[start:])
