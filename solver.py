@@ -7,7 +7,7 @@ from utils import Logger
 logger = Logger(__name__)
 import time
 
-def explicit(equation, boundary, fields, solver):
+def euler(equation, boundary, fields, solver):
     start = time.time()
 
     names = [phi.name for phi in fields]
@@ -25,6 +25,37 @@ def explicit(equation, boundary, fields, solver):
     end = time.time()
     pprint('Time for iteration:', end-start)
     return newFields
+
+def RK3(equation, boundary, fields, solver):
+    start = time.time()
+
+    names = [phi.name for phi in fields]
+    pprint('Time marching for', ' '.join(names))
+    for index in range(0, len(fields)):
+        fields[index].info()
+
+    def LHS(a, *oldLHS):
+        if len(oldLHS) != 0:
+            internalFields = [(fields[index].getInternalField() - a*LHS[index].field*solver.dt) for index in range(0, len(fields))]
+            newFields = boundary(*internalFields)
+        else:
+            newFields = fields
+        for index in range(0, len(fields)):
+            newFields[index].old = newFields[index]
+        return equation(*newFields)
+
+    k1 = LHS(0.)
+    k2 = LHS(0.5, k1)
+    k3 = LHS(0.5, k2)
+    k4 = LHS(1., k3)
+
+    for index in range(0, len(fields)):
+        newFields[index].name = fields[index].name
+    end = time.time()
+    pprint('Time for iteration:', end-start)
+    return newFields
+
+
 
 def implicit(equation, boundary, fields, garbage):
     assert ad.__name__ == 'numpad'

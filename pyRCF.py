@@ -6,7 +6,8 @@ import time
 from mesh import Mesh
 from field import Field, CellField
 from op import  div, snGrad, grad, ddt, laplacian
-from solver import implicit, explicit, forget, copy
+from solver import implicit, forget, copy
+from solver import RK3 as explicit
 from interp import interpolate, TVD_dual
 
 from utils import ad, pprint
