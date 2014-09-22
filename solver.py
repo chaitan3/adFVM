@@ -20,7 +20,6 @@ def euler(equation, boundary, fields, solver):
     newFields = boundary(*internalFields)
     for index in range(0, len(fields)):
         newFields[index].name = fields[index].name
-        #newFields[index].old = fields[index]
 
     end = time.time()
     pprint('Time for iteration:', end-start)
@@ -35,9 +34,10 @@ def RK(equation, boundary, fields, solver):
         phi.info()
 
     def NewFields(a, LHS):
-        internalFields = [phi.getInternalField() for phi in fields]
-        for index in range(0, len(a)):
-            internalFields[index] -= a[index]*LHS[index]*solver.dt
+        internalFields = [phi.getInternalField().copy() for phi in fields]
+        for termIndex in range(0, len(a)):
+            for index in range(0, len(fields)):
+                internalFields[index] -= a[termIndex]*LHS[termIndex][index].field*solver.dt
         return boundary(*internalFields)
 
     def f(a, *LHS):
@@ -52,7 +52,7 @@ def RK(equation, boundary, fields, solver):
         return equation(*newFields)
     f.rk = 1
 
-    k1 = f(0.)
+    k1 = f([0.])
     k2 = f([0.5], k1)
     k3 = f([0.5], k2)
     k4 = f([1.], k3)
