@@ -7,7 +7,7 @@ from mesh import Mesh
 from field import Field, CellField
 from op import  div, snGrad, grad, ddt, laplacian
 from solver import implicit, forget, copy
-from solver import RK as explicit
+from solver import euler as explicit
 from interp import interpolate, TVD_dual
 
 from utils import ad, pprint
@@ -181,7 +181,7 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = Solver(case, {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 'Pr': 0.7, 'CFL': 0.8})
-    #solver = Solver(case, {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': lambda T: T*0., 'Pr': 0.7, 'CFL': 0.8})
+    solver = Solver(case, {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 'Pr': 0.7, 'CFL': 0.6})
+    #solver = Solver(case, {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': lambda T: T*0., 'Pr': 0.7, 'CFL': 0.2})
     solver.run([time, 1e-3], 10000, 200)
 

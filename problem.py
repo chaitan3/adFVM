@@ -5,9 +5,10 @@ import numpy as np
 import sys
 
 from pyRCF import Solver
-from solver import explicit, derivative, copy
+from solver import derivative, copy
+from solver import euler as explicit
 from utils import ad
-from field import CellField
+from field import CellField, Field
 import utils
 
 nSteps = 20000
@@ -52,7 +53,7 @@ writeInterval = 100
 #
 #
 #
-primal = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006, 'gamma': 1.4, 'mu': 2.5e-5, 'Pr': 0.7, 'CFL': 0.2})
+primal = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006, 'gamma': 1.4, 'mu': lambda T:Field('mu', T.mesh, ad.ones(T.field.shape)*2.5e-5), 'Pr': 0.7, 'CFL': 0.2})
 
 def objective(fields):
     rho, rhoU, rhoE = fields
@@ -65,7 +66,8 @@ def objective(fields):
     start, end = patch.cellStartFace, patch.cellEndFace
     p = rhoE.field[start:end]*(primal.gamma-1)
     deltas = utils.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
-    mungUx = primal.mu*(rhoU.field[start:end, 0]/rho.field[start:end]-rhoU.field[patch.internalIndices, 0]/rho.field[patch.internalIndices])/deltas
+    T = rhoE/(rho*primal.Cv)
+    mungUx = (rhoU.field[start:end, 0]/rho.field[start:end]-rhoU.field[patch.internalIndices, 0]/rho.field[patch.internalIndices])*primal.mu(T).field[start:end]/deltas
     return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
 
 def perturb(fields):
