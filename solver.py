@@ -26,28 +26,37 @@ def euler(equation, boundary, fields, solver):
     pprint('Time for iteration:', end-start)
     return newFields
 
-def RK3(equation, boundary, fields, solver):
+def RK(equation, boundary, fields, solver):
     start = time.time()
 
     names = [phi.name for phi in fields]
     pprint('Time marching for', ' '.join(names))
-    for index in range(0, len(fields)):
-        fields[index].info()
+    for phi in fields:
+        phi.info()
 
-    def LHS(a, *oldLHS):
-        if len(oldLHS) != 0:
-            internalFields = [(fields[index].getInternalField() - a*LHS[index].field*solver.dt) for index in range(0, len(fields))]
-            newFields = boundary(*internalFields)
+    def NewFields(a, LHS):
+        internalFields = [phi.getInternalField() for phi in fields]
+        for index in range(0, len(a)):
+            internalFields[index] -= a[index]*LHS[index]*solver.dt
+        return boundary(*internalFields)
+
+    def f(a, *LHS):
+        pprint('RK step ', f.rk)
+        f.rk += 1
+        if len(LHS) != 0:
+            newFields = NewFields(a, LHS)
         else:
             newFields = fields
-        for index in range(0, len(fields)):
-            newFields[index].old = newFields[index]
+        for phi in newFields:
+            phi.old = phi
         return equation(*newFields)
+    f.rk = 1
 
-    k1 = LHS(0.)
-    k2 = LHS(0.5, k1)
-    k3 = LHS(0.5, k2)
-    k4 = LHS(1., k3)
+    k1 = f(0.)
+    k2 = f([0.5], k1)
+    k3 = f([0.5], k2)
+    k4 = f([1.], k3)
+    newFields = NewFields([1./6, 1./3, 1./3, 1./6], [k1, k2, k3, k4])
 
     for index in range(0, len(fields)):
         newFields[index].name = fields[index].name
