@@ -65,6 +65,11 @@ class Field(object):
         assert len(self.dimensions) == 2
         return self.__class__('{0}.T'.format(self.name), self.mesh, self.field.transpose((0,2,1)))
 
+    def trace(self):
+        assert len(self.dimensions) == 2
+        phi = self.field
+        return self.__class__('tr({0})'.format(self.name), self.mesh, (phi[:,0,0] + phi[:,1,1] + phi[:,2,2]).reshape((-1,1)))
+
     def __neg__(self):
         return self.__class__('-{0}'.format(self.name), self.mesh, -self.field)
 
