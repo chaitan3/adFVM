@@ -51,8 +51,8 @@ class Exchanger(object):
     def exchange(self, remote, sendData, recvData, tag):
         #if isinstance(sendData, ad.adarray):
         #    sendData = ad.value(sendData)
-        sendRequest = mpi.Isend([sendData, MPI.DOUBLE], remote, tag)
-        recvRequest = mpi.Irecv([recvData, MPI.DOUBLE], remote, tag)
+        sendRequest = mpi.Isend([sendData, MPI.DOUBLE], dest=remote, tag=tag)
+        recvRequest = mpi.Irecv([recvData, MPI.DOUBLE], source=remote, tag=tag)
         self.requests.extend([sendRequest, recvRequest])
 
     def wait(self):
