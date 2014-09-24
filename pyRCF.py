@@ -58,6 +58,9 @@ class Solver(object):
         logger.info('running solver for {0}'.format(nSteps))
         t, dt = timeStep
         mesh = self.mesh
+        #a = (mesh.absSumOp * (mesh.areas / mesh.deltas))/mesh.volumes
+        #print (utils.mpi_Rank, a.max())
+        #print (utils.mpi_Rank, a.min())
         #initialize
         if initialFields is None:
             self.p = CellField.read('p', mesh, t)
@@ -148,8 +151,8 @@ class Solver(object):
         alpha = self.alpha(mu, TF)
         UnF = 0.5*(UnLF + UnRF)
         UF = 0.5*(ULF + URF)
-        #gradUTF = interpolate(grad(UF, ghost=True).transpose())
-        gradUTF = interpolate(grad(UF, ghost=True))
+        gradUTF = interpolate(grad(UF, ghost=True).transpose())
+        #gradUTF = interpolate(grad(UF, ghost=True))
         sigmaF = mu*(snGrad(U) + gradUTF.dotN() - (2./3)*gradUTF.trace()*mesh.Normals)
         
         return [ddt(rho, self.dt) + div(rhoFlux),
