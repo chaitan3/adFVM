@@ -152,7 +152,6 @@ class Solver(object):
         UnF = 0.5*(UnLF + UnRF)
         UF = 0.5*(ULF + URF)
         gradUTF = interpolate(grad(UF, ghost=True).transpose())
-        #gradUTF = interpolate(grad(UF, ghost=True))
         sigmaF = mu*(snGrad(U) + gradUTF.dotN() - (2./3)*gradUTF.trace()*mesh.Normals)
         
         return [ddt(rho, self.dt) + div(rhoFlux),
