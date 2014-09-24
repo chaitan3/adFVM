@@ -35,7 +35,7 @@ def grad(phi, ghost=False):
     if phi.dimensions[0] == 1:
         product = phi * mesh.Normals
     else:
-        product = phi.outer(mesh.Normals)
+        product = mesh.Normals.outer(phi)
         product.field = product.field.reshape((phi.size, 9))
     gradField = (mesh.sumOp * (product.field * mesh.areas))/mesh.volumes
     # if grad of scalar
