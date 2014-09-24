@@ -26,7 +26,11 @@ class Field(object):
 
     def info(self):
         pprint(self.name + ':', end='')
-        pprint(' min:', utils.min(ad.value(self.field)), 'max:', utils.max(ad.value(self.field)))
+        fieldMin = utils.min(ad.value(self.field))
+        fieldMax = utils.max(ad.value(self.field))
+        assert not np.isnan(fieldMin)
+        assert not np.isnan(fieldMax)
+        pprint(' min:', fieldMin, 'max:', fieldMax)
 
     # creates a view
     def component(self, component): 
