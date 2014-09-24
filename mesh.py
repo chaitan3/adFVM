@@ -222,26 +222,47 @@ class Mesh(object):
                 neighbourPatch = self.boundary[patch['neighbourPatch']]   
                 neighbourStartFace = neighbourPatch['startFace']
                 neighbourEndFace = neighbourStartFace + nFaces
-                # apply transformation
+                # apply transformation: single value
                 # append cell centres
                 patch['transform'] = self.faceCentres[startFace]-self.faceCentres[neighbourStartFace]
                 self.cellCentres[cellStartFace:cellEndFace] = patch['transform'] + self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
-            elif patch['type'] in ['processor', 'processorCyclic']:
+
+            elif patch['type'] == 'processor':
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
                 local = patch['myProcNo']
                 remote = patch['neighbProcNo']
                 # exchange data
                 tag = 0
+                exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
+
+            elif patch['type'] == 'processorCyclic':
+                patch['neighbProcNo'] = int(patch['neighbProcNo'])
+                patch['myProcNo'] = int(patch['myProcNo'])
+                local = patch['myProcNo']
+                remote = patch['neighbProcNo']
                 if patch['type'] == 'processorCyclic':
                     commonPatch = self.boundary[patchID]['referPatch']
                     if local > remote:
                         commonPatch = self.boundary[commonPatch]['neighbourPatch']
                     tag = 1 + self.origPatches.index(commonPatch)
-
-                #exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
+                # apply transformation
+                exchanger.exchange(remote, -self.faceCentres[startFace:endFace] + self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
             else:
                 # append cell centres
                 self.cellCentres[cellStartFace:cellEndFace] = self.faceCentres[startFace:endFace]
         exchanger.wait()
+        for patchID in self.boundary:
+            patch = self.boundary[patchID]
+            startFace = patch['startFace']
+            nFaces = patch['nFaces']
+            # empty patches
+            if nFaces == 0:
+                continue
+            endFace = startFace + nFaces
+            cellStartFace = self.nInternalCells + startFace - self.nInternalFaces
+            cellEndFace = self.nInternalCells + endFace - self.nInternalFaces
+
+            if patch['type'] == 'processorCyclic':
+                self.cellCentres[cellStartFace:cellEndFace] += self.faceCentres[startFace:endFace]
 
