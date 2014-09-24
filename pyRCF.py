@@ -151,7 +151,8 @@ class Solver(object):
         alpha = self.alpha(mu, TF)
         UnF = 0.5*(UnLF + UnRF)
         UF = 0.5*(ULF + URF)
-        gradUTF = interpolate(grad(UF, ghost=True).transpose())
+        #gradUTF = interpolate(grad(UF, ghost=True).transpose())
+        gradUTF = interpolate(grad(UF, ghost=True))
         sigmaF = mu*(snGrad(U) + gradUTF.dotN() - (2./3)*gradUTF.trace()*mesh.Normals)
         
         return [ddt(rho, self.dt) + div(rhoFlux),
@@ -185,7 +186,7 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    #solver = Solver(case, {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 'Pr': 0.7, 'CFL': 1.2})
+    #solver = Solver(case, {'R': 8.314, 'Cp': 1011., 'gamma': 1.4, 'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 'Pr': 0.7, 'CFL': 1.2})
     solver = Solver(case, {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': lambda T: T*0., 'Pr': 0.7, 'CFL': 1.2})
     solver.run([time, 1e-3], 10000, 200)
 
