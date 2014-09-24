@@ -239,7 +239,7 @@ class Mesh(object):
                         commonPatch = self.boundary[commonPatch]['neighbourPatch']
                     tag = 1 + self.origPatches.index(commonPatch)
 
-                exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
+                #exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
             else:
                 # append cell centres
                 self.cellCentres[cellStartFace:cellEndFace] = self.faceCentres[startFace:endFace]

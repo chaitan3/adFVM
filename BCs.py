@@ -57,7 +57,7 @@ class processor(BoundaryCondition):
 
     def update(self, exchanger):
         logger.debug('processor BC for {0}'.format(self.patchID))
-        exchanger.exchange(self.remote, self.field[self.internalIndices], self.value, self.tag)
+        #exchanger.exchange(self.remote, self.field[self.internalIndices], self.value, self.tag)
 
 class processorCyclic(BoundaryCondition):
     def __init__(self, phi, patchID):
@@ -73,7 +73,7 @@ class processorCyclic(BoundaryCondition):
 
     def update(self, exchanger):
         logger.debug('processor BC for {0}'.format(self.patchID))
-        exchanger.exchange(self.remote, self.field[self.internalIndices], self.value, self.tag)
+        #exchanger.exchange(self.remote, self.field[self.internalIndices], self.value, self.tag)
 
 class zeroGradient(BoundaryCondition):
     def update(self):
@@ -107,6 +107,8 @@ class turbulentInletVelocity(BoundaryCondition):
         self.Umean = utils.extractField(self.patch['Umean'], self.nFaces, self.field.shape[1:] == (3,))
         self.lengthScale = self.patch['lengthScale']
         self.turbulentIntensity = self.patch['turbulentIntensity']
+        self.patch.pop('value', None)
+        self.patch['value'] = 'uniform (0 0 0)'
 
     def update(self):
         logger.debug('turbulentInletVelocity BC for {0}'.format(self.patchID))
