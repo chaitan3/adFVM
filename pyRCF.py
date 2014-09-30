@@ -159,13 +159,6 @@ class Solver(object):
                 ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
                 ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(e, alpha) + div(sigmaF.dot(UF)))]
 
-        #partialSigmaF = self.mu*(interpolate(grad(UF, ghost=True).transpose()).dotN() - (2./3)*interpolate(div(UnF, ghost=True))*mesh.Normals)
-        #sigmaF = self.mu*snGrad(U) + partialSigmaF
-        #
-        #return [ddt(rho, self.dt) + div(rhoFlux),
-        #        rho*ddt(U, self.dt) + div(rhoUFlux) + grad(pF) - laplacian(U, mu) - div(partialSigmaF),
-        #        ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(e, self.alpha) + div(sigmaF.dot(UF)))]
-
     def boundary(self, rhoI, rhoUI, rhoEI):
         logger.info('correcting boundary')
         mesh = self.mesh
