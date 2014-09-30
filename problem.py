@@ -71,11 +71,19 @@ def objective(fields):
     return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
 
 def perturb(fields):
+#    rho, rhoU, rhoE = fields
+#    patch = 'left'
+#    bc = rhoU.BC
+#    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
+#    rhoU.field[start:end][:,0] += 0.1
     rho, rhoU, rhoE = fields
-    patch = 'left'
-    bc = rhoU.BC
-    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
-    rhoU.field[start:end][:,0] += 0.1
+    mesh = rho.mesh
+    mid = np.array([-0.0048, 0.0008, 0.])
+    indices = range(0, mesh.nInternalCells)
+    G = 1e-3*ad.array(np.exp(-100*utils.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
+    rho.field[indices] += G
+
+
 
 startTime = 2.0
 dt = 1
