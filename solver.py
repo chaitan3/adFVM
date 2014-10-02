@@ -64,8 +64,6 @@ def RK(equation, boundary, fields, solver):
     pprint('Time for iteration:', end-start)
     return newFields
 
-
-
 def implicit(equation, boundary, fields, garbage):
     assert ad.__name__ == 'numpad'
     start = time.time()
