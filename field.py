@@ -128,6 +128,8 @@ class CellField(Field):
 
         if self.size == mesh.nInternalCells:
             self.setInternalField(field)
+            self.size = self.field.shape[0]
+
 
     @classmethod
     def zeros(self, name, mesh, dimensions):

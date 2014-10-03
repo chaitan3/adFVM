@@ -1,36 +1,60 @@
 #!/usr/bin/python2
 from __future__ import print_function
-
-#from mesh import Mesh
-#from field import CellField
-#from interp import interpolate
-#import time
-#
-#case = 'tests/cylinder/'
-#mesh = Mesh(case)
-#U = CellField.read('U', mesh, 2)
-#p = CellField.read('p', mesh, 2)
-#Uf = interpolate(U).field
-#pf = interpolate(p).field
-#
-#print(mesh.sumOp.shape)
-#print(pf.shape)
-#print(Uf.shape)
-#
-#x = lambda t: mesh.sumOp * pf
-#y = lambda t: mesh.sumOp * Uf
-#
-
+import unittest
 import numpy as np
-import utils
-if utils.mpi_Rank == 0:
-    a = np.zeros(10)
-    print(utils.mpi_Rank, a)
-    r2 = utils.mpi.Irecv(a[5:], 2, 1)
-    r1 = utils.mpi.Irecv(a[:5], 1, 1)
-    utils.MPI.Request.Waitall([r1, r2])
-    print(utils.mpi_Rank, a)
-else:
-    a = utils.mpi_Rank * np.arange(0., 5.)
-    print(utils.mpi_Rank, a)
-    utils.mpi.Send(a, 0, 1)
+from utils import ad
+
+from field import Field, CellField
+from mesh import Mesh
+from interp import interpolate, TVD_dual
+from op import grad, div, laplacian, snGrad
+
+class TestField(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        self.case = 'tests/cylinder/'
+        self.mesh = Mesh(self.case)
+        self.p = CellField.read('p', self.mesh, 2.0)
+        self.U = CellField.read('U', self.mesh, 2.0)
+        self.gradU = grad(self.U, ghost=True)
+        self.data = np.load(self.case + 'test_data.npz')
+
+    def test_max(self):
+        self.assertTrue(True)
+
+    def test_component(self):
+        res = ad.value(self.U.component(0).field)
+        ref = self.data['component']
+        self.assertAlmostEqual(0, np.abs(res-ref).max())
+
+    def test_magSqr(self):
+        res = ad.value(self.U.magSqr().field)
+        ref = self.data['magSqr']
+        self.assertAlmostEqual(0, np.abs(res-ref).max())
+
+    def test_dot_vector(self):
+        res = ad.value(interpolate(self.U).dotN().field)
+        ref = self.data['dot_vector']
+        self.assertAlmostEqual(0, np.abs(res-ref).max())
+
+    def test_outer(self):
+        res = ad.value(interpolate(self.U).outer(self.mesh.Normals).field)
+        ref = self.data['outer']
+        self.assertAlmostEqual(0, np.abs(res-ref).max())
+
+    def test_dot_tensor(self):
+        res = ad.value(self.gradU.dot(self.U).field)
+        ref = self.data['dot_tensor']
+        self.assertAlmostEqual(0, np.abs(res-ref).max())
+
+    def test_transpose(self):
+        res = ad.value(self.gradU.transpose().field)
+        ref = self.data['transpose']
+        self.assertAlmostEqual(0, np.abs(res-ref).max())
+
+    def test_trace(self):
+        res = ad.value(self.gradU.trace().field)
+        ref = self.data['trace']
+        self.assertAlmostEqual(0, np.abs(res-ref).max())
+        
+        
