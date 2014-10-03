@@ -5,8 +5,7 @@ import scipy.sparse as sp
 
 from field import Field, CellField
 from interp import interpolate
-from utils import ad
-from utils import Logger
+from config import ad, Logger
 logger = Logger(__name__)
 
 def div(phi, U=None, ghost=False):

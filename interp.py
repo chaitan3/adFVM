@@ -1,9 +1,8 @@
 from field import Field, CellField
 
-from utils import ad
-from utils import Logger
+from config import ad, Logger
 logger = Logger(__name__)
-import utils
+import config
 
 def TVD_dual(phi):
     from op import grad
@@ -29,9 +28,9 @@ def TVD_dual(phi):
             gradC = Field('gradC({0})'.format(phi.name), mesh, gradField.field[C])
             gradF = Field('gradF({0})'.format(phi.name), mesh, phiDC)
             if phi.dimensions[0] == 1:
-                r = 2*gradC.dot(R)/(gradF + utils.SMALL) - 1
+                r = 2*gradC.dot(R)/(gradF + config.SMALL) - 1
             else:
-                r = 2*gradC.transpose().dot(R).dot(gradF)/(gradF.magSqr() + utils.SMALL) - 1
+                r = 2*gradC.transpose().dot(R).dot(gradF)/(gradF.magSqr() + config.SMALL) - 1
             faceFields[index][start:end] = phiC + 0.5*psi(r, r.abs()).field*phiDC
             index += 1
 
@@ -39,13 +38,14 @@ def TVD_dual(phi):
     for patchID in phi.boundary:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        if phi.boundary[patchID]['type'] in ['cyclic', 'processor', 'processorCyclic']:
+        if phi.boundary[patchID]['type'] in config.coupledPatches:
             update(startFace, endFace)
         else:
             for faceField in faceFields:
                 faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
 
     return [Field('{0}F'.format(phi.name), mesh, faceField) for faceField in faceFields]
+
 
 def upwind(phi, U): 
     assert len(phi.dimensions) == 1
@@ -62,7 +62,7 @@ def upwind(phi, U):
     for patchID in phi.boundary:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        if phi.boundary[patchID]['type'] in ['cyclic', 'processor', 'processorCyclic']:
+        if phi.boundary[patchID]['type'] in config.coupledPatches:
             update(startFace, endFace)
         else:
             faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
@@ -80,3 +80,5 @@ def central(phi):
     return faceField
 
 interpolate = central
+
+

@@ -2,8 +2,8 @@ import numpy as np
 
 from field import CellField
 
-from utils import ad, pprint
-from utils import Logger
+from config import ad, Logger
+from parallel import pprint
 logger = Logger(__name__)
 import time
 

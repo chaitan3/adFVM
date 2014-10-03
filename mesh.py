@@ -4,17 +4,17 @@ import re
 import time
 
 from field import Field
-from utils import ad, adsparse, pprint
-from utils import Logger, Exchanger
+from config import ad, adsparse, Logger
+from parallel import pprint, Exchanger
 logger = Logger(__name__)
-import utils
+import config, parallel
 
 class Mesh(object):
     def __init__(self, caseDir):
         start = time.time()
         pprint('Reading mesh')
 
-        self.case = caseDir + utils.mpi_processorDirectory
+        self.case = caseDir + parallel.processorDirectory
         meshDir = self.case + 'constant/polyMesh/'
         self.faces = self.read(meshDir + 'faces', np.int32)
         self.points = self.read(meshDir + 'points', float)
@@ -55,10 +55,10 @@ class Mesh(object):
         logger.info('read {0}'.format(foamFile))
         content = open(foamFile).read()
         foamFileDict = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
-        assert re.search('format[\s\t]+(.*?);', foamFileDict).group(1) == utils.fileFormat
+        assert re.search('format[\s\t]+(.*?);', foamFileDict).group(1) == config.fileFormat
         start = content.find('(') + 1
         end = content.rfind(')')
-        if utils.fileFormat == 'binary':
+        if config.fileFormat == 'binary':
             if foamFile[-5:] == 'faces':
                 nFaces1 = int(re.search('[0-9]+', content[start-2:0:-1]).group(0)[::-1])
                 endIndices = start + nFaces1*4
@@ -79,7 +79,7 @@ class Mesh(object):
 
     def readBoundary(self, boundaryFile):
         logger.info('read {0}'.format(boundaryFile))
-        content = utils.removeCruft(open(boundaryFile).read())
+        content = removeCruft(open(boundaryFile).read())
         patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n]+{(.*?)}', re.DOTALL), content)
         boundary = {}
         for patch in patches:
@@ -93,7 +93,7 @@ class Mesh(object):
         v1 = self.points[self.faces[:,1]]-self.points[self.faces[:,2]]
         v2 = self.points[self.faces[:,2]]-self.points[self.faces[:,3]]
         normals = np.cross(v1, v2)
-        return normals / utils.norm(normals, axis=1).reshape(-1,1)
+        return normals / config.norm(normals, axis=1).reshape(-1,1)
 
     def getCellFaces(self):
         logger.info('generated cell faces')
@@ -131,7 +131,7 @@ class Mesh(object):
             nextPoints = self.points[self.faces[:, (index % nFacePoints)+1]]
             centres = (points + nextPoints + faceCentres)/3
             normals = np.cross((nextPoints - points), (faceCentres - points))
-            areas = (utils.norm(normals, axis=1)/2).reshape(-1,1)
+            areas = (config.norm(normals, axis=1)/2).reshape(-1,1)
             sumAreas += areas
             sumCentres += areas*centres
         faceCentres = sumCentres/sumAreas
@@ -141,7 +141,7 @@ class Mesh(object):
         logger.info('generated deltas')
         P = self.cellCentres[self.owner]
         N = self.cellCentres[self.neighbour]
-        return utils.norm(P-N, axis=1).reshape(-1,1)
+        return config.norm(P-N, axis=1).reshape(-1,1)
 
     def getWeights(self):
         logger.info('generated face deltas')
@@ -174,7 +174,7 @@ class Mesh(object):
         boundary = {}
         for patchID in self.boundary:
             boundary[patchID] = {}
-            if self.boundary[patchID]['type'] in ['cyclic', 'symmetryPlane', 'empty', 'processor', 'processorCyclic']:
+            if self.boundary[patchID]['type'] in config.defaultPatches:
                 boundary[patchID]['type'] = self.boundary[patchID]['type']
             else:
                 boundary[patchID]['type'] = 'zeroGradient'
@@ -185,7 +185,7 @@ class Mesh(object):
         boundary = {}
         for patchID in self.boundary:
             boundary[patchID] = {}
-            if self.boundary[patchID]['type'] in ['cyclic', 'processor', 'processorCyclic']:
+            if self.boundary[patchID]['type'] in config.coupledPatches:
                 boundary[patchID]['type'] = self.boundary[patchID]['type']
             else:
                 boundary[patchID]['type'] = 'calculated'
@@ -194,7 +194,7 @@ class Mesh(object):
     def getOrigPatches(self):
         origPatches = []
         for patchID in self.boundary:
-            if self.boundary[patchID]['type'] not in ['processor', 'processorCyclic']:
+            if self.boundary[patchID]['type'] not in config.processorPatches:
                 origPatches.append(patchID)
         origPatches.sort()
         return origPatches
@@ -265,4 +265,15 @@ class Mesh(object):
 
             if patch['type'] == 'processorCyclic':
                 self.cellCentres[cellStartFace:cellEndFace] += self.faceCentres[startFace:endFace]
+
+def removeCruft(content, keepHeader=False):
+    # remove comments and newlines
+    content = re.sub(re.compile('/\*.*\*/',re.DOTALL ) , '' , content)
+    content = re.sub(re.compile('//.*\n' ) , '' , content)
+    content = re.sub(re.compile('\n\n' ) , '\n' , content)
+    # remove header
+    if not keepHeader:
+        content = re.sub(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), '', content)
+    return content
+
 

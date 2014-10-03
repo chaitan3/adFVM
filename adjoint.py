@@ -7,7 +7,7 @@ import sys
 
 from field import CellField
 from solver import derivative, forget, copy
-from utils import ad
+from config import ad
 
 firstCheckpoint = 0
 if len(sys.argv) > 1:

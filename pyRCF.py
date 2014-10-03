@@ -10,11 +10,10 @@ from solver import implicit, forget, copy
 from solver import euler as explicit
 from interp import interpolate, TVD_dual
 
-from utils import ad, pprint
-from utils import Logger
+from config import ad, Logger
+from parallel import pprint
 logger = Logger(__name__)
-import utils
-
+import config, parallel
 
 class Solver(object):
     def __init__(self, case, config):
@@ -54,13 +53,13 @@ class Solver(object):
         rho.name, rhoU.name, rhoE.name = self.names
         return rho, rhoU, rhoE
     
-    def run(self, timeStep, nSteps, writeInterval=utils.LARGE, mode=None, initialFields=None, objective=lambda x: 0, perturb=None):
+    def run(self, timeStep, nSteps, writeInterval=config.LARGE, mode=None, initialFields=None, objective=lambda x: 0, perturb=None):
         logger.info('running solver for {0}'.format(nSteps))
         t, dt = timeStep
         mesh = self.mesh
         #a = (mesh.absSumOp * (mesh.areas / mesh.deltas))/mesh.volumes
-        #print (utils.mpi_Rank, a.max())
-        #print (utils.mpi_Rank, a.min())
+        #print (config.mpi_Rank, a.max())
+        #print (config.mpi_Rank, a.min())
         #initialize
         if initialFields is None:
             self.p = CellField.read('p', mesh, t)
@@ -112,7 +111,7 @@ class Solver(object):
            
     def timeStep(self, aFbyD):
         logger.info('computing new time step')
-        self.dt = min(self.dt*self.stepFactor, self.CFL/utils.max(aFbyD))
+        self.dt = min(self.dt*self.stepFactor, self.CFL/parallel.max(aFbyD))
 
     def equation(self, rho, rhoU, rhoE):
         logger.info('computing RHS/LHS')

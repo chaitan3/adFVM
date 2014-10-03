@@ -3,7 +3,8 @@ from field import Field
 import numpy as np
 import scipy.sparse as sp
 import time
-from utils import ad, pprint
+from config import ad
+from parallel import pprint
 
 # TAKING ADJOINT??????
 class Matrix(object):

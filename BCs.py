@@ -1,9 +1,8 @@
 import numpy as np
 
-from utils import ad
-from utils import Logger
+from field import extractField
+from config import ad, Logger
 logger = Logger(__name__)
-import utils
 
 class BoundaryCondition(object):
     def __init__(self, phi, patchID):
@@ -26,7 +25,7 @@ class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         if 'value' in self.patch:
-            self.field[self.cellStartFace:self.cellEndFace] = utils.extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,))
+            self.field[self.cellStartFace:self.cellEndFace] = extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,))
         else:
             self.field[self.cellStartFace:self.cellEndFace] = 0.
         self.patch.pop('value', None)
@@ -59,21 +58,13 @@ class processor(BoundaryCondition):
         logger.debug('processor BC for {0}'.format(self.patchID))
         exchanger.exchange(self.remote, self.field[self.internalIndices], self.value, self.tag)
 
-class processorCyclic(BoundaryCondition):
+class processorCyclic(processor):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        self.local = self.mesh.boundary[patchID]['myProcNo']
-        self.remote = self.mesh.boundary[patchID]['neighbProcNo']
-        self.patch.pop('value', None)
-        
         commonPatch = self.mesh.boundary[patchID]['referPatch']
         if self.local > self.remote:
             commonPatch = self.mesh.boundary[commonPatch]['neighbourPatch']
         self.tag = 1 + self.mesh.origPatches.index(commonPatch)
-
-    def update(self, exchanger):
-        logger.debug('processor BC for {0}'.format(self.patchID))
-        exchanger.exchange(self.remote, self.field[self.internalIndices], self.value, self.tag)
 
 class zeroGradient(BoundaryCondition):
     def update(self):
@@ -94,7 +85,7 @@ class symmetryPlane(zeroGradient):
 class fixedValue(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        self.fixedValue = utils.extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,))
+        self.fixedValue = extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,))
 
     def update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
@@ -104,7 +95,7 @@ class fixedValue(BoundaryCondition):
 class turbulentInletVelocity(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        self.Umean = utils.extractField(self.patch['Umean'], self.nFaces, self.field.shape[1:] == (3,))
+        self.Umean = extractField(self.patch['Umean'], self.nFaces, self.field.shape[1:] == (3,))
         self.lengthScale = self.patch['lengthScale']
         self.turbulentIntensity = self.patch['turbulentIntensity']
         self.patch.pop('value', None)

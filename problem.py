@@ -7,9 +7,9 @@ import sys
 from pyRCF import Solver
 from solver import derivative, copy
 from solver import euler as explicit
-from utils import ad
+from config import ad
 from field import CellField, Field
-import utils
+import config
 
 nSteps = 20000
 writeInterval = 100
@@ -21,7 +21,7 @@ writeInterval = 100
 #    mesh = rho.mesh
 #    mid = np.array([0.75, 0.5, 0.5])
 #    indices = range(0, mesh.nInternalCells)
-#    G = np.exp(-100*utils.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1)*mesh.volumes[indices]
+#    G = np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1)*mesh.volumes[indices]
 #    return ad.sum(rho.field[indices]*G)/(nSteps + 1)
 #
 #def perturb(fields, eps=1E-2):
@@ -29,7 +29,7 @@ writeInterval = 100
 #    mesh = rho.mesh
 #    mid = np.array([0.5, 0.5, 0.5])
 #    indices = range(0, mesh.nInternalCells)
-#    G = eps*ad.array(np.exp(-100*utils.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
+#    G = eps*ad.array(np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
 #    rho.field[indices] += G
 
 #primal = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
@@ -65,7 +65,7 @@ def objective(fields):
     nx = mesh.normals[start:end, 0]
     start, end = patch.cellStartFace, patch.cellEndFace
     p = rhoE.field[start:end]*(primal.gamma-1)
-    deltas = utils.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
+    deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
     T = rhoE/(rho*primal.Cv)
     mungUx = (rhoU.field[start:end, 0]/rho.field[start:end]-rhoU.field[patch.internalIndices, 0]/rho.field[patch.internalIndices])*primal.mu(T).field[start:end]/deltas
     return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
@@ -80,7 +80,7 @@ def perturb(fields):
     mesh = rho.mesh
     mid = np.array([-0.0048, 0.0008, 0.])
     indices = range(0, mesh.nInternalCells)
-    G = 1e-3*ad.array(np.exp(-100*utils.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
+    G = 1e-3*ad.array(np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
     rho.field[indices] += G
 
 
@@ -145,7 +145,7 @@ if __name__ == "__main__":
         stackedZeroFields = np.hstack([ad.value(phi.field) for phi in zeroFields])
 
         eps = ad.array(1E-6)
-        G = eps*ad.array(np.exp(-100*utils.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
+        G = eps*ad.array(np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
         oldFields[0].field[indices] += G
 
         J1 = objective(oldFields)

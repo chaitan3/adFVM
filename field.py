@@ -4,11 +4,10 @@ from os.path import exists
 from numbers import Number
 import re
 
-import BCs
-from utils import ad, pprint
-from utils import Logger, Exchanger
+from config import ad, Logger
+from parallel import pprint, Exchanger
 logger = Logger(__name__)
-import utils
+import config, parallel
 
 class Field(object):
     def __init__(self, name, mesh, field):
@@ -26,8 +25,8 @@ class Field(object):
 
     def info(self):
         pprint(self.name + ':', end='')
-        fieldMin = utils.min(ad.value(self.field))
-        fieldMax = utils.max(ad.value(self.field))
+        fieldMin = parallel.min(ad.value(self.field))
+        fieldMax = parallel.max(ad.value(self.field))
         assert not np.isnan(fieldMin)
         assert not np.isnan(fieldMax)
         pprint(' min:', fieldMin, 'max:', fieldMax)
@@ -108,6 +107,7 @@ class Field(object):
 
 class CellField(Field):
     def __init__(self, name, mesh, field, boundary={}):
+        import BCs
         logger.debug('initializing field {0}'.format(name))
         super(self.__class__, self).__init__(name, mesh, field)
 
@@ -150,12 +150,12 @@ class CellField(Field):
 
         content = open(timeDir + name).read()
         foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
-        assert re.search('format[\s\t]+(.*?);', foamFile).group(1) == utils.fileFormat
+        assert re.search('format[\s\t]+(.*?);', foamFile).group(1) == config.fileFormat
         vector = re.search('class[\s\t]+(.*?);', foamFile).group(1) == 'volVectorField'
         bytesPerField = 8*(1 + 2*vector)
         startBoundary = content.find('boundaryField')
         data = re.search(re.compile('internalField[\s\r\n]+(.*)', re.DOTALL), content[:startBoundary]).group(1)
-        internalField = utils.extractField(data, mesh.nInternalCells, vector)
+        internalField = extractField(data, mesh.nInternalCells, vector)
         content = content[startBoundary:]
         boundary = {}
         def getToken(x): 
@@ -171,7 +171,7 @@ class CellField(Field):
                 if key == '}':
                     break
                 # skip non binary, non value, uniform or empty patches
-                elif key == 'value' and utils.fileFormat == 'binary' and getToken(content[start:])[0] != 'uniform' and mesh.boundary[patchID]['nFaces'] != 0:
+                elif key == 'value' and config.fileFormat == 'binary' and getToken(content[start:])[0] != 'uniform' and mesh.boundary[patchID]['nFaces'] != 0:
                     match = re.search(re.compile('[ ]+(nonuniform[ ]+List<[a-z]+>[\s\r\n\t0-9]*\()', re.DOTALL), content[start:])
                     nBytes = bytesPerField * mesh.boundary[patchID]['nFaces']
                     start += match.end()
@@ -197,9 +197,9 @@ class CellField(Field):
         if not exists(timeDir):
             makedirs(timeDir)
         handle = open(timeDir + self.name, 'w')
-        handle.write(utils.foamHeader)
+        handle.write(config.foamHeader)
         handle.write('FoamFile\n{\n')
-        foamFile = utils.foamFile.copy()
+        foamFile = config.foamFile.copy()
         foamFile['object'] = self.name
         if self.dimensions[0] == 3:
             dtype = 'vector'
@@ -212,15 +212,15 @@ class CellField(Field):
         handle.write('}\n')
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
         handle.write('dimensions      [0 1 -1 0 0 0 0];\n')
-        utils.writeField(handle, ad.value(self.getInternalField()), dtype, 'internalField')
+        writeField(handle, ad.value(self.getInternalField()), dtype, 'internalField')
         handle.write('boundaryField\n{\n')
         for patchID in self.boundary:
             handle.write('\t' + patchID + '\n\t{\n')
             patch = self.boundary[patchID]
             for attr in patch:
                 handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
-            if patch['type'] in ['processor', 'calculated', 'processorCyclic']:
-                utils.writeField(handle, self.BC[patchID].getValue(), dtype, 'value')
+            if patch['type'] in config.valuePatches:
+                writeField(handle, self.BC[patchID].getValue(), dtype, 'value')
             handle.write('\t}\n')
         handle.write('}\n')
         handle.close()
@@ -236,12 +236,46 @@ class CellField(Field):
         logger.info('updating ghost cells for {0}'.format(self.name))
         exchanger = Exchanger()
         for patchID in self.BC:
-            if self.boundary[patchID]['type'] in ['processor', 'processorCyclic']:
+            if self.boundary[patchID]['type'] in config.processorPatches:
                 self.BC[patchID].update(exchanger)
             else:
                 self.BC[patchID].update()
         exchanger.wait()
 
+def extractField(data, size, vector):
+    extractScalar = lambda x: re.findall('[0-9\.Ee\-]+', x)
+    if vector:
+        extractor = lambda y: list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', y)))
+    else:
+        extractor = extractScalar
+    nonUniform = re.search('nonuniform', data)
+    data = re.search(re.compile('[A-Za-z<>\s\r\n]+(.*)', re.DOTALL), data).group(1)
+    if nonUniform is not None:
+        start = data.find('(') + 1
+        end = data.rfind(')')
+        if config.fileFormat == 'binary':
+            internalField = ad.array(np.fromstring(data[start:end], dtype=float))
+            if vector:
+                internalField = internalField.reshape((len(internalField)/3, 3))
+        else:
+            internalField = ad.array(np.array(extractor(data[start:end]), dtype=float))
+        if not vector:
+            internalField = internalField.reshape((-1, 1))
+    else:
+        internalField = ad.array(np.tile(np.array(extractor(data)), (size, 1)))
+    return internalField
 
-
+def writeField(handle, field, dtype, initial):
+    handle.write(initial + ' nonuniform List<'+ dtype +'>\n')
+    handle.write('{0}\n('.format(len(field)))
+    if config.fileFormat == 'binary':
+        handle.write(ad.value(field).tostring())
+    else:
+        handle.write('\n')
+        for value in ad.value(field):
+            if dtype == 'scalar':
+                handle.write(str(value[0]) + '\n')
+            else:
+                handle.write('(' + ' '.join(np.char.mod('%f', value)) + ')\n')
+    handle.write(')\n;\n')
 

@@ -2,7 +2,7 @@
 from __future__ import print_function
 import unittest
 import numpy as np
-from utils import ad
+from config import ad
 
 from field import Field, CellField
 from mesh import Mesh

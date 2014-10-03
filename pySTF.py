@@ -9,9 +9,9 @@ from field import Field, CellField
 from matop import div, ddt, laplacian, hybrid
 from solver import implicit, forget
 
-from utils import ad, pprint
-from utils import Logger
-import utils
+from config import ad, Logger
+from parallel import pprint
+import config
 logger = Logger(__name__)
 
 case = 'tests/cyclic/'
@@ -24,7 +24,7 @@ DT = 0.01
 #initialize
 T = CellField.zeros('T', mesh, (1,))
 mid = np.array([0.5, 0.5, 0.5])
-T.setInternalField(np.exp(-10*utils.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)).reshape(-1,1))
+T.setInternalField(np.exp(-10*config.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)).reshape(-1,1))
 #T = Field.read('T', mesh, t)
 U = 1.*ad.ones((mesh.nFaces, 3))*np.array([1., 0., 0])
 U = Field('U', mesh, U)
