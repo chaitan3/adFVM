@@ -3,7 +3,6 @@ from scipy import sparse as sp
 import re
 import time
 
-from field import Field
 from config import ad, adsparse, Logger
 from parallel import pprint, Exchanger
 logger = Logger(__name__)
@@ -33,7 +32,6 @@ class Mesh(object):
         self.nCells = self.nInternalCells + self.nGhostCells
 
         self.normals = self.getNormals()
-        self.Normals = Field('nF', self, ad.array(self.normals))
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()
         # uses neighbour
         self.cellFaces = self.getCellFaces()     # nInternalCells
@@ -276,4 +274,41 @@ def removeCruft(content, keepHeader=False):
         content = re.sub(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), '', content)
     return content
 
+
+def extractField(data, size, vector):
+    extractScalar = lambda x: re.findall('[0-9\.Ee\-]+', x)
+    if vector:
+        extractor = lambda y: list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', y)))
+    else:
+        extractor = extractScalar
+    nonUniform = re.search('nonuniform', data)
+    data = re.search(re.compile('[A-Za-z<>\s\r\n]+(.*)', re.DOTALL), data).group(1)
+    if nonUniform is not None:
+        start = data.find('(') + 1
+        end = data.rfind(')')
+        if config.fileFormat == 'binary':
+            internalField = ad.array(np.fromstring(data[start:end], dtype=float))
+            if vector:
+                internalField = internalField.reshape((len(internalField)/3, 3))
+        else:
+            internalField = ad.array(np.array(extractor(data[start:end]), dtype=float))
+        if not vector:
+            internalField = internalField.reshape((-1, 1))
+    else:
+        internalField = ad.array(np.tile(np.array(extractor(data)), (size, 1)))
+    return internalField
+
+def writeField(handle, field, dtype, initial):
+    handle.write(initial + ' nonuniform List<'+ dtype +'>\n')
+    handle.write('{0}\n('.format(len(field)))
+    if config.fileFormat == 'binary':
+        handle.write(ad.value(field).tostring())
+    else:
+        handle.write('\n')
+        for value in ad.value(field):
+            if dtype == 'scalar':
+                handle.write(str(value[0]) + '\n')
+            else:
+                handle.write('(' + ' '.join(np.char.mod('%f', value)) + ')\n')
+    handle.write(')\n;\n')
 

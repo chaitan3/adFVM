@@ -1,13 +1,19 @@
+
 import numpy as np
 from os import makedirs
 from os.path import exists
 from numbers import Number
 import re
 
+
 from config import ad, Logger
 from parallel import pprint, Exchanger
 logger = Logger(__name__)
 import config, parallel
+import BCs
+from mesh import extractField, writeField
+#import pdb; pdb.set_trace()
+
 
 class Field(object):
     def __init__(self, name, mesh, field):
@@ -107,9 +113,11 @@ class Field(object):
 
 class CellField(Field):
     def __init__(self, name, mesh, field, boundary={}):
-        import BCs
         logger.debug('initializing field {0}'.format(name))
         super(self.__class__, self).__init__(name, mesh, field)
+
+        if not hasattr(mesh, 'Normals'):
+            mesh.Normals = Field('nF', mesh, ad.array(mesh.normals))
 
         if len(list(boundary.keys())) == 0:
             self.boundary = mesh.defaultBoundary
@@ -242,40 +250,4 @@ class CellField(Field):
                 self.BC[patchID].update()
         exchanger.wait()
 
-def extractField(data, size, vector):
-    extractScalar = lambda x: re.findall('[0-9\.Ee\-]+', x)
-    if vector:
-        extractor = lambda y: list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', y)))
-    else:
-        extractor = extractScalar
-    nonUniform = re.search('nonuniform', data)
-    data = re.search(re.compile('[A-Za-z<>\s\r\n]+(.*)', re.DOTALL), data).group(1)
-    if nonUniform is not None:
-        start = data.find('(') + 1
-        end = data.rfind(')')
-        if config.fileFormat == 'binary':
-            internalField = ad.array(np.fromstring(data[start:end], dtype=float))
-            if vector:
-                internalField = internalField.reshape((len(internalField)/3, 3))
-        else:
-            internalField = ad.array(np.array(extractor(data[start:end]), dtype=float))
-        if not vector:
-            internalField = internalField.reshape((-1, 1))
-    else:
-        internalField = ad.array(np.tile(np.array(extractor(data)), (size, 1)))
-    return internalField
-
-def writeField(handle, field, dtype, initial):
-    handle.write(initial + ' nonuniform List<'+ dtype +'>\n')
-    handle.write('{0}\n('.format(len(field)))
-    if config.fileFormat == 'binary':
-        handle.write(ad.value(field).tostring())
-    else:
-        handle.write('\n')
-        for value in ad.value(field):
-            if dtype == 'scalar':
-                handle.write(str(value[0]) + '\n')
-            else:
-                handle.write('(' + ' '.join(np.char.mod('%f', value)) + ')\n')
-    handle.write(')\n;\n')
 

@@ -4,6 +4,8 @@
 *.avi
 *.txt
 
+*.o
+
 faces
 owner
 neighbour

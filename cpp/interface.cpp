@@ -3,19 +3,19 @@
 
 Mesh::Mesh (string caseDir) {
     Py_Initialize();
-    PyObject *name = PyString_FromString("mesh");
-    this->meshModule = PyImport_Import(name);
+    PyObject* mainmod = PyImport_AddModule("__main__");
+    PyObject* maindict = PyModule_GetDict(mainmod);
+    this->meshModule = PyImport_ImportModuleEx("mesh", maindict, maindict, NULL);
     assert(this->meshModule);
-    Py_DECREF(name);
     this->meshClass = PyObject_GetAttrString(this->meshModule, "Mesh");
     assert(this->meshClass);
     PyObject *caseString = PyString_FromString(caseDir.c_str());
     PyObject *args = PyTuple_New(1);
     PyTuple_SetItem(args, 0, caseString);
     this->mesh = PyObject_CallObject(this->meshClass, args);
-    assert(this->mesh);
     Py_DECREF(caseString);
-    Py_DECREF(args);
+    //Py_DECREF(args);
+    assert(this->mesh);
 
     this->caseDir = getString(this->mesh, "case");
     this->nInternalFaces = getInteger(this->mesh, "nInternalFaces");
@@ -47,15 +47,16 @@ Mesh::Mesh (string caseDir) {
 
 Mesh::~Mesh () {
     Py_DECREF(this->mesh);
-    Py_XDECREF(this->meshClass);
+    Py_DECREF(this->meshClass);
     Py_DECREF(this->meshModule);
-
-    Py_Finalize();
+    if (Py_IsInitialized())
+        Py_Finalize();
 }
 
 
 int getInteger(PyObject *mesh, const string attr) {
     PyObject *integer = PyObject_GetAttrString(mesh, attr.c_str());
+    assert(integer);
     int result = (int)PyInt_AsLong(integer);
     Py_DECREF(integer);
     return result;
@@ -63,6 +64,7 @@ int getInteger(PyObject *mesh, const string attr) {
 
 string getString(PyObject *mesh, const string attr) {
     PyObject *cstring = PyObject_GetAttrString(mesh, attr.c_str());
+    assert(cstring);
     string result(PyString_AsString(cstring));
     Py_DECREF(cstring);
     return result;
@@ -71,25 +73,30 @@ string getString(PyObject *mesh, const string attr) {
 template<typename Derived>
 void getArray(PyObject *mesh, const string attr, MatrixBase<Derived> & tmp) {
     PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
+    assert(array);
     int nDims = PyArray_NDIM(array);
     npy_intp* dims = PyArray_DIMS(array);
+    int rows = dims[1];
+    int cols = dims[0];
     if (nDims == 1) {
-        dims[1] = 1;
+        rows = 1;
     }
     typename Derived::Scalar *data = (typename Derived::Scalar *) PyArray_DATA(array);
-    Map<Derived> result(data, dims[1], dims[0]);
+    Map<Derived> result(data, rows, cols);
     tmp = result;
     Py_DECREF(array);
 }
 
 void getBoundary(PyObject *mesh, const string attr, Boundary& boundary) {
     PyObject *dict = PyObject_GetAttrString(mesh, attr.c_str());
+    assert(dict);
     PyObject *key, *value;
     PyObject *key2, *value2;
     Py_ssize_t pos = 0;
     Py_ssize_t pos2 = 0;
     while (PyDict_Next(dict, &pos, &key, &value)) {
         string ckey = PyString_AsString(key);
+        assert(value);
         while (PyDict_Next(value, &pos2, &key2, &value2)) {
             string ckey2 = PyString_AsString(key2);
             string cvalue;
@@ -103,11 +110,7 @@ void getBoundary(PyObject *mesh, const string attr, Boundary& boundary) {
             else {
             }
             boundary[ckey][ckey2] = cvalue;
-            Py_DECREF(key2);
-            Py_DECREF(value2);
         }
-        Py_DECREF(key);
-        Py_DECREF(value);
     }
     Py_DECREF(dict);
 }

@@ -1,13 +1,14 @@
 #include "field.hpp"
 
 Field::Field (const string name, const Mesh& mesh, const double time) {
+    Py_Initialize();
     this->name = name;
     this->mesh = &mesh;
 
-    PyObject *module = PyString_FromString("field");
-    this->fieldModule = PyImport_Import(module);
+    PyObject* mainmod = PyImport_AddModule("__main__");
+    PyObject* maindict = PyModule_GetDict(mainmod);
+    this->fieldModule = PyImport_ImportModuleEx("field", maindict, maindict, NULL);
     assert(this->fieldModule);
-    Py_DECREF(module);
     this->fieldClass = PyObject_GetAttrString(this->fieldModule, "CellField");
     PyObject *read = PyObject_GetAttrString(this->fieldClass, "read");
     assert(this->fieldClass);
@@ -19,6 +20,7 @@ Field::Field (const string name, const Mesh& mesh, const double time) {
     PyTuple_SetItem(args, 2, timeDouble);
     this->pyField = PyObject_CallObject(read,  args);
     assert(this->pyField);
+    Py_DECREF(read);
     Py_DECREF(nameString);
     Py_DECREF(timeDouble);
     Py_DECREF(args);
@@ -29,10 +31,10 @@ Field::Field (const string name, const Mesh& mesh, const double time) {
 
 Field::~Field () {
     Py_DECREF(this->pyField);
-    Py_XDECREF(this->fieldClass);
+    Py_DECREF(this->fieldClass);
     Py_DECREF(this->fieldModule);
-
-    Py_Finalize();
+    if (Py_IsInitialized())
+        Py_Finalize();
 }
 
 
