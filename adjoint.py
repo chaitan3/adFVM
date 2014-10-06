@@ -28,6 +28,8 @@ if firstCheckpoint == 0:
 else:
     adjointFields = [CellField.read('{0}a'.format(name), mesh, timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in primal.names]
 stackedAdjointFields = np.hstack([ad.value(phi.field) for phi in adjointFields])
+print(np.cumsum(np.array([phi.dimensions[0] for phi in adjointFields])))
+print('hey')
 nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in adjointFields]))))
 nDimensions = zip(nDimensions[:-1], nDimensions[1:])
 
