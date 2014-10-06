@@ -1,6 +1,7 @@
 #ifndef COMMON_HPP
 #define COMMON_HPP
 
+#define EIGEN_MATRIXBASE_PLUGIN "/home/talnikar/adFVM/cpp/ext.hpp"
 #include <Eigen/Dense>
 #include <iostream>
 

@@ -1,9 +1,8 @@
 #include "field.hpp"
 
-Field::Field (const string name, const Mesh& mesh, const double time) {
+Field::Field (const string name, const Mesh& mesh, const double time): 
+    mesh(mesh), name(name) {
     Py_Initialize();
-    this->name = name;
-    this->mesh = &mesh;
 
     PyObject* mainmod = PyImport_AddModule("__main__");
     PyObject* maindict = PyModule_GetDict(mainmod);
