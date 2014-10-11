@@ -180,5 +180,5 @@ if __name__ == "__main__":
 
     solver = Solver(case, {'R': 8.314, 'Cp': 1011., 'gamma': 1.4, 'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 'Pr': 0.7, 'CFL': 0.2})
     #solver = Solver(case, {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': lambda T: T*0., 'Pr': 0.7, 'CFL': 1.2})
-    solver.run([time, 1e-3], 10000, 200)
+    solver.run([time, 1e-3], 10000, 1000)
 

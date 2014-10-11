@@ -22,7 +22,6 @@ def max(data):
 def min(data):
     minData = np.min(data)
     if nProcessors > 1:
-        start = time.time()
         return mpi.allreduce(minData, op=MPI.MIN)
     else:
         return minData

@@ -48,7 +48,7 @@ class cyclic(BoundaryCondition):
 
 class processor(BoundaryCondition):
     def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
+        super(processor, self).__init__(phi, patchID)
         self.local = self.mesh.boundary[patchID]['myProcNo']
         self.remote = self.mesh.boundary[patchID]['neighbProcNo']
         self.patch.pop('value', None)
@@ -60,7 +60,7 @@ class processor(BoundaryCondition):
 
 class processorCyclic(processor):
     def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
+        super(processorCyclic, self).__init__(phi, patchID)
         commonPatch = self.mesh.boundary[patchID]['referPatch']
         if self.local > self.remote:
             commonPatch = self.mesh.boundary[commonPatch]['neighbourPatch']
