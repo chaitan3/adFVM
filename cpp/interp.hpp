@@ -6,9 +6,10 @@
 class Interpolator {
     const Mesh& mesh;
     
-    Interpolator(const Mesh& mesh): mesh(mesh) {};
-    mat central(const mat&);
-    mat TVD(const mat&);
+    public:
+        Interpolator(const Mesh& mesh): mesh(mesh) {};
+        arr central(const arr&);
+        arr TVD(const arr&);
 };
  
 

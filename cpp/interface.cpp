@@ -40,9 +40,9 @@ Mesh::Mesh (string caseDir) {
     getArray(this->mesh, "deltas", this->deltas);
     getArray(this->mesh, "weights", this->weights);
 
-    getBoundary(this->mesh, "boundary", this->boundary);
-    getBoundary(this->mesh, "calculatedBoundary", this->calculatedBoundary);
-    getBoundary(this->mesh, "defaultBoundary", this->defaultBoundary);
+    this->boundary = getBoundary(this->mesh, "boundary");
+    this->calculatedBoundary = getBoundary(this->mesh, "calculatedBoundary");
+    this->defaultBoundary = getBoundary(this->mesh, "defaultBoundary");
 }
 
 Mesh::~Mesh () {
@@ -70,30 +70,33 @@ string getString(PyObject *mesh, const string attr) {
     return result;
 }
 
-template<typename Derived>
-void getArray(PyObject *mesh, const string attr, MatrixBase<Derived> & tmp) {
+template <typename Derived>
+void getArray(PyObject *mesh, const string attr, DenseBase<Derived> & tmp) {
     PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
     assert(array);
     int nDims = PyArray_NDIM(array);
     npy_intp* dims = PyArray_DIMS(array);
     int rows = dims[1];
     int cols = dims[0];
+    //cout << attr << " " << rows << " " << cols << endl;
     if (nDims == 1) {
         rows = 1;
     }
     typename Derived::Scalar *data = (typename Derived::Scalar *) PyArray_DATA(array);
+    //cout << rows << " " << cols << endl;
     Map<Derived> result(data, rows, cols);
     tmp = result;
     Py_DECREF(array);
 }
 
-void getBoundary(PyObject *mesh, const string attr, Boundary& boundary) {
+Boundary getBoundary(PyObject *mesh, const string attr) {
     PyObject *dict = PyObject_GetAttrString(mesh, attr.c_str());
     assert(dict);
     PyObject *key, *value;
     PyObject *key2, *value2;
     Py_ssize_t pos = 0;
     Py_ssize_t pos2 = 0;
+    Boundary boundary;
     while (PyDict_Next(dict, &pos, &key, &value)) {
         string ckey = PyString_AsString(key);
         assert(value);
@@ -113,4 +116,5 @@ void getBoundary(PyObject *mesh, const string attr, Boundary& boundary) {
         }
     }
     Py_DECREF(dict);
+    return boundary;
 }

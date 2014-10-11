@@ -21,19 +21,19 @@ class Mesh {
         int nGhostCells;
         int nCells;
 
-        imat faces;
-        mat points;
-        imat owner;
-        imat neighbour;
+        iarr faces;
+        arr points;
+        iarr owner;
+        iarr neighbour;
 
-        mat normals;
-        mat faceCentres;
-        mat areas;
-        imat cellFaces;
-        mat cellCentres;
-        mat volumes;
-        mat deltas;
-        mat weights;
+        arr normals;
+        arr faceCentres;
+        arr areas;
+        iarr cellFaces;
+        arr cellCentres;
+        arr volumes;
+        arr deltas;
+        arr weights;
 
         Boundary boundary;
         Boundary defaultBoundary;
@@ -51,7 +51,7 @@ class Mesh {
 int getInteger(PyObject*, const string);
 string getString(PyObject*, const string);
 template<typename Derived>
-extern void getArray(PyObject *, const string, MatrixBase<Derived> &);
-void getBoundary(PyObject*, const string, Boundary&);
+extern void getArray(PyObject *, const string, DenseBase<Derived> &);
+Boundary getBoundary(PyObject*, const string);
 
 #endif

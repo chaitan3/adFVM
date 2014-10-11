@@ -25,7 +25,7 @@ Field::Field (const string name, const Mesh& mesh, const double time):
     Py_DECREF(args);
 
     getArray(this->pyField, "field", this->field);
-    getBoundary(this->pyField, "boundary", this->boundary);
+    this->boundary = getBoundary(this->pyField, "boundary");
 }
 
 Field::~Field () {

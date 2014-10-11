@@ -1,6 +1,8 @@
-#include "field.hpp"
+#include "interp.hpp"
 
 int main(int argc, char **argv) {
     Mesh mesh("../tests/cylinder");
-    Field field("U", mesh, 2.0);
+    Interpolator interpolate(mesh);
+    Field U("U", mesh, 2.0);
+    arr phiF = interpolate.central(U.field);
 }

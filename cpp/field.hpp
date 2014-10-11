@@ -7,7 +7,7 @@ class Field {
     public:
         const string name;
         const Mesh& mesh;
-        mat field;
+        arr field;
         Boundary boundary;
 
         PyObject *fieldModule;
