@@ -16,9 +16,13 @@ from mesh import extractField, writeField
 
 
 class Field(object):
-    def __init__(self, name, mesh, field):
+    @staticmethod
+    def setSolver(solver):
+        Field.solver = solver
+        Field.mesh = solver.mesh
+
+    def __init__(self, name, field):
         self.name = name
-        self.mesh = mesh
         self.field = field
         self.size = field.shape[0]
         self.dimensions = field.shape[1:]
@@ -27,7 +31,7 @@ class Field(object):
     def max(self, a, b):
         a_gt_b = ad.value(a.field) > ad.value(b.field)
         b_gt_a = 1 - a_gt_b
-        return self('max({0},{1})'.format(a.name, b.name), a.mesh, a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a))
+        return self('max({0},{1})'.format(a.name, b.name), a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a))
 
     def info(self):
         pprint(self.name + ':', end='')
@@ -40,67 +44,67 @@ class Field(object):
     # creates a view
     def component(self, component): 
         assert self.dimensions == (3,)
-        return self.__class__('{0}.{1}'.format(self.name, component), self.mesh, self.field[:, component].reshape((-1,1)))
+        return self.__class__('{0}.{1}'.format(self.name, component), self.field[:, component].reshape((-1,1)))
 
     def magSqr(self):
         assert self.dimensions == (3,)
-        return self.__class__('magSqr({0})'.format(self.name), self.mesh, ad.sum(self.field**2, axis=1).reshape((-1,1)))
+        return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field**2, axis=1).reshape((-1,1)))
 
     def mag(self):
         return self.magSqr()**0.5
 
     def abs(self):
-        return self.__class__('abs({0})'.format(self.name), self.mesh, self.field * ad.array(2*((ad.value(self.field) > 0) - 0.5)))
+        return self.__class__('abs({0})'.format(self.name), self.field * ad.array(2*((ad.value(self.field) > 0) - 0.5)))
 
     def dot(self, phi):
         assert self.dimensions[0] == 3
         # if tensor
         if len(self.dimensions) > 1:
-            phi = self.__class__(phi.name, phi.mesh, phi.field[:,np.newaxis,:])
+            phi = self.__class__(phi.name, phi.field[:,np.newaxis,:])
         product = ad.sum(self.field * phi.field, axis=-1)
         # if summed over vector
         if len(product.shape) == 1:
             product = product.reshape((-1,1))
-        return self.__class__('dot({0},{1})'.format(self.name, phi.name), self.mesh, product)
+        return self.__class__('dot({0},{1})'.format(self.name, phi.name), product)
 
     def dotN(self):
         return self.dot(self.mesh.Normals)
 
     def outer(self, phi):
-        return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.mesh, self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:])
+        return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:])
     
     # creates a view
     def transpose(self):
         assert len(self.dimensions) == 2
-        return self.__class__('{0}.T'.format(self.name), self.mesh, self.field.transpose((0,2,1)))
+        return self.__class__('{0}.T'.format(self.name), self.field.transpose((0,2,1)))
 
     def trace(self):
         assert len(self.dimensions) == 2
         phi = self.field
-        return self.__class__('tr({0})'.format(self.name), self.mesh, (phi[:,0,0] + phi[:,1,1] + phi[:,2,2]).reshape((-1,1)))
+        return self.__class__('tr({0})'.format(self.name), (phi[:,0,0] + phi[:,1,1] + phi[:,2,2]).reshape((-1,1)))
 
     def __neg__(self):
-        return self.__class__('-{0}'.format(self.name), self.mesh, -self.field)
+        return self.__class__('-{0}'.format(self.name), -self.field)
 
     def __mul__(self, phi):
         if isinstance(phi, Number):
-            return self.__class__('{0}*{1}'.format(self.name, phi), self.mesh, self.field * phi)
+            return self.__class__('{0}*{1}'.format(self.name, phi), self.field * phi)
         else:
             product = self.field * phi.field
-            return self.__class__('{0}*{1}'.format(self.name, phi.name), self.mesh, self.field * phi.field)
+            return self.__class__('{0}*{1}'.format(self.name, phi.name), self.field * phi.field)
 
 
     def __rmul__(self, phi):
         return self * phi
 
     def __pow__(self, power):
-        return self.__class__('{0}**{1}'.format(self.name, power), self.mesh, self.field.__pow__(power))
+        return self.__class__('{0}**{1}'.format(self.name, power), self.field.__pow__(power))
 
     def __add__(self, phi):
         if isinstance(phi, Number):
-            return self.__class__('{0}+{1}'.format(self.name, phi), self.mesh, self.field + phi)
+            return self.__class__('{0}+{1}'.format(self.name, phi), self.field + phi)
         else:
-            return self.__class__('{0}+{1}'.format(self.name, phi.name), self.mesh, self.field + phi.field)
+            return self.__class__('{0}+{1}'.format(self.name, phi.name), self.field + phi.field)
 
     def __radd__(self, phi):
         return self.__add__(phi)
@@ -109,15 +113,16 @@ class Field(object):
         return self.__add__(-phi)
 
     def __div__(self, phi):
-        return self.__class__('{0}/{1}'.format(self.name, phi.name), self.mesh, self.field / phi.field)
+        return self.__class__('{0}/{1}'.format(self.name, phi.name), self.field / phi.field)
 
 class CellField(Field):
-    def __init__(self, name, mesh, field, boundary={}):
+    def __init__(self, name, field, boundary={}):
         logger.debug('initializing field {0}'.format(name))
-        super(self.__class__, self).__init__(name, mesh, field)
+        super(self.__class__, self).__init__(name, field)
+        mesh = self.mesh
 
         if not hasattr(mesh, 'Normals'):
-            mesh.Normals = Field('nF', mesh, ad.array(mesh.normals))
+            mesh.Normals = Field('nF', ad.array(mesh.normals))
 
         if len(list(boundary.keys())) == 0:
             self.boundary = mesh.defaultBoundary
@@ -142,15 +147,16 @@ class CellField(Field):
     @classmethod
     def zeros(self, name, mesh, dimensions):
         logger.info('initializing zeros field {0}'.format(name))
-        return self(name, mesh, ad.zeros((mesh.nCells,) + dimensions))
+        return self(name, ad.zeros((mesh.nCells,) + dimensions))
 
     @classmethod
     def copy(self, phi):
         logger.info('copying field {0}'.format(phi.name))
-        return self(phi.name, phi.mesh, ad.array(ad.value(phi.field).copy()), phi.boundary.copy())
+        return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.boundary.copy())
 
     @classmethod
-    def read(self, name, mesh, time):
+    def read(self, name, time):
+        mesh = self.mesh
         if time.is_integer():
             time = int(time)
         pprint('reading field {0}, time {1}'.format(name, time))
@@ -193,7 +199,7 @@ class CellField(Field):
                     start += match.end() 
                     boundary[patchID][key] = match.group(1)
 
-        return self(name, mesh, internalField, boundary)
+        return self(name, internalField, boundary)
 
     def write(self, time):
         if time.is_integer():

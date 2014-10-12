@@ -34,6 +34,8 @@ class Solver(object):
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
 
+        Field.setSolver(self)
+
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
         U = rhoU/rho
@@ -62,9 +64,9 @@ class Solver(object):
         #print (config.mpi_Rank, a.min())
         #initialize
         if initialFields is None:
-            self.p = CellField.read('p', mesh, t)
-            self.T = CellField.read('T', mesh, t)
-            self.U = CellField.read('U', mesh, t)
+            self.p = CellField.read('p', t)
+            self.T = CellField.read('T', t)
+            self.U = CellField.read('U', t)
             fields = self.conservative(self.U, self.T, self.p)
         else:
             fields = initialFields
@@ -140,6 +142,8 @@ class Solver(object):
 
         # flux reconstruction
         rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF)
+        # phi for pressureInletVelocity
+        self.flux = 2*rhoFlux/(rhoLF + rhoRF)
         rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF) - 0.5*aF*(rhoURF-rhoULF)
         rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoERF-rhoELF)
         pF = 0.5*(pLF + pRF)
@@ -160,10 +164,9 @@ class Solver(object):
 
     def boundary(self, rhoI, rhoUI, rhoEI):
         logger.info('correcting boundary')
-        mesh = self.mesh
-        rhoN = Field(self.names[0], mesh, rhoI)
-        rhoUN = Field(self.names[1], mesh, rhoUI)
-        rhoEN = Field(self.names[2], mesh, rhoEI)
+        rhoN = Field(self.names[0], rhoI)
+        rhoUN = Field(self.names[1], rhoUI)
+        rhoEN = Field(self.names[2], rhoEI)
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
         self.U.setInternalField(UN.field)
         self.T.setInternalField(TN.field)

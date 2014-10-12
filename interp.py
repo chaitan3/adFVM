@@ -24,9 +24,9 @@ def TVD_dual(phi):
             phiC = phi.field[C]
             phiD = phi.field[D]
             phiDC = phiD-phiC
-            R = Field('R', mesh, ad.array(mesh.cellCentres[D] - mesh.cellCentres[C]))
-            gradC = Field('gradC({0})'.format(phi.name), mesh, gradField.field[C])
-            gradF = Field('gradF({0})'.format(phi.name), mesh, phiDC)
+            R = Field('R', ad.array(mesh.cellCentres[D] - mesh.cellCentres[C]))
+            gradC = Field('gradC({0})'.format(phi.name), gradField.field[C])
+            gradF = Field('gradF({0})'.format(phi.name), phiDC)
             if phi.dimensions[0] == 1:
                 r = 2*gradC.dot(R)/(gradF + config.SMALL) - 1
             else:
@@ -44,7 +44,7 @@ def TVD_dual(phi):
             for faceField in faceFields:
                 faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
 
-    return [Field('{0}F'.format(phi.name), mesh, faceField) for faceField in faceFields]
+    return [Field('{0}F'.format(phi.name), faceField) for faceField in faceFields]
 
 
 def upwind(phi, U): 
@@ -67,7 +67,7 @@ def upwind(phi, U):
         else:
             faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
 
-    return Field('{0}F'.format(phi.name), mesh, faceField)
+    return Field('{0}F'.format(phi.name), faceField)
 
 def central(phi):
     logger.info('interpolating {0}'.format(phi.name))
@@ -76,7 +76,7 @@ def central(phi):
     # for tensor
     if len(factor.shape)-1 < len(phi.dimensions):
         factor = factor.reshape((factor.shape[0], 1, 1))
-    faceField = Field('{0}F'.format(phi.name), mesh, phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1-factor))
+    faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1-factor))
     return faceField
 
 interpolate = central

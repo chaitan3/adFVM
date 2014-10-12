@@ -21,9 +21,9 @@ def div(phi, U=None, ghost=False):
             U = interpolate(U)
         divField = (mesh.sumOp * ((phi * U).dotN().field * mesh.areas))/mesh.volumes
     if ghost:
-        return CellField('div({0})'.format(phi.name), mesh, divField)
+        return CellField('div({0})'.format(phi.name), divField)
     else:
-        return Field('div({0})'.format(phi.name), mesh, divField)
+        return Field('div({0})'.format(phi.name), divField)
 
 def grad(phi, ghost=False):
     assert len(phi.dimensions) == 1
@@ -41,15 +41,15 @@ def grad(phi, ghost=False):
     if phi.dimensions[0] == 3:
         gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
     if ghost:
-        return CellField('grad({0})'.format(phi.name), mesh, gradField)
+        return CellField('grad({0})'.format(phi.name), gradField)
     else:
-        return Field('grad({0})'.format(phi.name), mesh, gradField)
+        return Field('grad({0})'.format(phi.name), gradField)
 
 def snGrad(phi):
     logger.info('snGrad of {0}'.format(phi.name))
     mesh = phi.mesh
     gradFdotn = (phi.field[mesh.neighbour]-phi.field[mesh.owner])/mesh.deltas
-    return Field('snGrad({0})'.format(phi.name), mesh, gradFdotn)
+    return Field('snGrad({0})'.format(phi.name), gradFdotn)
 
 def laplacian(phi, DT):
     logger.info('laplacian of {0}'.format(phi.name))
@@ -62,10 +62,10 @@ def laplacian(phi, DT):
 
     gradFdotn = snGrad(phi)
     laplacian2 = (mesh.sumOp * ((DT * gradFdotn).field * mesh.areas))/mesh.volumes
-    return Field('laplacian({0})'.format(phi.name), mesh, laplacian2)
+    return Field('laplacian({0})'.format(phi.name), laplacian2)
 
 def ddt(phi, dt):
     logger.info('ddt of {0}'.format(phi.name))
-    return Field('ddt' + phi.name, phi.mesh, (phi.getInternalField()-phi.old.getInternalField())/dt)
+    return Field('ddt' + phi.name, (phi.getInternalField()-phi.old.getInternalField())/dt)
 
 
