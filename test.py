@@ -14,8 +14,9 @@ class TestField(unittest.TestCase):
     def setUpClass(self):
         self.case = 'tests/cylinder/'
         self.mesh = Mesh(self.case)
-        self.p = CellField.read('p', self.mesh, 2.0)
-        self.U = CellField.read('U', self.mesh, 2.0)
+        Field.setSolver(self)
+        self.p = CellField.read('p', 2.0)
+        self.U = CellField.read('U', 2.0)
         self.gradU = grad(self.U, ghost=True)
         self.data = np.load(self.case + 'test_data.npz')
 
@@ -62,9 +63,10 @@ class TestInterp(unittest.TestCase):
     def setUpClass(self):
         self.case = 'tests/cylinder/'
         self.mesh = Mesh(self.case)
-        self.rho = CellField.read('rho', self.mesh, 2.0)
-        self.rhoU = CellField.read('rhoU', self.mesh, 2.0)
-        self.rhoE = CellField.read('rhoE', self.mesh, 2.0)
+        Field.setSolver(self)
+        self.rho = CellField.read('rho', 2.0)
+        self.rhoU = CellField.read('rhoU', 2.0)
+        self.rhoE = CellField.read('rhoE', 2.0)
         self.data = np.load(self.case + 'test_data.npz')
  
     def test_TVD_scalar(self):
@@ -87,9 +89,10 @@ class TestOp(unittest.TestCase):
     def setUpClass(self):
         self.case = 'tests/cylinder/'
         self.mesh = Mesh(self.case)
-        self.rho = CellField.read('rho', self.mesh, 2.0)
-        self.rhoU = CellField.read('rhoU', self.mesh, 2.0)
-        self.rhoE = CellField.read('rhoE', self.mesh, 2.0)
+        Field.setSolver(self)
+        self.rho = CellField.read('rho', 2.0)
+        self.rhoU = CellField.read('rhoU', 2.0)
+        self.rhoE = CellField.read('rhoE', 2.0)
         self.data = np.load(self.case + 'test_data.npz')
  
     def test_grad_scalar(self):
