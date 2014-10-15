@@ -156,6 +156,14 @@ class Mesh(object):
         owner = sp.csc_matrix((np.ones(self.nFaces), self.owner, range(0, self.nFaces+1)), shape=(self.nInternalCells, self.nFaces))
         Nindptr = np.concatenate((range(0, self.nInternalFaces+1), self.nInternalFaces*np.ones(self.nFaces-self.nInternalFaces, int)))
         neighbour = sp.csc_matrix((-np.ones(self.nInternalFaces), self.neighbour[:self.nInternalFaces], Nindptr), shape=(self.nInternalCells, self.nFaces))
+        # skip empty patches
+        for patchID in self.boundary:
+            patch = self.boundary[patchID]
+            if patch['type'] == 'empty' and patch['nFaces'] != 0:
+                pprint('Deleting empty patch ', patchID)
+                startFace = patch['startFace']
+                endFace = startFace + patch['nFaces']
+                owner.data[startFace:endFace] = 0
         sumOp = (owner + neighbour).tocsr()
         return adsparse.csr_matrix((ad.array(sumOp.data), sumOp.indices, sumOp.indptr), sumOp.shape)
 
