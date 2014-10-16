@@ -12,50 +12,86 @@ from op import grad, div, laplacian, snGrad
 class TestField(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.case = 'tests/cylinder/'
+        self.case = 'tests/convection/'
         self.mesh = Mesh(self.case)
         Field.setSolver(self)
-        self.p = CellField.read('p', 2.0)
-        self.U = CellField.read('U', 2.0)
-        self.gradU = grad(self.U, ghost=True)
-        self.data = np.load(self.case + 'test_data.npz')
+        self.Xf = self.mesh.cellCentres[:self.mesh.nInternalCells, 0]
+        self.X = self.Xf.reshape(-1, 1)
+        self.Yf = self.mesh.cellCentres[:self.mesh.nInternalCells, 1]
+        self.Y = self.Yf.reshape(-1, 1)
+        self.U = Field('U', ad.zeros((self.mesh.nInternalCells, 3)))
+        self.V = Field('U', ad.zeros((self.mesh.nInternalCells, 3)))
+        T = Field('T', ad.zeros((self.mesh.nInternalCells, 3, 3)))
+        T.field[:, 0, 0] = self.Xf*self.Xf
+        T.field[:, 0, 1] = self.Xf*self.Yf
+        T.field[:, 1, 1] = self.Yf*self.Yf
+        T.field[:, 2, 2] = 1.
+        self.T = T
 
     def test_max(self):
         self.assertTrue(True)
 
     def test_component(self):
+        self.U.field = self.X*np.array([[0.1,0.2,0.3]])
         res = ad.value(self.U.component(0).field)
-        ref = self.data['component']
+        ref = 0.1*self.X
         self.assertAlmostEqual(0, np.abs(res-ref).max())
 
     def test_magSqr(self):
+        self.U.field = self.X*np.array([[0.1,0.2,0.3]])
         res = ad.value(self.U.magSqr().field)
-        ref = self.data['magSqr']
+        ref = self.X**2*(0.1**2 + 0.2**2 + 0.3**2)
         self.assertAlmostEqual(0, np.abs(res-ref).max())
 
     def test_dot_vector(self):
-        res = ad.value(interpolate(self.U).dotN().field)
-        ref = self.data['dot_vector']
+        self.U.field[:, 0] = self.Xf
+        self.U.field[:, 1] = self.Yf
+        self.U.field[:, 2] = 0.5
+        self.V.field[:, 0] = self.Yf
+        self.V.field[:, 1] = -self.Xf
+        self.V.field[:, 2] = 2.
+        res = ad.value(self.U.dot(self.V).field)
+        ref = 1.
         self.assertAlmostEqual(0, np.abs(res-ref).max())
 
     def test_outer(self):
-        res = ad.value(interpolate(self.U).outer(self.mesh.Normals).field)
-        ref = self.data['outer']
+        self.U.field[:, 0] = self.Xf
+        self.U.field[:, 1] = self.Yf
+        self.U.field[:, 2] = 0
+        self.V.field[:, 0] = self.Yf
+        self.V.field[:, 1] = -self.Xf
+        self.V.field[:, 2] = 0
+        res = ad.value(self.U.outer(self.V).field)
+        ref = np.zeros((self.mesh.nInternalCells, 3, 3))
+        ref[:, 0, 0] = self.Xf*self.Yf
+        ref[:, 0, 1] = -self.Xf*self.Xf
+        ref[:, 1, 0] = self.Yf*self.Yf
+        ref[:, 1, 1] = -self.Xf*self.Yf
         self.assertAlmostEqual(0, np.abs(res-ref).max())
 
     def test_dot_tensor(self):
-        res = ad.value(self.gradU.dot(self.U).field)
-        ref = self.data['dot_tensor']
+        self.U.field[:, 0] = 0.1
+        self.U.field[:, 1] = 0.2
+        self.U.field[:, 2] = 0.3
+        res = ad.value(self.T.dot(self.U).field)
+        ref = np.zeros((self.mesh.nInternalCells, 3))
+        ref[:, 0] = self.T.field[:, 0, 0]*0.1 + self.T.field[:, 0, 1]*0.2
+        ref[:, 1] = self.T.field[:, 1, 1]*0.2
+        ref[:, 2] = self.T.field[:, 2, 2]*0.3
         self.assertAlmostEqual(0, np.abs(res-ref).max())
 
     def test_transpose(self):
-        res = ad.value(self.gradU.transpose().field)
-        ref = self.data['transpose']
+        res = ad.value(self.T.transpose().field)
+        ref = np.zeros((self.mesh.nInternalCells, 3, 3))
+        ref[:, 0, 0] = self.Xf*self.Xf
+        ref[:, 1, 0] = self.Xf*self.Yf
+        ref[:, 1, 1] = self.Yf*self.Yf
+        ref[:, 2, 2] = 1.
         self.assertAlmostEqual(0, np.abs(res-ref).max())
 
     def test_trace(self):
-        res = ad.value(self.gradU.trace().field)
-        ref = self.data['trace']
+        res = ad.value(self.T.trace().field)
+        ref = self.X*self.X + self.Y*self.Y + 1.
         self.assertAlmostEqual(0, np.abs(res-ref).max())
         
 class TestInterp(unittest.TestCase):
