@@ -15,21 +15,27 @@ from parallel import pprint
 logger = Logger(__name__)
 import config, parallel
 
+defaultConfig = {'R': 8.314, 
+                 'Cp': 1011., 
+                 'gamma': 1.4, 
+                 'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 
+                 'Pr': 0.7, 
+                 'CFL': 0.6,
+                 'stepFactor': 1.2
+                }
+
 class Solver(object):
-    def __init__(self, case, config):
+    def __init__(self, case, userConfig={}):
         logger.info('initializing solver for {0}'.format(case))
-        self.R = config['R']
-        self.Cp = config['Cp']
-        self.gamma = config['gamma']
+        config = defaultConfig.copy()
+        config.update(userConfig)
+        for key in config:
+            setattr(self, key, config[key])
+
         self.Cv = self.Cp/self.gamma
-        self.mu = config['mu']
-        self.Pr = config['Pr']
         self.alpha = lambda mu, T: mu*(1./self.Pr)
 
         self.mesh = Mesh(case)
-
-        self.stepFactor = 1.2
-        self.CFL = config['CFL']
 
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
@@ -181,7 +187,7 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = Solver(case, {'R': 8.314, 'Cp': 1011., 'gamma': 1.4, 'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 'Pr': 0.7, 'CFL': 0.6})
-    #solver = Solver(case, {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': lambda T: T*0., 'Pr': 0.7, 'CFL': 0.2})
+    solver = Solver(case, {'CFL': 0.2})
+    solver = Solver(case, {'Cp': 2.5, 'mu': lambda T: T*0., 'CFL': 0.2})
     solver.run([time, 1e-3], 16000, 500)
 

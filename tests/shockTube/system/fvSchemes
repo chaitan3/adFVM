@@ -15,12 +15,11 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-//fluxScheme      Kurganov;
-fluxScheme      Tadmor;
+fluxScheme      Kurganov;
 
 ddtSchemes
 {
-    default         localEuler rDeltaT;
+    default         Euler;
 }
 
 gradSchemes

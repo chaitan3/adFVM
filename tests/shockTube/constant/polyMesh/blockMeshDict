@@ -48,9 +48,9 @@ boundary
             (0 4 7 3)
         );
     }
-    walls
+    empty
     {
-        type wall;
+        type empty;
         faces
         (
             (0 1 5 4)

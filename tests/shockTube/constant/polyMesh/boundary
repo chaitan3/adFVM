@@ -23,9 +23,10 @@ FoamFile
         nFaces          2;
         startFace       99;
     }
-    walls
+    empty
     {
-        type            wall;
+        type            empty;
+        inGroups        1(empty);
         nFaces          400;
         startFace       101;
     }

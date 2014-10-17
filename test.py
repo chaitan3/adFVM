@@ -169,3 +169,4 @@ class TestOp(unittest.TestCase):
         res = ad.value(laplacian(self.T, 1.).field)
         ref = 4.
         check(self, res, ref)
+
