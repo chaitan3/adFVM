@@ -142,7 +142,16 @@ class TestOp(unittest.TestCase):
         check(self, res, ref)
 
     def test_grad_vector(self):
+        self.U.field[:, 0] = self.X*self.Y + self.X**2
+        self.U.field[:, 1] = self.Y + self.Y**2 
+        self.U.field[:, 2] = 1.
         res = ad.value(grad(self.U).field)
+        ref = np.zeros((self.mesh.nInternalCells, 3, 3))
+        x = self.X[:self.mesh.nInternalCells]
+        y = self.Y[:self.mesh.nInternalCells]
+        ref[:, 0, 0] = y + 2*x
+        ref[:, 1, 0] = x
+        ref[:, 1, 1] = 1 + 2*y
         check(self, res, ref)
 
     def test_div(self):
@@ -160,10 +169,3 @@ class TestOp(unittest.TestCase):
         res = ad.value(laplacian(self.T, 1.).field)
         ref = 4.
         check(self, res, ref)
-
-
-
-
-
-
-        
