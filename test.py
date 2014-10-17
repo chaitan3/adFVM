@@ -13,6 +13,14 @@ def check(self, res, ref, maxThres=1e-7, sumThres=1e-4):
     self.assertAlmostEqual(0, np.abs(res-ref).max(), delta=maxThres)
     self.assertAlmostEqual(0, np.abs(res-ref).sum(), delta=sumThres)
 
+def checkSum(self, res, ref, relThres=1e-4):
+    vols = self.mesh.volumes
+    if len(res.shape) == 3:
+        vols = vols.flatten().reshape((-1,1,1))
+    diff = np.abs(res-ref)*vols
+    rel = diff.sum()/(ref*vols).sum()
+    self.assertAlmostEqual(0, rel, delta=relThres)
+
 class TestField(unittest.TestCase):
     @classmethod
     def setUpClass(self):
@@ -139,7 +147,7 @@ class TestOp(unittest.TestCase):
         y = self.Y[:self.mesh.nInternalCells]
         ref[:, 0] = y + 2*x + 1
         ref[:, 1] = x + 2*y
-        check(self, res, ref)
+        checkSum(self, res, ref)
 
     def test_grad_vector(self):
         self.U.field[:, 0] = self.X*self.Y + self.X**2
@@ -152,7 +160,7 @@ class TestOp(unittest.TestCase):
         ref[:, 0, 0] = y + 2*x
         ref[:, 1, 0] = x
         ref[:, 1, 1] = 1 + 2*y
-        check(self, res, ref)
+        checkSum(self, res, ref)
 
     def test_div(self):
         self.T.field[:, 0] = 1.
@@ -162,11 +170,11 @@ class TestOp(unittest.TestCase):
         res = ad.value(div(self.T, self.U).field)
         y = self.Y[:self.mesh.nInternalCells]
         ref = (1 + 2*y).reshape(-1,1)
-        check(self, res, ref)
+        checkSum(self, res, ref)
 
     def test_laplacian(self):
         self.T.field[:, 0] = self.X**2 + self.Y**2 + self.X*self.Y
         res = ad.value(laplacian(self.T, 1.).field)
-        ref = 4.
-        check(self, res, ref)
+        ref = 4.*np.ones((self.mesh.nInternalCells, 1))
+        checkSum(self, res, ref, relThres=1e-2)
 
