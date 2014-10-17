@@ -19,112 +19,106 @@ class TestField(unittest.TestCase):
         self.case = 'tests/convection/'
         self.mesh = Mesh(self.case)
         Field.setSolver(self)
-        self.Xf = self.mesh.cellCentres[:self.mesh.nInternalCells, 0]
-        self.X = self.Xf.reshape(-1, 1)
-        self.Yf = self.mesh.cellCentres[:self.mesh.nInternalCells, 1]
-        self.Y = self.Yf.reshape(-1, 1)
+        self.X = self.mesh.cellCentres[:self.mesh.nInternalCells, 0]
+        self.Y = self.mesh.cellCentres[:self.mesh.nInternalCells, 1]
         self.U = Field('U', ad.zeros((self.mesh.nInternalCells, 3)))
-        self.V = Field('U', ad.zeros((self.mesh.nInternalCells, 3)))
-        T = Field('T', ad.zeros((self.mesh.nInternalCells, 3, 3)))
-        T.field[:, 0, 0] = self.Xf*self.Xf
-        T.field[:, 0, 1] = self.Xf*self.Yf
-        T.field[:, 1, 1] = self.Yf*self.Yf
-        T.field[:, 2, 2] = 1.
-        self.T = T
+        self.V = Field('V', ad.zeros((self.mesh.nInternalCells, 3)))
+        self.W = Field('W', ad.zeros((self.mesh.nInternalCells, 3)))
+        self.T = Field('T', ad.zeros((self.mesh.nInternalCells, 3, 3)))
+        self.U.field[:, 0] = self.X
+        self.U.field[:, 1] = self.Y
+        self.U.field[:, 2] = 0.5
+        self.V.field[:, 0] = self.Y
+        self.V.field[:, 1] = -self.X
+        self.V.field[:, 2] = 2.
+        self.W.field[:, 0] = self.X*0.1
+        self.W.field[:, 1] = self.X*0.2
+        self.W.field[:, 2] = self.X*0.3
+        self.T.field[:, 0, 0] = self.X*self.X
+        self.T.field[:, 0, 1] = self.X*self.Y
+        self.T.field[:, 1, 1] = self.Y*self.Y
+        self.T.field[:, 2, 2] = 1.
 
     def test_max(self):
         self.assertTrue(True)
 
     def test_component(self):
-        self.U.field = self.X*np.array([[0.1,0.2,0.3]])
-        res = ad.value(self.U.component(0).field)
-        ref = 0.1*self.X
+        res = ad.value(self.W.component(0).field)
+        ref = 0.1*self.X.reshape(-1, 1)
         check(self, res, ref)
 
     def test_magSqr(self):
-        self.U.field = self.X*np.array([[0.1,0.2,0.3]])
-        res = ad.value(self.U.magSqr().field)
-        ref = self.X**2*(0.1**2 + 0.2**2 + 0.3**2)
+        res = ad.value(self.W.magSqr().field)
+        ref = self.X.reshape(-1,1)**2*(0.1**2 + 0.2**2 + 0.3**2)
         self.assertAlmostEqual(0, np.abs(res-ref).max())
         check(self, res, ref)
 
     def test_dot_vector(self):
-        self.U.field[:, 0] = self.Xf
-        self.U.field[:, 1] = self.Yf
-        self.U.field[:, 2] = 0.5
-        self.V.field[:, 0] = self.Yf
-        self.V.field[:, 1] = -self.Xf
-        self.V.field[:, 2] = 2.
         res = ad.value(self.U.dot(self.V).field)
         ref = 1.
         check(self, res, ref)
 
     def test_outer(self):
-        self.U.field[:, 0] = self.Xf
-        self.U.field[:, 1] = self.Yf
-        self.U.field[:, 2] = 0
-        self.V.field[:, 0] = self.Yf
-        self.V.field[:, 1] = -self.Xf
-        self.V.field[:, 2] = 0
         res = ad.value(self.U.outer(self.V).field)
         ref = np.zeros((self.mesh.nInternalCells, 3, 3))
-        ref[:, 0, 0] = self.Xf*self.Yf
-        ref[:, 0, 1] = -self.Xf*self.Xf
-        ref[:, 1, 0] = self.Yf*self.Yf
-        ref[:, 1, 1] = -self.Xf*self.Yf
+        ref[:, 0, 0] = self.X*self.Y
+        ref[:, 0, 1] = -self.X*self.X
+        ref[:, 0, 2] = 2*self.X
+        ref[:, 1, 0] = self.Y*self.Y
+        ref[:, 1, 1] = -self.X*self.Y
+        ref[:, 1, 2] = 2*self.Y
+        ref[:, 2, 0] = 0.5*self.Y
+        ref[:, 2, 1] = -0.5*self.X
+        ref[:, 2, 2] = 1.
         check(self, res, ref)
 
     def test_dot_tensor(self):
-        self.U.field[:, 0] = 0.1
-        self.U.field[:, 1] = 0.2
-        self.U.field[:, 2] = 0.3
-        res = ad.value(self.T.dot(self.U).field)
+        res = ad.value(self.T.dot(self.W).field)
         ref = np.zeros((self.mesh.nInternalCells, 3))
-        ref[:, 0] = self.T.field[:, 0, 0]*0.1 + self.T.field[:, 0, 1]*0.2
-        ref[:, 1] = self.T.field[:, 1, 1]*0.2
-        ref[:, 2] = self.T.field[:, 2, 2]*0.3
+        ref[:, 0] = (self.T.field[:, 0, 0]*0.1 + self.T.field[:, 0, 1]*0.2)*self.X
+        ref[:, 1] = self.T.field[:, 1, 1]*0.2*self.X
+        ref[:, 2] = self.T.field[:, 2, 2]*0.3*self.X
         check(self, res, ref)
 
     def test_transpose(self):
         res = ad.value(self.T.transpose().field)
         ref = np.zeros((self.mesh.nInternalCells, 3, 3))
-        ref[:, 0, 0] = self.Xf*self.Xf
-        ref[:, 1, 0] = self.Xf*self.Yf
-        ref[:, 1, 1] = self.Yf*self.Yf
+        ref[:, 0, 0] = self.X*self.X
+        ref[:, 1, 0] = self.X*self.Y
+        ref[:, 1, 1] = self.Y*self.Y
         ref[:, 2, 2] = 1.
         check(self, res, ref)
 
     def test_trace(self):
         res = ad.value(self.T.trace().field)
-        ref = self.X*self.X + self.Y*self.Y + 1.
+        ref = (self.X*self.X + self.Y*self.Y + 1.).reshape(-1,1)
         check(self, res, ref)
 
 class TestInterp(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        exit12
-        self.case = 'tests/cylinder/'
+        self.case = 'tests/convection/'
         self.mesh = Mesh(self.case)
         Field.setSolver(self)
-        self.rho = CellField.read('rho', 2.0)
-        self.rhoU = CellField.read('rhoU', 2.0)
-        self.rhoE = CellField.read('rhoE', 2.0)
-        self.data = np.load(self.case + 'test_data.npz')
+        self.T = CellField('T', ad.zeros((self.mesh.nInternalCells, 1)))
+        self.U = CellField('U', ad.zeros((self.mesh.nInternalCells, 3)))
+        self.X = self.mesh.cellCentres[:, 0]
+        self.XF = self.mesh.faceCentres[:, 0]
+        self.Y = self.mesh.cellCentres[:, 1]
+        self.YF = self.mesh.faceCentres[:, 1]
  
+
     def test_TVD_scalar(self):
-        res = ad.value(TVD_dual(self.rho)[0].field)
-        ref = self.data['TVD_scalar']
-        self.assertAlmostEqual(0, np.abs(res-ref).max())
+        pass
 
     def test_TVD_vector(self):
-        res = ad.value(TVD_dual(self.rhoU)[1].field)
-        ref = self.data['TVD_vector']
-        self.assertAlmostEqual(0, np.abs(res-ref).max())
+        pass
 
     def test_interpolate(self):
-        res = ad.value(interpolate(self.rhoE).field)
-        ref = self.data['interpolate']
-        self.assertAlmostEqual(0, np.abs(res-ref).max())
+        self.T.field[:, 0] = self.X + self.Y
+        res = ad.value(interpolate(self.T).field)
+        ref = (self.XF + self.YF).reshape(-1,1)
+        check(self, res, ref)
      
 class TestOp(unittest.TestCase):
     @classmethod
@@ -134,19 +128,17 @@ class TestOp(unittest.TestCase):
         Field.setSolver(self)
         self.T = CellField('T', ad.zeros((self.mesh.nInternalCells, 1)))
         self.U = CellField('U', ad.zeros((self.mesh.nInternalCells, 3)))
-        self.Xf = self.mesh.cellCentres[:, 0]
-        self.X = self.Xf.reshape(-1, 1)
-        self.Yf = self.mesh.cellCentres[:, 1]
-        self.Y = self.Yf.reshape(-1, 1)
+        self.X = self.mesh.cellCentres[:, 0]
+        self.Y = self.mesh.cellCentres[:, 1]
  
     def test_grad_scalar(self):
-        self.T.field = np.exp(-10*((self.X-0.5)**2 + (self.Y-0.5)**2))
+        self.T.field[:, 0] = self.X*self.Y + self.X**2 + self.Y**2 + self.X
         res = ad.value(grad(self.T).field)
         ref = np.zeros((self.mesh.nInternalCells, 3))
-        xf = self.Xf[:self.mesh.nInternalCells]
-        yf = self.Xf[:self.mesh.nInternalCells]
-        ref[:, 0] = -10*2*(xf-0.5)*np.exp(-10*((xf-0.5)**2 + (yf-0.5)**2))
-        ref[:, 1] = -10*2*(yf-0.5)*np.exp(-10*((xf-0.5)**2 + (yf-0.5)**2))
+        x = self.X[:self.mesh.nInternalCells]
+        y = self.Y[:self.mesh.nInternalCells]
+        ref[:, 0] = y + 2*x + 1
+        ref[:, 1] = x + 2*y
         check(self, res, ref)
 
     def test_grad_vector(self):
@@ -154,15 +146,19 @@ class TestOp(unittest.TestCase):
         check(self, res, ref)
 
     def test_div(self):
-        self.U.field[:, 0] = np.sin(2*np.pi*self.Xf)*np.cos(2*np.pi*self.Yf)
-        self.U.field[:, 1] = -np.cos(2*np.pi*self.Xf)*np.sin(2*np.pi*self.Yf)
-        self.U.field[:, 2] = 0.
-        res = ad.value(div(self.U).field)
-        print(res)
-        check(self, res, 0.)
+        self.T.field[:, 0] = 1.
+        self.U.field[:, 0] = self.X + np.sin(2*np.pi*self.X)*np.cos(2*np.pi*self.Y)
+        self.U.field[:, 1] = self.Y**2 - np.cos(2*np.pi*self.X)*np.sin(2*np.pi*self.Y)
+        self.U.field[:, 2] = self.X
+        res = ad.value(div(self.T, self.U).field)
+        y = self.Y[:self.mesh.nInternalCells]
+        ref = (1 + 2*y).reshape(-1,1)
+        check(self, res, ref)
 
     def test_laplacian(self):
-        res = ad.value(laplacian(T, 1.).field)
+        self.T.field[:, 0] = self.X**2 + self.Y**2 + self.X*self.Y
+        res = ad.value(laplacian(self.T, 1.).field)
+        ref = 4.
         check(self, res, ref)
 
 
