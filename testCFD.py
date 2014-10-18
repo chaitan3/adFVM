@@ -38,6 +38,7 @@ class TestCases(unittest.TestCase):
 
     # openfoam inviscid comparison
     def test_forwardStep(self):
+        skip
         case = 'tests/forwardStep'
         solver = RCF(case, Cp=2.5, mu=lambda T: T*0., CFL=1.2)
         time = 1.7
@@ -59,10 +60,23 @@ class TestCases(unittest.TestCase):
 
     # openfoam viscous comparison
     def test_cylinder(self):
-        skip
         case = 'tests/cylinder'
-        solver = Solver(case)
-        solver.run([0.0, 1e-3], 100000, 5000)
+        solver = RCF(case, mu=lambda T: 2.5e-5*T/T)
+        time = 1 + 1e-4
+        timeRef = 10.0
+        solver.run(startTime=1.0, endTime=time, writeInterval=1000)
+        rho = CellField.read('rho', time)    
+        p = CellField.read('p', time)    
+        U = CellField.read('U', time)    
+        rhoRef = CellField.read('rho', timeRef)    
+        pRef = CellField.read('p', timeRef)    
+        URef = CellField.read('U', timeRef)    
+        vols = solver.mesh.volumes
+        checkSum(self, rho.getInternalField(), rhoRef.getInternalField(), vols, relThres=0.01)
+        checkSum(self, p.getInternalField(), pRef.getInternalField(), vols, relThres=0.01)
+        checkSum(self, U.getInternalField(), URef.getInternalField(), vols, relThres=0.01)
+
+
 
 if __name__ == "__main__":
         unittest.main(verbosity=2)

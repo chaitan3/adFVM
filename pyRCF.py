@@ -18,7 +18,7 @@ class RCF(Solver):
     defaultConfig = Solver.defaultConfig.copy()
     defaultConfig.update({
                              'R': 8.314, 
-                             'Cp': 1011., 
+                             'Cp': 1004.5, 
                              'gamma': 1.4, 
                              'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 
                              'Pr': 0.7, 
