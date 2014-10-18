@@ -1,6 +1,7 @@
 import numpy as np
 
 from field import Field, CellField
+from mesh import Mesh
 
 from config import ad, Logger
 import config
@@ -9,61 +10,68 @@ logger = Logger(__name__)
 import time
 
 class Solver(object):
-    defaultConfig = {'timeIntegrator': 'euler'
+    defaultConfig = {
+                        'timeIntegrator': 'euler'
                     }
-    def __init__(self, case, userConfig):
+    def __init__(self, case, **userConfig):
         logger.info('initializing solver for {0}'.format(case))
-        config = Solver.defaultConfig.copy()
-        config.update(userConfig)
-        for key in config:
-            setattr(self, key, config[key])
+        fullConfig = self.__class__.defaultConfig.copy()
+        fullConfig.update(userConfig)
+        for key in fullConfig:
+            setattr(self, key, fullConfig[key])
 
         self.mesh = Mesh(case)
         self.timeIntegrator = globals()[self.timeIntegrator]
         Field.setSolver(self)
 
-    def run(self, timeStep, nSteps, writeInterval=config.LARGE, mode=None, initialFields=None, objective=lambda x: 0, perturb=None):
+    def setDt(self):
+        self.dt = min(self.dt, self.endTime-self.t)
+
+    def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, 
+            mode='simulation', initialFields=None, objective=lambda x: 0, perturb=None):
+
         logger.info('running solver for {0}'.format(nSteps))
-        t, dt = timeStep
         mesh = self.mesh
         #initialize
-        if initialFields is None:
-            fields = self.initFields()
-        else:
+        if initialFields is not None:
             fields = initialFields
+        else:
+            fields = self.initFields(startTime)
         if perturb is not None:
             perturb(fields)
-        self.dt = dt
         pprint()
-        mesh = self.mesh
 
-        timeSteps = np.zeros((nSteps, 2))
-        result = objective(fields)
-        solutions = [copy(fields)]
-        for timeIndex in range(1, nSteps+1):
+        if mode == 'simulation':
+            timeSteps = []
+            result = objective(fields)
+        else:
+            solutions = [copy(fields)]
+        self.t = startTime
+        self.dt = dt
+        self.endTime = endTime
+        timeIndex = 0
+
+        while self.t < endTime and timeIndex < nSteps:
             fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
-            if mode is None:
+            if mode == 'simulation':
                 result += objective(fields)
-                timeSteps[timeIndex-1] = np.array([t, self.dt])
-                self.clearFields()
-            elif mode == 'forward':
-                self.clearFields()
+                timeSteps.append([self.t, self.dt])
+                self.clearFields(fields)
+            elif mode == 'primal':
+                self.clearFields(fields)
                 solutions.append(copy(fields))
             elif mode == 'adjoint':
                 assert nSteps == 1
                 solutions = fields
 
-            t += self.dt
-            t = round(t, 9)
-            pprint('Simulation Time:', t, 'Time step:', self.dt)
+            self.t = round(self.t + self.dt, 9)
+            timeIndex += 1
+            pprint('Simulation Time:', self.t, 'Time step:', self.dt)
             if timeIndex % writeInterval == 0:
-                for phi in fields:
-                    phi.write(t)
-                self.U.write(t)
-                self.T.write(t)
-                self.p.write(t)
+                self.writeFields(fields)
             pprint()
-        if mode is None:
+        self.writeFields(fields)
+        if mode == 'simulation':
             return timeSteps, result
         else:
             return solutions

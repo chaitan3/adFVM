@@ -178,3 +178,6 @@ class TestOp(unittest.TestCase):
         ref = 4.*np.ones((self.mesh.nInternalCells, 1))
         checkSum(self, res, ref, relThres=1e-2)
 
+
+if __name__ == "__main__":
+        unittest.main(verbosity=2, buffer=True)

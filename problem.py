@@ -4,7 +4,7 @@ from __future__ import print_function
 import numpy as np
 import sys
 
-from pyRCF import Solver
+from pyRCF import RCF
 from solver import derivative, copy
 from solver import euler as explicit
 from config import ad
@@ -14,7 +14,7 @@ import config
 nSteps = 20000
 writeInterval = 100
 
-#primal = Solver('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
+#primal = RCF('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 #
 #def objective(fields):
 #    rho, rhoU, rhoE = fields
@@ -32,7 +32,7 @@ writeInterval = 100
 #    G = eps*ad.array(np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
 #    rho.field[indices] += G
 
-#primal = Solver('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
+#primal = RCF('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 #
 #def objective(fields):
 #    rho, rhoU, rhoE = fields
@@ -53,7 +53,7 @@ writeInterval = 100
 #
 #
 #
-primal = Solver('tests/cylinder/', {'R': 8.314, 'Cp': 1006, 'gamma': 1.4, 'mu': lambda T:Field('mu', T.mesh, ad.ones(T.field.shape)*2.5e-5), 'Pr': 0.7, 'CFL': 0.2})
+primal = RCF('tests/cylinder/', {'mu': lambda T:Field('mu', T.mesh, ad.ones(T.field.shape)*2.5e-5)})
 
 def objective(fields):
     rho, rhoU, rhoE = fields

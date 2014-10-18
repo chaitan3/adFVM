@@ -3,10 +3,10 @@ import numpy as np
 import sys
 import time
 
-from mesh import Mesh
 from field import Field, CellField
 from op import  div, snGrad, grad, ddt, laplacian
 from solver import Solver
+from solver import forget
 from interp import interpolate, TVD_dual
 
 from config import ad, Logger
@@ -15,18 +15,20 @@ logger = Logger(__name__)
 import config, parallel
 
 class RCF(Solver):
-    defaultConfig.update({'R': 8.314, 
-                 'Cp': 1011., 
-                 'gamma': 1.4, 
-                 'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 
-                 'Pr': 0.7, 
-                 'CFL': 0.6,
-                 'stepFactor': 1.2,
-                 'timeStepping': RK
-                })
+    defaultConfig = Solver.defaultConfig.copy()
+    defaultConfig.update({
+                             'R': 8.314, 
+                             'Cp': 1011., 
+                             'gamma': 1.4, 
+                             'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 
+                             'Pr': 0.7, 
+                             'CFL': 0.6,
+                             'stepFactor': 1.2,
+                             'timeIntegrator': 'RK'
+                        })
 
-    def __init__(self, case, userConfig={}):
-        super(RCF, self).__init__(case, userConfig)
+    def __init__(self, case, **userConfig):
+        super(RCF, self).__init__(case, **userConfig)
 
         self.Cv = self.Cp/self.gamma
         self.alpha = lambda mu, T: mu*(1./self.Pr)
@@ -52,18 +54,26 @@ class RCF(Solver):
         rho.name, rhoU.name, rhoE.name = self.names
         return rho, rhoU, rhoE
 
-    def initFields(self):
+    def initFields(self, t):
         self.p = CellField.read('p', t)
         self.T = CellField.read('T', t)
         self.U = CellField.read('U', t)
         return self.conservative(self.U, self.T, self.p)
     
-    def clearFields(self):
+    def clearFields(self, fields):
         forget([self.U, self.T, self.p])
+
+    def writeFields(self, fields):
+        for phi in fields:
+            phi.write(self.t)
+        self.U.write(self.t)
+        self.T.write(self.t)
+        self.p.write(self.t)
            
-    def timeStep(self, aFbyD):
+    def setDt(self, aFbyD):
         logger.info('computing new time step')
         self.dt = min(self.dt*self.stepFactor, self.CFL/parallel.max(aFbyD))
+        super(RCF, self).setDt()
 
     def equation(self, rho, rhoU, rhoE):
         logger.info('computing RHS/LHS')
@@ -88,7 +98,7 @@ class RCF(Solver):
 
         # CFL based time step: sparse update?
         aF2 = Field.max((UnLF + aF).abs(), (UnRF - aF).abs())*0.5
-        self.timeStep(ad.value(aF2.field)/mesh.deltas)
+        self.setDt(ad.value(aF2.field)/mesh.deltas)
 
         # flux reconstruction
         rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF)
@@ -131,7 +141,6 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = RCF(case, {'CFL': 0.2})
-    solver = RCF(case, {'Cp': 2.5, 'mu': lambda T: T*0., 'CFL': 0.2})
-    solver.run([time, 1e-3], 16000, 500)
+    solver = RCF(case, CFL=0.2)
+    solver.run(startTime=time, nSteps=1000, writeInterval=100)
 
