@@ -1,11 +1,72 @@
 import numpy as np
 
-from field import CellField
+from field import Field, CellField
 
 from config import ad, Logger
+import config
 from parallel import pprint
 logger = Logger(__name__)
 import time
+
+class Solver(object):
+    defaultConfig = {'timeIntegrator': 'euler'
+                    }
+    def __init__(self, case, userConfig):
+        logger.info('initializing solver for {0}'.format(case))
+        config = Solver.defaultConfig.copy()
+        config.update(userConfig)
+        for key in config:
+            setattr(self, key, config[key])
+
+        self.mesh = Mesh(case)
+        self.timeIntegrator = globals()[self.timeIntegrator]
+        Field.setSolver(self)
+
+    def run(self, timeStep, nSteps, writeInterval=config.LARGE, mode=None, initialFields=None, objective=lambda x: 0, perturb=None):
+        logger.info('running solver for {0}'.format(nSteps))
+        t, dt = timeStep
+        mesh = self.mesh
+        #initialize
+        if initialFields is None:
+            fields = self.initFields()
+        else:
+            fields = initialFields
+        if perturb is not None:
+            perturb(fields)
+        self.dt = dt
+        pprint()
+        mesh = self.mesh
+
+        timeSteps = np.zeros((nSteps, 2))
+        result = objective(fields)
+        solutions = [copy(fields)]
+        for timeIndex in range(1, nSteps+1):
+            fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
+            if mode is None:
+                result += objective(fields)
+                timeSteps[timeIndex-1] = np.array([t, self.dt])
+                self.clearFields()
+            elif mode == 'forward':
+                self.clearFields()
+                solutions.append(copy(fields))
+            elif mode == 'adjoint':
+                assert nSteps == 1
+                solutions = fields
+
+            t += self.dt
+            t = round(t, 9)
+            pprint('Simulation Time:', t, 'Time step:', self.dt)
+            if timeIndex % writeInterval == 0:
+                for phi in fields:
+                    phi.write(t)
+                self.U.write(t)
+                self.T.write(t)
+                self.p.write(t)
+            pprint()
+        if mode is None:
+            return timeSteps, result
+        else:
+            return solutions
 
 def euler(equation, boundary, fields, solver):
     start = time.time()

@@ -6,8 +6,7 @@ import time
 from mesh import Mesh
 from field import Field, CellField
 from op import  div, snGrad, grad, ddt, laplacian
-from solver import implicit, forget, copy
-from solver import RK as explicit
+from solver import Solver
 from interp import interpolate, TVD_dual
 
 from config import ad, Logger
@@ -15,32 +14,24 @@ from parallel import pprint
 logger = Logger(__name__)
 import config, parallel
 
-defaultConfig = {'R': 8.314, 
+class RCF(Solver):
+    defaultConfig.update({'R': 8.314, 
                  'Cp': 1011., 
                  'gamma': 1.4, 
                  'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 
                  'Pr': 0.7, 
                  'CFL': 0.6,
-                 'stepFactor': 1.2
-                }
+                 'stepFactor': 1.2,
+                 'timeStepping': RK
+                })
 
-class Solver(object):
     def __init__(self, case, userConfig={}):
-        logger.info('initializing solver for {0}'.format(case))
-        config = defaultConfig.copy()
-        config.update(userConfig)
-        for key in config:
-            setattr(self, key, config[key])
+        super(RCF, self).__init__(case, userConfig)
 
         self.Cv = self.Cp/self.gamma
         self.alpha = lambda mu, T: mu*(1./self.Pr)
-
-        self.mesh = Mesh(case)
-
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
-
-        Field.setSolver(self)
 
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
@@ -60,61 +51,14 @@ class Solver(object):
         rhoE = rho*E
         rho.name, rhoU.name, rhoE.name = self.names
         return rho, rhoU, rhoE
+
+    def initFields(self):
+        self.p = CellField.read('p', t)
+        self.T = CellField.read('T', t)
+        self.U = CellField.read('U', t)
+        return self.conservative(self.U, self.T, self.p)
     
-    def run(self, timeStep, nSteps, writeInterval=config.LARGE, mode=None, initialFields=None, objective=lambda x: 0, perturb=None):
-        logger.info('running solver for {0}'.format(nSteps))
-        t, dt = timeStep
-        mesh = self.mesh
-        #a = (mesh.absSumOp * (mesh.areas / mesh.deltas))/mesh.volumes
-        #print (config.mpi_Rank, a.max())
-        #print (config.mpi_Rank, a.min())
-        #initialize
-        if initialFields is None:
-            self.p = CellField.read('p', t)
-            self.T = CellField.read('T', t)
-            self.U = CellField.read('U', t)
-            fields = self.conservative(self.U, self.T, self.p)
-        else:
-            fields = initialFields
-        if perturb is not None:
-            perturb(fields)
-        self.dt = dt
-        pprint()
-        mesh = self.mesh
-
-        timeSteps = np.zeros((nSteps, 2))
-        result = objective(fields)
-        solutions = [copy(fields)]
-        for timeIndex in range(1, nSteps+1):
-            fields = explicit(self.equation, self.boundary, fields, self)
-            #fields = implicit(self.equation, self.boundary, fields, self)
-            if mode is None:
-                result += objective(fields)
-                timeSteps[timeIndex-1] = np.array([t, self.dt])
-                self.clean()
-            elif mode == 'forward':
-                self.clean()
-                solutions.append(copy(fields))
-            elif mode == 'adjoint':
-                assert nSteps == 1
-                solutions = fields
-
-            t += self.dt
-            t = round(t, 9)
-            pprint('Simulation Time:', t, 'Time step:', self.dt)
-            if timeIndex % writeInterval == 0:
-                for phi in fields:
-                    phi.write(t)
-                self.U.write(t)
-                self.T.write(t)
-                self.p.write(t)
-            pprint()
-        if mode is None:
-            return timeSteps, result
-        else:
-            return solutions
-
-    def clean(self):
+    def clearFields(self):
         forget([self.U, self.T, self.p])
            
     def timeStep(self, aFbyD):
@@ -187,7 +131,7 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = Solver(case, {'CFL': 0.2})
-    solver = Solver(case, {'Cp': 2.5, 'mu': lambda T: T*0., 'CFL': 0.2})
+    solver = RCF(case, {'CFL': 0.2})
+    solver = RCF(case, {'Cp': 2.5, 'mu': lambda T: T*0., 'CFL': 0.2})
     solver.run([time, 1e-3], 16000, 500)
 
