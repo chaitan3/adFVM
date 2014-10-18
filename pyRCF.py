@@ -31,7 +31,7 @@ class RCF(Solver):
         super(RCF, self).__init__(case, **userConfig)
 
         self.Cv = self.Cp/self.gamma
-        self.alpha = lambda mu, T: mu*(self.Cp/self.Pr)
+        self.kappa = lambda mu, T: mu*(self.Cp/self.Pr)
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
 
@@ -86,7 +86,6 @@ class RCF(Solver):
         ULF, TLF, pLF = self.primitive(rhoLF, rhoULF, rhoELF)
         URF, TRF, pRF = self.primitive(rhoRF, rhoURF, rhoERF)
         U, T, p = self.primitive(rho, rhoU, rhoE)
-        e = self.Cv*T
 
         # numerical viscosity
         cLF, cRF = (self.gamma*pLF/rhoLF)**0.5, (self.gamma*pRF/rhoRF)**0.5
@@ -111,7 +110,7 @@ class RCF(Solver):
         # viscous part
         TF = 0.5*(TLF + TRF)
         mu = self.mu(TF)
-        alpha = self.alpha(mu, TF)
+        kappa = self.kappa(mu, TF)
         UnF = 0.5*(UnLF + UnRF)
         UF = 0.5*(ULF + URF)
         #gradUTF = interpolate(grad(UF, ghost=True).transpose())
@@ -120,7 +119,7 @@ class RCF(Solver):
         
         return [ddt(rho, self.dt) + div(rhoFlux),
                 ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
-                ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(e, alpha) + div(sigmaF.dot(UF)))]
+                ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(T, kappa) + div(sigmaF.dot(UF)))]
 
     def boundary(self, rhoI, rhoUI, rhoEI):
         logger.info('correcting boundary')
