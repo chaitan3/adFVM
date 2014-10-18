@@ -31,7 +31,7 @@ class RCF(Solver):
         super(RCF, self).__init__(case, **userConfig)
 
         self.Cv = self.Cp/self.gamma
-        self.alpha = lambda mu, T: mu*(1./self.Pr)
+        self.alpha = lambda mu, T: mu*(self.Cp/self.Pr)
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
 
