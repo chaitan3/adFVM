@@ -17,22 +17,19 @@ FoamFile
 dimensions      [0 1 -1 0 0 0 0];
 
 internalField   uniform 300;
-
-
 boundaryField
 {
     patch0_half0
     {
-        type cyclic;
+        type empty;
     }
     patch0_half1
     {
-        type cyclic;
+        type empty;
     }
     patch1_half0
     {
-        type fixedValue;
-        value uniform 300;
+        type zeroGradient;
     }
     patch1_half1
     {
@@ -40,10 +37,13 @@ boundaryField
     }
     patch2_half0
     {
-        type cyclic;
+        type zeroGradient;
     }
     patch2_half1
     {
-        type cyclic;
+        type zeroGradient;
     }
 }
+
+
+

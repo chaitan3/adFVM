@@ -24,7 +24,8 @@ class RCF(Solver):
                              'Pr': 0.7, 
                              'CFL': 0.6,
                              'stepFactor': 1.2,
-                             'timeIntegrator': 'RK'
+                             'timeIntegrator': 'RK', 
+                             'source': lambda x: [0, 0, 0]
                         })
 
     def __init__(self, case, **userConfig):
@@ -118,11 +119,11 @@ class RCF(Solver):
         sigmaF = mu*(snGrad(U) + gradUTF.dotN() - (2./3)*gradUTF.trace()*mesh.Normals)
 
         # source terms
-        source = self.source(t, mesh.cellCentres)
+        source = self.source(self)
         
-        return [ddt(rho, self.dt) + div(rhoFlux),
-                ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),
-                ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(T, kappa) + div(sigmaF.dot(UF)))]
+        return [ddt(rho, self.dt) + div(rhoFlux) - source[0],
+                ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
+                ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(T, kappa) + div(sigmaF.dot(UF))) - source[2]]
 
     def boundary(self, rhoI, rhoUI, rhoEI):
         logger.info('correcting boundary')

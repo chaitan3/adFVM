@@ -23,11 +23,11 @@ boundaryField
 {
     patch0_half0
     {
-        type cyclic;
+        type empty;
     }
     patch0_half1
     {
-        type cyclic;
+        type empty;
     }
     patch1_half0
     {
@@ -35,15 +35,14 @@ boundaryField
     }
     patch1_half1
     {
-        type fixedValue;
-        value uniform 101325;
+        type zeroGradient;
     }
     patch2_half0
     {
-        type cyclic;
+        type zeroGradient;
     }
     patch2_half1
     {
-        type cyclic;
+        type zeroGradient;
     }
 }

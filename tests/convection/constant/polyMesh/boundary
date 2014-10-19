@@ -19,23 +19,15 @@ FoamFile
 (
     patch0_half0
     {
-        type            cyclic;
-        inGroups        1(cyclic);
+        type            empty;
         nFaces          10000;
         startFace       19800;
-        matchTolerance  0.0001;
-        transform       unknown;
-        neighbourPatch  patch0_half1;
     }
     patch0_half1
     {
-        type            cyclic;
-        inGroups        1(cyclic);
+        type            empty;
         nFaces          10000;
         startFace       29800;
-        matchTolerance  0.0001;
-        transform       unknown;
-        neighbourPatch  patch0_half0;
     }
     patch1_half0
     {
@@ -51,23 +43,15 @@ FoamFile
     }
     patch2_half0
     {
-        type            cyclic;
-        inGroups        1(cyclic);
+        type            patch;
         nFaces          100;
         startFace       40000;
-        matchTolerance  0.0001;
-        transform       unknown;
-        neighbourPatch  patch2_half1;
     }
     patch2_half1
     {
-        type            cyclic;
-        inGroups        1(cyclic);
+        type            patch;
         nFaces          100;
         startFace       40100;
-        matchTolerance  0.0001;
-        transform       unknown;
-        neighbourPatch  patch2_half0;
     }
 )
 

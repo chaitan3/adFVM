@@ -1,7 +1,11 @@
 from sympy import *
+from sympy.utilities.lambdify import lambdify
+import numpy as np
+
+from field import Field
 
 x,y,z,t = symbols(('x', 'y', 'z', 't'))
-gamma, mu, alpha = symbols(('gamma', 'mu', 'alpha'))
+gamma, Cv, Pr = symbols(('gamma', 'Cv', 'Pr'))
 X = [x, y, z]
 
 def div(phi, U=None):
@@ -14,19 +18,22 @@ def dot(U, V):
 def lap(phi):
     return sum([diff(diff(phi, d), d) for d in X])
 
-rho = sin(x) + sin(y) + sin(z)
-rhoUx = sin(x) + sin(y) + sin(z)
-rhoUy = sin(x) + sin(y) + sin(z)
+# manufactured solution
+rho = 1 + 0.1*sin(0.75*pi*x) + 0.15*cos(1.0*pi*y) + 0*sin(pi*z)
+rhoUx = 70 + 4*sin(1.66*pi*x) + -12*cos(1.5*pi*y) + 0*cos(pi*z)
+rhoUy = 90 + -20*cos(1.5*pi*x) + 4*sin(1.0*pi*y) + 0*sin(pi*z)
 rhoUz = 0
+rhoE = 3e5 + -0.3e5*cos(1.0*pi*x) + 0.2e5*sin(1.25*pi*y) + 0*cos(pi*z)
+
 Ux = rhoUx/rho
 Uy = rhoUy/rho
 Uz = rhoUz/rho
 U = [Ux, Uy, Uz]
-rhoE = tan(z)
 e = (rhoE-rho*(Ux*Ux + Uy*Uy + Uz*Uz)/2)
+T = e/Cv
 p = (gamma-1)*e
 
-# euler
+# euler, simplify?
 Srho = diff(rho, t) + div(rho, U)
 SrhoUx = diff(rhoUx, t) + div(rhoUx, U) + diff(p, x)
 SrhoUy = diff(rhoUy, t) + div(rhoUy, U) + diff(p, y)
@@ -42,15 +49,32 @@ trace = sum([sigma[i][i]/2 for i in range(0, 3)])
 for i in range(0, 3):
     sigma[i][i] -= 2./3*trace
 sigmadotU = [dot(sig, U) for sig in sigma]
+mu = 10.
+kappa = mu*Cv*gamma/Pr
 
 # navier stokes
 SrhoUx += -mu*div(sigma[0])
 SrhoUy += -mu*div(sigma[1])
 SrhoUz += -mu*div(sigma[2])
-SrhoE += -alpha*lap(e) -mu*div(sigmadotU)
+SrhoE += -kappa*lap(T) -mu*div(sigmadotU)
 
 print Srho
-print SrhoE
 print SrhoUx
-def Source():
-    pass
+print SrhoUy
+print SrhoUz
+print SrhoE
+
+def source(solver):
+    cellCentres = solver.mesh.cellCentres[:solver.mesh.nInternalCells]
+    X = cellCentres[:, 0]
+    Y = cellCentres[:, 1]
+    Z = cellCentres[:, 2]
+    subs={Cv:solver.Cv, Pr:solver.Pr, gamma:solver.gamma, t: solver.t}
+    func = lambdify((x, y, z), [Srho.subs(subs), SrhoUx.subs(subs), SrhoUy.subs(subs), SrhoUz.subs(subs), SrhoE.subs(subs)], np)
+    res = func(X, Y, Z)
+    # rhoUz 0 hack
+    res[3] = X*0
+    Frho = Field('Srho', res[0].reshape(-1,1))
+    FrhoU = Field('SrhoU', np.column_stack(res[1:4]))
+    FrhoE = Field('SrhoE', res[4].reshape(-1,1))
+    return [Frho, FrhoU, FrhoE]
