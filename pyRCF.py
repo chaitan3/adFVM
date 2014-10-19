@@ -79,10 +79,10 @@ class RCF(Solver):
         logger.info('computing RHS/LHS')
         mesh = self.mesh
 
+        # interpolation
         rhoLF, rhoRF = TVD_dual(rho)
         rhoULF, rhoURF = TVD_dual(rhoU)
         rhoELF, rhoERF = TVD_dual(rhoE)
-
         ULF, TLF, pLF = self.primitive(rhoLF, rhoULF, rhoELF)
         URF, TRF, pRF = self.primitive(rhoRF, rhoURF, rhoERF)
         U, T, p = self.primitive(rho, rhoU, rhoE)
@@ -100,8 +100,8 @@ class RCF(Solver):
         self.setDt(ad.value(aF2.field)/mesh.deltas)
 
         # flux reconstruction
+        # phi (flux) for pressureInletVelocity
         rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF)
-        # phi for pressureInletVelocity
         self.flux = 2*rhoFlux/(rhoLF + rhoRF)
         rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF) - 0.5*aF*(rhoURF-rhoULF)
         rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoERF-rhoELF)
@@ -116,6 +116,9 @@ class RCF(Solver):
         #gradUTF = interpolate(grad(UF, ghost=True).transpose())
         gradUTF = interpolate(grad(UF, ghost=True))
         sigmaF = mu*(snGrad(U) + gradUTF.dotN() - (2./3)*gradUTF.trace()*mesh.Normals)
+
+        # source terms
+        source = self.source(t, mesh.cellCentres)
         
         return [ddt(rho, self.dt) + div(rhoFlux),
                 ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF),

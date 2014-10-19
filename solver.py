@@ -11,7 +11,8 @@ import time
 
 class Solver(object):
     defaultConfig = {
-                        'timeIntegrator': 'euler'
+                        'timeIntegrator': 'euler',
+                        'source': None
                     }
     def __init__(self, case, **userConfig):
         logger.info('initializing solver for {0}'.format(case))
