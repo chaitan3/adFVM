@@ -1,11 +1,11 @@
 from __future__ import print_function
 
 # switch between numpy and numpad
-#import numpad as ad
-#from numpad import adsparse
-import numpy as ad
-from scipy import sparse as adsparse
-ad.value = lambda x: x
+import numpad as ad
+from numpad import adsparse
+#import numpy as ad
+#from scipy import sparse as adsparse
+#ad.value = lambda x: x
 
 # custom norm for numpy 1.7
 import numpy as np

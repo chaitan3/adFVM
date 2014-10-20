@@ -2,7 +2,7 @@ from sympy import *
 from sympy.utilities.lambdify import lambdify
 import numpy as np
 
-from field import Field
+from field import Field, CellField
 
 x,y,z,t = symbols(('x', 'y', 'z', 't'))
 gamma, Cv, Pr = symbols(('gamma', 'Cv', 'Pr'))
@@ -22,7 +22,7 @@ def lap(phi):
 rho = 1 + 0.1*sin(0.75*pi*x) + 0.15*cos(1.0*pi*y) + 0*sin(pi*z)
 rhoUx = 70 + 4*sin(1.66*pi*x) + -12*cos(1.5*pi*y) + 0*cos(pi*z)
 rhoUy = 90 + -20*cos(1.5*pi*x) + 4*sin(1.0*pi*y) + 0*sin(pi*z)
-rhoUz = 0
+rhoUz = 0*rho
 rhoE = 3e5 + -0.3e5*cos(1.0*pi*x) + 0.2e5*sin(1.25*pi*y) + 0*cos(pi*z)
 
 Ux = rhoUx/rho
@@ -78,3 +78,23 @@ def source(solver):
     FrhoU = Field('SrhoU', np.column_stack(res[1:4]))
     FrhoE = Field('SrhoE', res[4].reshape(-1,1))
     return [Frho, FrhoU, FrhoE]
+
+def solution(T, mesh):
+    cellCentres = mesh.cellCentres[:mesh.nInternalCells]
+    X = cellCentres[:, 0]
+    Y = cellCentres[:, 1]
+    Z = cellCentres[:, 2]
+    subs = {t: T}
+    func = lambdify((x, y, z), [rho.subs(subs), rhoUx.subs(subs), rhoUy.subs(subs), rhoUz.subs(subs), rhoE.subs(subs)], np)
+    res = func(X, Y, Z)
+    # rhoUz 0 hack
+    res[3] = X*0
+    Frho = CellField('rho', res[0].reshape(-1,1))
+    FrhoU = CellField('rhoU', np.column_stack(res[1:4]))
+    FrhoE = CellField('rhoE', res[4].reshape(-1,1))
+    Frho.write(1.0)
+    FrhoU.write(1.0)
+    FrhoE.write(1.0)
+    return [Frho, FrhoU, FrhoE]
+
+

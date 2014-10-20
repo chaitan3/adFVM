@@ -5,7 +5,7 @@ import numpy as np
 
 from field import CellField
 from pyRCF import RCF
-from mms import source
+from mms import source, solution
 
 def checkSum(self, res, ref, vols, relThres=0.01):
     diff = np.abs(res-ref)*vols
@@ -60,10 +60,18 @@ class TestCases(unittest.TestCase):
     # analytical viscous comparison
     def test_mms(self):
         case = 'tests/convection'
-        timeRef = 100.
-        solver = RCF(case, mu=lambda T: 10.*T/T, Pr=1.0, source=source)
-        solver.run(endTime=timeRef, writeInterval=1000)
+        timeRef = 0.1
+        solver = RCF(case, mu=lambda T: 10.*T/T, Pr=1.0, source=source, timeIntegrator='implicit', stepFactor=1.0001)
+        solver.run(endTime=timeRef, dt=1e-5, writeInterval=100)
+        rhoRef, rhoURef, rhoERef = solution(timeRef, solver.mesh)
 
+        rho = CellField.read('rho', timeRef)    
+        rhoU = CellField.read('rhoU', timeRef)    
+        rhoE = CellField.read('rhoE', timeRef)    
+        vols = solver.mesh.volumes
+        checkSum(self, rho.getInternalField(), rhoRef.getInternalField(), vols, relThres=0.01)
+        checkSum(self, rhoU.getInternalField(), rhoURef.getInternalField(), vols, relThres=0.01)
+        checkSum(self, rhoE.getInternalField(), rhoERef.getInternalField(), vols, relThres=0.01)
 
     # openfoam viscous comparison
     def test_cylinder(self):
