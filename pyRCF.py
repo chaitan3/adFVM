@@ -144,6 +144,6 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = RCF(case, CFL=0.2)
-    solver.run(startTime=time, nSteps=1000, writeInterval=100)
+    solver = RCF(case, CFL=0.7)
+    solver.run(startTime=time, nSteps=60000, writeInterval=1000)
 
