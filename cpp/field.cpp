@@ -54,11 +54,11 @@ void Field::updateGhostCells() {
         if (patchType == "cyclic") {
             string neighbourPatchID = patchInfo.at("neighbourPatch");
             int neighbourStartFace = stoi(mesh.boundary.at(neighbourPatchID).at("startFace"));
-            this->field.block(0, cellStartFace, size, nFaces) = slice(this->field, mesh.owner.block(0, neighbourStartFace, 1, nFaces));
+            this->field.block(0, cellStartFace, size, nFaces) = slice(this->field, SELECT(mesh.owner, neighbourStartFace, nFaces));
             cout << "cyclic" << endl;
         }
         else if (patchType == "zeroGradient") {
-            this->field.block(0, cellStartFace, size, nFaces) = slice(this->field, mesh.owner.block(0, startFace, 1, nFaces));
+            this->field.block(0, cellStartFace, size, nFaces) = slice(this->field, SELECT(mesh.owner, startFace, nFaces));
             cout << "zeroGradient" << endl;
         }
         else {

@@ -9,7 +9,7 @@ class Interpolator {
     public:
         Interpolator(const Mesh& mesh): mesh(mesh) {};
         arr central(const arr&);
-        arr TVD(const arr&);
+        arr TVD(const arr&, const arr&, const arr& );
 };
  
 
