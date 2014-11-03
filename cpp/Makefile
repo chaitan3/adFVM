@@ -1,12 +1,12 @@
 CC = g++
 TARGET = ./test.exe
 CFLAGS = -Wno-write-strings -O2 -g -std=c++11
-LFLAGS = -g
+LFLAGS = 
 INCLUDE = -I/usr/include/eigen3/ -I/usr/include/python2.7/
 LIBS = -lpython2.7 #-larmadillo
 
 #OBJ = arma.o
-OBJ = interface.o test.o field.o interp.o
+OBJ = interface.o test.o field.o interp.o op.o
 
 ERRORS = errors.out
 

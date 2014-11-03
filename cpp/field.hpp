@@ -15,6 +15,8 @@ class Field {
         PyObject *pyField;
     
         ~Field ();
+        void write(const double);
+        void updateGhostCells();
         Field (const string, const Mesh&, const double);
 };
 

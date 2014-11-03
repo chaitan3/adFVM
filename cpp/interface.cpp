@@ -40,6 +40,8 @@ Mesh::Mesh (string caseDir) {
     getArray(this->mesh, "deltas", this->deltas);
     getArray(this->mesh, "weights", this->weights);
 
+    getSpArray(this->mesh, "sumOp", this->sumOp);
+
     this->boundary = getBoundary(this->mesh, "boundary");
     this->calculatedBoundary = getBoundary(this->mesh, "calculatedBoundary");
     this->defaultBoundary = getBoundary(this->mesh, "defaultBoundary");
@@ -78,7 +80,7 @@ void getArray(PyObject *mesh, const string attr, DenseBase<Derived> & tmp) {
     npy_intp* dims = PyArray_DIMS(array);
     int rows = dims[1];
     int cols = dims[0];
-    //cout << attr << " " << rows << " " << cols << endl;
+    // cout << attr << " " << rows << " " << cols << endl;
     if (nDims == 1) {
         rows = 1;
     }
@@ -88,6 +90,57 @@ void getArray(PyObject *mesh, const string attr, DenseBase<Derived> & tmp) {
     tmp = result;
     Py_DECREF(array);
 }
+
+void putArray(PyObject *mesh, const string attr, arr &tmp) {
+    PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
+    assert(array);
+    double *data = (double *) PyArray_DATA(array);
+    memcpy(data, tmp.data(), tmp.size() * sizeof(double));
+    Py_DECREF(array);
+}
+
+
+
+template <typename Derived>
+void getSpArray(PyObject *mesh, const string attr, SparseMatrix<Derived> & tmp) {
+    PyObject *sparse = PyObject_GetAttrString(mesh, attr.c_str());
+    assert(sparse);
+    PyObject *shape = PyObject_GetAttrString(sparse, "shape");
+    PyArrayObject *data = (PyArrayObject*) PyObject_GetAttrString(sparse, "data");
+    PyArrayObject *indices = (PyArrayObject*) PyObject_GetAttrString(sparse, "indices");
+    PyArrayObject *indptr = (PyArrayObject*) PyObject_GetAttrString(sparse, "indptr");
+    Derived *cdata = (Derived*) PyArray_DATA(data);
+    int32_t *cindices = (int32_t *)PyArray_DATA(indices);
+    int32_t *cindptr = (int32_t *)PyArray_DATA(indptr);
+
+    PyObject *pyRows = PyTuple_GetItem(shape, 0);
+    PyObject *pyCols = PyTuple_GetItem(shape, 1);
+    int rows = PyInt_AsLong(pyRows);
+    int cols = PyInt_AsLong(pyCols);
+    //cout << attr << " " << rows << " " << cols << endl;
+
+    spmat result(rows, cols);
+    result.reserve(2*cols);
+    // fill
+    for (int i = 0; i < rows; i++) {
+        for (int j = cindptr[i]; j < cindptr[i] + 1; j++) {
+            result.insert(i, cindices[j]) = cdata[j];
+        }
+    }
+    //
+    result.makeCompressed();
+    tmp = result;
+    //cout << rows << " " << cols << endl;
+    Py_DECREF(shape);
+    Py_DECREF(pyRows);
+    Py_DECREF(pyCols);
+    Py_DECREF(data);
+    Py_DECREF(indices);
+    Py_DECREF(indptr);
+    Py_DECREF(sparse);
+}
+
+
 
 Boundary getBoundary(PyObject *mesh, const string attr) {
     PyObject *dict = PyObject_GetAttrString(mesh, attr.c_str());
@@ -100,6 +153,7 @@ Boundary getBoundary(PyObject *mesh, const string attr) {
     while (PyDict_Next(dict, &pos, &key, &value)) {
         string ckey = PyString_AsString(key);
         assert(value);
+        pos2 = 0;
         while (PyDict_Next(value, &pos2, &key2, &value2)) {
             string ckey2 = PyString_AsString(key2);
             string cvalue;

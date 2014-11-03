@@ -20,6 +20,9 @@ class Field(object):
     def setSolver(solver):
         Field.solver = solver
         Field.mesh = solver.mesh
+    @staticmethod
+    def setMesh(mesh):
+        Field.mesh = mesh
 
     def __init__(self, name, field):
         self.name = name
@@ -145,9 +148,9 @@ class CellField(Field):
 
 
     @classmethod
-    def zeros(self, name, mesh, dimensions):
+    def zeros(self, name, dimensions):
         logger.info('initializing zeros field {0}'.format(name))
-        return self(name, ad.zeros((mesh.nCells,) + dimensions))
+        return self(name, ad.zeros((self.mesh.nCells,) + dimensions))
 
     @classmethod
     def copy(self, phi):

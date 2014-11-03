@@ -3,6 +3,7 @@
 
 #define EIGEN_MATRIXBASE_PLUGIN "/home/talnikar/adFVM/cpp/ext.hpp"
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 #include <iostream>
 
 using namespace Eigen;
@@ -10,6 +11,7 @@ using namespace std;
 
 typedef ArrayXXd arr;
 typedef Array<int32_t, Dynamic, Dynamic> iarr;
+typedef SparseMatrix<double> spmat;
 
 template <typename Derived, typename OtherDerived>
 inline arr slice(const DenseBase<Derived>& array, const DenseBase<OtherDerived>& indices) {

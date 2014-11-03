@@ -22,12 +22,14 @@ dt = 0.001
 DT = 0.01
 
 #initialize
-T = CellField.zeros('T', mesh, (1,))
+Field.mesh = mesh
+CellField.solver = mesh
+T = CellField.zeros('T', (1,))
 mid = np.array([0.5, 0.5, 0.5])
 T.setInternalField(np.exp(-10*config.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)).reshape(-1,1))
 #T = Field.read('T', mesh, t)
 U = 1.*ad.ones((mesh.nFaces, 3))*np.array([1., 0., 0])
-U = Field('U', mesh, U)
+U = Field('U', U)
 
 for i in range(0, 300):
     if i % 20 == 0:

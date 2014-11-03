@@ -1,7 +1,7 @@
 #ifndef INTERP_HPP
 #define INTERP_HPP
 
-#include "field.hpp"
+#include "interface.hpp"
 
 class Interpolator {
     const Mesh& mesh;
