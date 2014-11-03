@@ -84,23 +84,23 @@ import config
 primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.6)
 def objective(fields):
     rho, rhoU, rhoE = fields
-    mesh = rhoE.mesh
-    patchID = 'pressure'
+    solver = rhoE.solver
+    patchID = 'suction'
     patch = rhoE.BC[patchID]
     start, end = patch.startFace, patch.endFace
     areas = mesh.areas[start:end]
-    nx = mesh.normals[start:end, 0]
-    start, end = patch.cellStartFace, patch.cellEndFace
-    p = rhoE.field[start:end]*(primal.gamma-1)
+    Ti = solver.T.field[mesh.owner[start:end]] 
+    Tw = 300*Ti/Ti
     deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
-    T = rhoE/(rho*primal.Cv)
-    mungUx = (rhoU.field[start:end, 0]/rho.field[start:end]-rhoU.field[patch.internalIndices, 0]/rho.field[patch.internalIndices])*primal.mu(T).field[start:end]/deltas
-    return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
+    dtdn = (Tw-Ti)/deltas
+    k = solver.Cp*solver.mu(Tw)/solver.Pr
+    dT = 120
+    return ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1))
 
 
-nSteps = 2
-writeInterval = 1
-startTime = 1.0
+nSteps = 20000
+writeInterval = 100
+startTime = 2.0
 dt = 1
 
 if __name__ == "__main__":
@@ -178,7 +178,7 @@ if __name__ == "__main__":
         print('semi-automatic diff:', np.sum(-adj2*stackedZeroFields))
 
     elif option == 'orig':
-        timeSteps, result = primal.run([startTime, dt], nSteps, writeInterval=writeInterval, objective=objective)
+        timeSteps, result = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objective)
         np.savetxt(mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval), timeSteps)
     elif option == 'perturb':
         timeSteps, result = primal.run([startTime, dt], nSteps, objective=objective, perturb=perturb)

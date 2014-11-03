@@ -53,6 +53,7 @@ class Solver(object):
         timeIndex = 0
 
         while self.t < endTime and timeIndex < nSteps:
+            pprint('Time step', timeIndex)
             fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
             if mode == 'simulation':
                 result += objective(fields)
@@ -71,8 +72,8 @@ class Solver(object):
             if timeIndex % writeInterval == 0:
                 self.writeFields(fields)
             pprint()
-        self.writeFields(fields)
         if mode == 'simulation':
+            self.writeFields(fields)
             return timeSteps, result
         else:
             return solutions
