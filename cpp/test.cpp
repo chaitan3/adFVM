@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
         cout << i << endl;
         arr UF = interpolate.central(U.field);
         arr TF = interpolate.central(T.field);
-        arr TUFdotN = ((UF.rowwise() * TF.row(0))*mesh.normals).colwise().sum();
+        arr TUFdotN = DOT(ROWMUL(UF, TF), mesh.normals);
         T.field.leftCols(mesh.nInternalCells) -= (operate.div(TUFdotN) - operate.laplacian(T.field)) * dt;
         T.updateGhostCells();
     }

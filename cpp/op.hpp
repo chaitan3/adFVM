@@ -14,5 +14,6 @@ class Operator {
         arr snGrad(const arr&);
         arr laplacian(const arr&);
 };
+
  
 #endif

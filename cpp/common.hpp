@@ -22,4 +22,8 @@ inline arr slice(const DenseBase<Derived>& array, const DenseBase<OtherDerived>&
     return sliced;
 }
 
+#define ROWMUL(X, Y) ((X).rowwise() * (Y).row(0))
+#define ROWDIV(X, Y) ((X).rowwise() / (Y).row(0))
+#define DOT(X, Y) (((X) * (Y)).colwise().sum())
+
 #endif
