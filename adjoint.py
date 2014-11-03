@@ -24,12 +24,10 @@ assert ad.__name__ == 'numpad'
 mesh = primal.mesh
 
 if firstCheckpoint == 0:
-    adjointFields = [CellField('{0}a'.format(name), mesh, ad.zeros((mesh.nInternalCells, dimensions[0])), mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
+    adjointFields = [CellField('{0}a'.format(name), ad.zeros((mesh.nInternalCells, dimensions[0])), mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
 else:
-    adjointFields = [CellField.read('{0}a'.format(name), mesh, timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in primal.names]
+    adjointFields = [CellField.read('{0}a'.format(name), timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in primal.names]
 stackedAdjointFields = np.hstack([ad.value(phi.field) for phi in adjointFields])
-print(np.cumsum(np.array([phi.dimensions[0] for phi in adjointFields])))
-print('hey')
 nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in adjointFields]))))
 nDimensions = zip(nDimensions[:-1], nDimensions[1:])
 
@@ -48,36 +46,40 @@ def getStackedFields(fields):
     mesh = fields[0].mesh
     names = [phi.name for phi in fields]
     stackedFields = ad.array(np.hstack([ad.value(phi.field) for phi in fields]))
-    newFields = [CellField(names[index], mesh, stackedFields[:, range(*nDimensions[index])]) for index in range(0, 3)]
+    newFields = [CellField(names[index], stackedFields[:, range(*nDimensions[index])]) for index in range(0, 3)]
     return stackedFields, newFields
 
 for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
     print('PRIMAL FORWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     primalIndex = nSteps - (checkpoint + 1)*writeInterval
-    solutions = primal.run(timeSteps[primalIndex], nSteps=writeInterval, mode='forward')
+    t, dt = timeSteps[primalIndex]
+    solutions = primal.run(startTime=t, dt=dt, nSteps=writeInterval, mode='forward')
 
     print('ADJOINT BACKWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     if checkpoint == 0:
-        stackedLastSolution, lastSolution = getStackedFields(solutions[-1])
-        stackedAdjointFields = objective(lastSolution).diff(stackedLastSolution)
+        #stackedLastSolution, lastSolution = getStackedFields(solutions[-1])
+        #stackedAdjointFields = objective(lastSolution).diff(stackedLastSolution)
+        lastSolution = solutions[-1]
+        stackedAdjointFields  = derivative(objective(lastSolution), lastSolution)
         writeAdjointFields(timeSteps[-1][0])
 
     for step in range(0, writeInterval):
         start = time.time()
 
         adjointIndex = writeInterval-1 - step
-        stackedPreviousSolution, previousSolution = getStackedFields(solutions[adjointIndex])
-        #previousSolution = solutions[adjointIndex]
-        currentSolution = primal.run(timeSteps[primalIndex + adjointIndex], 1, mode='adjoint', initialFields=previousSolution)
+        #stackedPreviousSolution, previousSolution = getStackedFields(solutions[adjointIndex])
+        previousSolution = solutions[adjointIndex]
+        t, dt = timeSteps[primalIndex + adjointIndex]
+        currentSolution = primal.run(startTime=t, dt=dt, nSteps=1, mode='adjoint', initialFields=previousSolution)
         stackedFields = ad.hstack([phi.field for phi in currentSolution])
-        jacobians = ad.sum(stackedFields*stackedAdjointFields).diff(stackedPreviousSolution)
-        sensitivities = objective(previousSolution).diff(stackedPreviousSolution)
-        #jacobians = derivative(ad.sum(stackedFields*stackedAdjointFields), previousSolution)
-        #sensitivities = derivative(objective(previousSolution), previousSolution)
+        #jacobians = ad.sum(stackedFields*stackedAdjointFields).diff(stackedPreviousSolution)
+        #sensitivities = objective(previousSolution).diff(stackedPreviousSolution)
+        jacobians = derivative(ad.sum(stackedFields*stackedAdjointFields), previousSolution)
+        sensitivities = derivative(objective(previousSolution), previousSolution)
         print(jacobians.min(), jacobians.max())
         print(sensitivities.min(), sensitivities.max())
         stackedAdjointFields = jacobians + sensitivities
-        primal.clean()
+        primal.clearFields(currentSolution)
 
         end = time.time()
         print('Time for iteration: {0}'.format(end-start))

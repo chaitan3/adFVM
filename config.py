@@ -1,11 +1,11 @@
 from __future__ import print_function
 
 # switch between numpy and numpad
-#import numpad as ad
-#from numpad import adsparse
-import numpy as ad
-from scipy import sparse as adsparse
-ad.value = lambda x: x
+import numpad as ad
+from numpad import adsparse
+#import numpy as ad
+#from scipy import sparse as adsparse
+#ad.value = lambda x: x
 
 # custom norm for numpy 1.7
 import numpy as np
@@ -42,8 +42,8 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 \*---------------------------------------------------------------------------*/
 '''
 
-#fileFormat = 'binary'
-fileFormat = 'ascii'
+fileFormat = 'binary'
+#fileFormat = 'ascii'
 foamFile = {'version':'2.0', 'format': fileFormat, 'class': 'volScalarField', 'object': ''}
 
 # group patches

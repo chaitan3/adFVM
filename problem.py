@@ -11,8 +11,6 @@ from config import ad
 from field import CellField, Field
 import config
 
-nSteps = 20000
-writeInterval = 100
 
 #primal = RCF('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 #
@@ -53,12 +51,41 @@ writeInterval = 100
 #
 #
 #
-primal = RCF('tests/cylinder/', {'mu': lambda T:Field('mu', T.mesh, ad.ones(T.field.shape)*2.5e-5)})
+#primal = RCF('tests/cylinder/', {'mu': lambda T:Field('mu', T.mesh, ad.ones(T.field.shape)*2.5e-5)})
 
+#def objective(fields):
+#    rho, rhoU, rhoE = fields
+#    mesh = rhoE.mesh
+#    patchID = 'cylinder'
+#    patch = rhoE.BC[patchID]
+#    start, end = patch.startFace, patch.endFace
+#    areas = mesh.areas[start:end]
+#    nx = mesh.normals[start:end, 0]
+#    start, end = patch.cellStartFace, patch.cellEndFace
+#    p = rhoE.field[start:end]*(primal.gamma-1)
+#    deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
+#    T = rhoE/(rho*primal.Cv)
+#    mungUx = (rhoU.field[start:end, 0]/rho.field[start:end]-rhoU.field[patch.internalIndices, 0]/rho.field[patch.internalIndices])*primal.mu(T).field[start:end]/deltas
+#    return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
+#
+#def perturb(fields):
+##    rho, rhoU, rhoE = fields
+##    patch = 'left'
+##    bc = rhoU.BC
+##    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
+##    rhoU.field[start:end][:,0] += 0.1
+#    rho, rhoU, rhoE = fields
+#    mesh = rho.mesh
+#    mid = np.array([-0.0048, 0.0008, 0.])
+#    indices = range(0, mesh.nInternalCells)
+#    G = 1e-3*ad.array(np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
+#    rho.field[indices] += G
+
+primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.6)
 def objective(fields):
     rho, rhoU, rhoE = fields
     mesh = rhoE.mesh
-    patchID = 'cylinder'
+    patchID = 'pressure'
     patch = rhoE.BC[patchID]
     start, end = patch.startFace, patch.endFace
     areas = mesh.areas[start:end]
@@ -70,22 +97,10 @@ def objective(fields):
     mungUx = (rhoU.field[start:end, 0]/rho.field[start:end]-rhoU.field[patch.internalIndices, 0]/rho.field[patch.internalIndices])*primal.mu(T).field[start:end]/deltas
     return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
 
-def perturb(fields):
-#    rho, rhoU, rhoE = fields
-#    patch = 'left'
-#    bc = rhoU.BC
-#    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
-#    rhoU.field[start:end][:,0] += 0.1
-    rho, rhoU, rhoE = fields
-    mesh = rho.mesh
-    mid = np.array([-0.0048, 0.0008, 0.])
-    indices = range(0, mesh.nInternalCells)
-    G = 1e-3*ad.array(np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
-    rho.field[indices] += G
 
-
-
-startTime = 2.0
+nSteps = 2
+writeInterval = 1
+startTime = 1.0
 dt = 1
 
 if __name__ == "__main__":
@@ -168,9 +183,9 @@ if __name__ == "__main__":
     elif option == 'perturb':
         timeSteps, result = primal.run([startTime, dt], nSteps, objective=objective, perturb=perturb)
     elif option == 'adjoint':
-        adjointFields = [CellField.read('{0}a'.format(name), mesh, startTime) for name in primal.names]
+        adjointFields = [CellField.read('{0}a'.format(name), startTime) for name in primal.names]
         stackedAdjointFields = np.hstack([ad.value(phi.field) for phi in adjointFields])
-        fields = [CellField.zeros(name, mesh, dimension) for name, dimension in zip(primal.names, primal.dimensions)]
+        fields = [CellField.zeros(name, dimension) for name, dimension in zip(primal.names, primal.dimensions)]
         perturb(fields)
         stackedFields = np.hstack([ad.value(phi.field) for phi in fields])
         result = np.sum(stackedAdjointFields*stackedFields)
