@@ -18,6 +18,7 @@ class Field {
         void write(const double);
         void updateGhostCells();
         Field (const string, const Mesh&, const double);
+        Field (const Mesh&, const arr&);
 };
 
 #endif

@@ -29,6 +29,19 @@ Field::Field (const string name, const Mesh& mesh, const double time):
     this->boundary = getBoundary(this->pyField, "boundary");
 }
 
+Field::Field (const Mesh& mesh, const arr& phi):
+    mesh(mesh) {
+    if (phi.cols() == mesh.nInternalCells) {
+        this->field = arr::Zero(phi.rows(), mesh.nCells);
+        this->boundary = mesh.defaultBoundary;
+        SELECT(this->field, 0, mesh.nInternalCells) = phi;
+        this->updateGhostCells();
+    } else {
+        this->field = phi;
+    }
+}
+
+
 void Field::write(const double time) {
     putArray(this->pyField, "field", this->field);
     PyObject *pyWrite = PyObject_GetAttrString(this->pyField, "write");
@@ -68,12 +81,12 @@ void Field::updateGhostCells() {
 }
 
 Field::~Field () {
-    if (!Py_IsInitialized())
-        return;
-    Py_DECREF(this->pyField);
-    Py_DECREF(this->fieldClass);
-    Py_DECREF(this->fieldModule);
-    Py_Finalize();
+    //if (!Py_IsInitialized())
+    //    return;
+    //Py_DECREF(this->pyField);
+    //Py_DECREF(this->fieldClass);
+    //Py_DECREF(this->fieldModule);
+    //Py_Finalize();
 }
 
 

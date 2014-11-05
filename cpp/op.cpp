@@ -8,10 +8,12 @@ arr Operator::internal_sum(const arr& phi) {
 }
 
 arr Operator::grad(const arr& phi) {
-    // if phi is 1D
-    //arr gradF = ROWMUL(mesh.normals, phi);
-    // if phi is 3D
-    arr gradF = outerProduct(mesh.normals, phi); 
+    arr gradF;
+    if (phi.rows() == 1) {
+        gradF = ROWMUL(mesh.normals, phi);
+    } else {
+        gradF = outerProduct(mesh.normals, phi); 
+    }
     return internal_sum(gradF);
 }
 

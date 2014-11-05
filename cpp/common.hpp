@@ -33,11 +33,40 @@ inline arr outerProduct(const arr& X, const arr& Y) {
     return product;
 }
 
+inline arr transpose(const arr& X) {
+    arr res = X;
+    res.row(1) = X.row(3);
+    res.row(2) = X.row(6);
+    res.row(3) = X.row(1);
+    res.row(5) = X.row(7);
+    res.row(6) = X.row(2);
+    res.row(7) = X.row(5);
+    return res;
+}
+
+inline arr tdot(const arr& X, const arr& Y) {
+    int rows = X.rows()/Y.rows();
+    arr res = arr::Zero(rows, X.cols());
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < Y.rows(); j++) {
+            res.row(i) += X.row(i+j*Y.rows())*Y.row(j);
+        }
+    }
+    return res;
+}
+
+inline arr trace(const arr& phi) {
+    arr res(1, phi.cols());
+    res.row(0) = phi.row(0) + phi.row(4) + phi.row(8);
+    return res;
+}
+
+
 // switch to lambda functions?
 #define SELECT(X, i, n) ((X).block(0, (i), (X).rows(), (n)))
 #define ROWMUL(X, Y) ((X).rowwise() * (Y).row(0))
-#define ROWDIV(X, Y) ((X).rowwise() / (Y).row(0))
 #define DOT(X, Y) (((X) * (Y)).colwise().sum())
+#define ROWDIV(X, Y) ((X).rowwise() / (Y).row(0))
 
 #define SMALL 1e-30
 

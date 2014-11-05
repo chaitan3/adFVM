@@ -27,10 +27,9 @@ arr Interpolator::TVD(const arr& phi, const arr& gradPhi, const arr& U) {
             r = 2*DOT(gradC, R)/(gradF + SMALL) - 1;
         }
         else {
-            //TODO
-            r = 2*DOT(gradC, R)/(gradF + SMALL) - 1;
+            r = 2*DOT(tdot(transpose(gradC), R), gradF)/(DOT(gradF, gradF) + SMALL) - 1;
         }
-        SELECT(phiF, startFace, nFaces) = phiC + 0.5*psi(r, r.abs())*gradF;
+        SELECT(phiF, startFace, nFaces) = phiC + 0.5*ROWMUL(gradF, psi(r, r.abs()));
     };
 
     update(0, mesh.nInternalFaces);
