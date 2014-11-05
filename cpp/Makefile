@@ -1,20 +1,22 @@
 CC = g++
-TARGET = ./test.exe
 CFLAGS = -Wno-write-strings -O2 -g -std=c++11
 LFLAGS = 
 INCLUDE = -I/usr/include/eigen3/ -I/usr/include/python2.7/
 LIBS = -lpython2.7 #-larmadillo
 
-#OBJ = arma.o
-OBJ = interface.o test.o field.o interp.o op.o
+TARGET = rcf.exe
+SOLVER = cppRCF.o
+OBJ = interface.o field.o interp.o op.o $(SOLVER)
 
 ERRORS = errors.out
 
 all: $(TARGET)
-%.o: %.cpp
-	$(CC) $(CFLAGS) $(INCLUDE) -c $^
+
 $(TARGET): $(OBJ)
 	$(CC) $(LFLAGS) $(OBJ) -o $@ $(LIBS)
+
+%.o: %.cpp
+	$(CC) $(CFLAGS) $(INCLUDE) -c $^
 clean:
 	rm -f $(OBJ) $(TARGET)
 memtest:

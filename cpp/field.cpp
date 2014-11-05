@@ -55,14 +55,14 @@ void Field::updateGhostCells() {
             string neighbourPatchID = patchInfo.at("neighbourPatch");
             int neighbourStartFace = stoi(mesh.boundary.at(neighbourPatchID).at("startFace"));
             this->field.block(0, cellStartFace, size, nFaces) = slice(this->field, SELECT(mesh.owner, neighbourStartFace, nFaces));
-            cout << "cyclic" << endl;
+            //cout << "cyclic" << endl;
         }
-        else if (patchType == "zeroGradient") {
+        else if (patchType == "zeroGradient" || patchType == "empty" || patchType == "inletOutlet") {
             this->field.block(0, cellStartFace, size, nFaces) = slice(this->field, SELECT(mesh.owner, startFace, nFaces));
-            cout << "zeroGradient" << endl;
+            //cout << "zeroGradient" << endl;
         }
         else {
-            cout << "patch not found" << endl;
+            cout << "patch not found " << patchType << " " << patchID << endl;
         }
     }
 }

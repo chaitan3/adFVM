@@ -25,7 +25,7 @@ arr Operator::snGrad(const arr& phi) {
     return ROWMUL(phiN-phiP, mesh.deltas);
 }
 
-arr Operator::laplacian(const arr& phi) {
-    return internal_sum(snGrad(phi));
+arr Operator::laplacian(const arr& phi, const arr& DT) {
+    return internal_sum(DT * snGrad(phi));
 }
 

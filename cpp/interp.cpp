@@ -6,7 +6,7 @@ arr Interpolator::central(const arr& phi) {
     return ROWMUL(phiN, 1-mesh.weights) + ROWMUL(phiP, mesh.weights);
 }
 
-
+// maybe no lambda funcs?
 arr Interpolator::TVD(const arr& phi, const arr& gradPhi, const arr& U) {
     arr phiF(phi.rows(), mesh.nFaces);
 

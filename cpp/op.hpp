@@ -12,7 +12,7 @@ class Operator {
         arr div(const arr&);
         arr grad(const arr&);
         arr snGrad(const arr&);
-        arr laplacian(const arr&);
+        arr laplacian(const arr&, const arr&);
 };
 
  
