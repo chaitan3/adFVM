@@ -62,11 +62,17 @@ class RCF {
             arr rho, rhoU, rhoE;
             tie(rho, rhoU, rhoE) = this->conservative(U.field, T.field, p.field);
 
+            printf("\n");
             for (int i = 0; i < 10; i++) {
+                printf("Iteration count: %d\n", i);
+                auto start = chrono::system_clock::now();
+
+                printf("rho: min: %f max: %f\n", rho.minCoeff(), rho.maxCoeff());
+                printf("rhoU: min: %f max: %f\n", rhoU.minCoeff(), rhoU.maxCoeff());
+                printf("rhoE: min: %f max: %f\n", rhoE.minCoeff(), rhoE.maxCoeff());
                 arr gradRho = Field(mesh, operate.grad(interpolate.central(rho))).field;
                 arr gradRhoU = Field(mesh, operate.grad(interpolate.central(rhoU))).field;
                 arr gradRhoE = Field(mesh, operate.grad(interpolate.central(rhoE))).field;
-                // grad make it full
                 arr rhoLF = interpolate.TVD(rho, gradRho, pos);
                 arr rhoRF = interpolate.TVD(rho, gradRho, neg);
                 arr rhoULF = interpolate.TVD(rhoU, gradRhoU, pos);
@@ -101,7 +107,6 @@ class RCF {
                 arr kappa = this->kappa(mu, TF);
                 arr UF = 0.5*(ULF + URF);
                 arr gradUF = interpolate.central(Field(mesh, operate.grad(UF)).field);
-                // fix dot, trace
                 arr sigmaF = ROWMUL((operate.snGrad(U.field) + tdot(gradUF, mesh.normals) - (2./3)*ROWMUL(mesh.normals, trace(gradUF))), mu);
 
                 arr drho = operate.div(rhoFlux);
@@ -112,6 +117,7 @@ class RCF {
                 cRF = (UnRF - aF).abs()*0.5;
                 aF = (cLF > cRF).select(cLF, cRF);
                 dt = min(dt*stepFactor, this->CFL*(mesh.deltas/aF).maxCoeff());
+                printf("Time step: %f\n", dt);
                 
                 // integration
                 Ref<arr> rhoI = this->internalField(rho);
@@ -137,6 +143,10 @@ class RCF {
                 Ref<arr> TB = this->boundaryField(T.field);
                 Ref<arr> pB = this->boundaryField(p.field);
                 tie(rhoB, rhoUB, rhoEB) = this->conservative(UB, TB, pB);
+
+                auto end = chrono::system_clock::now();
+                double time = ((double)chrono::duration_cast<chrono::milliseconds>(end - start).count())/1000;
+                printf("Time for iteration: %f\n\n", time);
             }
         }
 };

@@ -63,18 +63,30 @@ void Field::updateGhostCells() {
         int startFace = stoi(patchInfo.at("startFace"));
         int nFaces = stoi(patchInfo.at("nFaces"));
         int cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
+        Ref<arr> patchFaces = SELECT(this->field, cellStartFace, nFaces);
+        const Ref<const iarr>& internalFaces = SELECT(mesh.owner, startFace, nFaces);
 
         if (patchType == "cyclic") {
             string neighbourPatchID = patchInfo.at("neighbourPatch");
             int neighbourStartFace = stoi(mesh.boundary.at(neighbourPatchID).at("startFace"));
-            this->field.block(0, cellStartFace, size, nFaces) = slice(this->field, SELECT(mesh.owner, neighbourStartFace, nFaces));
-            //cout << "cyclic" << endl;
-        }
-        else if (patchType == "zeroGradient" || patchType == "empty" || patchType == "inletOutlet") {
-            this->field.block(0, cellStartFace, size, nFaces) = slice(this->field, SELECT(mesh.owner, startFace, nFaces));
-            //cout << "zeroGradient" << endl;
-        }
-        else {
+            patchFaces = slice(this->field, SELECT(mesh.owner, neighbourStartFace, nFaces));
+        } else if (patchType == "zeroGradient" || patchType == "empty" || patchType == "inletOutlet") {
+            patchFaces = slice(this->field, internalFaces);
+        } else if (patchType == "symmetryPlane" || patchType == "slip") {
+            if (size == 3) {
+                const Ref<const arr>& v = SELECT(mesh.normals, startFace, nFaces);
+                patchFaces -= ROWMUL(v, DOT(v, patchFaces));
+            } else {
+                patchFaces = slice(this->field, internalFaces);
+            }
+        } else if (patchType == "fixedValue") {
+            if (size == 3) {
+                patchFaces = arr::Zero(3, nFaces);
+                patchFaces.row(0) = 3*VectorXd::Ones(nFaces);
+            } else {
+                patchFaces = arr::Ones(1, nFaces);
+            }
+        } else {
             cout << "patch not found " << patchType << " " << patchID << endl;
         }
     }

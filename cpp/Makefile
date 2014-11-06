@@ -1,5 +1,6 @@
 CC = g++
-CFLAGS = -Wno-write-strings -O2 -std=c++11
+
+CFLAGS = -std=c++11 -Wno-write-strings -ffast-math -O3 -msse2 
 LFLAGS = 
 INCLUDE = -I/usr/include/eigen3/ -I/usr/include/python2.7/
 LIBS = -lpython2.7 #-larmadillo

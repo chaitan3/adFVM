@@ -5,6 +5,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <iostream>
+#include <chrono>
 
 using namespace Eigen;
 using namespace std;
@@ -60,7 +61,6 @@ inline arr trace(const arr& phi) {
     res.row(0) = phi.row(0) + phi.row(4) + phi.row(8);
     return res;
 }
-
 
 // switch to lambda functions?
 #define SELECT(X, i, n) ((X).block(0, (i), (X).rows(), (n)))
