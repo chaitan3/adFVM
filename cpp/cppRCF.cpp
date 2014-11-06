@@ -10,7 +10,7 @@ class RCF {
     double gamma = 1.4;
     double Cv = Cp/gamma;
     double Pr = 0.7;
-    double CFL = 0.6;
+    double CFL = 0.2;
     double stepFactor = 1.2;
 
     Mesh mesh;
@@ -50,12 +50,14 @@ class RCF {
             mesh(caseDir) {
 
             Interpolator interpolate(mesh);
+
             Operator operate(mesh);
 
             Field U("U", mesh, 0.0);
             Field T("T", mesh, 0.0);
             Field p("p", mesh, 0.0);
             double dt = 1.0;
+            double t = 0.0;
 
             arr pos = arr::Ones(1, mesh.nFaces);
             arr neg = -pos;
@@ -63,7 +65,7 @@ class RCF {
             tie(rho, rhoU, rhoE) = this->conservative(U.field, T.field, p.field);
 
             printf("\n");
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 10001; i++) {
                 printf("Iteration count: %d\n", i);
                 auto start = chrono::system_clock::now();
 
@@ -111,13 +113,12 @@ class RCF {
 
                 arr drho = operate.div(rhoFlux);
                 arr drhoU = operate.div(rhoUFlux) + operate.grad(pF) - operate.div(sigmaF);
-                arr drhoE = operate.div(rhoEFlux) - operate.laplacian(T.field, kappa) + operate.div(DOT(sigmaF, UF)) ;
+                arr drhoE = operate.div(rhoEFlux) - (operate.laplacian(T.field, kappa) + operate.div(DOT(sigmaF, UF)));
 
                 cLF = (UnLF + aF).abs()*0.5;
                 cRF = (UnRF - aF).abs()*0.5;
                 aF = (cLF > cRF).select(cLF, cRF);
-                dt = min(dt*stepFactor, this->CFL*(mesh.deltas/aF).maxCoeff());
-                printf("Time step: %f\n", dt);
+                dt = min(dt*stepFactor, this->CFL*(mesh.deltas/aF).minCoeff());
                 
                 // integration
                 Ref<arr> rhoI = this->internalField(rho);
@@ -126,6 +127,8 @@ class RCF {
                 rhoI -= dt*drho;
                 rhoUI -= dt*drhoU;
                 rhoEI -= dt*drhoE;
+                t += dt;
+                printf("Simulation Time: %f Time step: %f\n", t, dt);
 
                 // boundary correction
                 Ref<arr> UI = this->internalField(U.field);
@@ -147,6 +150,12 @@ class RCF {
                 auto end = chrono::system_clock::now();
                 double time = ((double)chrono::duration_cast<chrono::milliseconds>(end - start).count())/1000;
                 printf("Time for iteration: %f\n\n", time);
+
+                if (i % 500 == 0) {
+                    U.write(t);
+                    T.write(t);
+                    p.write(t);
+                }
             }
         }
 };

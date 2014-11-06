@@ -120,6 +120,7 @@ class RCF(Solver):
 
         # source terms
         source = self.source(self)
+        #import pdb; pdb.set_trace()
         
         return [ddt(rho, self.dt) + div(rhoFlux) - source[0],
                 ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
@@ -144,5 +145,6 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = RCF(case, CFL=0.6)
+    #solver = RCF(case, CFL=0.6)
+    solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 0, timeIntegrator='euler')
     solver.run(startTime=time, nSteps=60000, writeInterval=1000)

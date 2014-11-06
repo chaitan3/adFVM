@@ -41,6 +41,7 @@ Mesh::Mesh (string caseDir) {
     getArray(this->mesh, "weights", this->weights);
 
     getSpArray(this->mesh, "sumOp", this->sumOp);
+    this->sumOpT = this->sumOp.transpose();
 
     this->boundary = getBoundary(this->mesh, "boundary");
     this->calculatedBoundary = getBoundary(this->mesh, "calculatedBoundary");
@@ -80,7 +81,7 @@ void getArray(PyObject *mesh, const string attr, DenseBase<Derived> & tmp) {
     npy_intp* dims = PyArray_DIMS(array);
     int rows = dims[1];
     int cols = dims[0];
-    // cout << attr << " " << rows << " " << cols << endl;
+    cout << attr << " " << rows << " " << cols << endl;
     if (nDims == 1) {
         rows = 1;
     }
@@ -119,17 +120,16 @@ void getSpArray(PyObject *mesh, const string attr, SparseMatrix<Derived> & tmp) 
     int cols = PyInt_AsLong(pyCols);
     //cout << attr << " " << rows << " " << cols << endl;
 
-    spmat result(rows, cols);
-    result.reserve(2*cols);
+    tmp = spmat(rows, cols);
+    tmp.reserve(2*cols);
     // fill
     for (int i = 0; i < rows; i++) {
-        for (int j = cindptr[i]; j < cindptr[i] + 1; j++) {
-            result.insert(i, cindices[j]) = cdata[j];
+        for (int j = cindptr[i]; j < cindptr[i+1] ; j++) {
+            tmp.insert(i, cindices[j]) = cdata[j];
         }
     }
     //
-    result.makeCompressed();
-    tmp = result;
+    //tmp.makeCompressed();
     //cout << rows << " " << cols << endl;
     Py_DECREF(shape);
     Py_DECREF(pyRows);

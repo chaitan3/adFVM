@@ -2,7 +2,7 @@
 
 arr Operator::internal_sum(const arr& phi) {
     return ROWDIV(
-            (ROWMUL(phi, mesh.areas).matrix() * mesh.sumOp.transpose()).array(),
+            (ROWMUL(phi, mesh.areas).matrix() * mesh.sumOpT).array(),
             mesh.volumes
             );
 }

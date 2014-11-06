@@ -28,6 +28,7 @@ inline arr outerProduct(const arr& X, const arr& Y) {
     arr product(X.rows()*Y.rows(), X.cols());
     for (int i = 0; i < X.cols(); i++) {
         MatrixXd A = X.col(i).matrix() * Y.col(i).matrix().transpose();
+        //MatrixXd A = Y.col(i).matrix() * X.col(i).matrix().transpose();
         VectorXd B(Map<VectorXd>(A.data(), A.cols()*A.rows()));
         product.col(i) = B;
     }

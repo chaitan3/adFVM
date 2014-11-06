@@ -207,7 +207,7 @@ class Mesh(object):
 
     def createGhostCells(self):
         logger.info('generated ghost cells')
-        self.neighbour = np.concatenate((self.neighbour, np.zeros(self.nBoundaryFaces, int)))
+        self.neighbour = np.concatenate((self.neighbour, np.zeros(self.nBoundaryFaces, np.int32)))
         self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3))))
         mpi_Requests = []
         mpi_Data = []

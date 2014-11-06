@@ -36,6 +36,7 @@ class Mesh {
         arr weights;
 
         spmat sumOp;
+        spmat sumOpT;
 
         Boundary boundary;
         Boundary defaultBoundary;

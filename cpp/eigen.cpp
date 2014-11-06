@@ -2,25 +2,26 @@
 #include <Eigen/Dense>
 
 using namespace Eigen;
-
-inline VectorXd slice(const VectorXd &a, const VectorXi &b) {
-    const int size = b.size();
-    VectorXd c(size);
-    for (int i = 0; i < size; i++) {
-        c(i) = a(b(i));
-    }
-    return c;
-}
+using namespace std;
 
 void dostuff()
 {
-    int Ni = 50, Nj = 20;
-    VectorXd x = VectorXd::LinSpaced(Ni+1, 20, -20);
-    VectorXd y = VectorXd::LinSpaced(Nj+1, 5, -5);
-    VectorXd a = VectorXd::Ones(Ni+1);
-    a = (x.array().abs() < 10).select(1-(1+x.array()/10*3.1416)*0.1, a);
-    MatrixXd X = x.replicate(Nj,1);
-    MatrixXd Y = y.replicate(1,Ni);
+    int Ni = 5, Nj = 3;
+    ArrayXXf X = MatrixXf::Random(Ni, Nj);
+    cout << X.rows() << endl;
+    cout << X.cols() << endl;
+    cout << X.colwise().sum().rows() << endl;
+    cout << X.colwise().sum().cols() << endl;
+
+    ArrayXXf Y(1, 3);
+    Y << 1, 2, 3;
+
+    cout << X << endl << endl << endl;
+    cout << X.row(0) << endl << endl;
+    cout << Y.row(0) << endl << endl;
+    cout << X.rowwise()*Y.row(0) << endl << endl;
+    cout << X.rowwise()/Y.row(0) << endl;
+
 }
         
 
