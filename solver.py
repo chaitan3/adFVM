@@ -59,12 +59,14 @@ class Solver(object):
                 result += objective(fields)
                 timeSteps.append([self.t, self.dt])
                 self.clearFields(fields)
-            elif mode == 'primal':
+            elif mode == 'forward':
                 self.clearFields(fields)
                 solutions.append(copy(fields))
             elif mode == 'adjoint':
                 assert nSteps == 1
                 solutions = fields
+            else:
+                raise Exception('mode not recognized', mode)
 
             self.t = round(self.t + self.dt, 9)
             timeIndex += 1

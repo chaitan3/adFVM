@@ -85,6 +85,7 @@ primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.6)
 def objective(fields):
     rho, rhoU, rhoE = fields
     solver = rhoE.solver
+    mesh = rhoE.mesh
     patchID = 'suction'
     patch = rhoE.BC[patchID]
     start, end = patch.startFace, patch.endFace
