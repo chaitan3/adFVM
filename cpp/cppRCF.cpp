@@ -14,6 +14,9 @@ class RCF {
     double stepFactor = 1.2;
 
     Mesh mesh;
+    Interpolator interpolate;
+    Operator operate;
+    Field U, T, p;
 
     // confirm that make_tuple doesn't create copies
     tuple<arr, arr, arr> primitive(const arr& rho, const arr& rhoU, const arr& rhoE) {
@@ -47,17 +50,11 @@ class RCF {
     
     public:
         RCF (string caseDir, double time):
-            mesh(caseDir) {
+            mesh(caseDir), 
+            U("U", mesh, time), T("T", mesh, time), p("p", mesh, time),
+            interpolate(mesh), operate(mesh) {};
 
-            Interpolator interpolate(mesh);
-
-            Operator operate(mesh);
-
-            Field U("U", mesh, 0.0);
-            Field T("T", mesh, 0.0);
-            Field p("p", mesh, 0.0);
-            double dt = 1.0;
-            double t = 0.0;
+        void run(double t, double dt) {
 
             arr pos = arr::Ones(1, mesh.nFaces);
             arr neg = -pos;
@@ -65,7 +62,7 @@ class RCF {
             tie(rho, rhoU, rhoE) = this->conservative(U.field, T.field, p.field);
 
             printf("\n");
-            for (int i = 0; i < 10001; i++) {
+            for (int i = 0; i < 10; i++) {
                 printf("Iteration count: %d\n", i);
                 auto start = chrono::system_clock::now();
 
@@ -81,9 +78,11 @@ class RCF {
                 arr rhoURF = interpolate.TVD(rhoU, gradRhoU, neg);
                 arr rhoELF = interpolate.TVD(rhoE, gradRhoE, pos);
                 arr rhoERF = interpolate.TVD(rhoE, gradRhoE, neg);
+                printf("%f\n", ((double)chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start).count())/1000);
                 arr ULF, URF, TLF, TRF, pLF, pRF;
                 tie(ULF, TLF, pLF) = this->primitive(rhoLF, rhoULF, rhoELF);
                 tie(URF, TRF, pRF) = this->primitive(rhoRF, rhoURF, rhoERF);
+                printf("%f\n", ((double)chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start).count())/1000);
 
                 //cRF not used?
                 arr cLF = sqrt(this->gamma*pLF/rhoLF);
@@ -96,12 +95,14 @@ class RCF {
                 cF.row(2) = (UnLF - cLF).row(0);
                 cF.row(3) = (UnRF - cLF).row(0);
                 arr aF = cF.abs().colwise().maxCoeff();
+                printf("%f\n", ((double)chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start).count())/1000);
 
                 arr rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF);
                 //self.flux = 2*rhoFlux/(rhoLF + rhoRF)
                 arr rhoUFlux = 0.5*(ROWMUL(rhoULF, UnLF) + ROWMUL(rhoURF, UnRF)) - 0.5*ROWMUL((rhoURF-rhoULF), aF);
                 arr rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoERF-rhoELF);
                 arr pF = 0.5*(pLF + pRF);
+                printf("%f\n", ((double)chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start).count())/1000);
                 
                 //optim?
                 arr TF = 0.5*(TLF + TRF);
@@ -110,6 +111,7 @@ class RCF {
                 arr UF = 0.5*(ULF + URF);
                 arr gradUF = interpolate.central(Field(mesh, operate.grad(UF)).field);
                 arr sigmaF = ROWMUL((operate.snGrad(U.field) + tdot(gradUF, mesh.normals) - (2./3)*ROWMUL(mesh.normals, trace(gradUF))), mu);
+                printf("%f\n", ((double)chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start).count())/1000);
 
                 arr drho = operate.div(rhoFlux);
                 arr drhoU = operate.div(rhoUFlux) + operate.grad(pF) - operate.div(sigmaF);
@@ -146,12 +148,13 @@ class RCF {
                 Ref<arr> TB = this->boundaryField(T.field);
                 Ref<arr> pB = this->boundaryField(p.field);
                 tie(rhoB, rhoUB, rhoEB) = this->conservative(UB, TB, pB);
+                printf("%f\n", ((double)chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start).count())/1000);
 
                 auto end = chrono::system_clock::now();
                 double time = ((double)chrono::duration_cast<chrono::milliseconds>(end - start).count())/1000;
                 printf("Time for iteration: %f\n\n", time);
 
-                if (i % 500 == 0) {
+                if (i % 500 == 5122) {
                     U.write(t);
                     T.write(t);
                     p.write(t);
@@ -164,6 +167,10 @@ int main(int argc, char **argv) {
     // template arr to be scalar/vector? 
     // or maybe use tensor functionality in eigen
 
-    RCF("../tests/forwardStep", 0.0);
+    RCF rcf("../tests/forwardStep", 0.0);
+    CALLGRIND_START_INSTRUMENTATION;
+    rcf.run(0.0, 1.0);
+    CALLGRIND_STOP_INSTRUMENTATION;
+    CALLGRIND_DUMP_STATS;
     return 0;
 }
