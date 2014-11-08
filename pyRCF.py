@@ -10,6 +10,7 @@ from solver import forget
 from interp import interpolate, TVD_dual
 
 from config import ad, Logger
+import config
 from parallel import pprint
 logger = Logger(__name__)
 import config, parallel
@@ -74,7 +75,7 @@ class RCF(Solver):
            
     def setDt(self, aFbyD):
         logger.info('computing new time step')
-        self.dt = min(self.dt*self.stepFactor, self.CFL/parallel.max(aFbyD))
+        self.dtc = config.smin(self.dt*self.stepFactor, self.CFL/parallel.max(aFbyD))
         super(RCF, self).setDt()
 
     def equation(self, rho, rhoU, rhoE):
@@ -123,19 +124,19 @@ class RCF(Solver):
         source = self.source(self)
         #import pdb; pdb.set_trace()
         
-        return [ddt(rho, self.dt) + div(rhoFlux) - source[0],
-                ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
-                ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(T, kappa) + div(sigmaF.dot(UF))) - source[2]]
+        return [ddt(rho, self.dtc) + div(rhoFlux) - source[0],
+                ddt(rhoU, self.dtc) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
+                ddt(rhoE, self.dtc) + div(rhoEFlux) - (laplacian(T, kappa) + div(sigmaF.dot(UF))) - source[2]]
 
     def boundary(self, rhoI, rhoUI, rhoEI):
         logger.info('correcting boundary')
-        rhoN = Field(self.names[0], rhoI)
-        rhoUN = Field(self.names[1], rhoUI)
-        rhoEN = Field(self.names[2], rhoEI)
+        rhoN = Field(self.names[0], rhoI, self.dimensions[0])
+        rhoUN = Field(self.names[1], rhoUI, self.dimensions[1])
+        rhoEN = Field(self.names[2], rhoEI, self.dimensions[2])
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
-        U = CellField('U', UN, self.U.boundary)
-        T = CellField('U', TN, self.T.boundary)
-        p = CellField('U', pN, self.p.boundary)
+        U = CellField('U', UN, self.U.dimensions, self.U.boundary)
+        T = CellField('U', TN, self.T.dimensions, self.T.boundary)
+        p = CellField('U', pN, self.p.dimensions, self.p.boundary)
         return self.conservative(U, T, p)
     
 if __name__ == "__main__":

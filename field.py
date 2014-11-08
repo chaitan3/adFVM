@@ -23,17 +23,16 @@ class Field(object):
     def setMesh(mesh):
         Field.mesh = mesh
 
-    def __init__(self, name, field):
+    def __init__(self, name, field, dimensions):
         self.name = name
         self.field = field
-        self.size = field.shape[0]
-        self.dimensions = field.shape[1:]
+        self.dimensions = dimensions
 
     @classmethod
     def max(self, a, b):
         a_gt_b = ad.value(a.field) > ad.value(b.field)
         b_gt_a = 1 - a_gt_b
-        return self('max({0},{1})'.format(a.name, b.name), a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a))
+        return self('max({0},{1})'.format(a.name, b.name), a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a), a.dimensions)
 
     def info(self):
         pprint(self.name + ':', end='')
@@ -46,67 +45,70 @@ class Field(object):
     # creates a view
     def component(self, component): 
         assert self.dimensions == (3,)
-        return self.__class__('{0}.{1}'.format(self.name, component), self.field[:, component].reshape((-1,1)))
+        return self.__class__('{0}.{1}'.format(self.name, component), self.field[:, component].reshape((-1,1)), (1,))
 
     def magSqr(self):
         assert self.dimensions == (3,)
-        return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field**2, axis=1).reshape((-1,1)))
+        return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field**2, axis=1).reshape((-1,1)), (1,))
 
     def mag(self):
         return self.magSqr()**0.5
 
     def abs(self):
-        return self.__class__('abs({0})'.format(self.name), self.field * ad.array(2*((ad.value(self.field) > 0) - 0.5)))
+        return self.__class__('abs({0})'.format(self.name), self.field * ad.array(2*((ad.value(self.field) > 0) - 0.5)), self.dimensions)
 
     def dot(self, phi):
         assert self.dimensions[0] == 3
         # if tensor
         if len(self.dimensions) > 1:
-            phi = self.__class__(phi.name, phi.field[:,np.newaxis,:])
+            phi = self.__class__(phi.name, phi.field[:,np.newaxis,:], (1,3))
+            dimensions = (3,)
+        else:
+            dimensions = (1,)
         product = ad.sum(self.field * phi.field, axis=-1)
         # if summed over vector
-        if len(product.shape) == 1:
+        if len(self.dimensions) == 1:
             product = product.reshape((-1,1))
-        return self.__class__('dot({0},{1})'.format(self.name, phi.name), product)
+        return self.__class__('dot({0},{1})'.format(self.name, phi.name), product, dimensions)
 
     def dotN(self):
         return self.dot(self.mesh.Normals)
 
     def outer(self, phi):
-        return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:])
+        return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:], (3,3))
     
     # creates a view
     def transpose(self):
         assert len(self.dimensions) == 2
-        return self.__class__('{0}.T'.format(self.name), self.field.transpose((0,2,1)))
+        return self.__class__('{0}.T'.format(self.name), self.field.transpose((0,2,1)), self.dimensions)
 
     def trace(self):
         assert len(self.dimensions) == 2
         phi = self.field
-        return self.__class__('tr({0})'.format(self.name), (phi[:,0,0] + phi[:,1,1] + phi[:,2,2]).reshape((-1,1)))
+        return self.__class__('tr({0})'.format(self.name), (phi[:,0,0] + phi[:,1,1] + phi[:,2,2]).reshape((-1,1)), (1,))
 
     def __neg__(self):
-        return self.__class__('-{0}'.format(self.name), -self.field)
+        return self.__class__('-{0}'.format(self.name), -self.field, self.dimensions)
 
     def __mul__(self, phi):
         if isinstance(phi, Number):
-            return self.__class__('{0}*{1}'.format(self.name, phi), self.field * phi)
+            return self.__class__('{0}*{1}'.format(self.name, phi), self.field * phi, self.dimensions)
         else:
             product = self.field * phi.field
-            return self.__class__('{0}*{1}'.format(self.name, phi.name), self.field * phi.field)
+            return self.__class__('{0}*{1}'.format(self.name, phi.name), self.field * phi.field, self.dimensions)
 
 
     def __rmul__(self, phi):
         return self * phi
 
     def __pow__(self, power):
-        return self.__class__('{0}**{1}'.format(self.name, power), self.field.__pow__(power))
+        return self.__class__('{0}**{1}'.format(self.name, power), self.field.__pow__(power), self.dimensions)
 
     def __add__(self, phi):
         if isinstance(phi, Number):
-            return self.__class__('{0}+{1}'.format(self.name, phi), self.field + phi)
+            return self.__class__('{0}+{1}'.format(self.name, phi), self.field + phi, self.dimensions)
         else:
-            return self.__class__('{0}+{1}'.format(self.name, phi.name), self.field + phi.field)
+            return self.__class__('{0}+{1}'.format(self.name, phi.name), self.field + phi.field, self.dimensions)
 
     def __radd__(self, phi):
         return self.__add__(phi)
@@ -115,12 +117,12 @@ class Field(object):
         return self.__add__(-phi)
 
     def __div__(self, phi):
-        return self.__class__('{0}/{1}'.format(self.name, phi.name), self.field / phi.field)
+        return self.__class__('{0}/{1}'.format(self.name, phi.name), self.field / phi.field, self.dimensions)
 
 class CellField(Field):
-    def __init__(self, name, field, boundary={}, internal=True):
+    def __init__(self, name, field, dimensions, boundary={}, internal=True):
         logger.debug('initializing CellField {0}'.format(name))
-        super(self.__class__, self).__init__(name, field)
+        super(self.__class__, self).__init__(name, field, dimensions)
         mesh = self.mesh
 
         if len(list(boundary.keys())) == 0:
@@ -129,7 +131,7 @@ class CellField(Field):
             self.boundary = boundary
 
         if internal:
-            self.field = ad.alloc(np.float64(0.), *(mesh.nCells, 3))
+            self.field = ad.alloc(np.float64(0.), *(mesh.nCells, dimensions[0]))
 
         self.BC = {}
         for patchID in self.boundary:
@@ -139,7 +141,6 @@ class CellField(Field):
             self.BC[patchID] = getattr(BCs, self.boundary[patchID]['type'])(self, patchID)
 
         if internal:
-            self.setInternalField(field)
             self.size = self.field.shape[0]
 
     @classmethod
@@ -150,7 +151,7 @@ class CellField(Field):
     @classmethod
     def copy(self, phi):
         logger.info('copying field {0}'.format(phi.name))
-        return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.boundary.copy(), internal=False)
+        return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.dimensions, phi.boundary.copy(), internal=False)
 
     def setInternalField(self, internalField):
         ad.set_subtensor(self.field[:self.mesh.nInternalCells], internalField)
@@ -170,20 +171,18 @@ class CellField(Field):
         exchanger.wait()
 
 class IOField(Field):
-    def __init__(self, name, field, boundary={}):
-        super(self.__class__, self).__init__(name, field)
+    def __init__(self, name, field, dimensions, boundary={}):
+        super(self.__class__, self).__init__(name, field, dimensions)
         logger.debug('initializing IOField {0}'.format(name))
-        self.name = name
-        self.field = field
         self.boundary = boundary
 
         if not hasattr(self.mesh, 'Normals'):
-            self.mesh.Normals = Field('nF', self.mesh.normals)
+            self.mesh.Normals = Field('nF', self.mesh.normals, (3,))
 
     def complete(self):
         logger.debug('completing field {0}'.format(self.name))
         X = ad.dmatrix()
-        phi = CellField(self.name, X, self.boundary)
+        phi = CellField(self.name, X, self.dimensions, self.boundary)
         Y = phi.field
         func = T.function([X], Y, on_unused_input='warn')
         self.field = func(self.field)
@@ -231,8 +230,12 @@ class IOField(Field):
                     match = re.search(re.compile('[ ]+(.*?);', re.DOTALL), content[start:])
                     start += match.end() 
                     boundary[patchID][key] = match.group(1)
+        if vector:
+            dimensions = (3,)
+        else:
+            dimensions = (1,)
 
-        return self(name, internalField, boundary)
+        return self(name, internalField, dimensions, boundary)
 
     def write(self, time):
         name = self.name

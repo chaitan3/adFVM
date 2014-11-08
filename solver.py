@@ -26,7 +26,7 @@ class Solver(object):
         Field.setSolver(self)
 
     def setDt(self):
-        self.dt = min(self.dt, self.endTime-self.t)
+        self.dtc = config.smin(self.dtc, self.endTime-self.t)
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, 
             mode='simulation', initialFields=None, objective=lambda x: 0, perturb=None):
@@ -47,40 +47,45 @@ class Solver(object):
             result = objective(fields)
         else:
             solutions = [copy(fields)]
-        self.t = startTime
-        self.dt = dt
+        self.t = T.shared(startTime)
+        t = startTime
+        self.dt = T.shared(dt)
         self.endTime = endTime
         timeIndex = 0
 
         stackedFields = np.hstack(fields)
 
-        unstack = lambda X: [Field('rho', X[:, 0]), Field('rhoU', X[:,1:3]), Field('rhoE', X[:, 3])]
+        unstack = lambda X: [CellField('rho', X[:, 0], (1,)), CellField('rhoU', X[:,1:3], (3,)), CellField('rhoE', X[:, 3], (1,))]
         X = ad.dmatrix()
-        fields = unstack(X)
-        fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
-        Y = ad.stack(fields)
-        func = T.function([X], Y)
+        phis = unstack(X)
+        phis = self.timeIntegrator(self.equation, self.boundary, phis, self)
+        Y = ad.concatenate([phi.field for phi in phis], axis=1)
+        func = T.function([X], [Y, self.dtc], on_unused_input='warn')
 
-        while self.t < endTime and timeIndex < nSteps:
+        while t < endTime and timeIndex < nSteps:
             start = time.time()
 
             pprint('Time marching for', ' '.join(self.names))
             for index in range(0, len(fields)):
-                fields[index].old = fields[index]
                 fields[index].info()
      
             pprint('Time step', timeIndex)
-            stackedFields = func(stackedFields)
+            print(stackedFields.shape)
+            stackedFields, dtc = func(stackedFields)
+            print(stackedFields.shape)
+            print(stackedFields, dtc)
             fields = unstack(stackedFields)
 
             for index in range(0, len(fields)):
                 newFields[index].name = fields[index].name
             end = time.time()
             pprint('Time for iteration:', end-start)
-
+            
+            self.dt.set_value(dtc)
+            dt, t = self.dt.get_value(), self.t.get_value()
             if mode == 'simulation':
                 result += objective(fields)
-                timeSteps.append([self.t, self.dt])
+                timeSteps.append([t, dt])
             elif mode == 'forward':
                 self.clearFields(fields)
                 solutions.append(copy(fields))
@@ -90,9 +95,10 @@ class Solver(object):
             else:
                 raise Exception('mode not recognized', mode)
 
-            self.t = round(self.t + self.dt, 9)
+            self.t.set_value(round(t + dt, 9))
+            t = self.get_value()
             timeIndex += 1
-            pprint('Simulation Time:', self.t, 'Time step:', self.dt)
+            pprint('Simulation Time:', t, 'Time step:', dt)
             if timeIndex % writeInterval == 0:
                 self.writeFields(fields)
             pprint()
@@ -105,7 +111,7 @@ class Solver(object):
 
 def euler(equation, boundary, fields, solver):
     LHS = equation(*fields)
-    internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields))]
+    internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dtc) for index in range(0, len(fields))]
     newFields = boundary(*internalFields)
     return newFields
 

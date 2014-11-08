@@ -1,6 +1,7 @@
 from __future__ import print_function
 from mpi4py import MPI
 import numpy as np
+from config import ad
 
 mpi = MPI.COMM_WORLD
 nProcessors = mpi.Get_size()
@@ -14,13 +15,13 @@ def pprint(*args, **kwargs):
         print(*args, **kwargs)
 
 def max(data):
-    maxData = np.max(data)
+    maxData = ad.max(data)
     if nProcessors > 1:
         return mpi.allreduce(maxData, op=MPI.MAX)
     else:
         return maxData
 def min(data):
-    minData = np.min(data)
+    minData = ad.min(data)
     if nProcessors > 1:
         return mpi.allreduce(minData, op=MPI.MIN)
     else:
