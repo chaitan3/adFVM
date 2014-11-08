@@ -59,7 +59,10 @@ class RCF(Solver):
         self.p = IOField.read('p', self.mesh, t)
         self.T = IOField.read('T', self.mesh, t)
         self.U = IOField.read('U', self.mesh, t)
-
+        b = self.p.field + self.p.field
+        self.p.complete()
+        self.T.complete()
+        self.U.complete()
         return self.conservative(self.U, self.T, self.p)
     
     def writeFields(self, fields):

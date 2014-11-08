@@ -5,8 +5,7 @@ from os.path import exists
 from numbers import Number
 import re
 
-
-from config import ad, Logger
+from config import ad, Logger, T
 from parallel import pprint, Exchanger
 logger = Logger(__name__)
 import config, parallel
@@ -176,9 +175,17 @@ class CellField(Field):
 
 class IOField(Field):
     def __init__(self, name, field, boundary={}):
+        super(self.__class__, self).__init__(name, field)
         self.name = name
         self.field = field
         self.boundary = boundary
+
+    def complete(self):
+        X = ad.dmatrix()
+        phi = CellField(self.name, X, self.boundary)
+        Y = phi.field
+        func = T.function([X], Y)
+        self.field = func(self.field)
 
     @classmethod
     def read(self, name, mesh, time):

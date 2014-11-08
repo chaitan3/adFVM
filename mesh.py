@@ -295,15 +295,15 @@ def extractField(data, size, vector):
         start = data.find('(') + 1
         end = data.rfind(')')
         if config.fileFormat == 'binary':
-            internalField = ad.array(np.fromstring(data[start:end], dtype=float))
+            internalField = np.array(np.fromstring(data[start:end], dtype=float))
             if vector:
                 internalField = internalField.reshape((len(internalField)/3, 3))
         else:
-            internalField = ad.array(np.array(extractor(data[start:end]), dtype=float))
+            internalField = np.array(np.array(extractor(data[start:end]), dtype=float))
         if not vector:
             internalField = internalField.reshape((-1, 1))
     else:
-        internalField = ad.array(np.tile(np.array(extractor(data)), (size, 1)))
+        internalField = np.array(np.tile(np.array(extractor(data)), (size, 1)), dtype=float)
     return internalField
 
 def writeField(handle, field, dtype, initial):

@@ -1,11 +1,11 @@
 from __future__ import print_function
+import numpy as np
 
 import theano.tensor as ad
 import theano.sparse as adsparse
 import theano as T
 ad.array = lambda x: x
 # custom norm for numpy 1.7
-import numpy as np
 def norm(a, axis):
     try:
         return np.linalg.norm(a, axis=axis)
