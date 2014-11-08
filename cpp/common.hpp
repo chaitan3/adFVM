@@ -54,9 +54,11 @@ inline arr transpose(const arr& X) {
 inline arr tdot(const arr& X, const arr& Y) {
     int rows = X.rows()/Y.rows();
     arr res = arr::Zero(rows, X.cols());
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < Y.rows(); j++) {
-            res.row(i) += X.row(i+j*Y.rows())*Y.row(j);
+    for (int k = 0; k < X.cols();  k++) {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < Y.rows(); j++) {
+                res(i, k) += X(i+j*Y.rows(), k)*Y(j, k);
+            }
         }
     }
     return res;

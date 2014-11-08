@@ -22,13 +22,13 @@ class RCF {
     tuple<arr, arr, arr> primitive(const arr& rho, const arr& rhoU, const arr& rhoE) {
         arr U = ROWDIV(rhoU, rho);
         arr e = rhoE/rho - 0.5*DOT(U, U);
-        return make_tuple(U, e/this->Cv, (this->gamma-1)*rho*e);
+        return make_tuple(move(U), move(e/this->Cv), move((this->gamma-1)*rho*e));
     }
     
     tuple<arr, arr, arr> conservative(const arr& U, const arr& T, const arr& p) {
         arr e = this->Cv * T;
         arr rho = p/(e*(this->gamma - 1));
-        return make_tuple(rho, ROWMUL(U, rho), rho*(e + 0.5*DOT(U, U)));
+        return make_tuple(move(rho), move(ROWMUL(U, rho)), move(rho*(e + 0.5*DOT(U, U))));
     }
 
     inline Ref<arr> internalField(arr& phi) {
