@@ -125,7 +125,7 @@ class CellField(Field):
         mesh = self.mesh
 
         if not hasattr(mesh, 'Normals'):
-            mesh.Normals = Field('nF', ad.array(mesh.normals))
+            mesh.Normals = Field('nF', mesh.normals)
 
         if len(list(boundary.keys())) == 0:
             self.boundary = mesh.defaultBoundary
@@ -133,7 +133,7 @@ class CellField(Field):
             self.boundary = boundary
 
         if self.size == mesh.nInternalCells:
-            self.field = ad.zeros((mesh.nCells,) + self.dimensions)
+            self.field = np.zeros((mesh.nCells,) + self.dimensions)
 
         self.BC = {}
         for patchID in self.boundary:
@@ -146,7 +146,6 @@ class CellField(Field):
             self.setInternalField(field)
             self.size = self.field.shape[0]
 
-
     @classmethod
     def zeros(self, name, dimensions):
         logger.info('initializing zeros field {0}'.format(name))
@@ -157,9 +156,32 @@ class CellField(Field):
         logger.info('copying field {0}'.format(phi.name))
         return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.boundary.copy())
 
+    def setInternalField(self, internalField):
+        #TODO
+        #self.field[:self.mesh.nInternalCells] = internalField
+        self.updateGhostCells()
+
+    def getInternalField(self):
+        return self.field[:self.mesh.nInternalCells]
+
+    def updateGhostCells(self):
+        logger.info('updating ghost cells for {0}'.format(self.name))
+        exchanger = Exchanger()
+        for patchID in self.BC:
+            if self.boundary[patchID]['type'] in config.processorPatches:
+                self.BC[patchID].update(exchanger)
+            else:
+                self.BC[patchID].update()
+        exchanger.wait()
+
+class IOField(Field):
+    def __init__(self, name, field, boundary={}):
+        self.name = name
+        self.field = field
+        self.boundary = boundary
+
     @classmethod
-    def read(self, name, time):
-        mesh = self.mesh
+    def read(self, name, mesh, time):
         if time.is_integer():
             time = int(time)
         pprint('reading field {0}, time {1}'.format(name, time))
@@ -205,20 +227,24 @@ class CellField(Field):
         return self(name, internalField, boundary)
 
     def write(self, time):
+        name = self.name
+        field = self.field
+        boundary = self.boundary
+        mesh = self.mesh
         if time.is_integer():
             time = int(time)
-        assert len(self.dimensions) == 1
+        assert len(field.shape) == 2
         np.set_printoptions(precision=16)
-        pprint('writing field {0}, time {1}'.format(self.name, time))
-        timeDir = '{0}/{1}/'.format(self.mesh.case, time)
+        pprint('writing field {0}, time {1}'.format(name, time))
+        timeDir = '{0}/{1}/'.format(mesh.case, time)
         if not exists(timeDir):
             makedirs(timeDir)
-        handle = open(timeDir + self.name, 'w')
+        handle = open(timeDir + name, 'w')
         handle.write(config.foamHeader)
         handle.write('FoamFile\n{\n')
         foamFile = config.foamFile.copy()
-        foamFile['object'] = self.name
-        if self.dimensions[0] == 3:
+        foamFile['object'] = name
+        if field.shape[1] == 3:
             dtype = 'vector'
             foamFile['class'] = 'volVectorField'
         else:
@@ -229,34 +255,23 @@ class CellField(Field):
         handle.write('}\n')
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
         handle.write('dimensions      [0 1 -1 0 0 0 0];\n')
-        writeField(handle, ad.value(self.getInternalField()), dtype, 'internalField')
+        writeField(handle, field[:mesh.nInternalCells], dtype, 'internalField')
         handle.write('boundaryField\n{\n')
-        for patchID in self.boundary:
+        for patchID in boundary:
             handle.write('\t' + patchID + '\n\t{\n')
-            patch = self.boundary[patchID]
+            patch = boundary[patchID]
             for attr in patch:
                 handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
             if patch['type'] in config.valuePatches:
-                writeField(handle, self.BC[patchID].getValue(), dtype, 'value')
+                startFace = mesh.boundary[patchID]['startFace']
+                nFaces = mesh.boundary[patchID]['nFaces']
+                endFace = startFace + nFaces
+                cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
+                cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+                writeField(handle, field[cellStartFace:cellEndFace], dtype, 'value')
             handle.write('\t}\n')
         handle.write('}\n')
         handle.close()
 
-    def setInternalField(self, internalField):
-        self.field[:self.mesh.nInternalCells] = internalField
-        self.updateGhostCells()
-
-    def getInternalField(self):
-        return self.field[:self.mesh.nInternalCells]
-
-    def updateGhostCells(self):
-        logger.info('updating ghost cells for {0}'.format(self.name))
-        exchanger = Exchanger()
-        for patchID in self.BC:
-            if self.boundary[patchID]['type'] in config.processorPatches:
-                self.BC[patchID].update(exchanger)
-            else:
-                self.BC[patchID].update()
-        exchanger.wait()
 
 

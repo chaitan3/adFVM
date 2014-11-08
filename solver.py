@@ -3,7 +3,7 @@ import numpy as np
 from field import Field, CellField
 from mesh import Mesh
 
-from config import ad, Logger
+from config import ad, Logger, T
 import config
 from parallel import pprint
 logger = Logger(__name__)
@@ -52,13 +52,35 @@ class Solver(object):
         self.endTime = endTime
         timeIndex = 0
 
+        stackedFields = np.hstack(fields)
+
+        unstack = lambda X: [X[:, 0], X[:,1:3], X[:, 3]]
+        X = ad.dmatrix()
+        fields = unstack(X)
+        fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
+        Y = ad.stack(fields)
+        func = T.function([X], Y)
+
         while self.t < endTime and timeIndex < nSteps:
+            start = time.time()
+
+            pprint('Time marching for', ' '.join(self.names))
+            for index in range(0, len(fields)):
+                fields[index].old = fields[index]
+                fields[index].info()
+     
             pprint('Time step', timeIndex)
-            fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
+            stackedFields = func(stackedFields)
+            fields = unstack(stackedFields)
+
+            for index in range(0, len(fields)):
+                newFields[index].name = fields[index].name
+            end = time.time()
+            pprint('Time for iteration:', end-start)
+
             if mode == 'simulation':
                 result += objective(fields)
                 timeSteps.append([self.t, self.dt])
-                self.clearFields(fields)
             elif mode == 'forward':
                 self.clearFields(fields)
                 solutions.append(copy(fields))
@@ -74,6 +96,7 @@ class Solver(object):
             if timeIndex % writeInterval == 0:
                 self.writeFields(fields)
             pprint()
+
         if mode == 'simulation':
             self.writeFields(fields)
             return timeSteps, result
@@ -81,21 +104,9 @@ class Solver(object):
             return solutions
 
 def euler(equation, boundary, fields, solver):
-    start = time.time()
-
-    names = [phi.name for phi in fields]
-    pprint('Time marching for', ' '.join(names))
-    for index in range(0, len(fields)):
-        fields[index].old = fields[index]
-        fields[index].info()
     LHS = equation(*fields)
     internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields))]
     newFields = boundary(*internalFields)
-    for index in range(0, len(fields)):
-        newFields[index].name = fields[index].name
-
-    end = time.time()
-    pprint('Time for iteration:', end-start)
     return newFields
 
 def RK(equation, boundary, fields, solver):

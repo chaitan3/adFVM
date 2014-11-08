@@ -165,7 +165,7 @@ class Mesh(object):
                 endFace = startFace + patch['nFaces']
                 owner.data[startFace:endFace] = 0
         sumOp = (owner + neighbour).tocsr()
-        return adsparse.csr_matrix((ad.array(sumOp.data), sumOp.indices, sumOp.indptr), sumOp.shape)
+        return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
 
     def getAbsSumOp(self):
         logger.info('generated abs sum op')
@@ -173,7 +173,7 @@ class Mesh(object):
         Nindptr = np.concatenate((range(0, self.nInternalFaces+1), self.nInternalFaces*np.ones(self.nFaces-self.nInternalFaces, int)))
         neighbour = sp.csc_matrix((np.ones(self.nInternalFaces), self.neighbour[:self.nInternalFaces], Nindptr), shape=(self.nInternalCells, self.nFaces))
         sumOp = (owner + neighbour).tocsr()
-        return adsparse.csr_matrix((ad.array(sumOp.data), sumOp.indices, sumOp.indptr), sumOp.shape)
+        return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
 
     def getDefaultBoundary(self):
         logger.info('generated default boundary')

@@ -3,7 +3,7 @@ import numpy as np
 import sys
 import time
 
-from field import Field, CellField
+from field import Field, CellField, IOField
 from op import  div, snGrad, grad, ddt, laplacian
 from solver import Solver
 from solver import forget
@@ -56,14 +56,12 @@ class RCF(Solver):
         return rho, rhoU, rhoE
 
     def initFields(self, t):
-        self.p = CellField.read('p', t)
-        self.T = CellField.read('T', t)
-        self.U = CellField.read('U', t)
+        self.p = IOField.read('p', self.mesh, t)
+        self.T = IOField.read('T', self.mesh, t)
+        self.U = IOField.read('U', self.mesh, t)
+
         return self.conservative(self.U, self.T, self.p)
     
-    def clearFields(self, fields):
-        forget([self.U, self.T, self.p])
-
     def writeFields(self, fields):
         for phi in fields:
             phi.write(self.t)
@@ -132,10 +130,10 @@ class RCF(Solver):
         rhoUN = Field(self.names[1], rhoUI)
         rhoEN = Field(self.names[2], rhoEI)
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
-        self.U.setInternalField(UN.field)
-        self.T.setInternalField(TN.field)
-        self.p.setInternalField(pN.field)
-        return self.conservative(self.U, self.T, self.p)
+        U = CellField('U', UN, self.U.boundary)
+        T = CellField('U', TN, self.T.boundary)
+        p = CellField('U', pN, self.p.boundary)
+        return self.conservative(U, T, p)
     
 if __name__ == "__main__":
     if len(sys.argv) > 2:

@@ -25,10 +25,11 @@ class BoundaryCondition(object):
 class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        if 'value' in self.patch:
-            self.field[self.cellStartFace:self.cellEndFace] = extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,))
-        else:
-            self.field[self.cellStartFace:self.cellEndFace] = 0.
+        #TODO
+        #if 'value' in self.patch:
+        #    self.field[self.cellStartFace:self.cellEndFace] = extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,))
+        #else:
+        #    self.field[self.cellStartFace:self.cellEndFace] = 0.
         self.patch.pop('value', None)
 
     def update(self):
@@ -45,7 +46,8 @@ class cyclic(BoundaryCondition):
     def update(self):
         logger.debug('cyclic BC for {0}'.format(self.patchID))
         #self.value[:] = self.field[self.neighbourIndices]
-        self.field[self.cellStartFace:self.cellEndFace] = self.field[self.neighbourIndices]
+        #TODO
+        #self.field[self.cellStartFace:self.cellEndFace] = self.field[self.neighbourIndices]
 
 class processor(BoundaryCondition):
     def __init__(self, phi, patchID):
@@ -71,7 +73,8 @@ class zeroGradient(BoundaryCondition):
     def update(self):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))
         #self.value[:] = self.field[self.internalIndices]
-        self.field[self.cellStartFace:self.cellEndFace] = self.field[self.internalIndices]
+        #TODO
+        #self.field[self.cellStartFace:self.cellEndFace] = self.field[self.internalIndices]
 
 class symmetryPlane(zeroGradient):
     def update(self):
@@ -81,7 +84,8 @@ class symmetryPlane(zeroGradient):
         if self.field.shape[1:] == (3,):
             v = -self.mesh.normals[self.startFace:self.endFace]
             #self.value -= ad.sum(self.value*v, axis=1).reshape((-1,1))*v
-            self.field[self.cellStartFace:self.cellEndFace] -= ad.sum(self.field[self.cellStartFace:self.cellEndFace]*v, axis=1).reshape((-1,1))*v
+            #TODO
+            #self.field[self.cellStartFace:self.cellEndFace] -= ad.sum(self.field[self.cellStartFace:self.cellEndFace]*v, axis=1).reshape((-1,1))*v
 
 class fixedValue(BoundaryCondition):
     def __init__(self, phi, patchID):
@@ -91,7 +95,8 @@ class fixedValue(BoundaryCondition):
     def update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
         #self.value[:] = self.fixedValue
-        self.field[self.cellStartFace:self.cellEndFace] = self.fixedValue
+        #TODO
+        #self.field[self.cellStartFace:self.cellEndFace] = self.fixedValue
 
 class turbulentInletVelocity(BoundaryCondition):
     def __init__(self, phi, patchID):
