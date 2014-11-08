@@ -118,21 +118,18 @@ class Field(object):
         return self.__class__('{0}/{1}'.format(self.name, phi.name), self.field / phi.field)
 
 class CellField(Field):
-    def __init__(self, name, field, boundary={}):
-        logger.debug('initializing field {0}'.format(name))
+    def __init__(self, name, field, boundary={}, internal=True):
+        logger.debug('initializing CellField {0}'.format(name))
         super(self.__class__, self).__init__(name, field)
         mesh = self.mesh
-
-        if not hasattr(mesh, 'Normals'):
-            mesh.Normals = Field('nF', mesh.normals)
 
         if len(list(boundary.keys())) == 0:
             self.boundary = mesh.defaultBoundary
         else:
             self.boundary = boundary
 
-        if self.size == mesh.nInternalCells:
-            self.field = np.zeros((mesh.nCells,) + self.dimensions)
+        if internal:
+            self.field = ad.alloc(np.float64(0.), *(mesh.nCells, 3))
 
         self.BC = {}
         for patchID in self.boundary:
@@ -141,23 +138,22 @@ class CellField(Field):
                 continue
             self.BC[patchID] = getattr(BCs, self.boundary[patchID]['type'])(self, patchID)
 
-        if self.size == mesh.nInternalCells:
+        if internal:
             self.setInternalField(field)
             self.size = self.field.shape[0]
 
     @classmethod
     def zeros(self, name, dimensions):
         logger.info('initializing zeros field {0}'.format(name))
-        return self(name, ad.zeros((self.mesh.nCells,) + dimensions))
+        return self(name, ad.zeros((self.mesh.nCells,) + dimensions), internal=False)
 
     @classmethod
     def copy(self, phi):
         logger.info('copying field {0}'.format(phi.name))
-        return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.boundary.copy())
+        return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.boundary.copy(), internal=False)
 
     def setInternalField(self, internalField):
-        #TODO
-        #self.field[:self.mesh.nInternalCells] = internalField
+        ad.set_subtensor(self.field[:self.mesh.nInternalCells], internalField)
         self.updateGhostCells()
 
     def getInternalField(self):
@@ -176,15 +172,20 @@ class CellField(Field):
 class IOField(Field):
     def __init__(self, name, field, boundary={}):
         super(self.__class__, self).__init__(name, field)
+        logger.debug('initializing IOField {0}'.format(name))
         self.name = name
         self.field = field
         self.boundary = boundary
 
+        if not hasattr(self.mesh, 'Normals'):
+            self.mesh.Normals = Field('nF', self.mesh.normals)
+
     def complete(self):
+        logger.debug('completing field {0}'.format(self.name))
         X = ad.dmatrix()
         phi = CellField(self.name, X, self.boundary)
         Y = phi.field
-        func = T.function([X], Y)
+        func = T.function([X], Y, on_unused_input='warn')
         self.field = func(self.field)
 
     @classmethod

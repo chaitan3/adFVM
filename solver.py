@@ -54,7 +54,7 @@ class Solver(object):
 
         stackedFields = np.hstack(fields)
 
-        unstack = lambda X: [X[:, 0], X[:,1:3], X[:, 3]]
+        unstack = lambda X: [Field('rho', X[:, 0]), Field('rhoU', X[:,1:3]), Field('rhoE', X[:, 3])]
         X = ad.dmatrix()
         fields = unstack(X)
         fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
