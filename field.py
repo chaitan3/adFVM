@@ -35,9 +35,10 @@ class Field(object):
         return self('max({0},{1})'.format(a.name, b.name), a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a), a.dimensions)
 
     def info(self):
+        assert isinstance(self.field, np.ndarray)
         pprint(self.name + ':', end='')
-        fieldMin = parallel.min(ad.value(self.field))
-        fieldMax = parallel.max(ad.value(self.field))
+        fieldMin = np.min(ad.value(self.field))
+        fieldMax = np.max(ad.value(self.field))
         assert not np.isnan(fieldMin)
         assert not np.isnan(fieldMax)
         pprint(' min:', fieldMin, 'max:', fieldMax)
@@ -49,7 +50,10 @@ class Field(object):
 
     def magSqr(self):
         assert self.dimensions == (3,)
-        return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field**2, axis=1).reshape((-1,1)), (1,))
+        if isinstance(self.field, np.ndarray):
+            return self.__class__('magSqr({0})'.format(self.name), np.sum(self.field**2, axis=1).reshape((-1,1)), (1,))
+        else:
+            return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field**2, axis=1).reshape((-1,1)), (1,))
 
     def mag(self):
         return self.magSqr()**0.5
@@ -120,7 +124,7 @@ class Field(object):
         return self.__class__('{0}/{1}'.format(self.name, phi.name), self.field / phi.field, self.dimensions)
 
 class CellField(Field):
-    def __init__(self, name, field, dimensions, boundary={}, internal=True):
+    def __init__(self, name, field, dimensions, boundary={}, internal=False):
         logger.debug('initializing CellField {0}'.format(name))
         super(self.__class__, self).__init__(name, field, dimensions)
         mesh = self.mesh
@@ -131,7 +135,12 @@ class CellField(Field):
             self.boundary = boundary
 
         if internal:
-            self.field = ad.alloc(np.float64(0.), *(mesh.nCells, dimensions[0]))
+            if len(dimensions) == 1:
+                self.field = ad.alloc(np.float64(0.), *(mesh.nCells, dimensions[0]))
+                self.field.tag.test_value = np.zeros((mesh.nCells, dimensions[0]))
+            else:
+                self.field = ad.alloc(np.float64(0.), *(mesh.nCells, dimensions[0], dimensions[1]))
+                self.field.tag.test_value = np.zeros((mesh.nCells, dimensions[0], dimensions[1]))
 
         self.BC = {}
         for patchID in self.boundary:
@@ -141,7 +150,7 @@ class CellField(Field):
             self.BC[patchID] = getattr(BCs, self.boundary[patchID]['type'])(self, patchID)
 
         if internal:
-            self.size = self.field.shape[0]
+            self.setInternalField(field)
 
     @classmethod
     def zeros(self, name, dimensions):
@@ -154,7 +163,7 @@ class CellField(Field):
         return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.dimensions, phi.boundary.copy(), internal=False)
 
     def setInternalField(self, internalField):
-        ad.set_subtensor(self.field[:self.mesh.nInternalCells], internalField)
+        self.field = ad.set_subtensor(self.field[:self.mesh.nInternalCells], internalField)
         self.updateGhostCells()
 
     def getInternalField(self):
@@ -182,7 +191,8 @@ class IOField(Field):
     def complete(self):
         logger.debug('completing field {0}'.format(self.name))
         X = ad.dmatrix()
-        phi = CellField(self.name, X, self.dimensions, self.boundary)
+        X.tag.test_value = self.field
+        phi = CellField(self.name, X, self.dimensions, self.boundary, internal=True)
         Y = phi.field
         func = T.function([X], Y, on_unused_input='warn')
         self.field = func(self.field)

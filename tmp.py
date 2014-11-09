@@ -41,9 +41,39 @@ import scipy.sparse as sp
 
 x = ad.dmatrix()
 y = ad.dmatrix()
-z = ad.concatenate((x, y), axis=1)
+#z = ad.concatenate((x, y), axis=1)
+#xt = x.reshape((-1,1))
+xt = x
+z = y*xt.reshape((-1,1))
 f = T.function([x, y], z)
 
-X = np.random.rand(100, 1)
-Y = np.random.rand(100, 3)
+X = 2*np.ones((100, 1))
+Y = 3*np.ones((100, 3))
 print(f(X, Y))
+
+#class Field(object):
+#    def __init__(self, field):
+#        self.field = ad.alloc(np.float64(0.), *(100, 3))
+#        ad.set_subtensor(self.field[:50], field)
+#        ad.set_subtensor(self.field[50:], self.field[:50])
+#
+#X = ad.dmatrix()
+##phi = Field(X)
+##Y = phi.field
+#A = ad.alloc(np.float64(0.), *(100, 3))
+#A = ad.set_subtensor(A[:50], X)
+#A = ad.set_subtensor(A[50:], A[:50])
+#
+#f = T.function([X], A)
+
+#mesh = Mesh('tests/forwardStep')
+#x = ad.dmatrix()
+#y = ad.dmatrix()
+#z = x[mesh.owner]*mesh.weights + y[mesh.neighbour]*(1-mesh.weights)
+#f = T.function([x, y], z)
+#
+#X = np.random.rand(mesh.nCells, 1)
+#Y = np.random.rand(mesh.nCells, 1)
+#print(f(X, Y))
+
+

@@ -52,15 +52,15 @@ class Solver(object):
         self.dt = T.shared(dt)
         self.endTime = endTime
         timeIndex = 0
+        stackedFields = np.hstack([phi.field for phi in fields])
 
-        stackedFields = np.hstack(fields)
-
-        unstack = lambda X: [CellField('rho', X[:, 0], (1,)), CellField('rhoU', X[:,1:3], (3,)), CellField('rhoE', X[:, 3], (1,))]
+        unstack = lambda X: [CellField('rho', X[:, 0].reshape((-1,1)), (1,), internal=False), CellField('rhoU', X[:,1:4], (3,), internal=False), CellField('rhoE', X[:, 4].reshape((-1,1)), (1,), internal=False)]
         X = ad.dmatrix()
+        X.tag.test_value = (np.random.rand(mesh.nCells, 5))
         phis = unstack(X)
         phis = self.timeIntegrator(self.equation, self.boundary, phis, self)
         Y = ad.concatenate([phi.field for phi in phis], axis=1)
-        func = T.function([X], [Y, self.dtc], on_unused_input='warn')
+        func = T.function([X], [Y, self.dtc], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
 
         while t < endTime and timeIndex < nSteps:
             start = time.time()
@@ -76,8 +76,6 @@ class Solver(object):
             print(stackedFields, dtc)
             fields = unstack(stackedFields)
 
-            for index in range(0, len(fields)):
-                newFields[index].name = fields[index].name
             end = time.time()
             pprint('Time for iteration:', end-start)
             
@@ -96,7 +94,7 @@ class Solver(object):
                 raise Exception('mode not recognized', mode)
 
             self.t.set_value(round(t + dt, 9))
-            t = self.get_value()
+            t = self.t.get_value()
             timeIndex += 1
             pprint('Simulation Time:', t, 'Time step:', dt)
             if timeIndex % writeInterval == 0:

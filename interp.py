@@ -1,6 +1,6 @@
 from field import Field, CellField
 
-from config import ad, Logger
+from config import ad, Logger, T
 logger = Logger(__name__)
 import config
 
@@ -31,7 +31,7 @@ def TVD_dual(phi):
                 r = 2*gradC.dot(R)/(gradF + config.SMALL) - 1
             else:
                 r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + config.SMALL) - 1
-            ad.set_subtensor(faceFields[index][start:end], phiC + 0.5*psi(r, r.abs()).field*phiDC)
+            faceFields[index] = ad.set_subtensor(faceFields[index][start:end], phiC + 0.5*psi(r, r.abs()).field*phiDC)
             index += 1
 
     update(0, mesh.nInternalFaces)
@@ -41,8 +41,8 @@ def TVD_dual(phi):
         if phi.boundary[patchID]['type'] in config.coupledPatches:
             update(startFace, endFace)
         else:
-            for faceField in faceFields:
-                ad.set_subtensor(faceField[startFace:endFace], phi.field[mesh.neighbour[startFace:endFace]])
+            for index in range(0, len(faceFields)):
+                faceFields[index] = ad.set_subtensor(faceFields[index][startFace:endFace], phi.field[mesh.neighbour[startFace:endFace]])
 
     return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
 

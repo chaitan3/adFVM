@@ -21,7 +21,7 @@ def div(phi, U=None, ghost=False):
         raise Exception('not tested')
         divField = internal_sum((phi*U).dotN())
     if ghost:
-        return CellField('div({0})'.format(phi.name), divField, phi.dimensions)
+        return CellField('div({0})'.format(phi.name), divField, phi.dimensions, internal=True)
     else:
         return Field('div({0})'.format(phi.name), divField, phi.dimensions)
 
@@ -37,14 +37,14 @@ def grad(phi, ghost=False, transpose=False):
             product = phi.outer(mesh.Normals)
         else:
             product = mesh.Normals.outer(phi)
-        product.field = product.field.reshape((phi.field.shape[0], 9))
+        product.field = product.field.reshape((mesh.nFaces, 9))
         dimensions = (3,3)
     gradField = internal_sum(product)
     # if grad of scalar
     if phi.dimensions[0] == 3:
         gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
     if ghost:
-        return CellField('grad({0})'.format(phi.name), gradField, dimensions)
+        return CellField('grad({0})'.format(phi.name), gradField, dimensions, internal=True)
     else:
         return Field('grad({0})'.format(phi.name), gradField, dimensions)
 

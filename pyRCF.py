@@ -39,6 +39,8 @@ class RCF(Solver):
 
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
+        #wtf is this needed?
+        rho.field = rho.field.reshape((-1,1))
         U = rhoU/rho
         E = rhoE/rho
         e = E - 0.5*U.magSqr()
@@ -60,7 +62,6 @@ class RCF(Solver):
         self.p = IOField.read('p', self.mesh, t)
         self.T = IOField.read('T', self.mesh, t)
         self.U = IOField.read('U', self.mesh, t)
-        b = self.p.field + self.p.field
         self.p.complete()
         self.T.complete()
         self.U.complete()
@@ -134,9 +135,9 @@ class RCF(Solver):
         rhoUN = Field(self.names[1], rhoUI, self.dimensions[1])
         rhoEN = Field(self.names[2], rhoEI, self.dimensions[2])
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
-        U = CellField('U', UN, self.U.dimensions, self.U.boundary)
-        T = CellField('U', TN, self.T.dimensions, self.T.boundary)
-        p = CellField('U', pN, self.p.dimensions, self.p.boundary)
+        U = CellField('U', UN.field, self.U.dimensions, self.U.boundary, internal=True)
+        T = CellField('U', TN.field, self.T.dimensions, self.T.boundary, internal=True)
+        p = CellField('U', pN.field, self.p.dimensions, self.p.boundary, internal=True)
         return self.conservative(U, T, p)
     
 if __name__ == "__main__":

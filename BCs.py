@@ -7,7 +7,7 @@ logger = Logger(__name__)
 class BoundaryCondition(object):
     def __init__(self, phi, patchID):
         self.patchID = patchID
-        self.field = phi.field
+        self.phi = phi
         self.solver = phi.solver
         self.mesh = phi.mesh
         self.patch = phi.boundary[patchID]
@@ -20,16 +20,16 @@ class BoundaryCondition(object):
         # used by field writer
         self.getValue = lambda: self.field[self.cellStartFace:self.cellEndFace]
         # used by processor patches
-        self.value = self.field[self.cellStartFace:self.cellEndFace]
+        #self.value = self.field[self.cellStartFace:self.cellEndFace]
 
 class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         #TODO
         if 'value' in self.patch:
-            ad.set_subtensor(self.field[self.cellStartFace:self.cellEndFace], extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,)))
+            self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,)))
         else:
-            ad.set_subtensor(self.field[self.cellStartFace:self.cellEndFace], 0)
+            self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], 0)
         self.patch.pop('value', None)
 
     def update(self):
@@ -46,8 +46,7 @@ class cyclic(BoundaryCondition):
     def update(self):
         logger.debug('cyclic BC for {0}'.format(self.patchID))
         #self.value[:] = self.field[self.neighbourIndices]
-        #TODO
-        #self.field[self.cellStartFace:self.cellEndFace] = self.field[self.neighbourIndices]
+        self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.phi.field[self.neighbourIndices])
 
 class processor(BoundaryCondition):
     def __init__(self, phi, patchID):
@@ -73,29 +72,29 @@ class zeroGradient(BoundaryCondition):
     def update(self):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))
         #self.value[:] = self.field[self.internalIndices]
-        ad.set_subtensor(self.field[self.cellStartFace:self.cellEndFace], self.field[self.internalIndices])
+        self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.phi.field[self.internalIndices])
 
 class symmetryPlane(zeroGradient):
     def update(self):
         logger.debug('symmetryPlane BC for {0}'.format(self.patchID))
         super(self.__class__, self).update()
         # if vector
-        if self.field.shape[1:] == (3,):
+        if self.phi.dimensions == (3,):
             v = -self.mesh.normals[self.startFace:self.endFace]
             #self.value -= ad.sum(self.value*v, axis=1).reshape((-1,1))*v
             #TODO
-            ad.inc_subtensor(self.field[self.cellStartFace:self.cellEndFace], -ad.sum(self.field[self.cellStartFace:self.cellEndFace]*v, axis=1).reshape((-1,1))*v)
+            self.phi.field = ad.inc_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], -ad.sum(self.phi.field[self.cellStartFace:self.cellEndFace]*v, axis=1).reshape((-1,1))*v)
 
 class fixedValue(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        self.fixedValue = extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,))
+        self.fixedValue = extractField(self.patch['value'], self.nFaces, self.phi.dimensions == (3,))
 
     def update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
         #self.value[:] = self.fixedValue
         #TODO
-        ad.set_subtensor(self.field[self.cellStartFace:self.cellEndFace], self.fixedValue)
+        self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.fixedValue)
 
 class turbulentInletVelocity(BoundaryCondition):
     def __init__(self, phi, patchID):
