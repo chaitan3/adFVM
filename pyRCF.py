@@ -70,6 +70,10 @@ class RCF(Solver):
     def writeFields(self, fields, t):
         for phi in fields:
             phi.write(t)
+        U, T, p = self.primitive(*fields)
+        self.U.field = U.field
+        self.T.field = T.field
+        self.p.field = p.field
         self.U.write(t)
         self.T.write(t)
         self.p.write(t)
@@ -109,7 +113,7 @@ class RCF(Solver):
         # flux reconstruction
         # phi (flux) for pressureInletVelocity
         rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF)
-        self.flux = 2*rhoFlux/(rhoLF + rhoRF)
+        self.flux = 2.*rhoFlux/(rhoLF + rhoRF)
         rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF) - 0.5*aF*(rhoURF-rhoULF)
         rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoERF-rhoELF)
         pF = 0.5*(pLF + pRF)

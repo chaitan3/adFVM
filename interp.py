@@ -29,9 +29,9 @@ def TVD_dual(phi):
             gradC = Field('gradC({0})'.format(phi.name), gradField.field[C], gradField.dimensions)
             gradF = Field('gradF({0})'.format(phi.name), phiDC, phi.dimensions)
             if phi.dimensions[0] == 1:
-                r = 2*gradC.dot(R)/(gradF + config.SMALL) - 1
+                r = 2.*gradC.dot(R)/(gradF + config.SMALL) - 1.
             else:
-                r = 2*gradC.dot(R).dot(gradF)/(gradF.magSqr() + config.SMALL) - 1
+                r = 2.*gradC.dot(R).dot(gradF)/(gradF.magSqr() + config.SMALL) - 1.
             faceFields[index] = ad.set_subtensor(faceFields[index][start:end], phiC + 0.5*psi(r, r.abs()).field*phiDC)
             index += 1
 
@@ -77,7 +77,7 @@ def central(phi):
     # for tensor
     if len(factor.shape)-1 < len(phi.dimensions):
         factor = factor.reshape((factor.shape[0], 1, 1))
-    faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1-factor), phi.dimensions)
+    faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1.-factor), phi.dimensions)
     return faceField
 
 interpolate = central

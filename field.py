@@ -182,6 +182,10 @@ class IOField(Field):
         super(self.__class__, self).__init__(name, field, dimensions)
         logger.debug('initializing IOField {0}'.format(name))
         self.boundary = boundary
+        if len(list(boundary.keys())) == 0:
+            self.boundary = self.mesh.defaultBoundary
+        else:
+            self.boundary = boundary
 
         if not hasattr(self.mesh, 'Normals'):
             self.mesh.Normals = Field('nF', self.mesh.normals, (3,))

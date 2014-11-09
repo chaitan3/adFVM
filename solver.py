@@ -74,10 +74,10 @@ class Solver(object):
      
             pprint('Time step', timeIndex)
             stackedFields, dtc = func(stackedFields)
-            print(stackedFields)
-            print(stackedFields.min())
-            print(stackedFields.max())
-            print(dtc)
+            #print(stackedFields)
+            #print(stackedFields.min())
+            #print(stackedFields.max())
+            #print(dtc)
             #stackedFields, tech = func2(stackedFields)
             #print(stackedFields)
             #print(stackedFields[569])
@@ -91,7 +91,7 @@ class Solver(object):
             pprint('Time for iteration:', end-start)
             
             self.dt.set_value(dtc)
-            dt, t = self.dt.get_value(), self.t.get_value()
+            dt, t = float(self.dt.get_value()), float(self.t.get_value())
             if mode == 'simulation':
                 result += objective(fields)
                 timeSteps.append([t, dt])
@@ -105,7 +105,7 @@ class Solver(object):
                 raise Exception('mode not recognized', mode)
 
             self.t.set_value(round(t + dt, 9))
-            t = self.t.get_value()
+            t = float(self.t.get_value())
             timeIndex += 1
             pprint('Simulation Time:', t, 'Time step:', dt)
             if timeIndex % writeInterval == 0:
