@@ -1,4 +1,5 @@
 from field import Field, CellField
+import numpy as np
 
 from config import ad, Logger, T
 logger = Logger(__name__)
@@ -12,7 +13,7 @@ def TVD_dual(phi):
     # van leer
     psi = lambda r, rabs: (r + rabs)/(1 + rabs)
 
-    faceField = ad.zeros((mesh.nFaces, phi.dimensions[0]))
+    faceField = ad.alloc(np.float64(0.), *(mesh.nFaces, phi.dimensions[0]))
     faceFields = [faceField, faceField.copy()]
     gradField = grad(interpolate(phi), ghost=True, transpose=True)
 

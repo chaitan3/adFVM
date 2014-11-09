@@ -29,26 +29,24 @@ import scipy.sparse as sp
 #print(f(A))
 #print(g(A))
 
-#a = T.shared(np.float64(1.))
-#
-#print(a.get_value())
-#
+a = T.shared(np.float64(1.))
+print(a.get_value())
+
+x = ad.dvector()
+b = a*x
+f = T.function([x], ad.abs_(b))
+print(f(np.array([1,-1])))
+
 #x = ad.dscalar()
-#b = a*x
-#f = T.function([x], [b, b*2])
-#print(f(3))
-#print(a.get_value())
-
-x = ad.dscalar()
-y = ad.dscalar()
-#z = ad.concatenate((x, y), axis=1)
-#xt = x.reshape((-1,1))
-z = T.ifelse.ifelse(ad.lt(x, y), y, x)
-f = T.function([x, y], z)
-
-X = 2.0
-Y = 1.9
-print(f(X, Y))
+#y = ad.dscalar()
+##z = ad.concatenate((x, y), axis=1)
+##xt = x.reshape((-1,1))
+#z = T.ifelse.ifelse(ad.lt(x, y), y, x)
+#f = T.function([x, y], z)
+#
+#X = 2.0
+#Y = 1.9
+#print(f(X, Y))
 
 #class Field(object):
 #    def __init__(self, field):

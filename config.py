@@ -36,7 +36,7 @@ def Logger(name):
     return logging.getLogger('processor{0}:{1}'.format(parallel.rank, name))
 
 # CONSTANTS
-SMALL = 1e-15
+SMALL = 1e-12
 VSMALL = 1e-300
 LARGE = 1e30
 

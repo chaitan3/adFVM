@@ -30,9 +30,7 @@ class Field(object):
 
     @classmethod
     def max(self, a, b):
-        a_gt_b = ad.value(a.field) > ad.value(b.field)
-        b_gt_a = 1 - a_gt_b
-        return self('max({0},{1})'.format(a.name, b.name), a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a), a.dimensions)
+        return self('max({0},{1})'.format(a.name, b.name), ad.switch(ad.lt(a.field, b.field), b.field, a.field), a.dimensions)
 
     def info(self):
         assert isinstance(self.field, np.ndarray)
@@ -59,7 +57,7 @@ class Field(object):
         return self.magSqr()**0.5
 
     def abs(self):
-        return self.__class__('abs({0})'.format(self.name), self.field * ad.array(2*((ad.value(self.field) > 0) - 0.5)), self.dimensions)
+        return self.__class__('abs({0})'.format(self.name), ad.abs_(self.field), self.dimensions)
 
     def dot(self, phi):
         assert self.dimensions[0] == 3

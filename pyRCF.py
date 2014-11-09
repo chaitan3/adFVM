@@ -79,7 +79,7 @@ class RCF(Solver):
         self.dtc = config.smin(self.dt*self.stepFactor, self.CFL/parallel.max(aFbyD))
         super(RCF, self).setDt()
 
-    def equation(self, rho, rhoU, rhoE):
+    def equation(self, rho, rhoU, rhoE, exit=False):
         logger.info('computing RHS/LHS')
         mesh = self.mesh
 
@@ -102,6 +102,9 @@ class RCF(Solver):
         # CFL based time step: sparse update?
         aF2 = Field.max((UnLF + aF).abs(), (UnRF - aF).abs())*0.5
         self.setDt(ad.value(aF2.field)/mesh.deltas)
+
+       #if exit:
+       #     return [UnLF], self.dtc
 
         # flux reconstruction
         # phi (flux) for pressureInletVelocity

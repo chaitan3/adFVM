@@ -58,14 +58,12 @@ class Solver(object):
         X = ad.dmatrix()
         X.tag.test_value = (np.random.rand(mesh.nCells, 5))
         phis = unstack(X, CellField)
+        #ars, tech = self.equation(*phis, exit=True)
         phis = self.timeIntegrator(self.equation, self.boundary, phis, self)
-        #LHS = self.equation(*phis)
-        #internalFields = [(phis[index].getInternalField() - LHS[index].field*self.dtc) for index in range(0, len(phis))]
-        #newFields = self.boundary(*internalFields)
-        ##phis = [Field('2', phi, (1,)) for phi in internalFields]
-        #phis = newFields
         Y = ad.concatenate([phi.field for phi in phis], axis=1)
         func = T.function([X], [Y, self.dtc], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
+        #Z = ad.concatenate([phi.field for phi in ars], axis=1)
+        #func2 = T.function([X], [Z, tech], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
 
         while t < endTime and timeIndex < nSteps:
             start = time.time()
@@ -79,8 +77,16 @@ class Solver(object):
             print(stackedFields)
             print(stackedFields.min())
             print(stackedFields.max())
+            print(dtc)
+            #stackedFields, tech = func2(stackedFields)
+            #print(stackedFields)
+            #print(stackedFields[569])
+            #print(stackedFields.min(axis=0), stackedFields.argmin(axis=0))
+            #print(stackedFields.max(axis=0), stackedFields.argmax(axis=0))
+            #print(tech)
             fields = unstack(stackedFields, IOField)
 
+            end = time.time()
             end = time.time()
             pprint('Time for iteration:', end-start)
             
