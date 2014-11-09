@@ -9,7 +9,7 @@ ad.value = lambda x: x
 
 from theano.ifelse import ifelse
 def smin(a, b):
-    return ifelse(ad.lt(a, b), b, a)
+    return ifelse(ad.lt(a, b), a, b)
 
 # custom norm for numpy 1.7
 def norm(a, axis):

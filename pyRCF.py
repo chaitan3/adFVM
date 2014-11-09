@@ -67,12 +67,12 @@ class RCF(Solver):
         self.U.complete()
         return self.conservative(self.U, self.T, self.p)
     
-    def writeFields(self, fields):
+    def writeFields(self, fields, t):
         for phi in fields:
-            phi.write(self.t)
-        self.U.write(self.t)
-        self.T.write(self.t)
-        self.p.write(self.t)
+            phi.write(t)
+        self.U.write(t)
+        self.T.write(t)
+        self.p.write(t)
            
     def setDt(self, aFbyD):
         logger.info('computing new time step')

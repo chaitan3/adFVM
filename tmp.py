@@ -39,16 +39,15 @@ import scipy.sparse as sp
 #print(f(3))
 #print(a.get_value())
 
-x = ad.dmatrix()
-y = ad.dmatrix()
+x = ad.dscalar()
+y = ad.dscalar()
 #z = ad.concatenate((x, y), axis=1)
 #xt = x.reshape((-1,1))
-xt = x
-z = y*xt.reshape((-1,1))
+z = T.ifelse.ifelse(ad.lt(x, y), y, x)
 f = T.function([x, y], z)
 
-X = 2*np.ones((100, 1))
-Y = 3*np.ones((100, 3))
+X = 2.0
+Y = 1.9
 print(f(X, Y))
 
 #class Field(object):

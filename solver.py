@@ -1,6 +1,6 @@
 import numpy as np
 
-from field import Field, CellField
+from field import Field, CellField, IOField
 from mesh import Mesh
 
 from config import ad, Logger, T
@@ -54,11 +54,16 @@ class Solver(object):
         timeIndex = 0
         stackedFields = np.hstack([phi.field for phi in fields])
 
-        unstack = lambda X: [CellField('rho', X[:, 0].reshape((-1,1)), (1,), internal=False), CellField('rhoU', X[:,1:4], (3,), internal=False), CellField('rhoE', X[:, 4].reshape((-1,1)), (1,), internal=False)]
+        unstack = lambda X, mod: [mod('rho', X[:, 0].reshape((-1,1)), (1,)), mod('rhoU', X[:,1:4], (3,)), mod('rhoE', X[:, 4].reshape((-1,1)), (1,))]
         X = ad.dmatrix()
         X.tag.test_value = (np.random.rand(mesh.nCells, 5))
-        phis = unstack(X)
+        phis = unstack(X, CellField)
         phis = self.timeIntegrator(self.equation, self.boundary, phis, self)
+        #LHS = self.equation(*phis)
+        #internalFields = [(phis[index].getInternalField() - LHS[index].field*self.dtc) for index in range(0, len(phis))]
+        #newFields = self.boundary(*internalFields)
+        ##phis = [Field('2', phi, (1,)) for phi in internalFields]
+        #phis = newFields
         Y = ad.concatenate([phi.field for phi in phis], axis=1)
         func = T.function([X], [Y, self.dtc], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
 
@@ -70,11 +75,11 @@ class Solver(object):
                 fields[index].info()
      
             pprint('Time step', timeIndex)
-            print(stackedFields.shape)
             stackedFields, dtc = func(stackedFields)
-            print(stackedFields.shape)
-            print(stackedFields, dtc)
-            fields = unstack(stackedFields)
+            print(stackedFields)
+            print(stackedFields.min())
+            print(stackedFields.max())
+            fields = unstack(stackedFields, IOField)
 
             end = time.time()
             pprint('Time for iteration:', end-start)
@@ -98,11 +103,11 @@ class Solver(object):
             timeIndex += 1
             pprint('Simulation Time:', t, 'Time step:', dt)
             if timeIndex % writeInterval == 0:
-                self.writeFields(fields)
+                self.writeFields(fields, t)
             pprint()
 
         if mode == 'simulation':
-            self.writeFields(fields)
+            self.writeFields(fields, t)
             return timeSteps, result
         else:
             return solutions
