@@ -70,6 +70,9 @@ inline arr trace(const arr& phi) {
     return res;
 }
 
-#define SMALL 1e-30
+#define SMALL 1e-15
+inline arr stabilise(const arr& phi, double num) {
+    return (phi > 0.).select(phi + num, phi - num);
+}
 
 #endif

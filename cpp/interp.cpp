@@ -65,10 +65,10 @@ arr Interpolator::TVD(const arr& phi, const arr& gradPhi, const arr& U) {
         arr r;
         //// compile time switch? not possible in current code structure
         if (phi.rows() == 1) {
-            r = 2*DOT(gradC, R)/(gradF + SMALL) - 1;
+            r = 2*DOT(gradC, R)/stabilise(gradF, SMALL) - 1;
         }
         else {
-            r = 2*DOT(tdot(transpose(gradC), R), gradF)/(DOT(gradF, gradF) + SMALL) - 1;
+            r = 2*DOT(tdot(transpose(gradC), R), gradF)/stabilise(DOT(gradF, gradF),  SMALL) - 1;
         }
         SELECT(phiF, startFace, nFaces) = phiC + 0.5*ROWMUL(gradF, psi(r, r.abs()));
 

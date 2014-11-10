@@ -4,7 +4,7 @@ import time
 import scipy.sparse as sp
 
 from field import Field, CellField
-from interp import interpolate
+from interp import interpolate, upwind
 from config import ad, Logger
 logger = Logger(__name__)
 

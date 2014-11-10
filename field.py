@@ -56,6 +56,12 @@ class Field(object):
     def mag(self):
         return self.magSqr()**0.5
 
+    # modifies in place
+    def stabilise(self, num):
+        pos =  ad.value(self.field) > 0.
+        neg = 1 - pos
+        return self.__class__('abs({0})'.format(self.name), (self.field + num)*pos + (self.field - num)*neg)
+
     def abs(self):
         return self.__class__('abs({0})'.format(self.name), self.field * ad.array(2*((ad.value(self.field) > 0) - 0.5)))
 
