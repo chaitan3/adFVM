@@ -28,9 +28,13 @@ def TVD_dual(phi):
             gradC = Field('gradC({0})'.format(phi.name), gradField.field[C])
             gradF = Field('gradF({0})'.format(phi.name), phiDC)
             if phi.dimensions[0] == 1:
-                r = 2*gradC.dot(R)/gradF.stabilise(config.SMALL) - 1
+                gradC = gradC.dot(R)
             else:
-                r = 2*gradC.transpose().dot(R).dot(gradF)/gradF.magSqr().stabilise(config.SMALL) - 1
+                gradC = gradC.transpose().dot(R).dot(gradF)
+                gradF = gradF.magSqr()
+            r = 2.*gradC/gradF.stabilise(config.VSMALL) - 1.
+            #r = Field.switch(ad.value(gradC.abs().field) > ad.value(1000.*gradF.abs().field), 2.*1000.*gradC.sign()*gradF.sign() - 1., 2.*gradC/gradF - 1.)
+            
             faceFields[index][start:end] = phiC + 0.5*psi(r, r.abs()).field*phiDC
             index += 1
 

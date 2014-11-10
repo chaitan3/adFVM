@@ -36,6 +36,11 @@ class Field(object):
         b_gt_a = 1 - a_gt_b
         return self('max({0},{1})'.format(a.name, b.name), a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a))
 
+    @classmethod
+    def switch(self, condition, a, b):
+        neg = 1 - condition
+        return self('max({0},{1})'.format(a.name, b.name), a.field * ad.array(condition) + b.field * ad.array(neg))
+
     def info(self):
         pprint(self.name + ':', end='')
         fieldMin = parallel.min(ad.value(self.field))
@@ -64,6 +69,9 @@ class Field(object):
 
     def abs(self):
         return self.__class__('abs({0})'.format(self.name), self.field * ad.array(2*((ad.value(self.field) > 0) - 0.5)))
+
+    def sign(self):
+        return self.__class__('abs({0})'.format(self.name), ad.array(np.sign(ad.value(self.field))))
 
     def dot(self, phi):
         assert self.dimensions[0] == 3
