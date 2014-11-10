@@ -21,7 +21,7 @@ class RCF(Solver):
                              'R': 8.314, 
                              'Cp': 1004.5, 
                              'gamma': 1.4, 
-                             'mu': lambda T:  1.4792e-06*T**1.5/(T+116), 
+                             'mu': lambda T:  1.4792e-06*T**1.5/(T+116.), 
                              'Pr': 0.7, 
                              'CFL': 0.6,
                              'stepFactor': 1.2,
@@ -53,7 +53,7 @@ class RCF(Solver):
         e = self.Cv*T
         rho = p/(e*(self.gamma-1))
         E = e + 0.5*U.magSqr()
-        rhoU = rho*U
+        rhoU = U*rho
         rhoE = rho*E
         rho.name, rhoU.name, rhoE.name = self.names
         return rho, rhoU, rhoE
@@ -126,7 +126,7 @@ class RCF(Solver):
         UF = 0.5*(ULF + URF)
         #gradUTF = interpolate(grad(UF, ghost=True).transpose())
         gradUTF = interpolate(grad(UF, ghost=True))
-        sigmaF = mu*(snGrad(U) + gradUTF.dotN() - (2./3)*gradUTF.trace()*mesh.Normals)
+        sigmaF = (snGrad(U) + gradUTF.dotN() - (2./3)*mesh.Normals*gradUTF.trace())*mu
 
         # source terms
         source = self.source(self)
@@ -155,6 +155,6 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    #solver = RCF(case, CFL=0.6)
-    solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 0, timeIntegrator='euler')
+    solver = RCF(case, CFL=0.2, timeIntegrator='euler')
+    #solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 1e-30*T, timeIntegrator='euler')
     solver.run(startTime=time, nSteps=60000, writeInterval=1000)

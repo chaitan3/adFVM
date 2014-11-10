@@ -101,7 +101,8 @@ class Field(object):
             return self.__class__('{0}*{1}'.format(self.name, phi), self.field * phi, self.dimensions)
         else:
             product = self.field * phi.field
-            return self.__class__('{0}*{1}'.format(self.name, phi.name), self.field * phi.field, self.dimensions)
+            dimensions = max(self.dimensions, phi.dimensions)
+            return self.__class__('{0}*{1}'.format(self.name, phi.name), self.field * phi.field, dimensions)
 
 
     def __rmul__(self, phi):
