@@ -41,6 +41,10 @@ class Field(object):
         assert not np.isnan(fieldMax)
         pprint(' min:', fieldMin, 'max:', fieldMax)
 
+
+    def stabilise(self, num):
+        return self.__class__('stabilise({0})'.format(self.name), ad.switch(ad.lt(self.field, 0.), self.field - num, self.field + num), self.dimensions)
+
     # creates a view
     def component(self, component): 
         assert self.dimensions == (3,)

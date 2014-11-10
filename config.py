@@ -36,8 +36,10 @@ def Logger(name):
     return logging.getLogger('processor{0}:{1}'.format(parallel.rank, name))
 
 # CONSTANTS
-SMALL = 1e-9
-VSMALL = 1e-300
+#SMALL = 1e-15
+#VSMALL = 1e-300
+SMALL = 1e-6
+VSMALL = 1e-12
 LARGE = 1e30
 
 # FILE READING
