@@ -159,11 +159,6 @@ class CellField(Field):
             self.setInternalField(field)
 
     @classmethod
-    def zeros(self, name, dimensions):
-        logger.info('initializing zeros field {0}'.format(name))
-        return self(name, ad.zeros((self.mesh.nCells,) + dimensions), internal=False)
-
-    @classmethod
     def copy(self, phi):
         logger.info('copying field {0}'.format(phi.name))
         return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.dimensions, phi.boundary.copy(), internal=False)

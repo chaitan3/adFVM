@@ -44,6 +44,7 @@ class Solver(object):
         #Z = ad.concatenate([phi.field for phi in ars], axis=1)
         #func2 = T.function([X], [Z, tech], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
         if self.adjoint:
+            stackedAdjointFields = ad.dmatrix()
             self.gradient = T.function([stackedFields, stackedAdjointFields], ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields))
 
         end = time.time()
@@ -53,11 +54,13 @@ class Solver(object):
     def stackFields(self, fields, mod): 
         return mod.concatenate([phi.field for phi in fields], axis=1)
 
-    def unstackFields(self, stackedFields, mod): 
+    def unstackFields(self, stackedFields, mod, names=None):
+        if names is None:
+            names = self.names
         fields = []
         nDimensions = np.concatenate(([0], np.cumsum(np.array(self.dimensions))))
         nDimensions = zip(nDimensions[:-1], nDimensions[1:])
-        for name, dim, dimRange in zip(self.names, self.dimensions, nDimensions):
+        for name, dim, dimRange in zip(names, self.dimensions, nDimensions):
             phi = stackedFields[:, range(*dimRange)]
             if dim == (1,):
                 phi.reshape((-1, 1))

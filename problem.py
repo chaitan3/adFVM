@@ -97,8 +97,8 @@ def perturb(fields):
 #    dT = 120
 #    return ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1))
 
-nSteps = 20000
-writeInterval = 100
+nSteps = 10
+writeInterval = 2
 startTime = 2.0
 dt = 1
 

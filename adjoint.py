@@ -5,8 +5,7 @@ import numpy as np
 import time
 import sys
 
-from field import CellField
-from solver import derivative, forget, copy
+from field import IOField
 from config import ad
 
 firstCheckpoint = 0
@@ -24,15 +23,16 @@ primal.adjoint = True
 mesh = primal.mesh
 
 if firstCheckpoint == 0:
-    adjointFields = [CellField('{0}a'.format(name), ad.zeros((mesh.nInternalCells, dimensions[0])), mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
+    adjointFields = [IOField('{0}a'.format(name), np.zeros((mesh.nInternalCells, dimensions[0])), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
 else:
-    adjointFields = [CellField.read('{0}a'.format(name), timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in primal.names]
+    adjointFields = [IOField.read('{0}a'.format(name), timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in primal.names]
 
 stackedAdjointFields = primal.stackFields(adjointFields, np)
 print('STARTING ADJOINT\n')
 
 def writeAdjointFields(writeTime):
-    adjointFields = primal.unstackFields(stackedAdjointFields)
+    global adjointFields
+    adjointFields = primal.unstackFields(stackedAdjointFields, IOField, names=[phi.name for phi in adjointFields])
     for phi in adjointFields:
         phi.info()
         phi.write(writeTime)
@@ -47,7 +47,7 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
     print('ADJOINT BACKWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     if checkpoint == 0:
         lastSolution = solutions[-1]
-        stackedAdjointFields  = objectiveGradient(previousSolution)
+        stackedAdjointFields  = objectiveGradient(lastSolution)
         writeAdjointFields(timeSteps[-1][0])
 
     for step in range(0, writeInterval):
