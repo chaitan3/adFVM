@@ -26,16 +26,14 @@ def TVD_dual(phi):
             phiD = phi.field[D]
             phiDC = phiD-phiC
             R = Field('R', ad.array(mesh.cellCentres[D] - mesh.cellCentres[C]), (3,))
-            gradC = Field('gradC({0})'.format(phi.name), gradField.field[C].dot(R), gradField.dimensions)
+            gradC = Field('gradC({0})'.format(phi.name), gradField.field[C], gradField.dimensions)
             gradF = Field('gradF({0})'.format(phi.name), phiDC, phi.dimensions)
-            if phi.dimensions[0] == 1:
-                pass
-                #r = 2.*gradC.dot(R)/gradF.stabilise(config.VSMALL) - 1.
-            else:
+            gradC = gradC.dot(R)
+            if phi.dimensions[0] == 3:
                 gradC = gradC.dot(gradF)
                 gradF = gradF.magSqr()
-                #r = 2.*gradC.dot(R).dot(gradF)/gradF.magSqr().stabilise(config.VSMALL) - 1.
-            r = 2.*gradC/gradF - 1.
+            r = 2.*gradC/gradF.stabilise(config.VSMALL) - 1.
+            #r = 2.*gradC/gradF - 1.
             faceFields[index] = ad.set_subtensor(faceFields[index][start:end], phiC + 0.5*psi(r, r.abs()).field*phiDC)
             index += 1
 

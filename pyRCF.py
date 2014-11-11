@@ -6,7 +6,6 @@ import time
 from field import Field, CellField, IOField
 from op import  div, snGrad, grad, ddt, laplacian
 from solver import Solver
-from solver import forget
 from interp import interpolate, TVD_dual
 
 from config import ad, Logger
@@ -25,7 +24,7 @@ class RCF(Solver):
                              'Pr': 0.7, 
                              'CFL': 0.6,
                              'stepFactor': 1.2,
-                             'timeIntegrator': 'RK', 
+                             #'timeIntegrator': 'RK', 
                              'source': lambda x: [0, 0, 0]
                         })
 
@@ -39,7 +38,7 @@ class RCF(Solver):
 
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
-        #wtf is this needed?
+        #WTF is this needed?
         rho.field = rho.field.reshape((-1,1))
         U = rhoU/rho
         E = rhoE/rho

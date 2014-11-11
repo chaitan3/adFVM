@@ -12,8 +12,10 @@ import time
 class Solver(object):
     defaultConfig = {
                         'timeIntegrator': 'euler',
-                        'source': None
+                        'source': None,
+                        'adjoint': False
                     }
+
     def __init__(self, case, **userConfig):
         logger.info('initializing solver for {0}'.format(case))
         fullConfig = self.__class__.defaultConfig.copy()
@@ -25,45 +27,72 @@ class Solver(object):
         self.timeIntegrator = globals()[self.timeIntegrator]
         Field.setSolver(self)
 
+    def compile(self):
+        pprint('Compiling solver')
+        start = time.time()
+
+        self.t = T.shared(np.float64(1.))
+        self.dt = T.shared(np.float64(1.))
+        self.endTime = T.shared(np.float64(1.))
+        stackedFields = ad.dmatrix()
+        stackedFields.tag.test_value = (np.random.rand(self.mesh.nCells, 5))
+        fields = self.unstackFields(stackedFields, CellField)
+        #ars, tech = self.equation(*phis, exit=True)
+        fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
+        newStackedFields = self.stackFields(fields, ad)
+        self.forward = T.function([stackedFields], [newStackedFields, self.dtc], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
+        #Z = ad.concatenate([phi.field for phi in ars], axis=1)
+        #func2 = T.function([X], [Z, tech], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
+        if self.adjoint:
+            self.gradient = T.function([stackedFields, stackedAdjointFields], ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields))
+
+        end = time.time()
+        pprint('Time for compilation:', end-start)
+        pprint()
+
+    def stackFields(self, fields, mod): 
+        return mod.concatenate([phi.field for phi in fields], axis=1)
+
+    def unstackFields(self, stackedFields, mod): 
+        fields = []
+        nDimensions = np.concatenate(([0], np.cumsum(np.array(self.dimensions))))
+        nDimensions = zip(nDimensions[:-1], nDimensions[1:])
+        for name, dim, dimRange in zip(self.names, self.dimensions, nDimensions):
+            phi = stackedFields[:, range(*dimRange)]
+            if dim == (1,):
+                phi.reshape((-1, 1))
+            fields.append(mod(name, phi, dim))
+        return fields
+
     def setDt(self):
         self.dtc = config.smin(self.dtc, self.endTime-self.t)
 
+
     def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, 
-            mode='simulation', initialFields=None, objective=lambda x: 0, perturb=None):
+            mode='simulation', objective=lambda x: 0, perturb=None):
 
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
         #initialize
-        if initialFields is not None:
-            fields = initialFields
-        else:
-            fields = self.initFields(startTime)
+        fields = self.initFields(startTime)
         if perturb is not None:
             perturb(fields)
         pprint()
 
-        if mode == 'simulation':
-            timeSteps = []
-            result = objective(fields)
-        else:
-            solutions = [copy(fields)]
-        self.t = T.shared(startTime)
-        t = startTime
-        self.dt = T.shared(dt)
-        self.endTime = endTime
-        timeIndex = 0
-        stackedFields = np.hstack([phi.field for phi in fields])
+        if not hasattr(self, 'forward'):
+            self.compile()
 
-        unstack = lambda X, mod: [mod('rho', X[:, 0].reshape((-1,1)), (1,)), mod('rhoU', X[:,1:4], (3,)), mod('rhoE', X[:, 4].reshape((-1,1)), (1,))]
-        X = ad.dmatrix()
-        X.tag.test_value = (np.random.rand(mesh.nCells, 5))
-        phis = unstack(X, CellField)
-        #ars, tech = self.equation(*phis, exit=True)
-        phis = self.timeIntegrator(self.equation, self.boundary, phis, self)
-        Y = ad.concatenate([phi.field for phi in phis], axis=1)
-        func = T.function([X], [Y, self.dtc], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
-        #Z = ad.concatenate([phi.field for phi in ars], axis=1)
-        #func2 = T.function([X], [Z, tech], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
+        self.t.set_value(startTime)
+        self.dt.set_value(dt)
+        self.endTime.set_value(endTime)
+        t = startTime
+        timeIndex = 0
+        stackedFields = self.stackFields(fields, np)
+        
+        timeSteps = []
+        result = objective(stackedFields)
+        if mode == 'forward':
+            solutions = [stackedFields]
 
         while t < endTime and timeIndex < nSteps:
             start = time.time()
@@ -73,7 +102,7 @@ class Solver(object):
                 fields[index].info()
      
             pprint('Time step', timeIndex)
-            stackedFields, dtc = func(stackedFields)
+            stackedFields, dtc = self.forward(stackedFields)
             #print(stackedFields)
             #print(stackedFields.min())
             #print(stackedFields.max())
@@ -84,25 +113,17 @@ class Solver(object):
             #print(stackedFields.min(axis=0), stackedFields.argmin(axis=0))
             #print(stackedFields.max(axis=0), stackedFields.argmax(axis=0))
             #print(tech)
-            fields = unstack(stackedFields, IOField)
+            fields = self.unstackFields(stackedFields, IOField)
 
-            end = time.time()
             end = time.time()
             pprint('Time for iteration:', end-start)
             
             self.dt.set_value(dtc)
             dt, t = float(self.dt.get_value()), float(self.t.get_value())
-            if mode == 'simulation':
-                result += objective(fields)
-                timeSteps.append([t, dt])
-            elif mode == 'forward':
-                self.clearFields(fields)
-                solutions.append(copy(fields))
-            elif mode == 'adjoint':
-                assert nSteps == 1
-                solutions = fields
-            else:
-                raise Exception('mode not recognized', mode)
+            result += objective(stackedFields)
+            timeSteps.append([t, dt])
+            if mode == 'forward':
+                solutions.append(stackedFields)
 
             self.t.set_value(round(t + dt, 9))
             t = float(self.t.get_value())
@@ -112,11 +133,11 @@ class Solver(object):
                 self.writeFields(fields, t)
             pprint()
 
-        if mode == 'simulation':
-            self.writeFields(fields, t)
-            return timeSteps, result
-        else:
+        if mode == 'forward':
             return solutions
+
+        self.writeFields(fields, t)
+        return timeSteps, result
 
 def euler(equation, boundary, fields, solver):
     LHS = equation(*fields)
@@ -195,24 +216,3 @@ def implicit(equation, boundary, fields, garbage):
     end = time.time()
     pprint('Time for iteration:', end-start)
     return newFields
-
-def derivative(newField, oldFields):
-    names = [phi.name for phi in oldFields]
-    logger.info('computing derivative with respect to {0}'.format(names))
-    diffs = [newField.diff(phi.field).toarray().reshape(phi.field.shape) for phi in oldFields]
-    result = np.hstack(diffs)
-    return result
-
-def copy(fields):
-    newFields = [CellField.copy(phi) for phi in fields]
-    return newFields
-
-def forget(fields):
-    if ad.__name__ != 'numpad':
-        return
-    for phi in fields:
-        phi.field.obliviate()
-
-
-
-

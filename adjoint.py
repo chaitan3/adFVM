@@ -19,35 +19,24 @@ else:
     print('Primal run time step file not specified')
     exit()
 
-from problem import primal, nSteps, writeInterval, objective
-assert ad.__name__ == 'numpad'
+from problem import primal, nSteps, writeInterval, objectiveGradient
+primal.adjoint = True
 mesh = primal.mesh
 
 if firstCheckpoint == 0:
     adjointFields = [CellField('{0}a'.format(name), ad.zeros((mesh.nInternalCells, dimensions[0])), mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
 else:
     adjointFields = [CellField.read('{0}a'.format(name), timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in primal.names]
-stackedAdjointFields = np.hstack([ad.value(phi.field) for phi in adjointFields])
-nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in adjointFields]))))
-nDimensions = zip(nDimensions[:-1], nDimensions[1:])
 
+stackedAdjointFields = primal.stackFields(adjointFields, np)
 print('STARTING ADJOINT\n')
 
 def writeAdjointFields(writeTime):
-    for index in range(0, len(nDimensions)):
-        phi = adjointFields[index]
-        # range creates a copy
-        phi.field = stackedAdjointFields[:, range(*nDimensions[index])]
+    adjointFields = primal.unstackFields(stackedAdjointFields)
+    for phi in adjointFields:
         phi.info()
         phi.write(writeTime)
     print()
-
-def getStackedFields(fields):
-    mesh = fields[0].mesh
-    names = [phi.name for phi in fields]
-    stackedFields = ad.array(np.hstack([ad.value(phi.field) for phi in fields]))
-    newFields = [CellField(names[index], stackedFields[:, range(*nDimensions[index])]) for index in range(0, 3)]
-    return stackedFields, newFields
 
 for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
     print('PRIMAL FORWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
@@ -57,32 +46,23 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
 
     print('ADJOINT BACKWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     if checkpoint == 0:
-        #stackedLastSolution, lastSolution = getStackedFields(solutions[-1])
-        #stackedAdjointFields = objective(lastSolution).diff(stackedLastSolution)
         lastSolution = solutions[-1]
-        stackedAdjointFields  = derivative(objective(lastSolution), lastSolution)
+        stackedAdjointFields  = objectiveGradient(previousSolution)
         writeAdjointFields(timeSteps[-1][0])
 
     for step in range(0, writeInterval):
         start = time.time()
 
         adjointIndex = writeInterval-1 - step
-        #stackedPreviousSolution, previousSolution = getStackedFields(solutions[adjointIndex])
         previousSolution = solutions[adjointIndex]
-        t, dt = timeSteps[primalIndex + adjointIndex]
-        currentSolution = primal.run(startTime=t, dt=dt, nSteps=1, mode='adjoint', initialFields=previousSolution)
-        stackedFields = ad.hstack([phi.field for phi in currentSolution])
-        #jacobians = ad.sum(stackedFields*stackedAdjointFields).diff(stackedPreviousSolution)
-        #sensitivities = objective(previousSolution).diff(stackedPreviousSolution)
-        jacobians = derivative(ad.sum(stackedFields*stackedAdjointFields), previousSolution)
-        sensitivities = derivative(objective(previousSolution), previousSolution)
+        jacobians = primal.gradient(previousSolution, stackedAdjointFields)
+        sensitivities = objectiveGradient(previousSolution)
         print(jacobians.min(), jacobians.max())
         print(sensitivities.min(), sensitivities.max())
         stackedAdjointFields = jacobians + sensitivities
-        primal.clearFields(currentSolution)
 
         end = time.time()
         print('Time for iteration: {0}'.format(end-start))
         print('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
-    writeAdjointFields(timeSteps[primalIndex][0])
+    writeAdjointFields(t)

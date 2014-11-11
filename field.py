@@ -18,10 +18,13 @@ class Field(object):
     @staticmethod
     def setSolver(solver):
         Field.solver = solver
-        Field.mesh = solver.mesh
+        Field.setMesh(solver.mesh)
+
     @staticmethod
     def setMesh(mesh):
         Field.mesh = mesh
+        if not hasattr(mesh, 'Normals'):
+            mesh.Normals = Field('nF', mesh.normals, (3,))
 
     def __init__(self, name, field, dimensions):
         self.name = name
@@ -192,8 +195,6 @@ class IOField(Field):
         else:
             self.boundary = boundary
 
-        if not hasattr(self.mesh, 'Normals'):
-            self.mesh.Normals = Field('nF', self.mesh.normals, (3,))
 
     def complete(self):
         logger.debug('completing field {0}'.format(self.name))
@@ -300,6 +301,4 @@ class IOField(Field):
             handle.write('\t}\n')
         handle.write('}\n')
         handle.close()
-
-
 

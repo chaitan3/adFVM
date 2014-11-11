@@ -30,6 +30,8 @@ def grad(phi, ghost=False, transpose=False):
     logger.info('gradient of {0}'.format(phi.name))
     mesh = phi.mesh
     if phi.dimensions[0] == 1:
+        #WTF is this needed?
+        phi.field = phi.field.reshape((-1, 1))
         product = phi * mesh.Normals
         dimensions = (3,)
     else:
