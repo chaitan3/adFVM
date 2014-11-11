@@ -33,7 +33,12 @@ class Field(object):
 
     @classmethod
     def max(self, a, b):
-        return self('max({0},{1})'.format(a.name, b.name), ad.switch(ad.lt(a.field, b.field), b.field, a.field), a.dimensions)
+        return self('max({0},{1})'.format(a.name, b.name), ad.maximum(a.field, b.field), a.dimensions)
+
+    @classmethod
+    def switch(self, condition, a, b):
+        return self('switch({0},{1})'.format(a.name, b.name), ad.switch(condition, a.field, b.field), a.dimensions)
+
 
     def info(self):
         assert isinstance(self.field, np.ndarray)
@@ -45,8 +50,6 @@ class Field(object):
         pprint(' min:', fieldMin, 'max:', fieldMax)
 
 
-    def stabilise(self, num):
-        return self.__class__('stabilise({0})'.format(self.name), ad.switch(ad.lt(self.field, 0.), self.field - num, self.field + num), self.dimensions)
 
     # creates a view
     def component(self, component): 
@@ -65,6 +68,13 @@ class Field(object):
 
     def abs(self):
         return self.__class__('abs({0})'.format(self.name), ad.abs_(self.field), self.dimensions)
+
+    def stabilise(self, num):
+        return self.__class__('stabilise({0})'.format(self.name), ad.switch(ad.lt(self.field, 0.), self.field - num, self.field + num), self.dimensions)
+
+    def sign(self):
+        return self.__class__('abs({0})'.format(self.name), ad.sgn(self.field), self.dimensions)
+
 
     def dot(self, phi):
         assert self.dimensions[0] == 3

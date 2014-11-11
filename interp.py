@@ -34,7 +34,8 @@ def TVD_dual(phi):
                 gradF = gradF.magSqr()
             r = 2.*gradC/gradF.stabilise(config.VSMALL) - 1.
             #r = 2.*gradC/gradF - 1.
-            faceFields[index] = ad.set_subtensor(faceFields[index][start:end], phiC + 0.5*psi(r, r.abs()).field*phiDC)
+            #faceFields[index] = ad.set_subtensor(faceFields[index][start:end], phiC + 0.5*psi(r, r.abs()).field*phiDC)
+            r = Field.switch(ad.gt(gradC.abs().field, 1000.*gradF.abs().field), 2.*1000.*gradC.sign()*gradF.sign() - 1., 2.*gradC/gradF - 1.)
             index += 1
 
     update(0, mesh.nInternalFaces)
