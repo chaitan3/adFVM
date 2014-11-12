@@ -1,4 +1,5 @@
 from field import Field, CellField
+import numpy as np
 
 from config import ad, Logger
 logger = Logger(__name__)
@@ -32,9 +33,8 @@ def TVD_dual(phi):
             else:
                 gradC = gradC.transpose().dot(R).dot(gradF)
                 gradF = gradF.magSqr()
-            r = 2.*gradC/gradF.stabilise(config.VSMALL) - 1.
-            #r = Field.switch(ad.value(gradC.abs().field) > ad.value(1000.*gradF.abs().field), 2.*1000.*gradC.sign()*gradF.sign() - 1., 2.*gradC/gradF - 1.)
-            
+            #r = 2.*gradC/gradF.stabilise(config.VSMALL) - 1.
+            r = Field.switch(ad.value(gradC.abs().field) >= ad.value(1000.*gradF.abs().field), 2.*1000.*gradC.sign()*gradF.sign() - 1., 2.*gradC/gradF.stabilise(config.VSMALL) - 1.)
             faceFields[index][start:end] = phiC + 0.5*psi(r, r.abs()).field*phiDC
             index += 1
 
