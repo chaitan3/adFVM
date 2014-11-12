@@ -46,6 +46,7 @@ class Solver(object):
         if self.adjoint:
             stackedAdjointFields = ad.dmatrix()
             self.gradient = T.function([stackedFields, stackedAdjointFields], ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields))
+        #import pdb; pdb.set_trace()
 
         end = time.time()
         pprint('Time for compilation:', end-start)

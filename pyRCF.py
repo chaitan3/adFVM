@@ -155,5 +155,6 @@ if __name__ == "__main__":
         exit()
 
     solver = RCF(case, CFL=0.2, timeIntegrator='euler')
+    solver.adjoint=True
     #solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 1e-30*T, timeIntegrator='euler')
     solver.run(startTime=time, nSteps=60000, writeInterval=1000)
