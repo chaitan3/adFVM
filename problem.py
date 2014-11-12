@@ -50,55 +50,57 @@ import config
 #
 #
 #
-primal = RCF('tests/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
-
-def objective(fields):
-    rho, rhoU, rhoE = fields
-    mesh = rhoE.mesh
-    patchID = 'cylinder'
-    patch = rhoE.BC[patchID]
-    start, end = patch.startFace, patch.endFace
-    areas = mesh.areas[start:end]
-    nx = mesh.normals[start:end, 0].reshape((-1, 1))
-    start, end = patch.cellStartFace, patch.cellEndFace
-    p = rhoE.field[start:end]*(primal.gamma-1)
-    deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
-    T = rhoE/(rho*primal.Cv)
-    mungUx = (rhoU.field[start:end, 0].reshape((-1,1))/rho.field[start:end]-rhoU.field[patch.internalIndices, 0].reshape((-1,1))/rho.field[patch.internalIndices])*primal.mu(T).field[start:end]/deltas
-    return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
-
-def perturb(fields):
-#    rho, rhoU, rhoE = fields
-#    patch = 'left'
-#    bc = rhoU.BC
-#    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
-#    rhoU.field[start:end][:,0] += 0.1
-    rho, rhoU, rhoE = fields
-    mesh = rho.mesh
-    mid = np.array([-0.0048, 0.0008, 0.])
-    indices = range(0, mesh.nInternalCells)
-    G = 1e-3*ad.array(np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
-    rho.field[indices] += G
-
-#primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.6)
+#primal = RCF('tests/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+#
 #def objective(fields):
 #    rho, rhoU, rhoE = fields
-#    solver = rhoE.solver
 #    mesh = rhoE.mesh
-#    patchID = 'suction'
+#    patchID = 'cylinder'
 #    patch = rhoE.BC[patchID]
 #    start, end = patch.startFace, patch.endFace
 #    areas = mesh.areas[start:end]
-#    Ti = solver.T.field[mesh.owner[start:end]] 
-#    Tw = 300*Ti/Ti
+#    nx = mesh.normals[start:end, 0].reshape((-1, 1))
+#    start, end = patch.cellStartFace, patch.cellEndFace
+#    p = rhoE.field[start:end]*(primal.gamma-1)
 #    deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
-#    dtdn = (Tw-Ti)/deltas
-#    k = solver.Cp*solver.mu(Tw)/solver.Pr
-#    dT = 120
-#    return ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1))
+#    T = rhoE/(rho*primal.Cv)
+#    mungUx = (rhoU.field[start:end, 0].reshape((-1,1))/rho.field[start:end]-rhoU.field[patch.internalIndices, 0].reshape((-1,1))/rho.field[patch.internalIndices])*primal.mu(T).field[start:end]/deltas
+#    return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
+#
+#def perturb(fields):
+##    rho, rhoU, rhoE = fields
+##    patch = 'left'
+##    bc = rhoU.BC
+##    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
+##    rhoU.field[start:end][:,0] += 0.1
+#    rho, rhoU, rhoE = fields
+#    mesh = rho.mesh
+#    mid = np.array([-0.0048, 0.0008, 0.])
+#    indices = range(0, mesh.nInternalCells)
+#    G = 1e-3*ad.array(np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
+#    rho.field[indices] += G
 
-nSteps = 10
-writeInterval = 2
+primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.6)
+def objective(fields):
+    rho, rhoU, rhoE = fields
+    solver = rhoE.solver
+    mesh = rhoE.mesh
+    patchID = 'suction'
+    patch = rhoE.BC[patchID]
+    start, end = patch.startFace, patch.endFace
+    areas = mesh.areas[start:end]
+    U, T, p = solver.primitive(rho, rhoU, rhoE)
+    
+    Ti = T.field[mesh.owner[start:end]] 
+    Tw = 300*Ti/Ti
+    deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
+    dtdn = (Tw-Ti)/deltas
+    k = solver.Cp*solver.mu(Tw)/solver.Pr
+    dT = 120
+    return ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1))
+
+nSteps = 20000
+writeInterval = 100
 startTime = 2.0
 dt = 1
 

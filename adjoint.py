@@ -54,6 +54,9 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         start = time.time()
 
         adjointIndex = writeInterval-1 - step
+        t, dt = timeSteps[primalIndex + adjointIndex]
+        primal.dt.set_value(dt)
+        primal.t.set_value(t)
         previousSolution = solutions[adjointIndex]
         jacobians = primal.gradient(previousSolution, stackedAdjointFields)
         sensitivities = objectiveGradient(previousSolution)
