@@ -28,7 +28,7 @@ class Solver(object):
         Field.setSolver(self)
 
     def compile(self):
-        pprint('Compiling solver')
+        pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         start = time.time()
 
         self.t = T.shared(np.float64(1.))
@@ -150,31 +150,19 @@ def euler(equation, boundary, fields, solver):
     return newFields
 
 def RK(equation, boundary, fields, solver):
-    start = time.time()
-
-    names = [phi.name for phi in fields]
-    pprint('Time marching for', ' '.join(names))
-    for phi in fields:
-        phi.info()
-
     def NewFields(a, LHS):
-        internalFields = [phi.getInternalField().copy() for phi in fields]
+        internalFields = [phi.getInternalField() for phi in fields]
         for termIndex in range(0, len(a)):
             for index in range(0, len(fields)):
-                internalFields[index] -= a[termIndex]*LHS[termIndex][index].field*solver.dt
+                internalFields[index] -= a[termIndex]*LHS[termIndex][index].field*solver.dtc
         return boundary(*internalFields)
 
     def f(a, *LHS):
-        pprint('RK step ', f.rk)
-        f.rk += 1
         if len(LHS) != 0:
             newFields = NewFields(a, LHS)
         else:
             newFields = fields
-        for phi in newFields:
-            phi.old = phi
         return equation(*newFields)
-    f.rk = 1
 
     k1 = f([0.])
     k2 = f([0.5], k1)
@@ -182,10 +170,6 @@ def RK(equation, boundary, fields, solver):
     k4 = f([1.], k3)
     newFields = NewFields([1./6, 1./3, 1./3, 1./6], [k1, k2, k3, k4])
 
-    for index in range(0, len(fields)):
-        newFields[index].name = fields[index].name
-    end = time.time()
-    pprint('Time for iteration:', end-start)
     return newFields
 
 def implicit(equation, boundary, fields, garbage):

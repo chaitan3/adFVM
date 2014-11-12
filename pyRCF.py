@@ -24,7 +24,7 @@ class RCF(Solver):
                              'Pr': 0.7, 
                              'CFL': 0.6,
                              'stepFactor': 1.2,
-                             #'timeIntegrator': 'RK', 
+                             'timeIntegrator': 'RK', 
                              'source': lambda x: [0, 0, 0]
                         })
 
@@ -154,7 +154,6 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = RCF(case, CFL=0.2, timeIntegrator='euler')
-    solver.adjoint=True
+    solver = RCF(case, CFL=0.6)
     #solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 1e-30*T, timeIntegrator='euler')
     solver.run(startTime=time, nSteps=60000, writeInterval=1000)
