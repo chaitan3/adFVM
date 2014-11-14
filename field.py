@@ -37,6 +37,12 @@ class Field(object):
         return self('max({0},{1})'.format(a.name, b.name), a.field * ad.array(a_gt_b) + b.field * ad.array(b_gt_a))
 
     @classmethod
+    def min(self, a, b):
+        a_gt_b = ad.value(a.field) > ad.value(b.field)
+        b_gt_a = 1 - a_gt_b
+        return self('min({0},{1})'.format(a.name, b.name), b.field * ad.array(a_gt_b) + a.field * ad.array(b_gt_a))
+
+    @classmethod
     def switch(self, condition, a, b):
         neg = 1 - condition
         return self('max({0},{1})'.format(a.name, b.name), a.field * ad.array(condition) + b.field * ad.array(neg))
@@ -65,7 +71,7 @@ class Field(object):
     def stabilise(self, num):
         pos =  ad.value(self.field) > 0.
         neg = 1 - pos
-        return self.__class__('abs({0})'.format(self.name), (self.field + num)*pos + (self.field - num)*neg)
+        return self.__class__('abs({0})'.format(self.name), (self.field + num)*ad.array(pos) + (self.field - num)*ad.array(neg))
 
     def abs(self):
         return self.__class__('abs({0})'.format(self.name), self.field * ad.array(2*((ad.value(self.field) > 0) - 0.5)))

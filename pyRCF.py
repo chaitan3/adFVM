@@ -80,7 +80,8 @@ class RCF(Solver):
         logger.info('computing RHS/LHS')
         mesh = self.mesh
 
-        # interpolation
+        # interpolation L: pos, R: neg
+        # i doubt the tvd is right
         rhoLF, rhoRF = TVD_dual(rho)
         rhoULF, rhoURF = TVD_dual(rhoU)
         rhoELF, rhoERF = TVD_dual(rhoE)
@@ -89,11 +90,18 @@ class RCF(Solver):
         U, T, p = self.primitive(rho, rhoU, rhoE)
 
         # numerical viscosity
-        cLF, cRF = (self.gamma*pLF/rhoLF)**0.5, (self.gamma*pRF/rhoRF)**0.5
+        c = (self.gamma*p/rho)**0.5
+        cLF, cRF = TVD_dual(c)
+        #cLF, cRF = (self.gamma*pLF/rhoLF)**0.5, (self.gamma*pRF/rhoRF)**0.5
         UnLF, UnRF = ULF.dotN(), URF.dotN()
-        cF = (UnLF + cLF, UnRF + cLF, UnLF - cLF, UnRF - cLF)
-        aF = cF[0].abs()
-        for c in cF[1:]: aF = Field.max(aF, c.abs())
+        ##cF = (UnLF + cLF, UnRF + cRF, UnLF - cLF, UnRF - cRF)
+        #cF = (UnLF + cLF, UnRF + cLF, UnLF - cLF, UnRF - cLF)
+        #aF = cF[0].abs()
+        #for c in cF[1:]: aF = Field.max(aF, c.abs())
+        Z = Field('Z', ad.zeros((mesh.nFaces, 1)))
+        apF = Field.max(Field.max(UnLF + cLF, UnRF + cRF), Z)
+        amF = Field.min(Field.min(UnLF - cLF, UnRF - cRF), Z)
+        aF = Field.max(apF.abs(), amF.abs())
         aF.name = 'aF'
 
         # CFL based time step: sparse update?
@@ -145,6 +153,6 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = RCF(case, CFL=0.6)
-    #solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 0, timeIntegrator='euler')
+    #solver = RCF(case, CFL=0.6)
+    solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 0, timeIntegrator='euler')
     solver.run(startTime=time, nSteps=60000, writeInterval=1000)
