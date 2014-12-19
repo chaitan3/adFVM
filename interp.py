@@ -69,6 +69,7 @@ def upwind(phi, U):
         if phi.boundary[patchID]['type'] in config.coupledPatches:
             update(startFace, endFace)
         else:
+            # wrong
             faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
 
     return Field('{0}F'.format(phi.name), faceField)
