@@ -78,7 +78,7 @@ def central(phi):
     mesh = phi.mesh
     factor = mesh.weights
     # for tensor
-    if len(factor.shape)-1 < len(phi.dimensions):
+    if len(phi.dimensions) == 2:
         factor = factor.reshape((factor.shape[0], 1, 1))
     faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1.-factor), phi.dimensions)
     return faceField

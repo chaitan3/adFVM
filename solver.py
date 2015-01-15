@@ -18,7 +18,7 @@ class Solver(object):
 
     def __init__(self, case, **userConfig):
         logger.info('initializing solver for {0}'.format(case))
-        fullConfig = self.__class__.defaultConfig.copy()
+        fullConfig = self.__class__.defaultConfig
         fullConfig.update(userConfig)
         for key in fullConfig:
             setattr(self, key, fullConfig[key])

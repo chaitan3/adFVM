@@ -3,7 +3,7 @@ from scipy import sparse as sp
 import re
 import time
 
-from config import ad, adsparse, Logger
+from config import ad, adsparse, T, Logger
 from parallel import pprint, Exchanger
 logger = Logger(__name__)
 import config, parallel
@@ -39,11 +39,22 @@ class Mesh(object):
         # uses neighbour
         self.sumOp = self.getSumOp()             # (nInternalCells, nFaces)
         self.absSumOp = self.getAbsSumOp()             # (nInternalCells, nFaces)
+
         
         # ghost cell modification
         self.createGhostCells()
         self.deltas = self.getDeltas()           # nFaces
         self.weights = self.getWeights()   # nFaces
+
+        # theano shared variables
+        #self.owner = T.shared(self.owner)
+        #self.neighbour = T.shared(self.neighbour)
+        #self.normals = T.shared(self.normals)
+        #self.areas = T.shared(self.areas)
+        #self.volumes = T.shared(self.volumes)
+        #self.cellCentres = T.shared(self.cellCentres)
+        #self.deltas = T.shared(self.deltas)
+        #self.weights = T.shared(self.weights)
 
         end = time.time()
         pprint('Time for reading mesh:', end-start)

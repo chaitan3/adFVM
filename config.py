@@ -19,7 +19,7 @@ def norm(a, axis):
         return np.einsum('ij,ij->i', a, a)**0.5
 
 # LOGGING
-#T.config.compute_test_value = 'raise'
+T.config.compute_test_value = 'raise'
 def inspect_inputs(i, node, fn):
     print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])
 
@@ -53,8 +53,8 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 \*---------------------------------------------------------------------------*/
 '''
 
-fileFormat = 'binary'
-#fileFormat = 'ascii'
+#fileFormat = 'binary'
+fileFormat = 'ascii'
 foamFile = {'version':'2.0', 'format': fileFormat, 'class': 'volScalarField', 'object': ''}
 
 # group patches
