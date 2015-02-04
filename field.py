@@ -34,6 +34,9 @@ class Field(object):
     @classmethod
     def max(self, a, b):
         return self('max({0},{1})'.format(a.name, b.name), ad.maximum(a.field, b.field), a.dimensions)
+    @classmethod
+    def min(self, a, b):
+        return self('min({0},{1})'.format(a.name, b.name), ad.minimum(a.field, b.field), a.dimensions)
 
     @classmethod
     def switch(self, condition, a, b):

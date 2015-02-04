@@ -95,11 +95,17 @@ class RCF(Solver):
         U, T, p = self.primitive(rho, rhoU, rhoE)
 
         # numerical viscosity
-        cLF, cRF = (self.gamma*pLF/rhoLF)**0.5, (self.gamma*pRF/rhoRF)**0.5
+        c = (self.gamma*p/rho)**0.5
+        cLF, cRF = TVD_dual(c)
+        #cLF, cRF = (self.gamma*pLF/rhoLF)**0.5, (self.gamma*pRF/rhoRF)**0.5
         UnLF, UnRF = ULF.dotN(), URF.dotN()
-        cF = (UnLF + cLF, UnRF + cLF, UnLF - cLF, UnRF - cLF)
-        aF = cF[0].abs()
-        for c in cF[1:]: aF = Field.max(aF, c.abs())
+        #cF = (UnLF + cLF, UnRF + cLF, UnLF - cLF, UnRF - cLF)
+        #aF = cF[0].abs()
+        #for c in cF[1:]: aF = Field.max(aF, c.abs())
+        Z = Field('Z', ad.zeros((mesh.nFaces, 1)), (1,))
+        apF = Field.max(Field.max(UnLF + cLF, UnRF + cRF), Z)
+        amF = Field.min(Field.min(UnLF - cLF, UnRF - cRF), Z)
+        aF = Field.max(apF.abs(), amF.abs())
         aF.name = 'aF'
 
         # CFL based time step: sparse update?
