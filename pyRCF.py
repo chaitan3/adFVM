@@ -148,8 +148,8 @@ class RCF(Solver):
         rhoEN = Field(self.names[2], rhoEI, self.dimensions[2])
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
         U = CellField('U', UN.field, self.U.dimensions, self.U.boundary, internal=True)
-        T = CellField('U', TN.field, self.T.dimensions, self.T.boundary, internal=True)
-        p = CellField('U', pN.field, self.p.dimensions, self.p.boundary, internal=True)
+        T = CellField('T', TN.field, self.T.dimensions, self.T.boundary, internal=True)
+        p = CellField('p', pN.field, self.p.dimensions, self.p.boundary, internal=True)
         return self.conservative(U, T, p)
     
 if __name__ == "__main__":

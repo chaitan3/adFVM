@@ -7,19 +7,18 @@ from interp import interpolate
 from config import ad, Logger, adsparse
 logger = Logger(__name__)
 
-def internal_sum(phi):
-    mesh = phi.mesh
+def internal_sum(phi, mesh):
     return (adsparse.basic.dot(mesh.sumOp, (phi.field * mesh.areas)))/mesh.volumes
 
 def div(phi, U=None, ghost=False):
     logger.info('divergence of {0}'.format(phi.name))
     mesh = phi.mesh
     if U is None:
-        divField = internal_sum(phi)
+        divField = internal_sum(phi, mesh)
     else:
         assert phi.dimensions == (1,)
         raise Exception('not tested')
-        divField = internal_sum((phi*U).dotN())
+        divField = internal_sum((phi*U).dotN(), mesh)
     if ghost:
         return CellField('div({0})'.format(phi.name), divField, phi.dimensions, internal=True)
     else:
@@ -28,7 +27,10 @@ def div(phi, U=None, ghost=False):
 def grad(phi, ghost=False, transpose=False):
     assert len(phi.dimensions) == 1
     logger.info('gradient of {0}'.format(phi.name))
-    mesh = phi.mesh
+    if ghost:
+        mesh = phi.mesh.paddedMesh
+    else:
+        mesh = phi.mesh
     if phi.dimensions[0] == 1:
         #WTF is this needed?
         phi.field = phi.field.reshape((-1, 1))
@@ -41,7 +43,7 @@ def grad(phi, ghost=False, transpose=False):
             product = mesh.Normals.outer(phi)
         product.field = product.field.reshape((mesh.nFaces, 9))
         dimensions = (3,3)
-    gradField = internal_sum(product)
+    gradField = internal_sum(product, mesh)
     # if grad of scalar
     if phi.dimensions[0] == 3:
         gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
@@ -66,7 +68,7 @@ def laplacian(phi, DT):
     #laplacian1 = div(interpolate(DTgradF), 1.)
 
     gradFdotn = snGrad(phi)
-    laplacian2 = internal_sum(gradFdotn*DT)
+    laplacian2 = internal_sum(gradFdotn*DT, mesh)
     return Field('laplacian({0})'.format(phi.name), laplacian2, phi.dimensions)
 
 def ddt(phi, dt):

@@ -30,17 +30,20 @@ def min(data):
 class Exchanger(object):
     def __init__(self):
         self.requests = []
+        self.statuses = []
 
     def exchange(self, remote, sendData, recvData, tag):
-        #if isinstance(sendData, ad.adarray):
-        #    sendData = ad.value(sendData)
-        sendRequest = mpi.Isend([sendData, MPI.DOUBLE], dest=remote, tag=tag)
-        recvRequest = mpi.Irecv([recvData, MPI.DOUBLE], source=remote, tag=tag)
+        sendRequest = mpi.Isend(sendData, dest=remote, tag=tag)
+        recvRequest = mpi.Irecv(recvData, source=remote, tag=tag)
+        sendStatus = MPI.Status()
+        recvStatus = MPI.Status()
         self.requests.extend([sendRequest, recvRequest])
+        self.statuses.extend([sendStatus, recvStatus])
 
     def wait(self):
         if nProcessors == 1:
-            return
-        MPI.Request.Waitall(self.requests)
+            return []
+        MPI.Request.Waitall(self.requests, self.statuses)
+        return self.statuses
 
 

@@ -15,7 +15,8 @@ def TVD_dual(phi):
 
     faceField = ad.alloc(np.float64(0.), *(mesh.nFaces, phi.dimensions[0]))
     faceFields = [faceField, faceField.copy()]
-    gradField = grad(interpolate(phi), ghost=True, transpose=True)
+    # in interpolation phi is full with additional second layer, gradField is full
+    gradField = grad(central(phi, mesh.paddedMesh), ghost=True, transpose=True)
 
     def update(start, end):
         owner = mesh.owner[start:end]
@@ -72,9 +73,8 @@ def upwind(phi, U):
 
     return Field('{0}F'.format(phi.name), faceField, phi.dimensions)
 
-def central(phi):
+def central(phi, mesh):
     logger.info('interpolating {0}'.format(phi.name))
-    mesh = phi.mesh
     factor = mesh.weights
     # for tensor
     if len(phi.dimensions) == 2:
@@ -82,6 +82,5 @@ def central(phi):
     faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1.-factor), phi.dimensions)
     return faceField
 
-interpolate = central
-
-
+def interpolate(phi):
+    return central(phi, phi.mesh)

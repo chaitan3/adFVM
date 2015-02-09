@@ -3,6 +3,7 @@ from field import CellField
 from config import ad, T, adsparse
 import numpy as np
 import scipy.sparse as sp
+from mpi4py import MPI
 
 #mesh = Mesh('tests/cylinder')
 #
@@ -29,13 +30,13 @@ import scipy.sparse as sp
 #print(f(A))
 #print(g(A))
 
-a = T.shared(np.float64(1.))
-print(a.get_value())
-
-x = ad.dvector()
-b = a*x
-f = T.function([x], ad.abs_(b))
-print(f(np.array([1,-1])))
+#a = T.shared(np.float64(1.))
+#print(a.get_value())
+#
+#x = ad.dvector()
+#b = a*x
+#f = T.function([x], ad.abs_(b))
+#print(f(np.array([1,-1])))
 
 #x = ad.dscalar()
 #y = ad.dscalar()
@@ -73,4 +74,62 @@ print(f(np.array([1,-1])))
 #Y = np.random.rand(mesh.nCells, 1)
 #print(f(X, Y))
 
+#mpi = MPI.COMM_WORLD
+#rank = mpi.Get_rank()
+#print(rank)
+#x = ad.dscalar()
+#y = ad.dscalar()
+#
+#X = np.random.rand(1)[0]
+#other = 1 - rank
+#if rank == 0:
+#    z = x**2 + y
+#    mpi.send(X, dest=other)
+#    Y = mpi.recv(source=other)
+#    grad = 2*X + 3*X**2*Y
+#else:
+#    z = x * y**3
+#    Y = mpi.recv(source=other)
+#    mpi.send(X, dest=other)
+#    grad = 1 + Y**3
+#f = T.function([x, y], z)
+#g = T.function([x, y], T.grad(z, x))
+#h = T.function([x, y], T.grad(z, y))
+#print(rank, X, Y)
+#print(rank, f(X, Y))
+#diff = h(X, Y)
+#if rank == 0:
+#    mpi.send(diff, dest=other)
+#    data = mpi.recv(source=other)
+#else:
+#    data = mpi.recv(source=other)
+#    mpi.send(diff, dest=other)
+#
+#print('grad ', rank, g(X, Y) + data, grad)
 
+#x = ad.dmatrix()
+#n = 0
+#y = ad.alloc(np.float64(0.), *(200 + n, 3))
+#y = ad.set_subtensor(y[:100], x[:100])
+#y = ad.set_subtensor(y[200:], x[100:])
+#f = T.function([x], y)
+#a = np.random.rand(100 + n, 3)
+#print a
+#print f(a)
+#
+
+
+mpi = MPI.COMM_WORLD
+rank = mpi.Get_rank()
+
+other = 1 - rank
+if rank == 0:
+    x = 2*np.ones(100, np.int32)
+    e = mpi.Isend(x, dest=other)
+else:
+    x = np.empty(200, np.int32)
+    e = mpi.Irecv(x, source=other)
+status = MPI.Status()
+MPI.Request.Wait(e, status)
+print x
+print status.Get_count()

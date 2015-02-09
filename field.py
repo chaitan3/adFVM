@@ -52,8 +52,6 @@ class Field(object):
         assert not np.isnan(fieldMax)
         pprint(' min:', fieldMin, 'max:', fieldMax)
 
-
-
     # creates a view
     def component(self, component): 
         assert self.dimensions == (3,)
@@ -153,6 +151,7 @@ class CellField(Field):
         else:
             self.boundary = boundary
 
+        # CellField does not contain processor patch data, but the size is still full = nCells in original code
         if internal:
             if len(dimensions) == 1:
                 self.field = ad.alloc(np.float64(0.), *(mesh.nCells, dimensions[0]))
@@ -164,9 +163,10 @@ class CellField(Field):
         self.BC = {}
         for patchID in self.boundary:
             # skip empty patches
-            if mesh.boundary[patchID]['nFaces'] == 0:
+            patchType = self.boundary[patchID]['type']
+            if (mesh.boundary[patchID]['nFaces'] == 0) or (patchType in config.processorPatches):
                 continue
-            self.BC[patchID] = getattr(BCs, self.boundary[patchID]['type'])(self, patchID)
+            self.BC[patchID] = getattr(BCs, patchType)(self, patchID)
 
         if internal:
             self.setInternalField(field)
@@ -177,8 +177,13 @@ class CellField(Field):
         return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.dimensions, phi.boundary.copy(), internal=False)
 
     def setInternalField(self, internalField):
-        self.field = ad.set_subtensor(self.field[:self.mesh.nInternalCells], internalField)
+        internal = self.mesh.nInternalCells
+        local = self.mesh.nLocalCells
+        # boundary conditions complete cell field after setting internal field
+        self.field = ad.set_subtensor(self.field[:internal], internalField[:internal])
         self.updateGhostCells()
+        # processor boundary condition completed by copying the extra data in internalField, HACK
+        self.field = ad.set_subtensor(self.field[local:], internalField[internal:])
 
     def getInternalField(self):
         return self.field[:self.mesh.nInternalCells]

@@ -9,7 +9,13 @@ logger = Logger(__name__)
 import config, parallel
 
 class Mesh(object):
-    def __init__(self, caseDir):
+    def __init__(self, caseDir=None):
+        if caseDir is None:
+            self.owner = self.neighbour = None
+            self.sumOp = None
+            self.areas = self.volumes = self.weights = self.normals = None
+            return
+
         start = time.time()
         pprint('Reading mesh')
 
@@ -37,14 +43,17 @@ class Mesh(object):
         self.cellFaces = self.getCellFaces()     # nInternalCells
         self.cellCentres, self.volumes = self.getCellCentresAndVolumes() # nCells after ghost cell mod
         # uses neighbour
-        self.sumOp = self.getSumOp()             # (nInternalCells, nFaces)
+        self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
         self.absSumOp = self.getAbsSumOp()             # (nInternalCells, nFaces)
 
         
         # ghost cell modification
-        self.createGhostCells()
+        self.nLocalCells = self.createGhostCells()
         self.deltas = self.getDeltas()           # nFaces
         self.weights = self.getWeights()   # nFaces
+
+        # padded mesh
+        self.paddedMesh = self.createPaddedMesh()
 
         # theano shared variables
         #self.owner = T.shared(self.owner)
@@ -162,17 +171,17 @@ class Mesh(object):
         weights = neighbourDist/(neighbourDist + ownerDist)
         return weights.reshape(-1,1)
 
-    def getSumOp(self):
+    def getSumOp(self, mesh):
         logger.info('generated sum op')
-        owner = sp.csc_matrix((np.ones(self.nFaces), self.owner, range(0, self.nFaces+1)), shape=(self.nInternalCells, self.nFaces))
-        Nindptr = np.concatenate((range(0, self.nInternalFaces+1), self.nInternalFaces*np.ones(self.nFaces-self.nInternalFaces, int)))
-        neighbour = sp.csc_matrix((-np.ones(self.nInternalFaces), self.neighbour[:self.nInternalFaces], Nindptr), shape=(self.nInternalCells, self.nFaces))
+        owner = sp.csc_matrix((np.ones(mesh.nFaces), mesh.owner, range(0, mesh.nFaces+1)), shape=(mesh.nInternalCells, mesh.nFaces))
+        Nindptr = np.concatenate((range(0, mesh.nInternalFaces+1), mesh.nInternalFaces*np.ones(mesh.nFaces-mesh.nInternalFaces, int)))
+        neighbour = sp.csc_matrix((-np.ones(mesh.nInternalFaces), mesh.neighbour[:mesh.nInternalFaces], Nindptr), shape=(mesh.nInternalCells, mesh.nFaces))
         # skip empty patches
         for patchID in self.boundary:
             patch = self.boundary[patchID]
             if patch['type'] == 'empty' and patch['nFaces'] != 0:
                 pprint('Deleting empty patch ', patchID)
-                startFace = patch['startFace']
+                startFace = mesh.nInternalFaces + patch['startFace'] - self.nInternalFaces
                 endFace = startFace + patch['nFaces']
                 owner.data[startFace:endFace] = 0
         sumOp = (owner + neighbour).tocsr()
@@ -222,8 +231,7 @@ class Mesh(object):
         logger.info('generated ghost cells')
         self.neighbour = np.concatenate((self.neighbour, np.zeros(self.nBoundaryFaces, np.int32)))
         self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3))))
-        mpi_Requests = []
-        mpi_Data = []
+        nLocalCells = self.nInternalCells
         exchanger = Exchanger()
         for patchID in self.boundary:
             patch = self.boundary[patchID]
@@ -232,6 +240,8 @@ class Mesh(object):
             # empty patches
             if nFaces == 0:
                 continue
+            elif patch['type'] not in config.processorPatches:
+                nLocalCells += nFaces
             endFace = startFace + nFaces
             cellStartFace = self.nInternalCells + startFace - self.nInternalFaces
             cellEndFace = self.nInternalCells + endFace - self.nInternalFaces
@@ -284,6 +294,184 @@ class Mesh(object):
 
             if patch['type'] == 'processorCyclic':
                 self.cellCentres[cellStartFace:cellEndFace] += self.faceCentres[startFace:endFace]
+
+        return nLocalCells
+
+    def createPaddedMesh(self):
+        logger.info('generated padded mesh')
+        if parallel.nProcessors == 1:
+            return self
+        mesh = Mesh()
+        # set correct values for faces whose neighbours are ghost cells
+        nLocalBoundaryFaces = self.nLocalCells - self.nInternalCells
+        nLocalRemoteBoundaryFaces = self.nCells - self.nLocalCells
+        nLocalFaces = self.nInternalFaces + nLocalBoundaryFaces
+
+        exchanger = Exchanger()
+        # processor patches are in increasing order
+        remoteInternal = {'mapping':{},'owner':{}, 'neighbour':{}, 'areas':{}, 'weights':{}, 'normals':{}}
+        remoteBoundary = remoteInternal.copy()
+        patches = []
+        for patchID in self.boundary:
+            patch = self.boundary[patchID]
+            patchType = patch['type']
+            if patchType not in config.processorPatches:
+                continue
+            else:
+                patches.append(patchID)
+            startFace = patch['startFace']
+            nFaces = patch['nFaces']
+            endFace = startFace + nFaces
+            cellStartFace = self.nInternalCells + startFace - nLocalFaces
+            cellEndFace = self.nInternalCells + endFace - nLocalFaces
+            
+            extraInternalCells = self.owner[startFace:endFace]
+            extraFaces = self.cellFaces[extraInternalCells].ravel()
+            boundaryFaces = range(startFace, endFace)
+            extraFaces  = np.setdiff1d(extraFaces, boundaryFaces)
+            owner = self.owner[extraFaces]
+            neighbour = self.neighbour[extraFaces]
+            normals = self.normals[extraFaces]
+            weights = self.weights[extraFaces]
+            extraCells = np.concatenate((owner, neighbour))
+            extraGhostCells = np.setdiff1d(extraCells, extraInternalCells)
+            # swap extra boundary faces whose owner is wrong
+            swapIndex = np.in1d(owner, extraGhostCells)
+            tmp = neighbour[swapIndex]
+            neighbour[swapIndex] = owner[swapIndex]
+            owner[swapIndex] = tmp
+            # flip normals and invert weights
+            normals[swapIndex] *= -1
+            weights[swapIndex] = 1-weights[swapIndex]
+
+            boundaryIndex = np.in1d(neighbour, extraGhostCells)
+            internalIndex = np.invert(boundaryIndex)
+            extraBoundaryFaces = extraFaces[boundaryIndex]
+            extraInternalFaces = extraFaces[internalIndex]
+
+            remote = patch['neighbProcNo']
+            tag = 0
+            tagIncrement = len(self.origPatches) + 1
+            if patch['type'] == 'processorCyclic':
+                commonPatch = self.boundary[patchID]['referPatch']
+                if local > remote:
+                    commonPatch = self.boundary[commonPatch]['neighbourPatch']
+                tag = 1 + self.origPatches.index(commonPatch)
+            tag = {0:tag}
+
+            def remoteExchange(field, sendData, location):
+                if location == 'internal':
+                    size = (sendData.shape[0]*2, ) + sendData.shape[1:]
+                    remoteInternal[field][patchID] = np.zeros(size, sendData.dtype)
+                    exchanger.exchange(remote, sendData, remoteInternal[field][patchID], tag[0])
+                else:
+                    size = (sendData.shape[0]*4, ) + sendData.shape[1:]
+                    remoteBoundary[field][patchID] = np.zeros(size, sendData.dtype)
+                    exchanger.exchange(remote, sendData, remoteBoundary[field][patchID], tag[0])
+                tag[0] += tagIncrement
+
+            #0: send extraInternalCells, first layer mapping
+            remoteExchange('mapping', extraInternalCells, 'internal')
+            
+            #2: send extraGhostCells, second layer mapping
+            remoteExchange('mapping', extraGhostCells, 'boundary')
+
+            #4: send owner and neighbour and do the mapping
+            remoteExchange('owner', owner[internalIndex], 'internal')
+            remoteExchange('owner', owner[boundaryIndex], 'boundary')
+            remoteExchange('neighbour', neighbour[internalIndex], 'internal')
+            remoteExchange('neighbour', neighbour[boundaryIndex], 'boundary')
+
+            #12: send rest
+            remoteExchange('areas', self.areas[extraInternalFaces], 'internal')
+            remoteExchange('areas', self.areas[extraBoundaryFaces], 'boundary')
+            remoteExchange('normals', normals[internalIndex], 'internal')
+            remoteExchange('normals', normals[boundaryIndex], 'boundary')
+            remoteExchange('weights', weights[internalIndex], 'internal')
+            remoteExchange('weights', weights[boundaryIndex], 'boundary')
+            remoteExchange('volumes', self.volumes[extraInternalCells], 'internal')
+
+        statuses = exchanger.wait()
+        getCount = lambda index: statuses[index].Get_count()/4
+        nRemoteInternalFaces = 0
+        nRemoteBoundaryFaces = 0
+        total = 26
+        for index, patchID in enumerate(patches):
+            remoteInternal['mapping'][patchID] = remoteInternal['mapping'][patchID][:getCount(index*total + 1)]
+            remoteBoundary['mapping'][patchID] = remoteBoundary['mapping'][patchID][:getCount(index*total + 3)]
+            remoteInternal['owner'][patchID] = remoteInternal['owner'][patchID][:getCount(index*total + 5)]
+            remoteBoundary['owner'][patchID] = remoteBoundary['owner'][patchID][:getCount(index*total + 7)]
+            print(parallel.rank, remoteInternal['mapping'][patchID])
+            remoteInternal['mapping'][patchID] = {v:k for k,v in enumerate(remoteInternal['mapping'][patchID])}
+            remoteBoundary['mapping'][patchID] = {v:k for k,v in enumerate(remoteBoundary['mapping'][patchID])}
+            nRemoteInternalFaces += len(remoteInternal['owner'][patchID])
+            nRemoteBoundaryFaces += len(remoteBoundary['owner'][patchID])
+        mesh.nInternalFaces = self.nInternalFaces + nLocalRemoteBoundaryFaces + nRemoteInternalFaces
+        mesh.nBoundaryFaces = nLocalBoundaryFaces + nRemoteBoundaryFaces
+        mesh.nFaces = mesh.nInternalFaces + mesh.nBoundaryFaces
+        mesh.nInternalCells = self.nInternalCells + nLocalRemoteBoundaryFaces
+        mesh.nGhostCells = mesh.nBoundaryFaces
+        mesh.nCells = mesh.nInternalCells + mesh.nGhostCells
+
+        nLocalInternalFaces = self.nInternalFaces + nLocalRemoteBoundaryFaces
+        remoteGhostStartFace = mesh.nInternalFaces + nLocalBoundaryFaces
+        def padFaceField(fieldName):
+            field = getattr(self, fieldName)
+            example = remoteInternal[fieldName][patches[0]]
+            size = (mesh.nFaces, ) + example.shape[1:]
+            dtype = example.dtype
+
+            faceField = np.empty(size, dtype)
+            faceField[:self.nInternalFaces] = field[:self.nInternalFaces]
+            faceField[self.nInternalFaces:nLocalInternalFaces] = field[nLocalFaces:]
+            faceField[mesh.nInternalFaces:remoteGhostStartFace] = field[self.nInternalFaces:nLocalFaces]
+            internalCursor = nLocalInternalFaces
+            boundaryCursor = remoteGhostStartFace
+            for patchID in patches:
+                nInternalFaces = len(remoteInternal['owner'][patchID])
+                faceField[internalCursor:internalCursor + nInternalFaces] = remoteInternal[fieldName][patchID][:nInternalFaces]
+                internalCursor += nInternalFaces
+                nBoundaryFaces = len(remoteBoundary['owner'][patchID])
+                faceField[boundaryCursor:boundaryCursor + nBoundaryFaces] = remoteBoundary[fieldName][patchID][:nBoundaryFaces]
+                boundaryCursor += nBoundaryFaces
+            return faceField
+
+        mesh.owner = padFaceField('owner')
+        mesh.neighbour = padFaceField('neighbour')
+        mesh.neighbour[self.nInternalFaces:nLocalInternalFaces] -= nLocalBoundaryFaces
+        mesh.neighbour[mesh.nInternalFaces:remoteGhostStartFace] += nLocalRemoteBoundaryFaces
+        # do mapping, vectorize? mostly not possible
+        internalCursor = nLocalInternalFaces
+        boundaryCursor = remoteGhostStartFace
+        for patchID in patches:
+            print(remoteInternal['mapping'][patchID])
+            nInternalFaces = len(remoteInternal['owner'][patchID])
+            for index in range(internalCursor, internalCursor + nInternalFaces):
+                mesh.owner[index] = remoteInternal['mapping'][patchID][mesh.owner[index]] + self.nInternalCells
+                mesh.neighbour[index] = remoteInternal['mapping'][patchID][mesh.neighbour[index]] + self.nInternalCells
+            internalCursor += nInternalFaces
+            nBoundaryFaces = len(remoteBoundary['owner'][patchID])
+            for index in range(boundaryCursor, boundaryCursor + nInternalFaces):
+                mesh.owner[index] = remoteBoundary['mapping'][patchID][mesh.owner[index]] + self.nInternalCells
+                mesh.neighbour[index] = remoteBoundary['mapping'][patchID][mesh.neighbour[index]] + mesh.nInternalCells + nLocalBoundaryFaces
+            boundaryCursor += nBoundaryFaces
+     
+        mesh.areas = padFaceField('areas')
+        mesh.normals = padFaceField('normals')
+        mesh.weights = padFaceField('weights')
+        mesh.sumOp = self.getSumOp(mesh)
+
+        mesh.volumes = np.empty((mesh.nInternalCells, 1))
+        mesh.volumes[:self.nInternalCells] = self.volumes
+        internalCursor = self.nInternalCells
+        for patchID in patches:
+            nInternalCells = self.boundary[patchID]['nFaces']
+            mesh.volumes[internalCursor:internalCursor + nInternalCells] = remoteInternal['volumes'][patchID][:nInternalCells]
+            internalCursor += nInternalCells
+
+        exit()
+
+        return mesh
 
 def removeCruft(content, keepHeader=False):
     # remove comments and newlines
