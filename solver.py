@@ -31,9 +31,7 @@ class Solver(object):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         start = time.time()
 
-        self.t = T.shared(np.float64(1.))
         self.dt = T.shared(np.float64(1.))
-        self.endTime = T.shared(np.float64(1.))
         stackedFields = ad.dmatrix()
         stackedFields.tag.test_value = (np.random.rand(self.mesh.nCells, 5))
         fields = self.unstackFields(stackedFields, CellField)
@@ -68,36 +66,6 @@ class Solver(object):
             fields.append(mod(name, phi, dim))
         return fields
 
-    def getRemoteCells(stackedFields):
-        mesh = self.mesh.paddedMesh 
-        # patches accessed in same order?
-        patches = mesh.remoteMapping['internal'].keys()
-
-        newStackedFields = np.zeros((mesh.nCells, ) + stackedFields.shape[1:])
-        newStackedFields[:self.mesh.nInternalCells] = stackedFields[:self.mesh.nInternalCells]
-        nLocalBoundaryFaces = self.mesh.nLocalCells - self.mesh.nInternalCells
-        newStackedFields[mesh.nInternalCells:mesh.nInternalCells + nLocalBoundaryFaces] = stackedFields[self.mesh.nInternalCells:self.mesh.nLocalCells]
-
-        exchanger = Exchanger()
-        internalCursor = self.mesh.nInternalCells
-        boundaryCursor = mesh.nInternalCells + nLocalBoundaryFaces
-        for patchID in patches:
-            nInternalCells = len(mesh.remoteCells['internal'][patchID])
-            nBoundaryCells = len(mesh.remoteCells['boundary'][patchID])
-            patch = self.mesh.boundary[patchID]
-            local, remote, tag = self.mesh.getProcessorPatchInfo(patch)
-            exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['internal'][patchID]], newStackedFields[internalCursor:internalCursor+nInternalCells], tag)
-            tag += len(self.mesh.origPatches) + 1
-            exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['boundary'][patchID]], newStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
-            internalCursor += nInternalCells
-            boundaryCursor += nBoundaryCells
-        exchanger.wait()
-
-        return newStackedFields
-
-    def setDt(self):
-        self.dtc = config.smin(self.dtc, self.endTime-self.t)
-
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, 
             mode='simulation', objective=lambda x: 0, perturb=None):
@@ -113,10 +81,8 @@ class Solver(object):
         if not hasattr(self, 'forward'):
             self.compile()
 
-        self.t.set_value(startTime)
-        self.dt.set_value(dt)
-        self.endTime.set_value(endTime)
         t = startTime
+        self.dt.set_value(dt)
         timeIndex = 0
         stackedFields = self.stackFields(fields, np)
         
@@ -133,7 +99,7 @@ class Solver(object):
                 fields[index].info()
 
             # mpi stuff, bloat stackedFields
-            stackedFields = self.getRemoteCells(stackedFields)  
+            stackedFields = CellField.getRemoteCells(stackedFields)  
 
             pprint('Time step', timeIndex)
             stackedFields, dtc = self.forward(stackedFields)
@@ -142,15 +108,14 @@ class Solver(object):
             end = time.time()
             pprint('Time for iteration:', end-start)
             
-            self.dt.set_value(dtc)
-            dt, t = float(self.dt.get_value()), float(self.t.get_value())
+            dt = min(parallel.min(dtc), dt*stepFactor, endTime-t)
+            self.dt.set_value(dt)
             result += objective(stackedFields)
             timeSteps.append([t, dt])
             if mode == 'forward':
                 solutions.append(stackedFields)
 
-            self.t.set_value(round(t + dt, 9))
-            t = float(self.t.get_value())
+            t = round(t+dt, 9)
             timeIndex += 1
             pprint('Simulation Time:', t, 'Time step:', dt)
             if timeIndex % writeInterval == 0:
@@ -165,7 +130,7 @@ class Solver(object):
 
 def euler(equation, boundary, fields, solver):
     LHS = equation(*fields)
-    internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dtc) for index in range(0, len(fields))]
+    internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields))]
     newFields = boundary(*internalFields)
     return newFields
 
@@ -174,7 +139,7 @@ def RK(equation, boundary, fields, solver):
         internalFields = [phi.getInternalField() for phi in fields]
         for termIndex in range(0, len(a)):
             for index in range(0, len(fields)):
-                internalFields[index] -= a[termIndex]*LHS[termIndex][index].field*solver.dtc
+                internalFields[index] -= a[termIndex]*LHS[termIndex][index].field*solver.dt
         return boundary(*internalFields)
 
     def f(a, *LHS):

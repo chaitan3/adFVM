@@ -46,8 +46,8 @@ class Field(object):
     def info(self):
         assert isinstance(self.field, np.ndarray)
         pprint(self.name + ':', end='')
-        fieldMin = np.min(ad.value(self.field))
-        fieldMax = np.max(ad.value(self.field))
+        fieldMin = parallel.min(ad.value(self.field))
+        fieldMax = parallel.max(ad.value(self.field))
         assert not np.isnan(fieldMin)
         assert not np.isnan(fieldMax)
         pprint(' min:', fieldMin, 'max:', fieldMax)
@@ -141,6 +141,35 @@ class Field(object):
         return self.__class__('{0}/{1}'.format(self.name, phi.name), self.field / phi.field, self.dimensions)
 
 class CellField(Field):
+    @staticmethod
+    def getRemoteCells(stackedFields):
+        logger.info('fetching remote cells')
+        mesh = self.mesh.paddedMesh 
+        # patches accessed in same order?
+        patches = mesh.remoteMapping['internal'].keys()
+
+        newStackedFields = np.zeros((mesh.nCells, ) + stackedFields.shape[1:])
+        newStackedFields[:self.mesh.nInternalCells] = stackedFields[:self.mesh.nInternalCells]
+        nLocalBoundaryFaces = self.mesh.nLocalCells - self.mesh.nInternalCells
+        newStackedFields[mesh.nInternalCells:mesh.nInternalCells + nLocalBoundaryFaces] = stackedFields[self.mesh.nInternalCells:self.mesh.nLocalCells]
+
+        exchanger = Exchanger()
+        internalCursor = self.mesh.nInternalCells
+        boundaryCursor = mesh.nInternalCells + nLocalBoundaryFaces
+        for patchID in patches:
+            nInternalCells = len(mesh.remoteCells['internal'][patchID])
+            nBoundaryCells = len(mesh.remoteCells['boundary'][patchID])
+            patch = self.mesh.boundary[patchID]
+            local, remote, tag = self.mesh.getProcessorPatchInfo(patch)
+            exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['internal'][patchID]], newStackedFields[internalCursor:internalCursor+nInternalCells], tag)
+            tag += len(self.mesh.origPatches) + 1
+            exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['boundary'][patchID]], newStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
+            internalCursor += nInternalCells
+            boundaryCursor += nBoundaryCells
+        exchanger.wait()
+
+        return newStackedFields
+
     def __init__(self, name, field, dimensions, boundary={}, internal=False):
         logger.debug('initializing CellField {0}'.format(name))
         super(self.__class__, self).__init__(name, field, dimensions)
@@ -176,6 +205,18 @@ class CellField(Field):
         logger.info('copying field {0}'.format(phi.name))
         return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.dimensions, phi.boundary.copy(), internal=False)
 
+    @classmethod
+    def getOrigField(self, phi):
+        logger.info('getting original field {0}'.format(phi.name))
+        nRemoteCells = mesh.nCells - mesh.nLocalCells
+        phiField = ad.alloc(np.float64(0.), *((mesh.nCells, ) + phi.dimensions))
+        phiField = ad.set_subtensor(phiField[:mesh.nInternalCells], phi.field[mesh.nInternalCells])
+        phiField = ad.set_subtensor(phiField[mesh.nInternalCells:mesh.nLocalCells], phi.field[mesh.nInternalCells + nRemoteCells:mesh.nCells])
+        phiField = ad.set_subtensor(phiField[mesh.nLocalCells:], phi.field[mesh.nInternalCells:mesh.nInternalCells + nRemoteCells])
+        phi.field = phiField
+        return self(phi.name, phiField, phi.dimensions, phi.boundary, internal=False)
+
+
     def setInternalField(self, internalField):
         internal = self.mesh.nInternalCells
         local = self.mesh.nLocalCells
@@ -197,6 +238,7 @@ class CellField(Field):
             else:
                 self.BC[patchID].update()
         exchanger.wait()
+    
 
 class IOField(Field):
     def __init__(self, name, field, dimensions, boundary={}):
@@ -314,4 +356,5 @@ class IOField(Field):
             handle.write('\t}\n')
         handle.write('}\n')
         handle.close()
+
 

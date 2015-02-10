@@ -73,7 +73,8 @@ def laplacian(phi, DT):
 
 def ddt(phi, dt):
     logger.info('ddt of {0}'.format(phi.name))
-    return Field('ddt' + phi.name, (phi.getInternalField()-phi.getInternalField())/dt, phi.dimensions)
+    #return Field('ddt' + phi.name, (phi.getInternalField()-phi.getInternalField())/dt, phi.dimensions)
+    return Field('ddt' + phi.name, phi.getInternalField()*0, phi.dimensions)
     #return Field('ddt' + phi.name, (phi.getInternalField()-phi.old.getInternalField())/dt, phi.dimensions)
 
 

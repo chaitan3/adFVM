@@ -5,22 +5,11 @@ from config import ad, Logger, T
 logger = Logger(__name__)
 import config
 
-def TVD_dual(phi):
+def TVD_dual(phi, gradPhi):
     from op import grad
     assert len(phi.dimensions) == 1
     logger.info('TVD {0}'.format(phi.name))
     mesh = phi.mesh
-
-    # in interpolation phi is full with additional second layer, gradField is full
-    gradField = grad(central(phi, mesh.paddedMesh), ghost=True, transpose=True)
-    # phi is in paddedMesh form, needs to be copied to regular
-    # phi from phiPaddedMesh
-    nRemoteCells = mesh.nCells - mesh.nLocalCells
-    phiField = ad.alloc(np.float64(0.), *((mesh.nCells, ) + phi.dimensions))
-    phiField = ad.set_subtensor(phiField[:mesh.nInternalCells], phi.field[mesh.nInternalCells])
-    phiField = ad.set_subtensor(phiField[mesh.nInternalCells:mesh.nLocalCells], phi.field[mesh.nInternalCells + nRemoteCells:mesh.nCells])
-    phiField = ad.set_subtensor(phiField[mesh.nLocalCells:], phi.field[mesh.nInternalCells:mesh.nInternalCells + nRemoteCells])
-    phi.field = phiField
 
     faceField = ad.alloc(np.float64(0.), *(mesh.nFaces, phi.dimensions[0]))
     faceFields = [faceField, faceField.copy()]
@@ -35,7 +24,7 @@ def TVD_dual(phi):
             phiD = phi.field[D]
             phiDC = phiD-phiC
             R = Field('R', ad.array(mesh.cellCentres[D] - mesh.cellCentres[C]), (3,))
-            gradC = Field('gradC({0})'.format(phi.name), gradField.field[C], gradField.dimensions)
+            gradC = Field('gradC({0})'.format(phi.name), gradPhi.field[C], gradPhi.dimensions)
             gradF = Field('gradF({0})'.format(phi.name), phiDC, phi.dimensions)
             gradC = gradC.dot(R)
             if phi.dimensions[0] == 3:

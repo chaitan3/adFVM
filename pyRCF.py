@@ -77,19 +77,26 @@ class RCF(Solver):
         self.T.write(t)
         self.p.write(t)
            
-    def setDt(self, aFbyD):
-        logger.info('computing new time step')
-        self.dtc = config.smin(self.dt*self.stepFactor, self.CFL/parallel.max(aFbyD))
-        super(RCF, self).setDt()
-
-    def equation(self, rho, rhoU, rhoE, exit=False):
+    def equation(self, rhoP, rhoUP, rhoEP, exit=False):
         logger.info('computing RHS/LHS')
         mesh = self.mesh
+        paddedMesh = mesh.paddedMesh
+
+        # in interpolation phi is full with additional second layer, gradField is full
+        gradRho = grad(central(rho, paddedMesh), ghost=True, transpose=True)
+        gradRhoU = grad(central(rhoU, paddedMesh), ghost=True, transpose=True)
+        gradRhoE = grad(central(rhoE, paddedMesh), ghost=True, transpose=True)
+
+        # phi is in paddedMesh form, needs to be copied to regular
+        # phi from phiPaddedMesh
+        rho = CellField.getOrigField(rho)
+        rhoU = CellField.getOrigField(rhoU)
+        rhoE = CellField.getOrigField(rhoE)
 
         # interpolation
-        rhoLF, rhoRF = TVD_dual(rho)
-        rhoULF, rhoURF = TVD_dual(rhoU)
-        rhoELF, rhoERF = TVD_dual(rhoE)
+        rhoLF, rhoRF = TVD_dual(rho, gradRho)
+        rhoULF, rhoURF = TVD_dual(rhoU, gradRhoU)
+        rhoELF, rhoERF = TVD_dual(rhoE, gradRhoE)
         ULF, TLF, pLF = self.primitive(rhoLF, rhoULF, rhoELF)
         URF, TRF, pRF = self.primitive(rhoRF, rhoURF, rhoERF)
         U, T, p = self.primitive(rho, rhoU, rhoE)
@@ -111,10 +118,7 @@ class RCF(Solver):
 
         # CFL based time step: sparse update?
         aF2 = Field.max((UnLF + aF).abs(), (UnRF - aF).abs())*0.5
-        self.setDt(ad.value(aF2.field)/mesh.deltas)
-
-       #if exit:
-       #     return [UnLF], self.dtc
+        self.dtc = self.CFL/ad.max(aF2.field/mesh.deltas)
 
         # flux reconstruction
         # phi (flux) for pressureInletVelocity
@@ -130,17 +134,17 @@ class RCF(Solver):
         kappa = self.kappa(mu, TF)
         UnF = 0.5*(UnLF + UnRF)
         UF = 0.5*(ULF + URF)
-        #gradUTF = interpolate(grad(UF, ghost=True).transpose())
-        gradUTF = interpolate(grad(UF, ghost=True))
+        #gradUTF = interpolate(grad(UF, ghost=True))
+        gradUTF = interpolate((rho*gradRhoU-rhoU*gradRho)/rho**2)
         sigmaF = (snGrad(U) + gradUTF.dotN() - (2./3)*mesh.Normals*gradUTF.trace())*mu
 
         # source terms
         source = self.source(self)
         #import pdb; pdb.set_trace()
         
-        return [ddt(rho, self.dtc) + div(rhoFlux) - source[0],
-                ddt(rhoU, self.dtc) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
-                ddt(rhoE, self.dtc) + div(rhoEFlux) - (laplacian(T, kappa) + div(sigmaF.dot(UF))) - source[2]]
+        return [ddt(rho, self.dt) + div(rhoFlux) - source[0],
+                ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
+                ddt(rhoE, self.dt) + div(rhoEFlux) - (laplacian(T, kappa) + div(sigmaF.dot(UF))) - source[2]]
 
     def boundary(self, rhoI, rhoUI, rhoEI):
         logger.info('correcting boundary')

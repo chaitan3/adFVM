@@ -15,13 +15,13 @@ def pprint(*args, **kwargs):
         print(*args, **kwargs)
 
 def max(data):
-    maxData = ad.max(data)
+    maxData = np.max(data)
     if nProcessors > 1:
         return mpi.allreduce(maxData, op=MPI.MAX)
     else:
         return maxData
 def min(data):
-    minData = ad.min(data)
+    minData = np.min(data)
     if nProcessors > 1:
         return mpi.allreduce(minData, op=MPI.MIN)
     else:
