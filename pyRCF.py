@@ -95,9 +95,10 @@ class RCF(Solver):
         U, T, p = self.primitive(rho, rhoU, rhoE)
 
         # numerical viscosity
-        c = (self.gamma*p/rho)**0.5
-        cLF, cRF = TVD_dual(c)
-        #cLF, cRF = (self.gamma*pLF/rhoLF)**0.5, (self.gamma*pRF/rhoRF)**0.5
+        # no TVD_dual for c in parallel
+        #c = (self.gamma*p/rho)**0.5
+        #cLF, cRF = TVD_dual(c)
+        cLF, cRF = (self.gamma*pLF/rhoLF)**0.5, (self.gamma*pRF/rhoRF)**0.5
         UnLF, UnRF = ULF.dotN(), URF.dotN()
         #cF = (UnLF + cLF, UnRF + cLF, UnLF - cLF, UnRF - cLF)
         #aF = cF[0].abs()

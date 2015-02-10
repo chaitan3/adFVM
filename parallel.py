@@ -26,7 +26,7 @@ def min(data):
         return mpi.allreduce(minData, op=MPI.MIN)
     else:
         return minData
-
+    
 class Exchanger(object):
     def __init__(self):
         self.requests = []

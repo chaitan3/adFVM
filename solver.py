@@ -5,7 +5,7 @@ from mesh import Mesh
 
 from config import ad, Logger, T
 import config
-from parallel import pprint
+from parallel import pprint, Exchanger
 logger = Logger(__name__)
 import time
 
@@ -68,6 +68,33 @@ class Solver(object):
             fields.append(mod(name, phi, dim))
         return fields
 
+    def getRemoteCells(stackedFields):
+        mesh = self.mesh.paddedMesh 
+        # patches accessed in same order?
+        patches = mesh.remoteMapping['internal'].keys()
+
+        newStackedFields = np.zeros((mesh.nCells, ) + stackedFields.shape[1:])
+        newStackedFields[:self.mesh.nInternalCells] = stackedFields[:self.mesh.nInternalCells]
+        nLocalBoundaryFaces = self.mesh.nLocalCells - self.mesh.nInternalCells
+        newStackedFields[mesh.nInternalCells:mesh.nInternalCells + nLocalBoundaryFaces] = stackedFields[self.mesh.nInternalCells:self.mesh.nLocalCells]
+
+        exchanger = Exchanger()
+        internalCursor = self.mesh.nInternalCells
+        boundaryCursor = mesh.nInternalCells + nLocalBoundaryFaces
+        for patchID in patches:
+            nInternalCells = len(mesh.remoteCells['internal'][patchID])
+            nBoundaryCells = len(mesh.remoteCells['boundary'][patchID])
+            patch = self.mesh.boundary[patchID]
+            local, remote, tag = self.mesh.getProcessorPatchInfo(patch)
+            exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['internal'][patchID]], newStackedFields[internalCursor:internalCursor+nInternalCells], tag)
+            tag += len(self.mesh.origPatches) + 1
+            exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['boundary'][patchID]], newStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
+            internalCursor += nInternalCells
+            boundaryCursor += nBoundaryCells
+        exchanger.wait()
+
+        return newStackedFields
+
     def setDt(self):
         self.dtc = config.smin(self.dtc, self.endTime-self.t)
 
@@ -104,19 +131,12 @@ class Solver(object):
             pprint('Time marching for', ' '.join(self.names))
             for index in range(0, len(fields)):
                 fields[index].info()
-     
+
+            # mpi stuff, bloat stackedFields
+            stackedFields = self.getRemoteCells(stackedFields)  
+
             pprint('Time step', timeIndex)
             stackedFields, dtc = self.forward(stackedFields)
-            #print(stackedFields)
-            #print(stackedFields.min())
-            #print(stackedFields.max())
-            #print(dtc)
-            #stackedFields, tech = func2(stackedFields)
-            #print(stackedFields)
-            #print(stackedFields[569])
-            #print(stackedFields.min(axis=0), stackedFields.argmin(axis=0))
-            #print(stackedFields.max(axis=0), stackedFields.argmax(axis=0))
-            #print(tech)
             fields = self.unstackFields(stackedFields, IOField)
 
             end = time.time()
