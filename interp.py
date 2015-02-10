@@ -1,7 +1,7 @@
 from field import Field, CellField
 import numpy as np
 
-from config import ad, Logger, T
+from config import ad, Logger
 logger = Logger(__name__)
 import config
 
@@ -11,6 +11,7 @@ def TVD_dual(phi, gradPhi):
     logger.info('TVD {0}'.format(phi.name))
     mesh = phi.mesh
 
+    # every face gets filled
     faceField = ad.alloc(np.float64(0.), *(mesh.nFaces, phi.dimensions[0]))
     faceFields = [faceField, faceField.copy()]
     # van leer
@@ -78,6 +79,3 @@ def central(phi, mesh):
         factor = factor.reshape((factor.shape[0], 1, 1))
     faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1.-factor), phi.dimensions)
     return faceField
-
-def interpolate(phi):
-    return central(phi, phi.mesh)

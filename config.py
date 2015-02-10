@@ -19,12 +19,12 @@ def norm(a, axis):
         return np.einsum('ij,ij->i', a, a)**0.5
 
 # LOGGING
-#T.config.compute_test_value = 'raise'
+T.config.compute_test_value = 'raise'
 def inspect_inputs(i, node, fn):
     print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])
-
 def inspect_outputs(i, node, fn):
     print("output(s) value(s):", [output[0] for output in fn.outputs])
+
 import logging
 # normal
 #logging.basicConfig(level=logging.WARNING)
@@ -39,7 +39,7 @@ def Logger(name):
 #SMALL = 1e-15
 #VSMALL = 1e-300
 SMALL = 1e-9
-VSMALL = 1e-15
+VSMALL = 1e-9
 LARGE = 1e30
 
 # FILE READING

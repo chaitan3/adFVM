@@ -25,6 +25,7 @@ class Field(object):
         Field.mesh = mesh
         if not hasattr(mesh, 'Normals'):
             mesh.Normals = Field('nF', mesh.normals, (3,))
+            mesh.paddedMesh.Normals = Field('nF', mesh.paddedMesh.normals, (3,))
 
     def __init__(self, name, field, dimensions):
         self.name = name
@@ -94,6 +95,7 @@ class Field(object):
     def dotN(self):
         return self.dot(self.mesh.Normals)
 
+    # represents self * phi
     def outer(self, phi):
         return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:], (3,3))
     
@@ -144,9 +146,13 @@ class CellField(Field):
     @staticmethod
     def getRemoteCells(stackedFields):
         logger.info('fetching remote cells')
+        if parallel.nProcessors == 1:
+            return stackedFields
+
+        self = CellField
         mesh = self.mesh.paddedMesh 
         # patches accessed in same order?
-        patches = mesh.remoteMapping['internal'].keys()
+        patches = mesh.localRemoteCells['internal'].keys()
 
         newStackedFields = np.zeros((mesh.nCells, ) + stackedFields.shape[1:])
         newStackedFields[:self.mesh.nInternalCells] = stackedFields[:self.mesh.nInternalCells]
@@ -170,7 +176,7 @@ class CellField(Field):
 
         return newStackedFields
 
-    def __init__(self, name, field, dimensions, boundary={}, internal=False):
+    def __init__(self, name, field, dimensions, boundary={}, ghost=False, padded=False):
         logger.debug('initializing CellField {0}'.format(name))
         super(self.__class__, self).__init__(name, field, dimensions)
         mesh = self.mesh
@@ -181,13 +187,18 @@ class CellField(Field):
             self.boundary = boundary
 
         # CellField does not contain processor patch data, but the size is still full = nCells in original code
-        if internal:
-            if len(dimensions) == 1:
-                self.field = ad.alloc(np.float64(0.), *(mesh.nCells, dimensions[0]))
-                self.field.tag.test_value = np.zeros((mesh.nCells, dimensions[0]))
-            else:
-                self.field = ad.alloc(np.float64(0.), *(mesh.nCells, dimensions[0], dimensions[1]))
-                self.field.tag.test_value = np.zeros((mesh.nCells, dimensions[0], dimensions[1]))
+        if ghost:
+            # can be not filled
+            size = (mesh.nCells, ) + dimensions
+            self.field = ad.alloc(np.float64(1.), *size)
+            self.field.tag.test_value = np.zeros(size)
+
+            #if len(dimensions) == 1:
+            #    self.field = ad.alloc(np.float64(0.), *(mesh.nCells, dimensions[0]))
+            #    self.field.tag.test_value = np.zeros((mesh.nCells, dimensions[0]))
+            #else:
+            #    self.field = ad.alloc(np.float64(0.), *(mesh.nCells, dimensions[0], dimensions[1]))
+            #    self.field.tag.test_value = np.zeros((mesh.nCells, dimensions[0], dimensions[1]))
 
         self.BC = {}
         for patchID in self.boundary:
@@ -197,34 +208,40 @@ class CellField(Field):
                 continue
             self.BC[patchID] = getattr(BCs, patchType)(self, patchID)
 
-        if internal:
+        if ghost:
             self.setInternalField(field)
 
     @classmethod
     def copy(self, phi):
         logger.info('copying field {0}'.format(phi.name))
-        return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.dimensions, phi.boundary.copy(), internal=False)
+        return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.dimensions, phi.boundary.copy())
 
     @classmethod
     def getOrigField(self, phi):
         logger.info('getting original field {0}'.format(phi.name))
+        if parallel.nProcessors == 1:
+            return phi
+
+        mesh = phi.mesh
         nRemoteCells = mesh.nCells - mesh.nLocalCells
+        # every cell gets filled
         phiField = ad.alloc(np.float64(0.), *((mesh.nCells, ) + phi.dimensions))
         phiField = ad.set_subtensor(phiField[:mesh.nInternalCells], phi.field[mesh.nInternalCells])
         phiField = ad.set_subtensor(phiField[mesh.nInternalCells:mesh.nLocalCells], phi.field[mesh.nInternalCells + nRemoteCells:mesh.nCells])
         phiField = ad.set_subtensor(phiField[mesh.nLocalCells:], phi.field[mesh.nInternalCells:mesh.nInternalCells + nRemoteCells])
-        phi.field = phiField
-        return self(phi.name, phiField, phi.dimensions, phi.boundary, internal=False)
+        return self(phi.name, phiField, phi.dimensions, phi.boundary)
 
-
-    def setInternalField(self, internalField):
+    def copyRemoteCells(self, internalField):
+        # processor boundary condition completed by copying the extra data in internalField, HACK
         internal = self.mesh.nInternalCells
         local = self.mesh.nLocalCells
+        self.field = ad.set_subtensor(self.field[local:], internalField[internal:])
+
+    def setInternalField(self, internalField):
         # boundary conditions complete cell field after setting internal field
+        internal = self.mesh.nInternalCells
         self.field = ad.set_subtensor(self.field[:internal], internalField[:internal])
         self.updateGhostCells()
-        # processor boundary condition completed by copying the extra data in internalField, HACK
-        self.field = ad.set_subtensor(self.field[local:], internalField[internal:])
 
     def getInternalField(self):
         return self.field[:self.mesh.nInternalCells]
@@ -255,7 +272,7 @@ class IOField(Field):
         logger.debug('completing field {0}'.format(self.name))
         X = ad.dmatrix()
         X.tag.test_value = self.field
-        phi = CellField(self.name, X, self.dimensions, self.boundary, internal=True)
+        phi = CellField(self.name, X, self.dimensions, self.boundary, ghost=True)
         Y = phi.field
         func = T.function([X], Y, on_unused_input='warn')
         self.field = func(self.field)

@@ -4,7 +4,7 @@ from field import Field, CellField, IOField
 from mesh import Mesh
 
 from config import ad, Logger, T
-import config
+import config, parallel
 from parallel import pprint, Exchanger
 logger = Logger(__name__)
 import time
@@ -33,7 +33,7 @@ class Solver(object):
 
         self.dt = T.shared(np.float64(1.))
         stackedFields = ad.dmatrix()
-        stackedFields.tag.test_value = (np.random.rand(self.mesh.nCells, 5))
+        stackedFields.tag.test_value = (np.random.rand(self.mesh.paddedMesh.nCells, 5))
         fields = self.unstackFields(stackedFields, CellField)
         #ars, tech = self.equation(*phis, exit=True)
         fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
@@ -108,7 +108,7 @@ class Solver(object):
             end = time.time()
             pprint('Time for iteration:', end-start)
             
-            dt = min(parallel.min(dtc), dt*stepFactor, endTime-t)
+            dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
             self.dt.set_value(dt)
             result += objective(stackedFields)
             timeSteps.append([t, dt])

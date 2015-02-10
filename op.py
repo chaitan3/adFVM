@@ -3,7 +3,6 @@ import numpy as np
 import time
 
 from field import Field, CellField
-from interp import interpolate
 from config import ad, Logger, adsparse
 logger = Logger(__name__)
 
@@ -24,7 +23,7 @@ def div(phi, U=None, ghost=False):
     else:
         return Field('div({0})'.format(phi.name), divField, phi.dimensions)
 
-def grad(phi, ghost=False, transpose=False):
+def grad(phi, ghost=False):
     assert len(phi.dimensions) == 1
     logger.info('gradient of {0}'.format(phi.name))
     if ghost:
@@ -37,10 +36,7 @@ def grad(phi, ghost=False, transpose=False):
         product = phi * mesh.Normals
         dimensions = (3,)
     else:
-        if transpose:
-            product = phi.outer(mesh.Normals)
-        else:
-            product = mesh.Normals.outer(phi)
+        product = phi.outer(mesh.Normals)
         product.field = product.field.reshape((mesh.nFaces, 9))
         dimensions = (3,3)
     gradField = internal_sum(product, mesh)
@@ -48,7 +44,9 @@ def grad(phi, ghost=False, transpose=False):
     if phi.dimensions[0] == 3:
         gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
     if ghost:
-        return CellField('grad({0})'.format(phi.name), gradField, dimensions, internal=True)
+        gradPhi = CellField('grad({0})'.format(phi.name), gradField, dimensions, ghost=True)
+        gradPhi.copyRemoteCells(gradField)
+        return gradPhi
     else:
         return Field('grad({0})'.format(phi.name), gradField, dimensions)
 
