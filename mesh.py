@@ -2,6 +2,7 @@ import numpy as np
 from scipy import sparse as sp
 import re
 import time
+import copy
 
 from config import ad, adsparse, T, Logger
 from parallel import pprint, Exchanger
@@ -307,11 +308,13 @@ class Mesh(object):
         nLocalRemoteBoundaryFaces = self.nCells - self.nLocalCells
         nLocalFaces = self.nInternalFaces + nLocalBoundaryFaces
 
+            
         exchanger = Exchanger()
         # processor patches are in increasing order
-        remoteInternal = {'mapping':{},'owner':{}, 'neighbour':{}, 'areas':{}, 'weights':{}, 'normals':{}}
-        remoteBoundary = remoteInternal.copy()
+        remoteInternal = {'mapping':{},'owner':{}, 'neighbour':{}, 'areas':{}, 'weights':{}, 'normals':{}, 'volumes':{}}
+        remoteBoundary = copy.deepcopy(remoteInternal)
         patches = []
+        x = np.zeros(300, np.int32)
         for patchID in self.boundary:
             patch = self.boundary[patchID]
             patchType = patch['type']
@@ -370,9 +373,10 @@ class Mesh(object):
                     exchanger.exchange(remote, sendData, remoteBoundary[field][patchID], tag[0])
                 tag[0] += tagIncrement
 
+
             #0: send extraInternalCells, first layer mapping
             remoteExchange('mapping', extraInternalCells, 'internal')
-            
+
             #2: send extraGhostCells, second layer mapping
             remoteExchange('mapping', extraGhostCells, 'boundary')
 
@@ -391,7 +395,9 @@ class Mesh(object):
             remoteExchange('weights', weights[boundaryIndex], 'boundary')
             remoteExchange('volumes', self.volumes[extraInternalCells], 'internal')
 
+
         statuses = exchanger.wait()
+
         getCount = lambda index: statuses[index].Get_count()/4
         nRemoteInternalFaces = 0
         nRemoteBoundaryFaces = 0
@@ -401,7 +407,8 @@ class Mesh(object):
             remoteBoundary['mapping'][patchID] = remoteBoundary['mapping'][patchID][:getCount(index*total + 3)]
             remoteInternal['owner'][patchID] = remoteInternal['owner'][patchID][:getCount(index*total + 5)]
             remoteBoundary['owner'][patchID] = remoteBoundary['owner'][patchID][:getCount(index*total + 7)]
-            print(parallel.rank, remoteInternal['mapping'][patchID])
+            #print(getCount(index*total+3))
+            #print(parallel.rank, remoteBoundary['mapping'][patchID])
             remoteInternal['mapping'][patchID] = {v:k for k,v in enumerate(remoteInternal['mapping'][patchID])}
             remoteBoundary['mapping'][patchID] = {v:k for k,v in enumerate(remoteBoundary['mapping'][patchID])}
             nRemoteInternalFaces += len(remoteInternal['owner'][patchID])
@@ -444,7 +451,6 @@ class Mesh(object):
         internalCursor = nLocalInternalFaces
         boundaryCursor = remoteGhostStartFace
         for patchID in patches:
-            print(remoteInternal['mapping'][patchID])
             nInternalFaces = len(remoteInternal['owner'][patchID])
             for index in range(internalCursor, internalCursor + nInternalFaces):
                 mesh.owner[index] = remoteInternal['mapping'][patchID][mesh.owner[index]] + self.nInternalCells
@@ -452,7 +458,7 @@ class Mesh(object):
             internalCursor += nInternalFaces
             nBoundaryFaces = len(remoteBoundary['owner'][patchID])
             for index in range(boundaryCursor, boundaryCursor + nInternalFaces):
-                mesh.owner[index] = remoteBoundary['mapping'][patchID][mesh.owner[index]] + self.nInternalCells
+                mesh.owner[index] = remoteInternal['mapping'][patchID][mesh.owner[index]] + self.nInternalCells
                 mesh.neighbour[index] = remoteBoundary['mapping'][patchID][mesh.neighbour[index]] + mesh.nInternalCells + nLocalBoundaryFaces
             boundaryCursor += nBoundaryFaces
      

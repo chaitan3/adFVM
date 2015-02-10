@@ -6,6 +6,8 @@ logger = Logger(__name__)
 import config
 
 def TVD_dual(phi):
+    # phi is in paddedMesh form, needs to be copied to regular
+    # phi from phiPaddedMesh
     from op import grad
     assert len(phi.dimensions) == 1
     logger.info('TVD {0}'.format(phi.name))
