@@ -1,9 +1,12 @@
 from __future__ import print_function
 import numpy as np
+import parallel
 
+import os
+os.environ['THEANO_FLAGS']='compiledir=~/.theano/adFVM-' + str(parallel.rank)
+import theano as T
 import theano.tensor as ad
 import theano.sparse as adsparse
-import theano as T
 ad.array = lambda x: x
 ad.value = lambda x: x
 
@@ -31,7 +34,6 @@ import logging
 # debug
 #logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.INFO)
 #logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)
-import parallel
 def Logger(name):
     return logging.getLogger('processor{0}:{1}'.format(parallel.rank, name))
 
