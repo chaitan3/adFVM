@@ -28,8 +28,9 @@ class Mesh(object):
         self.points = self.read(meshDir + 'points', float)
         self.owner = self.read(meshDir + 'owner', np.int32).ravel()
         self.neighbour = self.read(meshDir + 'neighbour', np.int32).ravel()
-        self.boundary = self.readBoundary(meshDir + 'boundary')
-        self.origPatches = self.getOrigPatches()
+        self.boundary, self.localPatches, self.remotePatches = self.readBoundary(meshDir + 'boundary')
+        self.origPatches = copy.copy(self.localPatches)
+        self.origPatches.sort()
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
 
@@ -103,11 +104,17 @@ class Mesh(object):
         content = removeCruft(open(boundaryFile).read())
         patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n]+{(.*?)}', re.DOTALL), content)
         boundary = {}
+        localPatches = []
+        remotePatches = []
         for patch in patches:
             boundary[patch[0]] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch[1]))
             boundary[patch[0]]['nFaces'] = int(boundary[patch[0]]['nFaces'])
             boundary[patch[0]]['startFace'] = int(boundary[patch[0]]['startFace'])
-        return boundary
+            if boundary[patch[0]]['type'] in config.processorPatches:
+                remotePatches.append(patch[0])
+            else:
+                localPatches.append(patch[0])
+        return boundary, localPatches, remotePatches
 
     def getNormals(self):
         logger.info('generated normals')
@@ -222,14 +229,6 @@ class Mesh(object):
                 boundary[patchID]['type'] = 'calculated'
         return boundary
 
-    def getOrigPatches(self):
-        origPatches = []
-        for patchID in self.boundary:
-            if self.boundary[patchID]['type'] not in config.processorPatches:
-                origPatches.append(patchID)
-        origPatches.sort()
-        return origPatches
-
     def getProcessorPatchInfo(self, patch):
         local = patch['myProcNo']
         remote = patch['neighbProcNo']
@@ -321,20 +320,16 @@ class Mesh(object):
         remoteBoundary = copy.deepcopy(remoteInternal)
         mesh.localRemoteCells = {'internal':{}, 'boundary':{}}
         mesh.remoteCells = copy.deepcopy(mesh.localRemoteCells)
-        patches = []
-        for patchID in self.boundary:
+        for patchID in self.remotePatches:
             patch = self.boundary[patchID]
-            patchType = patch['type']
-            if patchType not in config.processorPatches:
-                continue
-            else:
-                patches.append(patchID)
             startFace = patch['startFace']
             nFaces = patch['nFaces']
             endFace = startFace + nFaces
             cellStartFace = self.nInternalCells + startFace - nLocalFaces
             cellEndFace = self.nInternalCells + endFace - nLocalFaces
             
+            # extraInternalCells might not be unique
+            #extraInternalCells = np.unique(self.owner[startFace:endFace])
             extraInternalCells = self.owner[startFace:endFace]
             extraFaces = self.cellFaces[extraInternalCells].ravel()
             boundaryFaces = range(startFace, endFace)
@@ -399,14 +394,13 @@ class Mesh(object):
             mesh.localRemoteCells['internal'][patchID] = extraInternalCells
             mesh.localRemoteCells['boundary'][patchID] = extraGhostCells
 
-
         statuses = exchanger.wait()
 
         getCount = lambda index: statuses[index].Get_count()/4
         nRemoteInternalFaces = 0
         nRemoteBoundaryFaces = 0
         total = 26
-        for index, patchID in enumerate(patches):
+        for index, patchID in enumerate(self.remotePatches):
             remoteInternal['mapping'][patchID] = remoteInternal['mapping'][patchID][:getCount(index*total + 1)]
             remoteBoundary['mapping'][patchID] = remoteBoundary['mapping'][patchID][:getCount(index*total + 3)]
             remoteInternal['owner'][patchID] = remoteInternal['owner'][patchID][:getCount(index*total + 5)]
@@ -429,7 +423,7 @@ class Mesh(object):
         remoteGhostStartFace = mesh.nInternalFaces + nLocalBoundaryFaces
         def padFaceField(fieldName):
             field = getattr(self, fieldName)
-            example = remoteInternal[fieldName][patches[0]]
+            example = remoteInternal[fieldName][self.remotePatches[0]]
             size = (mesh.nFaces, ) + example.shape[1:]
             dtype = example.dtype
 
@@ -439,7 +433,7 @@ class Mesh(object):
             faceField[mesh.nInternalFaces:remoteGhostStartFace] = field[self.nInternalFaces:nLocalFaces]
             internalCursor = nLocalInternalFaces
             boundaryCursor = remoteGhostStartFace
-            for patchID in patches:
+            for patchID in self.remotePatches:
                 nInternalFaces = len(remoteInternal['owner'][patchID])
                 faceField[internalCursor:internalCursor + nInternalFaces] = remoteInternal[fieldName][patchID][:nInternalFaces]
                 internalCursor += nInternalFaces
@@ -454,20 +448,24 @@ class Mesh(object):
         mesh.neighbour[mesh.nInternalFaces:remoteGhostStartFace] += nLocalRemoteBoundaryFaces
         # do mapping, vectorize? mostly not possible
         internalCursor = nLocalInternalFaces
+        internalCellsCursor = self.nInternalCells
         boundaryCursor = remoteGhostStartFace
-        for patchID in patches:
-            remoteInternal['mapping'][patchID] = {v:(k + self.nInternalCells) for k,v in enumerate(remoteInternal['mapping'][patchID])}
+        boundaryCellsCursor = mesh.nInternalCells + nLocalBoundaryFaces
+        for patchID in self.remotePatches:
+            reverseInternalMapping = {v:(k + internalCellsCursor) for k,v in enumerate(remoteInternal['mapping'][patchID])}
             nInternalFaces = len(remoteInternal['owner'][patchID])
             for index in range(internalCursor, internalCursor + nInternalFaces):
-                mesh.owner[index] = remoteInternal['mapping'][patchID][mesh.owner[index]]
-                mesh.neighbour[index] = remoteInternal['mapping'][patchID][mesh.neighbour[index]]
+                mesh.owner[index] = reverseInternalMapping[mesh.owner[index]]
+                mesh.neighbour[index] = reverseInternalMapping[mesh.neighbour[index]]
             internalCursor += nInternalFaces
-            remoteBoundary['mapping'][patchID] = {v:(k + mesh.nInternalCells + nLocalBoundaryFaces) for k,v in enumerate(remoteBoundary['mapping'][patchID])}
+            internalCellsCursor += len(remoteInternal['mapping'][patchID])
+            reverseBoundaryMapping = {v:(k + boundaryCellsCursor) for k,v in enumerate(remoteBoundary['mapping'][patchID])}
             nBoundaryFaces = len(remoteBoundary['owner'][patchID])
             for index in range(boundaryCursor, boundaryCursor + nInternalFaces):
-                mesh.owner[index] = remoteInternal['mapping'][patchID][mesh.owner[index]]
-                mesh.neighbour[index] = remoteBoundary['mapping'][patchID][mesh.neighbour[index]]
+                mesh.owner[index] = reverseInternalMapping[mesh.owner[index]]
+                mesh.neighbour[index] = reverseBoundaryMapping[mesh.neighbour[index]]
             boundaryCursor += nBoundaryFaces
+            boundaryCellsCursor += len(remoteBoundary['mapping'][patchID])
      
         mesh.areas = padFaceField('areas')
         mesh.normals = padFaceField('normals')
@@ -477,7 +475,7 @@ class Mesh(object):
         mesh.volumes = np.empty((mesh.nInternalCells, 1))
         mesh.volumes[:self.nInternalCells] = self.volumes
         internalCursor = self.nInternalCells
-        for patchID in patches:
+        for patchID in self.remotePatches:
             nInternalCells = self.boundary[patchID]['nFaces']
             mesh.volumes[internalCursor:internalCursor + nInternalCells] = remoteInternal['volumes'][patchID][:nInternalCells]
             internalCursor += nInternalCells

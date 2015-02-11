@@ -151,8 +151,6 @@ class CellField(Field):
 
         self = CellField
         mesh = self.mesh.paddedMesh 
-        # patches accessed in same order?
-        patches = mesh.localRemoteCells['internal'].keys()
 
         newStackedFields = np.zeros((mesh.nCells, ) + stackedFields.shape[1:])
         newStackedFields[:self.mesh.nInternalCells] = stackedFields[:self.mesh.nInternalCells]
@@ -162,7 +160,7 @@ class CellField(Field):
         exchanger = Exchanger()
         internalCursor = self.mesh.nInternalCells
         boundaryCursor = mesh.nInternalCells + nLocalBoundaryFaces
-        for patchID in patches:
+        for patchID in self.mesh.remotePatches:
             nInternalCells = len(mesh.remoteCells['internal'][patchID])
             nBoundaryCells = len(mesh.remoteCells['boundary'][patchID])
             patch = self.mesh.boundary[patchID]
@@ -222,13 +220,13 @@ class CellField(Field):
         if parallel.nProcessors == 1:
             return phi
 
-        mesh = phi.mesh
-        nRemoteCells = mesh.nCells - mesh.nLocalCells
+        mesh = self.mesh.paddedMesh
+        nRemoteCells = self.mesh.nCells - self.mesh.nLocalCells
         # every cell gets filled
-        phiField = ad.alloc(np.float64(0.), *((mesh.nCells, ) + phi.dimensions))
-        phiField = ad.set_subtensor(phiField[:mesh.nInternalCells], phi.field[mesh.nInternalCells])
-        phiField = ad.set_subtensor(phiField[mesh.nInternalCells:mesh.nLocalCells], phi.field[mesh.nInternalCells + nRemoteCells:mesh.nCells])
-        phiField = ad.set_subtensor(phiField[mesh.nLocalCells:], phi.field[mesh.nInternalCells:mesh.nInternalCells + nRemoteCells])
+        phiField = ad.alloc(np.float64(0.), *((self.mesh.nCells, ) + phi.dimensions))
+        phiField = ad.set_subtensor(phiField[:self.mesh.nInternalCells], phi.field[:self.mesh.nInternalCells])
+        phiField = ad.set_subtensor(phiField[self.mesh.nInternalCells:self.mesh.nLocalCells], phi.field[mesh.nInternalCells:self.mesh.nCells])
+        phiField = ad.set_subtensor(phiField[self.mesh.nLocalCells:], phi.field[self.mesh.nInternalCells:self.mesh.nInternalCells + nRemoteCells])
         return self(phi.name, phiField, phi.dimensions, phi.boundary)
 
     def copyRemoteCells(self, internalField):
