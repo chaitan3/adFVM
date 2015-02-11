@@ -340,6 +340,9 @@ class Mesh(object):
             weights = self.weights[extraFaces]
             extraCells = np.concatenate((owner, neighbour))
             extraGhostCells = np.setdiff1d(extraCells, extraInternalCells)
+            # check cells on another processor
+            extraRemoteGhostCells = extraGhostCells[extraGhostCells >= self.nLocalCells]
+            print 'Extra remote ghost cells: ', parallel.rank, len(extraRemoteGhostCells)
             # swap extra boundary faces whose owner is wrong
             swapIndex = np.in1d(owner, extraGhostCells)
             tmp = neighbour[swapIndex]
