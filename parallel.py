@@ -1,7 +1,7 @@
 from __future__ import print_function
 from mpi4py import MPI
 import numpy as np
-from config import ad
+from config import ad, T
 
 mpi = MPI.COMM_WORLD
 nProcessors = mpi.Get_size()
@@ -9,6 +9,8 @@ rank = mpi.Get_rank()
 processorDirectory = '/'
 if nProcessors > 1:
     processorDirectory = '/processor{0}/'.format(rank)
+T.config.compiledir += '-{0}'.format(rank)
+print T.config.compiledir
 
 def pprint(*args, **kwargs):
     if rank == 0:
