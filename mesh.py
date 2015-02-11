@@ -453,7 +453,7 @@ class Mesh(object):
         internalCursor = nLocalInternalFaces
         internalCellsCursor = self.nInternalCells
         boundaryCursor = remoteGhostStartFace
-        boundaryCellsCursor = mesh.nInternalCells + nLocalBoundaryFaces
+        boundaryCellsCursor = self.nCells
         for patchID in self.remotePatches:
             reverseInternalMapping = {v:(k + internalCellsCursor) for k,v in enumerate(remoteInternal['mapping'][patchID])}
             nInternalFaces = len(remoteInternal['owner'][patchID])

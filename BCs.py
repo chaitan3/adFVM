@@ -30,7 +30,6 @@ class calculated(BoundaryCondition):
             self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,)))
         else:
             self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], 0)
-        self.patch.pop('value', None)
 
     def update(self):
         pass

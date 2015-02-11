@@ -159,7 +159,7 @@ class CellField(Field):
 
         exchanger = Exchanger()
         internalCursor = self.mesh.nInternalCells
-        boundaryCursor = mesh.nInternalCells + nLocalBoundaryFaces
+        boundaryCursor = self.mesh.nCells
         for patchID in self.mesh.remotePatches:
             nInternalCells = len(mesh.remoteCells['internal'][patchID])
             nBoundaryCells = len(mesh.remoteCells['boundary'][patchID])
@@ -190,13 +190,6 @@ class CellField(Field):
             size = (mesh.nCells, ) + dimensions
             self.field = ad.alloc(np.float64(1.), *size)
             self.field.tag.test_value = np.zeros(size)
-
-            #if len(dimensions) == 1:
-            #    self.field = ad.alloc(np.float64(0.), *(mesh.nCells, dimensions[0]))
-            #    self.field.tag.test_value = np.zeros((mesh.nCells, dimensions[0]))
-            #else:
-            #    self.field = ad.alloc(np.float64(0.), *(mesh.nCells, dimensions[0], dimensions[1]))
-            #    self.field.tag.test_value = np.zeros((mesh.nCells, dimensions[0], dimensions[1]))
 
         self.BC = {}
         for patchID in self.boundary:
@@ -359,6 +352,8 @@ class IOField(Field):
         for patchID in boundary:
             handle.write('\t' + patchID + '\n\t{\n')
             patch = boundary[patchID]
+            if patch['type'] in config.valuePatches:
+                patch.pop('value', None)
             for attr in patch:
                 handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
             if patch['type'] in config.valuePatches:
