@@ -3,7 +3,9 @@ import numpy as np
 import parallel
 
 import os
-os.environ['THEANO_FLAGS']='compiledir=~/.theano/adFVM-' + str(parallel.rank)
+os.environ['THEANO_FLAGS'] = 'compiledir=~/.theano/adFVM-' + str(parallel.rank)
+# profiling
+#os.environ['THEANO_FLAGS'] += ',profile=True'
 import theano as T
 import theano.tensor as ad
 import theano.sparse as adsparse
