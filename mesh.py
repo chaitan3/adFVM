@@ -16,6 +16,7 @@ class Mesh(object):
             self.sumOp = None
             self.areas = self.volumes = self.weights = self.normals = None
             self.localRemoteCells = None
+            self.localRemoteFaces = None
             self.remoteCells = None
             return
 
@@ -319,6 +320,7 @@ class Mesh(object):
         remoteInternal = {'mapping':{},'owner':{}, 'neighbour':{}, 'areas':{}, 'weights':{}, 'normals':{}, 'volumes':{}}
         remoteBoundary = copy.deepcopy(remoteInternal)
         mesh.localRemoteCells = {'internal':{}, 'boundary':{}}
+        mesh.localRemoteFaces = copy.deepcopy(mesh.localRemoteCells)
         mesh.remoteCells = copy.deepcopy(mesh.localRemoteCells)
         for patchID in self.remotePatches:
             patch = self.boundary[patchID]
@@ -344,13 +346,15 @@ class Mesh(object):
             extraRemoteGhostCells = extraGhostCells[extraGhostCells >= self.nLocalCells]
             print 'Extra remote ghost cells: ', parallel.rank, len(extraRemoteGhostCells)
             # swap extra boundary faces whose owner is wrong
+            print parallel.rank, owner
             swapIndex = np.in1d(owner, extraGhostCells)
             tmp = neighbour[swapIndex]
             neighbour[swapIndex] = owner[swapIndex]
             owner[swapIndex] = tmp
-            # flip normals and invert weights
+            ## flip normals and invert weights
             normals[swapIndex] *= -1
             weights[swapIndex] = 1-weights[swapIndex]
+            print parallel.rank, owner
 
             boundaryIndex = np.in1d(neighbour, extraGhostCells)
             internalIndex = np.invert(boundaryIndex)
@@ -396,7 +400,8 @@ class Mesh(object):
             
             mesh.localRemoteCells['internal'][patchID] = extraInternalCells
             mesh.localRemoteCells['boundary'][patchID] = extraGhostCells
-
+            mesh.localRemoteFaces['internal'][patchID] = extraInternalFaces
+            mesh.localRemoteFaces['boundary'][patchID] = extraBoundaryFaces
         statuses = exchanger.wait()
 
         getCount = lambda index: statuses[index].Get_count()/4
@@ -451,8 +456,8 @@ class Mesh(object):
         mesh.neighbour[mesh.nInternalFaces:remoteGhostStartFace] += nLocalRemoteBoundaryFaces
         # do mapping, vectorize? mostly not possible
         internalCursor = nLocalInternalFaces
-        internalCellsCursor = self.nInternalCells
         boundaryCursor = remoteGhostStartFace
+        internalCellsCursor = self.nInternalCells
         boundaryCellsCursor = self.nCells
         for patchID in self.remotePatches:
             reverseInternalMapping = {v:(k + internalCellsCursor) for k,v in enumerate(remoteInternal['mapping'][patchID])}

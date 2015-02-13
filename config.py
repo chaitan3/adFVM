@@ -3,7 +3,7 @@ import numpy as np
 import parallel
 
 import os
-os.environ['THEANO_FLAGS'] = 'compiledir=~/.theano/adFVM-' + str(parallel.rank)
+os.environ['THEANO_FLAGS'] = 'compiledir=~/.theano/adFVM-{0}-{1}'.format(parallel.nProcessors, parallel.rank)
 # profiling
 #os.environ['THEANO_FLAGS'] += ',profile=True'
 import theano as T

@@ -35,16 +35,13 @@ class Solver(object):
         stackedFields = ad.dmatrix()
         stackedFields.tag.test_value = (np.random.rand(self.mesh.paddedMesh.nCells, 5))
         fields = self.unstackFields(stackedFields, CellField)
-        #ars, tech = self.equation(*phis, exit=True)
         fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
         newStackedFields = self.stackFields(fields, ad)
-        self.forward = T.function([stackedFields], [newStackedFields, self.dtc], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
-        #Z = ad.concatenate([phi.field for phi in ars], axis=1)
-        #func2 = T.function([X], [Z, tech], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
+        #self.forward = T.function([stackedFields], [newStackedFields, self.dtc], on_unused_input='warn')
+        self.forward = T.function([stackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
         if self.adjoint:
             stackedAdjointFields = ad.dmatrix()
             self.gradient = T.function([stackedFields, stackedAdjointFields], ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields))
-        #import pdb; pdb.set_trace()
 
         end = time.time()
         pprint('Time for compilation:', end-start)
@@ -102,7 +99,11 @@ class Solver(object):
             stackedFields = CellField.getRemoteCells(stackedFields)  
 
             pprint('Time step', timeIndex)
-            stackedFields, dtc = self.forward(stackedFields)
+            #stackedFields, dtc = self.forward(stackedFields)
+            stackedFields, dtc, local, remote = self.forward(stackedFields)
+            print 'local', parallel.rank, local, local.shape
+            print 'remote', parallel.rank, remote, remote.shape
+
             fields = self.unstackFields(stackedFields, IOField)
 
             end = time.time()

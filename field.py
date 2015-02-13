@@ -170,6 +170,7 @@ class CellField(Field):
             exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['boundary'][patchID]], newStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
             internalCursor += nInternalCells
             boundaryCursor += nBoundaryCells
+
         exchanger.wait()
 
         return newStackedFields
@@ -214,24 +215,20 @@ class CellField(Field):
             return phi
 
         mesh = self.mesh.paddedMesh
-        nRemoteCells = self.mesh.nCells - self.mesh.nLocalCells
         # every cell gets filled
         phiField = ad.alloc(np.float64(0.), *((self.mesh.nCells, ) + phi.dimensions))
         phiField = ad.set_subtensor(phiField[:self.mesh.nInternalCells], phi.field[:self.mesh.nInternalCells])
         phiField = ad.set_subtensor(phiField[self.mesh.nInternalCells:self.mesh.nLocalCells], phi.field[mesh.nInternalCells:self.mesh.nCells])
-        phiField = ad.set_subtensor(phiField[self.mesh.nLocalCells:], phi.field[self.mesh.nInternalCells:self.mesh.nInternalCells + nRemoteCells])
+        phiField = ad.set_subtensor(phiField[self.mesh.nLocalCells:], phi.field[self.mesh.nInternalCells:mesh.nInternalCells])
         return self(phi.name, phiField, phi.dimensions, phi.boundary)
 
     def copyRemoteCells(self, internalField):
         # processor boundary condition completed by copying the extra data in internalField, HACK
-        internal = self.mesh.nInternalCells
-        local = self.mesh.nLocalCells
-        self.field = ad.set_subtensor(self.field[local:], internalField[internal:])
+        self.field = ad.set_subtensor(self.field[self.mesh.nLocalCells:], internalField[self.mesh.nInternalCells:])
 
     def setInternalField(self, internalField):
         # boundary conditions complete cell field after setting internal field
-        internal = self.mesh.nInternalCells
-        self.field = ad.set_subtensor(self.field[:internal], internalField[:internal])
+        self.field = ad.set_subtensor(self.field[:self.mesh.nInternalCells], internalField[:self.mesh.nInternalCells])
         self.updateGhostCells()
 
     def getInternalField(self):

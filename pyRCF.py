@@ -81,7 +81,6 @@ class RCF(Solver):
         logger.info('computing RHS/LHS')
         mesh = self.mesh
         paddedMesh = mesh.paddedMesh
-        from config import T as theano
 
         # in interpolation phi is full with additional second layer, gradField is full
         gradRho = grad(central(rhoP, paddedMesh), ghost=True)
@@ -96,7 +95,17 @@ class RCF(Solver):
         rhoE = CellField.getOrigField(rhoEP)
         U = CellField.getOrigField(UP)
         T = CellField.getOrigField(TP)
-        #theano.printing.Print('sdsd')(pP.field.shape)
+        #self.local = (rho.field[mesh.owner[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
+        #self.remote = (rho.field[mesh.neighbour[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
+        #self.local = (gradRho.field[mesh.owner[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
+        #self.remote = (gradRho.field[mesh.neighbour[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
+        for patchID in mesh.remotePatches:
+            #phi = central(rhoP, paddedMesh).field
+            phi = rhoP.field[paddedMesh.owner]
+            #self.local = phi[paddedMesh.localRemoteFaces['internal'][patchID]][:, 0]
+            #self.remote = phi[mesh.nInternalFaces + mesh.nCells - mesh.nLocalCells:paddedMesh.nInternalFaces][:, 0]
+            self.local = phi[paddedMesh.localRemoteFaces['boundary'][patchID]][:, 0]
+            self.remote = phi[paddedMesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:paddedMesh.nFaces][:, 0]
 
         # interpolation
         rhoLF, rhoRF = TVD_dual(rho, gradRho)
