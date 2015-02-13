@@ -100,12 +100,12 @@ class RCF(Solver):
         #self.local = (gradRho.field[mesh.owner[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
         #self.remote = (gradRho.field[mesh.neighbour[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
         for patchID in mesh.remotePatches:
-            #phi = central(rhoP, paddedMesh).field
-            phi = rhoP.field[paddedMesh.owner]
-            #self.local = phi[paddedMesh.localRemoteFaces['internal'][patchID]][:, 0]
-            #self.remote = phi[mesh.nInternalFaces + mesh.nCells - mesh.nLocalCells:paddedMesh.nInternalFaces][:, 0]
-            self.local = phi[paddedMesh.localRemoteFaces['boundary'][patchID]][:, 0]
-            self.remote = phi[paddedMesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:paddedMesh.nFaces][:, 0]
+            phi = central(rhoP, paddedMesh).field
+            phi = ad.concatenate((rhoP.field[paddedMesh.owner], rhoP.field[paddedMesh.neighbour], paddedMesh.weights, 1-paddedMesh.weights, phi), axis=1)
+            #self.local = phi[paddedMesh.localRemoteFaces['internal'][patchID]]
+            #self.remote = phi[mesh.nInternalFaces + mesh.nCells - mesh.nLocalCells:paddedMesh.nInternalFaces]
+            self.local = phi[paddedMesh.localRemoteFaces['boundary'][patchID]]
+            self.remote = phi[paddedMesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:paddedMesh.nFaces]
 
         # interpolation
         rhoLF, rhoRF = TVD_dual(rho, gradRho)

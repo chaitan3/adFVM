@@ -101,8 +101,8 @@ class Solver(object):
             pprint('Time step', timeIndex)
             #stackedFields, dtc = self.forward(stackedFields)
             stackedFields, dtc, local, remote = self.forward(stackedFields)
-            print 'local', parallel.rank, local, local.shape
-            print 'remote', parallel.rank, remote, remote.shape
+            #print 'local', parallel.rank, local, local.shape
+            #print 'remote', parallel.rank, remote, remote.shape
 
             fields = self.unstackFields(stackedFields, IOField)
 

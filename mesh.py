@@ -345,8 +345,9 @@ class Mesh(object):
             # check cells on another processor
             extraRemoteGhostCells = extraGhostCells[extraGhostCells >= self.nLocalCells]
             print 'Extra remote ghost cells: ', parallel.rank, len(extraRemoteGhostCells)
+
+            boundaryIndex = np.in1d(neighbour, extraGhostCells)
             # swap extra boundary faces whose owner is wrong
-            print parallel.rank, owner
             swapIndex = np.in1d(owner, extraGhostCells)
             tmp = neighbour[swapIndex]
             neighbour[swapIndex] = owner[swapIndex]
@@ -354,7 +355,6 @@ class Mesh(object):
             ## flip normals and invert weights
             normals[swapIndex] *= -1
             weights[swapIndex] = 1-weights[swapIndex]
-            print parallel.rank, owner
 
             boundaryIndex = np.in1d(neighbour, extraGhostCells)
             internalIndex = np.invert(boundaryIndex)
@@ -469,7 +469,7 @@ class Mesh(object):
             internalCellsCursor += len(remoteInternal['mapping'][patchID])
             reverseBoundaryMapping = {v:(k + boundaryCellsCursor) for k,v in enumerate(remoteBoundary['mapping'][patchID])}
             nBoundaryFaces = len(remoteBoundary['owner'][patchID])
-            for index in range(boundaryCursor, boundaryCursor + nInternalFaces):
+            for index in range(boundaryCursor, boundaryCursor + nBoundaryFaces):
                 mesh.owner[index] = reverseInternalMapping[mesh.owner[index]]
                 mesh.neighbour[index] = reverseBoundaryMapping[mesh.neighbour[index]]
             boundaryCursor += nBoundaryFaces
