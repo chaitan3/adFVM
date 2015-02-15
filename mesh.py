@@ -121,7 +121,10 @@ class Mesh(object):
         logger.info('generated normals')
         v1 = self.points[self.faces[:,1]]-self.points[self.faces[:,2]]
         v2 = self.points[self.faces[:,2]]-self.points[self.faces[:,3]]
+        # CROSS product makes it F_CONTIGUOUS even if normals is not
         normals = np.cross(v1, v2)
+        # change back to contiguous
+        normals = np.ascontiguousarray(normals)
         return normals / config.norm(normals, axis=1).reshape(-1,1)
 
     def getCellFaces(self):
@@ -322,6 +325,7 @@ class Mesh(object):
         mesh.localRemoteCells = {'internal':{}, 'boundary':{}}
         mesh.localRemoteFaces = copy.deepcopy(mesh.localRemoteCells)
         mesh.remoteCells = copy.deepcopy(mesh.localRemoteCells)
+        mesh.remoteFaces = copy.deepcopy(mesh.localRemoteCells)
         for patchID in self.remotePatches:
             patch = self.boundary[patchID]
             startFace = patch['startFace']
@@ -366,13 +370,15 @@ class Mesh(object):
             tagIncrement = len(self.origPatches) + 1
 
             def remoteExchange(field, sendData, location):
+                order = 'C'
                 if location == 'internal':
                     size = (sendData.shape[0]*2, ) + sendData.shape[1:]
-                    remoteInternal[field][patchID] = np.zeros(size, sendData.dtype)
+                    remoteInternal[field][patchID] = np.zeros(size, sendData.dtype, order)
+                    #print field, sendData.flags['F_CONTIGUOUS'], remoteInternal[field][patchID].flags['F_CONTIGUOUS']
                     exchanger.exchange(remote, sendData, remoteInternal[field][patchID], tag[0])
                 else:
                     size = (sendData.shape[0]*4, ) + sendData.shape[1:]
-                    remoteBoundary[field][patchID] = np.zeros(size, sendData.dtype)
+                    remoteBoundary[field][patchID] = np.zeros(size, sendData.dtype, order)
                     exchanger.exchange(remote, sendData, remoteBoundary[field][patchID], tag[0])
                 tag[0] += tagIncrement
 
@@ -392,6 +398,7 @@ class Mesh(object):
             #12: send rest
             remoteExchange('areas', self.areas[extraInternalFaces], 'internal')
             remoteExchange('areas', self.areas[extraBoundaryFaces], 'boundary')
+            # WHY THE FUCK IS normals F_CONTIGUOUS
             remoteExchange('normals', normals[internalIndex], 'internal')
             remoteExchange('normals', normals[boundaryIndex], 'boundary')
             remoteExchange('weights', weights[internalIndex], 'internal')
@@ -415,6 +422,8 @@ class Mesh(object):
             remoteBoundary['owner'][patchID] = remoteBoundary['owner'][patchID][:getCount(index*total + 7)]
             mesh.remoteCells['internal'][patchID] = remoteInternal['mapping'][patchID]
             mesh.remoteCells['boundary'][patchID] = remoteBoundary['mapping'][patchID]
+            mesh.remoteFaces['internal'][patchID] = len(remoteInternal['owner'][patchID])
+            mesh.remoteFaces['boundary'][patchID] = len(remoteBoundary['owner'][patchID])
             #print(getCount(index*total+3))
             #print(parallel.rank, remoteBoundary['mapping'][patchID])
             nRemoteInternalFaces += len(remoteInternal['owner'][patchID])
@@ -477,6 +486,7 @@ class Mesh(object):
      
         mesh.areas = padFaceField('areas')
         mesh.normals = padFaceField('normals')
+        #print sum(np.linalg.norm(mesh.normals[remoteGhostStartFace:], axis=1)), nRemoteBoundaryFaces
         mesh.weights = padFaceField('weights')
         mesh.sumOp = self.getSumOp(mesh)
 

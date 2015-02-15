@@ -119,17 +119,37 @@ from mpi4py import MPI
 #
 
 
+#mpi = MPI.COMM_WORLD
+#rank = mpi.Get_rank()
+#
+#other = 1 - rank
+#if rank == 0:
+#    x = 2*np.ones(100, np.int32)
+#    e = mpi.Isend(x, dest=other)
+#else:
+#    x = np.empty(200, np.int32)
+#    e = mpi.Irecv(x, source=other)
+#status = MPI.Status()
+#MPI.Request.Wait(e, status)
+#print x
+#print status.Get_count()
+
 mpi = MPI.COMM_WORLD
 rank = mpi.Get_rank()
+bufsize = (4, 3)
+order = 'F'
 
 other = 1 - rank
 if rank == 0:
-    x = 2*np.ones(100, np.int32)
-    e = mpi.Isend(x, dest=other)
+    x = np.array([[3, 1, 2], [1, 5, 4]], order=order)
+    req = mpi.Isend(x, dest=other)
 else:
-    x = np.empty(200, np.int32)
-    e = mpi.Irecv(x, source=other)
-status = MPI.Status()
-MPI.Request.Wait(e, status)
-print x
-print status.Get_count()
+    x = np.zeros(bufsize, np.int64, order=order)
+    req = mpi.Irecv(x, source=other)
+MPI.Request.Wait(req)
+print rank, x
+
+a = np.random.rand(10, 3)
+b = np.random.rand(10, 3)
+c = np.cross(a,b)
+print c.flags

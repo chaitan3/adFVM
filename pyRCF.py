@@ -95,17 +95,21 @@ class RCF(Solver):
         rhoE = CellField.getOrigField(rhoEP)
         U = CellField.getOrigField(UP)
         T = CellField.getOrigField(TP)
-        #self.local = (rho.field[mesh.owner[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
-        #self.remote = (rho.field[mesh.neighbour[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
-        #self.local = (gradRho.field[mesh.owner[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
-        #self.remote = (gradRho.field[mesh.neighbour[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
-        for patchID in mesh.remotePatches:
-            phi = central(rhoP, paddedMesh).field
-            phi = ad.concatenate((rhoP.field[paddedMesh.owner], rhoP.field[paddedMesh.neighbour], paddedMesh.weights, 1-paddedMesh.weights, phi), axis=1)
-            #self.local = phi[paddedMesh.localRemoteFaces['internal'][patchID]]
-            #self.remote = phi[mesh.nInternalFaces + mesh.nCells - mesh.nLocalCells:paddedMesh.nInternalFaces]
-            self.local = phi[paddedMesh.localRemoteFaces['boundary'][patchID]]
-            self.remote = phi[paddedMesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:paddedMesh.nFaces]
+        #self.local = (rhoU.field[mesh.owner[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
+        #self.remote = (rhoU.field[mesh.neighbour[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
+        self.local = (gradRho.field[mesh.owner[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
+        self.remote = (gradRho.field[mesh.neighbour[mesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:mesh.nFaces]])
+
+        #field = rhoU
+        #fieldP = rhoUP
+        #phi = ad.concatenate((field.field[mesh.owner], field.field[mesh.neighbour], mesh.weights, mesh.normals, central(field, mesh).field), axis=1)
+        #phiP = ad.concatenate((fieldP.field[paddedMesh.owner], fieldP.field[paddedMesh.neighbour], paddedMesh.weights, paddedMesh.normals, central(fieldP, paddedMesh).field), axis=1)
+        ##self.remote = phiP[mesh.nInternalFaces + mesh.nCells - mesh.nLocalCells:paddedMesh.nInternalFaces]
+        #self.remote = phiP[paddedMesh.nInternalFaces + mesh.nLocalCells - mesh.nInternalCells:paddedMesh.nFaces]
+        #self.loc = 'boundary'
+        #self.local = phi[paddedMesh.localRemoteFaces[self.loc][mesh.remotePatches[0]]]
+        #for patchID in mesh.remotePatches[1:]:
+        #    self.local = ad.concatenate((self.local, phi[paddedMesh.localRemoteFaces[self.loc][patchID]]), axis=0)
 
         # interpolation
         rhoLF, rhoRF = TVD_dual(rho, gradRho)

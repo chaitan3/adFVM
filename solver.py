@@ -101,9 +101,20 @@ class Solver(object):
             pprint('Time step', timeIndex)
             #stackedFields, dtc = self.forward(stackedFields)
             stackedFields, dtc, local, remote = self.forward(stackedFields)
-            #print 'local', parallel.rank, local, local.shape
-            #print 'remote', parallel.rank, remote, remote.shape
-
+            lStart = 0
+            rStart = 0
+            #print parallel.rank, mesh.remotePatches
+            #for patchID in mesh.remotePatches:
+            #    n = mesh.boundary[patchID]['nFaces']
+            #    #n = len(mesh.paddedMesh.localRemoteFaces[self.loc][patchID])
+            #    np.savetxt('local_' + patchID, local[lStart:lStart+n])
+            #    #print 'local', patchID, local[lStart:lStart+n], local.shape
+            #    lStart += n
+            #    #n = mesh.paddedMesh.remoteFaces[self.loc][patchID]
+            #    np.savetxt('remote_' + patchID, remote[rStart:rStart+n])
+            #    #print 'remote', patchID, remote[rStart:rStart+n], remote.shape
+            #    rStart += n
+                        
             fields = self.unstackFields(stackedFields, IOField)
 
             end = time.time()
