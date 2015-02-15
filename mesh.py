@@ -233,12 +233,13 @@ class Mesh(object):
                 boundary[patchID]['type'] = 'calculated'
         return boundary
 
-    def getProcessorPatchInfo(self, patch):
+    def getProcessorPatchInfo(self, patchID):
+        patch = self.boundary[patchID]
         local = patch['myProcNo']
         remote = patch['neighbProcNo']
         tag = 0
         if patch['type'] == 'processorCyclic':
-            commonPatch = self.boundary[patchID]['referPatch']
+            commonPatch = patch['referPatch']
             if local > remote:
                 commonPatch = self.boundary[commonPatch]['neighbourPatch']
             tag = 1 + self.origPatches.index(commonPatch)
@@ -278,14 +279,14 @@ class Mesh(object):
             elif patch['type'] == 'processor':
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
-                local, remote, tag = self.getProcessorPatchInfo(patch)
+                local, remote, tag = self.getProcessorPatchInfo(patchID)
                 # exchange data
                 exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
 
             elif patch['type'] == 'processorCyclic':
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
-                local, remote, tag = self.getProcessorPatchInfo(patch)
+                local, remote, tag = self.getProcessorPatchInfo(patchID)
                 # apply transformation
                 exchanger.exchange(remote, -self.faceCentres[startFace:endFace] + self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
             else:
@@ -365,7 +366,7 @@ class Mesh(object):
             extraBoundaryFaces = extraFaces[boundaryIndex]
             extraInternalFaces = extraFaces[internalIndex]
 
-            local, remote, tag = self.getProcessorPatchInfo(patch)
+            local, remote, tag = self.getProcessorPatchInfo(patchID)
             tag = {0:tag}
             tagIncrement = len(self.origPatches) + 1
 

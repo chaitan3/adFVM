@@ -163,8 +163,7 @@ class CellField(Field):
         for patchID in self.mesh.remotePatches:
             nInternalCells = len(mesh.remoteCells['internal'][patchID])
             nBoundaryCells = len(mesh.remoteCells['boundary'][patchID])
-            patch = self.mesh.boundary[patchID]
-            local, remote, tag = self.mesh.getProcessorPatchInfo(patch)
+            local, remote, tag = self.mesh.getProcessorPatchInfo(patchID)
             exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['internal'][patchID]], newStackedFields[internalCursor:internalCursor+nInternalCells], tag)
             tag += len(self.mesh.origPatches) + 1
             exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['boundary'][patchID]], newStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
