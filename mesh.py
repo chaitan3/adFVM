@@ -49,8 +49,6 @@ class Mesh(object):
         self.cellCentres, self.volumes = self.getCellCentresAndVolumes() # nCells after ghost cell mod
         # uses neighbour
         self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
-        self.absSumOp = self.getAbsSumOp()             # (nInternalCells, nFaces)
-
         
         # ghost cell modification
         self.nLocalCells = self.createGhostCells()
@@ -129,7 +127,7 @@ class Mesh(object):
 
     def getCellFaces(self):
         logger.info('generated cell faces')
-        enum = lambda x: np.column_stack((np.indices(x.shape)[0], x)) 
+        enum = lambda x: np.column_stack((np.indices(x.shape, np.int32)[0], x)) 
         combined = np.concatenate((enum(self.owner), enum(self.neighbour)))
         cellFaces = combined[combined[:,1].argsort(), 0]
         # todo: make it a list ( investigate np.diff )
@@ -187,9 +185,9 @@ class Mesh(object):
 
     def getSumOp(self, mesh):
         logger.info('generated sum op')
-        owner = sp.csc_matrix((np.ones(mesh.nFaces), mesh.owner, range(0, mesh.nFaces+1)), shape=(mesh.nInternalCells, mesh.nFaces))
-        Nindptr = np.concatenate((range(0, mesh.nInternalFaces+1), mesh.nInternalFaces*np.ones(mesh.nFaces-mesh.nInternalFaces, int)))
-        neighbour = sp.csc_matrix((-np.ones(mesh.nInternalFaces), mesh.neighbour[:mesh.nInternalFaces], Nindptr), shape=(mesh.nInternalCells, mesh.nFaces))
+        owner = sp.csc_matrix((np.ones(mesh.nFaces, config.precision), mesh.owner, np.arange(0, mesh.nFaces+1, dtype=np.int32)), shape=(mesh.nInternalCells, mesh.nFaces))
+        Nindptr = np.concatenate((np.arange(0, mesh.nInternalFaces+1, dtype=np.int32), mesh.nInternalFaces*np.ones(mesh.nFaces-mesh.nInternalFaces, np.int32)))
+        neighbour = sp.csc_matrix((-np.ones(mesh.nInternalFaces, config.precision), mesh.neighbour[:mesh.nInternalFaces], Nindptr), shape=(mesh.nInternalCells, mesh.nFaces))
         # skip empty patches
         for patchID in self.boundary:
             patch = self.boundary[patchID]
@@ -198,15 +196,6 @@ class Mesh(object):
                 startFace = mesh.nInternalFaces + patch['startFace'] - self.nInternalFaces
                 endFace = startFace + patch['nFaces']
                 owner.data[startFace:endFace] = 0
-        sumOp = (owner + neighbour).tocsr()
-        #return sumOp
-        return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
-
-    def getAbsSumOp(self):
-        logger.info('generated abs sum op')
-        owner = sp.csc_matrix((np.ones(self.nFaces), self.owner, range(0, self.nFaces+1)), shape=(self.nInternalCells, self.nFaces))
-        Nindptr = np.concatenate((range(0, self.nInternalFaces+1), self.nInternalFaces*np.ones(self.nFaces-self.nInternalFaces, int)))
-        neighbour = sp.csc_matrix((np.ones(self.nInternalFaces), self.neighbour[:self.nInternalFaces], Nindptr), shape=(self.nInternalCells, self.nFaces))
         sumOp = (owner + neighbour).tocsr()
         #return sumOp
         return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
@@ -250,7 +239,7 @@ class Mesh(object):
     def createGhostCells(self):
         logger.info('generated ghost cells')
         self.neighbour = np.concatenate((self.neighbour, np.zeros(self.nBoundaryFaces, np.int32)))
-        self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3))))
+        self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3), config.precision)))
         nLocalCells = self.nInternalCells
         exchanger = Exchanger()
         for patchID in self.boundary:

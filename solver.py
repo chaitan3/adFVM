@@ -101,8 +101,10 @@ class Solver(object):
             pprint('Time step', timeIndex)
             #stackedFields, dtc = self.forward(stackedFields)
             stackedFields, dtc, local, remote = self.forward(stackedFields)
-            lStart = 0
-            rStart = 0
+            #print local, local.max(), local.min()
+
+            #lStart = 0
+            #rStart = 0
             #print parallel.rank, mesh.remotePatches
             #for patchID in mesh.remotePatches:
             #    n = mesh.boundary[patchID]['nFaces']
@@ -134,7 +136,7 @@ class Solver(object):
             pprint()
 
             dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
-            self.dt.set_value(dt)
+            self.dt.set_value(config.precision(dt))
 
         if mode == 'forward':
             return solutions

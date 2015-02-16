@@ -135,6 +135,8 @@ class RCF(Solver):
         aF = Field.max(apF.abs(), amF.abs())
         aF.name = 'aF'
 
+        self.local = cLF.field
+
         # CFL based time step: sparse update?
         aF2 = Field.max((UnLF + aF).abs(), (UnRF - aF).abs())*0.5
         self.dtc = self.CFL/ad.max(aF2.field/mesh.deltas)

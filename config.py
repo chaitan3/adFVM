@@ -44,11 +44,16 @@ def Logger(name):
     return logging.getLogger('processor{0}:{1}'.format(parallel.rank, name))
 
 # CONSTANTS
-#SMALL = 1e-15
-#VSMALL = 1e-300
-SMALL = 1e-9
-VSMALL = 1e-9
-LARGE = 1e30
+if precision == np.float64:
+    #SMALL = 1e-15
+    #VSMALL = 1e-300
+    SMALL = 1e-6
+    VSMALL = 1e-9
+    LARGE = 1e300
+else:
+    SMALL = 1e-3
+    VSMALL = 1e-5
+    LARGE = 1e30
 
 # FILE READING
 
