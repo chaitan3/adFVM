@@ -152,7 +152,7 @@ class CellField(Field):
         self = CellField
         mesh = self.mesh.paddedMesh 
 
-        newStackedFields = np.zeros((mesh.nCells, ) + stackedFields.shape[1:])
+        newStackedFields = np.zeros((mesh.nCells, ) + stackedFields.shape[1:], config.precision)
         newStackedFields[:self.mesh.nInternalCells] = stackedFields[:self.mesh.nInternalCells]
         nLocalBoundaryFaces = self.mesh.nLocalCells - self.mesh.nInternalCells
         newStackedFields[mesh.nInternalCells:mesh.nInternalCells + nLocalBoundaryFaces] = stackedFields[self.mesh.nInternalCells:self.mesh.nLocalCells]
@@ -188,8 +188,8 @@ class CellField(Field):
         if ghost:
             # can be not filled
             size = (mesh.nCells, ) + dimensions
-            self.field = ad.alloc(np.float64(1.), *size)
-            self.field.tag.test_value = np.zeros(size)
+            self.field = ad.alloc(config.precision(1.), *size)
+            self.field.tag.test_value = np.zeros(size, config.precision)
 
         self.BC = {}
         for patchID in self.boundary:
@@ -215,7 +215,7 @@ class CellField(Field):
 
         mesh = self.mesh.paddedMesh
         # every cell gets filled
-        phiField = ad.alloc(np.float64(0.), *((self.mesh.nCells, ) + phi.dimensions))
+        phiField = ad.alloc(config.precision(0.), *((self.mesh.nCells, ) + phi.dimensions))
         phiField = ad.set_subtensor(phiField[:self.mesh.nInternalCells], phi.field[:self.mesh.nInternalCells])
         phiField = ad.set_subtensor(phiField[self.mesh.nInternalCells:self.mesh.nLocalCells], phi.field[mesh.nInternalCells:self.mesh.nCells])
         phiField = ad.set_subtensor(phiField[self.mesh.nLocalCells:], phi.field[self.mesh.nInternalCells:mesh.nInternalCells])
@@ -257,7 +257,7 @@ class IOField(Field):
 
     def complete(self):
         logger.debug('completing field {0}'.format(self.name))
-        X = ad.dmatrix()
+        X = ad.matrix()
         X.tag.test_value = self.field
         phi = CellField(self.name, X, self.dimensions, self.boundary, ghost=True)
         Y = phi.field

@@ -31,16 +31,16 @@ class Solver(object):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         start = time.time()
 
-        self.dt = T.shared(np.float64(1.))
-        stackedFields = ad.dmatrix()
-        stackedFields.tag.test_value = (np.random.rand(self.mesh.paddedMesh.nCells, 5))
+        self.dt = T.shared(config.precision(1.))
+        stackedFields = ad.matrix()
+        stackedFields.tag.test_value = np.random.rand(self.mesh.paddedMesh.nCells, 5).astype(config.precision)
         fields = self.unstackFields(stackedFields, CellField)
         fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
         newStackedFields = self.stackFields(fields, ad)
         #self.forward = T.function([stackedFields], [newStackedFields, self.dtc], on_unused_input='warn')
         self.forward = T.function([stackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
         if self.adjoint:
-            stackedAdjointFields = ad.dmatrix()
+            stackedAdjointFields = ad.matrix()
             self.gradient = T.function([stackedFields, stackedAdjointFields], ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields))
 
         end = time.time()
@@ -120,9 +120,8 @@ class Solver(object):
             end = time.time()
             pprint('Time for iteration:', end-start)
             
-            dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
-            self.dt.set_value(dt)
             result += objective(stackedFields)
+            dt = self.dt.get_value()
             timeSteps.append([t, dt])
             if mode == 'forward':
                 solutions.append(stackedFields)
@@ -133,6 +132,9 @@ class Solver(object):
             if timeIndex % writeInterval == 0:
                 self.writeFields(fields, t)
             pprint()
+
+            dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
+            self.dt.set_value(dt)
 
         if mode == 'forward':
             return solutions
@@ -169,6 +171,7 @@ def RK(equation, boundary, fields, solver):
 
     return newFields
 
+# DOES NOT WORK
 def implicit(equation, boundary, fields, garbage):
     assert ad.__name__ == 'numpad'
     start = time.time()

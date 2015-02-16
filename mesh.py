@@ -26,7 +26,7 @@ class Mesh(object):
         self.case = caseDir + parallel.processorDirectory
         meshDir = self.case + 'constant/polyMesh/'
         self.faces = self.read(meshDir + 'faces', np.int32)
-        self.points = self.read(meshDir + 'points', float)
+        self.points = self.read(meshDir + 'points', np.float64).astype(config.precision)
         self.owner = self.read(meshDir + 'owner', np.int32).ravel()
         self.neighbour = self.read(meshDir + 'neighbour', np.int32).ravel()
         self.boundary, self.localPatches, self.remotePatches = self.readBoundary(meshDir + 'boundary')
@@ -492,7 +492,7 @@ class Mesh(object):
         mesh.weights = padFaceField('weights')
         mesh.sumOp = self.getSumOp(mesh)
 
-        mesh.volumes = np.empty((mesh.nInternalCells, 1))
+        mesh.volumes = np.empty((mesh.nInternalCells, 1), config.precision)
         mesh.volumes[:self.nInternalCells] = self.volumes
         internalCursor = self.nInternalCells
         for patchID in self.remotePatches:
@@ -525,22 +525,22 @@ def extractField(data, size, vector):
         start = data.find('(') + 1
         end = data.rfind(')')
         if config.fileFormat == 'binary':
-            internalField = np.array(np.fromstring(data[start:end], dtype=float))
+            internalField = np.array(np.fromstring(data[start:end], dtype=np.float64))
             if vector:
                 internalField = internalField.reshape((len(internalField)/3, 3))
         else:
-            internalField = np.array(np.array(extractor(data[start:end]), dtype=float))
+            internalField = np.array(np.array(extractor(data[start:end]), dtype=np.float64))
         if not vector:
             internalField = internalField.reshape((-1, 1))
     else:
-        internalField = np.array(np.tile(np.array(extractor(data)), (size, 1)), dtype=float)
-    return internalField
+        internalField = np.array(np.tile(np.array(extractor(data)), (size, 1)), dtype=np.float64)
+    return internalField.astype(config.precision)
 
 def writeField(handle, field, dtype, initial):
     handle.write(initial + ' nonuniform List<'+ dtype +'>\n')
     handle.write('{0}\n('.format(len(field)))
     if config.fileFormat == 'binary':
-        handle.write(ad.value(field).tostring())
+        handle.write(ad.value(field.astype(np.float64)).tostring())
     else:
         handle.write('\n')
         for value in ad.value(field):

@@ -2,8 +2,14 @@ from __future__ import print_function
 import numpy as np
 import parallel
 
+# compute type
+precision = np.float32
+#precision = np.float64
+
 import os
-os.environ['THEANO_FLAGS'] = 'compiledir=~/.theano/adFVM-{0}-{1}'.format(parallel.nProcessors, parallel.rank)
+dtype = str(np.zeros(1, precision).dtype)
+os.environ['THEANO_FLAGS'] = 'compiledir=~/.theano/adFVM-{0}-{1}-{2}'.format(dtype, parallel.nProcessors, parallel.rank)
+os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 # profiling
 #os.environ['THEANO_FLAGS'] += ',profile=True'
 import theano as T
@@ -12,9 +18,7 @@ import theano.sparse as adsparse
 ad.array = lambda x: x
 ad.value = lambda x: x
 
-#from theano.ifelse import ifelse
-#def scalarMin(a, b):
-#    return ifelse(ad.lt(a, b), a, b)
+
 
 # custom norm for numpy 1.7
 def norm(a, axis):

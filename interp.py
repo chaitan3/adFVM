@@ -12,7 +12,7 @@ def TVD_dual(phi, gradPhi):
     mesh = phi.mesh
 
     # every face gets filled
-    faceField = ad.alloc(np.float64(0.), *(mesh.nFaces, phi.dimensions[0]))
+    faceField = ad.alloc(config.precision(0.), *(mesh.nFaces, phi.dimensions[0]))
     faceFields = [faceField, faceField.copy()]
     # van leer
     psi = lambda r, rabs: (r + rabs)/(1 + rabs)
@@ -53,7 +53,7 @@ def upwind(phi, U):
     assert len(phi.dimensions) == 1
     logger.info('upwinding {0} using {1}'.format(phi.name, U.name)) 
     mesh = phi.mesh
-    faceField = ad.zeros((mesh.nFaces, phi.dimensions[0]))
+    faceField = ad.alloc(config.precision(0.), *(mesh.nFaces, phi.dimensions[0]))
     def update(start, end):
         positiveFlux = ad.value(ad.sum(U.field[start:end] * mesh.normals[start:end], axis=1)) > 0
         negativeFlux = 1 - positiveFlux
