@@ -349,7 +349,8 @@ class Mesh(object):
             extraGhostCells = np.setdiff1d(extraCells, extraInternalCells)
             # check cells on another processor
             extraRemoteGhostCells = extraGhostCells[extraGhostCells >= self.nLocalCells]
-            print 'Extra remote ghost cells: ', parallel.rank, len(extraRemoteGhostCells)
+            if len(extraRemoteGhostCells) > 0:
+                print 'Extra remote ghost cells:', patchID, len(extraRemoteGhostCells)
 
             boundaryIndex = np.in1d(neighbour, extraGhostCells)
             # swap extra boundary faces whose owner is wrong
