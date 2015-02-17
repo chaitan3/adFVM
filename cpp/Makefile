@@ -1,4 +1,5 @@
 CC = g++
+#CC = clang
 
 #CFLAGS = -std=c++11 -Wno-write-strings -O0 -g 
 CFLAGS = -std=c++11 -Wno-write-strings -DNDEBUG -O2 -msse2  #-fno-inline

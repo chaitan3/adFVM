@@ -3,10 +3,10 @@ import numpy as np
 import parallel
 
 # compute type
-precision = np.float32
-#precision = np.float64
-#device = 'cpu'
-device = 'gpu0'
+device = 'cpu'
+precision = np.float64
+#device = 'gpu0'
+#precision = np.float32
 
 import os
 dtype = str(np.zeros(1, precision).dtype)
@@ -20,8 +20,6 @@ import theano.tensor as ad
 import theano.sparse as adsparse
 ad.array = lambda x: x
 ad.value = lambda x: x
-
-
 
 # custom norm for numpy 1.7
 def norm(a, axis):

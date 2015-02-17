@@ -161,15 +161,27 @@ class CellField(Field):
         internalCursor = self.mesh.nInternalCells
         boundaryCursor = self.mesh.nCells
         for patchID in self.mesh.remotePatches:
-            nInternalCells = len(mesh.remoteCells['internal'][patchID])
-            nBoundaryCells = len(mesh.remoteCells['boundary'][patchID])
+            nInternalCells = mesh.remoteCells['internal'][patchID]
+            nBoundaryCells = mesh.remoteCells['boundary'][patchID]
             local, remote, tag = self.mesh.getProcessorPatchInfo(patchID)
             exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['internal'][patchID]], newStackedFields[internalCursor:internalCursor+nInternalCells], tag)
             tag += len(self.mesh.origPatches) + 1
             exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['boundary'][patchID]], newStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
             internalCursor += nInternalCells
             boundaryCursor += nBoundaryCells
+        exchanger.wait()
 
+        # second round of transferring: does not matter which processor
+        # the second layer belongs to
+        exchanger = Exchanger()
+        boundaryCursor = self.mesh.nCells
+        for patchID in self.mesh.remotePatches:
+            nBoundaryCells = mesh.remoteCells['boundary'][patchID]
+            nLocalBoundaryCells = mesh.remoteCells['boundary'][patchID]-mesh.remoteCells['remoteBoundary']
+            local, remote, tag = self.mesh.getProcessorPatchInfo(patchID)
+            # does it work if sendData/recvData is empty
+            exchanger.exchange(remote, newStackedFields[self.mesh.nCells - self.mesh.nLocalCells + mesh.localRemoteCells['remoteBoundary'][patchID]], newStackedFields[boundaryCursor+nLocalBoundaryCells:boundaryCursor+nBoundaryCells], tag)
+            boundaryCursor += nBoundaryCells
         exchanger.wait()
 
         return newStackedFields
