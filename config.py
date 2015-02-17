@@ -8,9 +8,11 @@ precision = np.float64
 #device = 'gpu0'
 #precision = np.float32
 
+# theano
 import os
+project = 'adFVM'
 dtype = str(np.zeros(1, precision).dtype)
-os.environ['THEANO_FLAGS'] = 'compiledir=~/.theano/adFVM-{0}-{1}-{2}-{3}'.format(device, dtype, parallel.nProcessors, parallel.rank)
+os.environ['THEANO_FLAGS'] = 'compiledir=~/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
 # profiling
@@ -20,6 +22,12 @@ import theano.tensor as ad
 import theano.sparse as adsparse
 ad.array = lambda x: x
 ad.value = lambda x: x
+# debugging
+#T.config.compute_test_value = 'raise'
+def inspect_inputs(i, node, fn):
+    print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])
+def inspect_outputs(i, node, fn):
+    print("output(s) value(s):", [output[0] for output in fn.outputs])
 
 # custom norm for numpy 1.7
 def norm(a, axis):
@@ -29,11 +37,6 @@ def norm(a, axis):
         return np.einsum('ij,ij->i', a, a)**0.5
 
 # LOGGING
-#T.config.compute_test_value = 'raise'
-def inspect_inputs(i, node, fn):
-    print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])
-def inspect_outputs(i, node, fn):
-    print("output(s) value(s):", [output[0] for output in fn.outputs])
 
 import logging
 # normal

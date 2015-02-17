@@ -105,8 +105,8 @@ startTime = 2.0
 dt = 1e-9
 
 print('Compiling objective')
-stackedFields = ad.dmatrix()
-stackedFields.tag.test_value = np.random.rand(primal.mesh.nCells, 5)
+stackedFields = ad.matrix()
+stackedFields.tag.test_value = np.random.rand(primal.mesh.nCells, 5).astype(config.precision)
 fields = primal.unstackFields(stackedFields, CellField)
 objectiveValue = objective(fields)
 objectiveFunction = T.function([stackedFields], objectiveValue)
@@ -116,7 +116,22 @@ if __name__ == "__main__":
     mesh = primal.mesh
     option = sys.argv[1]
 
-    if option == 'test':
+    if option == 'orig':
+        timeSteps, result = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction)
+        np.savetxt(mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval), timeSteps)
+
+    elif option == 'perturb':
+        timeSteps, result = primal.run([startTime, dt], nSteps, objective=objective, perturb=perturb)
+
+    elif option == 'adjoint':
+        adjointFields = [CellField.read('{0}a'.format(name), startTime) for name in primal.names]
+        stackedAdjointFields = np.hstack([ad.value(phi.field) for phi in adjointFields])
+        fields = [CellField.zeros(name, dimension) for name, dimension in zip(primal.names, primal.dimensions)]
+        perturb(fields)
+        stackedFields = np.hstack([ad.value(phi.field) for phi in fields])
+        result = np.sum(stackedAdjointFields*stackedFields)
+
+    elif option == 'test':
         eps = ad.array(1E-6)
         mid = np.array([0.5, 0.5, 0.5])
 
@@ -186,18 +201,7 @@ if __name__ == "__main__":
         print('semi-automatic diff:', np.sum(adj*stackedZeroFields))
         print('semi-automatic diff:', np.sum(-adj2*stackedZeroFields))
 
-    elif option == 'orig':
-        timeSteps, result = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction)
-        np.savetxt(mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval), timeSteps)
-    elif option == 'perturb':
-        timeSteps, result = primal.run([startTime, dt], nSteps, objective=objective, perturb=perturb)
-    elif option == 'adjoint':
-        adjointFields = [CellField.read('{0}a'.format(name), startTime) for name in primal.names]
-        stackedAdjointFields = np.hstack([ad.value(phi.field) for phi in adjointFields])
-        fields = [CellField.zeros(name, dimension) for name, dimension in zip(primal.names, primal.dimensions)]
-        perturb(fields)
-        stackedFields = np.hstack([ad.value(phi.field) for phi in fields])
-        result = np.sum(stackedAdjointFields*stackedFields)
+
     else:
         print('WTF')
         exit()

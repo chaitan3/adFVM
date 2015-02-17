@@ -11,7 +11,7 @@ from config import ad
 firstCheckpoint = 0
 if len(sys.argv) > 1:
     timeSteps = np.loadtxt(sys.argv[1], ndmin=2)
-    timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(9), 0]])))
+    timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(9), 0]]))).astype(config.precision)
     if len(sys.argv) > 2:
         firstCheckpoint = int(sys.argv[2])
 else:
@@ -23,7 +23,7 @@ primal.adjoint = True
 mesh = primal.mesh
 
 if firstCheckpoint == 0:
-    adjointFields = [IOField('{0}a'.format(name), np.zeros((mesh.nInternalCells, dimensions[0])), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
+    adjointFields = [IOField('{0}a'.format(name), np.zeros((mesh.nInternalCells, dimensions[0]), config.precision), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
 else:
     adjointFields = [IOField.read('{0}a'.format(name), timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in primal.names]
 
@@ -50,6 +50,7 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         stackedAdjointFields  = objectiveGradient(lastSolution)
         writeAdjointFields(timeSteps[-1][0])
 
+    # recheck time stepping 
     for step in range(0, writeInterval):
         start = time.time()
 
