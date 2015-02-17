@@ -7,6 +7,7 @@ import sys
 
 from field import IOField
 from config import ad
+import config
 
 firstCheckpoint = 0
 if len(sys.argv) > 1:
@@ -57,7 +58,6 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         adjointIndex = writeInterval-1 - step
         t, dt = timeSteps[primalIndex + adjointIndex]
         primal.dt.set_value(dt)
-        primal.t.set_value(t)
         previousSolution = solutions[adjointIndex]
         jacobians = primal.gradient(previousSolution, stackedAdjointFields)
         sensitivities = objectiveGradient(previousSolution)
