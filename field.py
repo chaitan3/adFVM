@@ -47,8 +47,9 @@ class Field(object):
     def info(self):
         assert isinstance(self.field, np.ndarray)
         pprint(self.name + ':', end='')
-        fieldMin = parallel.min(ad.value(self.field))
-        fieldMax = parallel.max(ad.value(self.field))
+        field = self.field[:self.mesh.nLocalCells]
+        fieldMin = parallel.min(field)
+        fieldMax = parallel.max(field)
         assert not np.isnan(fieldMin)
         assert not np.isnan(fieldMax)
         pprint(' min:', fieldMin, 'max:', fieldMax)
@@ -177,11 +178,13 @@ class CellField(Field):
         boundaryCursor = self.mesh.nCells
         for patchID in self.mesh.remotePatches:
             nBoundaryCells = mesh.remoteCells['boundary'][patchID]
-            nLocalBoundaryCells = mesh.remoteCells['boundary'][patchID]-mesh.remoteCells['remoteBoundary']
+            boundaryCursor += nBoundaryCells
+            nExtraRemoteBoundaryCells = mesh.remoteCells['extra'][patchID]
+            nLocalBoundaryCells = self.mesh.nLocalCells - self.mesh.nInternalCells
             local, remote, tag = self.mesh.getProcessorPatchInfo(patchID)
             # does it work if sendData/recvData is empty
-            exchanger.exchange(remote, newStackedFields[self.mesh.nCells - self.mesh.nLocalCells + mesh.localRemoteCells['remoteBoundary'][patchID]], newStackedFields[boundaryCursor+nLocalBoundaryCells:boundaryCursor+nBoundaryCells], tag)
-            boundaryCursor += nBoundaryCells
+            #print patchID, nExtraRemoteBoundaryCells, len(mesh.localRemoteCells['extra'][patchID])
+            exchanger.exchange(remote, newStackedFields[-nLocalBoundaryCells + mesh.localRemoteCells['extra'][patchID]], newStackedFields[boundaryCursor-nExtraRemoteBoundaryCells:boundaryCursor], tag)
         exchanger.wait()
 
         return newStackedFields

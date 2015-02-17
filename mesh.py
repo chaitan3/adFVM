@@ -313,6 +313,7 @@ class Mesh(object):
         # processor patches are in increasing order
         remoteInternal = {'mapping':{},'owner':{}, 'neighbour':{}, 'areas':{}, 'weights':{}, 'normals':{}, 'volumes':{}}
         remoteBoundary = copy.deepcopy(remoteInternal)
+        remoteExtra = {}
         mesh.localRemoteCells = {'internal':{}, 'boundary':{}, 'extra':{}}
         mesh.localRemoteFaces = copy.deepcopy(mesh.localRemoteCells)
         mesh.remoteCells = copy.deepcopy(mesh.localRemoteCells)
@@ -339,10 +340,10 @@ class Mesh(object):
             extraGhostCells = np.setdiff1d(extraCells, extraInternalCells)
             # extra = localRemote
             # check cells on another processor
-            remoteBoundaryIndex = extraGhostCells >= self.nLocalCells
-            extraRemoteCells = extraGhostCells[remoteBoundaryIndex]
+            extraIndex = extraGhostCells >= self.nLocalCells
+            extraRemoteCells = extraGhostCells[extraIndex]
             # rearrange extraGhostCells 
-            extraGhostCells = np.concatenate((extraGhostCells[np.invert(remoteBoundaryIndex)], extraRemoteCells))
+            extraGhostCells = np.concatenate((extraGhostCells[np.invert(extraIndex)], extraRemoteCells))
             if len(extraRemoteCells) > 0:
                 print 'Extra remote ghost cells:', patchID, len(extraRemoteCells)
 
@@ -426,7 +427,7 @@ class Mesh(object):
             remoteBoundary['owner'][patchID] = remoteBoundary['owner'][patchID][:getCount(index*total + 9)]
             mesh.remoteCells['internal'][patchID] = len(remoteInternal['mapping'][patchID])
             mesh.remoteCells['boundary'][patchID] = len(remoteBoundary['mapping'][patchID])
-            mesh.remoteCells['extra'][patchID] = len(remoteExtra['patchID'][:getCount(index*total + 5)])
+            mesh.remoteCells['extra'][patchID] = len(remoteExtra[patchID][:getCount(index*total + 5)])
             mesh.remoteFaces['internal'][patchID] = len(remoteInternal['owner'][patchID])
             mesh.remoteFaces['boundary'][patchID] = len(remoteBoundary['owner'][patchID])
             #print(getCount(index*total+3))
