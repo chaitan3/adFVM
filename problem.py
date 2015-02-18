@@ -4,12 +4,11 @@ from __future__ import print_function
 import numpy as np
 import sys
 
+import config, parallel
+from config import ad, T
 from pyRCF import RCF
 from solver import euler as explicit
-from config import ad, T
 from field import CellField, Field
-import config
-
 
 #primal = RCF('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 #
@@ -110,6 +109,8 @@ stackedFields.tag.test_value = np.random.rand(primal.mesh.nCells, 5).astype(conf
 fields = primal.unstackFields(stackedFields, CellField)
 objectiveValue = objective(fields)
 objectiveFunction = T.function([stackedFields], objectiveValue)
+# objective is anyways going to be a sum over all processors
+# so no additional code req to handle parallel case
 objectiveGradient = T.function([stackedFields], ad.grad(objectiveValue, stackedFields))
 
 if __name__ == "__main__":
@@ -118,7 +119,8 @@ if __name__ == "__main__":
 
     if option == 'orig':
         timeSteps, result = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction)
-        np.savetxt(mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval), timeSteps)
+        if parallel.rank == 0:
+            np.savetxt(mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval), timeSteps)
 
     elif option == 'perturb':
         timeSteps, result = primal.run([startTime, dt], nSteps, objective=objective, perturb=perturb)
@@ -207,5 +209,5 @@ if __name__ == "__main__":
         exit()
 
     with open(primal.mesh.case + '/objective.txt', 'a') as f:
-        f.write('{0} {1}\n'.format(option, result))
+        f.write('{0} {1} {2}\n'.format(option, parallel.rank, result))
 

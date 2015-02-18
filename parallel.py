@@ -45,4 +45,75 @@ class Exchanger(object):
         MPI.Request.Waitall(self.requests, self.statuses)
         return self.statuses
 
+def getRemoteCells(stackedFields, mesh):
+    #logger.info('fetching remote cells')
+    if nProcessors == 1:
+        return stackedFields
+
+    origMesh = mesh
+    mesh = mesh.paddedMesh 
+
+    paddedStackedFields = np.zeros((mesh.nCells, ) + stackedFields.shape[1:], config.precision)
+    paddedStackedFields[:origMesh.nInternalCells] = stackedFields[:origMesh.nInternalCells]
+    nLocalBoundaryFaces = origMesh.nLocalCells - origMesh.nInternalCells
+    paddedStackedFields[mesh.nInternalCells:mesh.nInternalCells + nLocalBoundaryFaces] = stackedFields[origMesh.nInternalCells:origMesh.nLocalCells]
+
+    exchanger = Exchanger()
+    internalCursor = origMesh.nInternalCells
+    boundaryCursor = origMesh.nCells
+    for patchID in origMesh.remotePatches:
+        nInternalCells = mesh.remoteCells['internal'][patchID]
+        nBoundaryCells = mesh.remoteCells['boundary'][patchID]
+        local, remote, tag = origMesh.getProcessorPatchInfo(patchID)
+        exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['internal'][patchID]], paddedStackedFields[internalCursor:internalCursor+nInternalCells], tag)
+        tag += len(origMesh.origPatches) + 1
+        exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['boundary'][patchID]], paddedStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
+        internalCursor += nInternalCells
+        boundaryCursor += nBoundaryCells
+    exchanger.wait()
+
+    # second round of transferring: does not matter which processor
+    # the second layer belongs to
+    exchanger = Exchanger()
+    boundaryCursor = origMesh.nCells
+    for patchID in origMesh.remotePatches:
+        nBoundaryCells = mesh.remoteCells['boundary'][patchID]
+        boundaryCursor += nBoundaryCells
+        nExtraRemoteBoundaryCells = mesh.remoteCells['extra'][patchID]
+        nLocalBoundaryCells = origMesh.nLocalCells - origMesh.nInternalCells
+        local, remote, tag = origMesh.getProcessorPatchInfo(patchID)
+        # does it work if sendData/recvData is empty
+        #print patchID, nExtraRemoteBoundaryCells, len(mesh.localRemoteCells['extra'][patchID])
+        exchanger.exchange(remote, paddedStackedFields[-nLocalBoundaryCells + mesh.localRemoteCells['extra'][patchID]], paddedStackedFields[boundaryCursor-nExtraRemoteBoundaryCells:boundaryCursor], tag)
+    exchanger.wait()
+
+    return paddedStackedFields
+
+def getAdjointRemoteCells(paddedJacobian, mesh):
+    #logger.info('fetching adjoint remote cells')
+    if nProcessors == 1:
+        return paddedJacobian
+
+    paddedMesh = mesh.paddedMesh
+
+    jacobian = np.zeros(((mesh.nCells,) + paddedJacobian.shapep[1:]), config.precision)
+    jacobian[:mesh.nInternalCells] = paddedJacobian[:mesh.nInternalCells]
+    nLocalBoundaryFaces = mesh.nLocalCells - mesh.nInternalCells
+    jacobian[mesh.nInternalCells:mesh.nLocalCells] = paddedJacobian[paddedMesh.nInternalCells:paddedMesh.nInternalCells+nLocalBoundaryFaces]
+
+    exchanger = Exchanger()
+    internalCursor = origMesh.nInternalCells
+    boundaryCursor = origMesh.nCells
+    for patchID in origMesh.remotePatches:
+        nInternalCells = mesh.remoteCells['internal'][patchID]
+        nBoundaryCells = mesh.remoteCells['boundary'][patchID]
+        local, remote, tag = origMesh.getProcessorPatchInfo(patchID)
+        exchanger.exchange(remote, paddedJacobian[mesh.localRemoteCells['internal'][patchID]], jacobian[internalCursor:internalCursor+nInternalCells], tag)
+        tag += len(origMesh.origPatches) + 1
+        exchanger.exchange(remote, paddedJacobian[mesh.localRemoteCells['boundary'][patchID]], jacobian[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
+        internalCursor += nInternalCells
+        boundaryCursor += nBoundaryCells
+    exchanger.wait()
+
+    return jacobian
 

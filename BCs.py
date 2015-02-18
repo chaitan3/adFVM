@@ -1,8 +1,8 @@
 import numpy as np
 
+from config import ad
 from mesh import extractField
-from config import ad, Logger
-logger = Logger(__name__)
+logger = config.Logger(__name__)
 
 class BoundaryCondition(object):
     def __init__(self, phi, patchID):

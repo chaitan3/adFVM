@@ -1,9 +1,10 @@
 from field import Field, CellField
 import numpy as np
 
-from config import ad, Logger
-logger = Logger(__name__)
 import config
+from config import ad
+
+logger = config.Logger(__name__)
 
 def TVD_dual(phi, gradPhi):
     from op import grad

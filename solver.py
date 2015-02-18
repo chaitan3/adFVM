@@ -1,13 +1,14 @@
 import numpy as np
+import time
+
+import config, parallel
+from config import ad, T
+from parallel import pprint
 
 from field import Field, CellField, IOField
 from mesh import Mesh
 
-from config import ad, Logger, T
-import config, parallel
-from parallel import pprint, Exchanger
-logger = Logger(__name__)
-import time
+logger = config.Logger(__name__)
 
 class Solver(object):
     defaultConfig = {
@@ -32,16 +33,18 @@ class Solver(object):
         start = time.time()
 
         self.dt = T.shared(config.precision(1.))
-        stackedFields = ad.matrix()
-        stackedFields.tag.test_value = np.random.rand(self.mesh.paddedMesh.nCells, 5).astype(config.precision)
-        fields = self.unstackFields(stackedFields, CellField)
+        paddedStackedFields = ad.matrix()
+        paddedStackedFields.tag.test_value = np.random.rand(self.mesh.paddedMesh.nCells, 5).astype(config.precision)
+        fields = self.unstackFields(paddedStackedFields, CellField)
         fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
         newStackedFields = self.stackFields(fields, ad)
-        #self.forward = T.function([stackedFields], [newStackedFields, self.dtc], on_unused_input='warn')
-        self.forward = T.function([stackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
+        #self.forward = T.function([paddedStackedFields], [newStackedFields, self.dtc], on_unused_input='warn')
+        self.forward = T.function([paddedStackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
-            self.gradient = T.function([stackedFields, stackedAdjointFields], ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields))
+            paddedStackedFields = ad.matrix()
+            paddedGradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), paddedStackedFields)
+            self.gradient = T.function([paddedStackedFields, stackedAdjointFields], paddedGradient)
 
         end = time.time()
         pprint('Time for compilation:', end-start)
@@ -84,7 +87,9 @@ class Solver(object):
         stackedFields = self.stackFields(fields, np)
         
         timeSteps = []
+        # objective is local
         result = objective(stackedFields)
+        # writing and returning local solutions
         if mode == 'forward':
             solutions = [stackedFields]
 
@@ -96,7 +101,7 @@ class Solver(object):
                 fields[index].info()
 
             # mpi stuff, bloat stackedFields
-            stackedFields = CellField.getRemoteCells(stackedFields)  
+            stackedFields = parallel.getRemoteCells(stackedFields, mesh)  
 
             pprint('Time step', timeIndex)
             #stackedFields, dtc = self.forward(stackedFields)
@@ -140,8 +145,8 @@ class Solver(object):
 
         if mode == 'forward':
             return solutions
-
-        self.writeFields(fields, t)
+        if timeIndex % writeInterval != 0:
+            self.writeFields(fields, t)
         return timeSteps, result
 
 def euler(equation, boundary, fields, solver):

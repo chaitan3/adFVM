@@ -2,9 +2,11 @@ from __future__ import print_function
 import numpy as np
 import time
 
+import config
+from config import ad, adsparse
 from field import Field, CellField
-from config import ad, Logger, adsparse
-logger = Logger(__name__)
+
+logger = config.Logger(__name__)
 
 def internal_sum(phi, mesh):
     return (adsparse.basic.dot(mesh.sumOp, (phi.field * mesh.areas)))/mesh.volumes

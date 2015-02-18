@@ -1,18 +1,16 @@
-
 import numpy as np
 from os import makedirs
 from os.path import exists
 from numbers import Number
 import re
 
-from config import ad, Logger, T
-from parallel import pprint, Exchanger
-logger = Logger(__name__)
 import config, parallel
+from config import ad, T
+from parallel import pprint
 import BCs
 from mesh import extractField, writeField
-#import pdb; pdb.set_trace()
 
+logger = config.Logger(__name__)
 
 class Field(object):
     @staticmethod
@@ -144,52 +142,8 @@ class Field(object):
         return self.__class__('{0}/{1}'.format(self.name, phi.name), self.field / phi.field, self.dimensions)
 
 class CellField(Field):
-    @staticmethod
-    def getRemoteCells(stackedFields):
-        logger.info('fetching remote cells')
-        if parallel.nProcessors == 1:
-            return stackedFields
-
-        self = CellField
-        mesh = self.mesh.paddedMesh 
-
-        newStackedFields = np.zeros((mesh.nCells, ) + stackedFields.shape[1:], config.precision)
-        newStackedFields[:self.mesh.nInternalCells] = stackedFields[:self.mesh.nInternalCells]
-        nLocalBoundaryFaces = self.mesh.nLocalCells - self.mesh.nInternalCells
-        newStackedFields[mesh.nInternalCells:mesh.nInternalCells + nLocalBoundaryFaces] = stackedFields[self.mesh.nInternalCells:self.mesh.nLocalCells]
-
-        exchanger = Exchanger()
-        internalCursor = self.mesh.nInternalCells
-        boundaryCursor = self.mesh.nCells
-        for patchID in self.mesh.remotePatches:
-            nInternalCells = mesh.remoteCells['internal'][patchID]
-            nBoundaryCells = mesh.remoteCells['boundary'][patchID]
-            local, remote, tag = self.mesh.getProcessorPatchInfo(patchID)
-            exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['internal'][patchID]], newStackedFields[internalCursor:internalCursor+nInternalCells], tag)
-            tag += len(self.mesh.origPatches) + 1
-            exchanger.exchange(remote, stackedFields[mesh.localRemoteCells['boundary'][patchID]], newStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
-            internalCursor += nInternalCells
-            boundaryCursor += nBoundaryCells
-        exchanger.wait()
-
-        # second round of transferring: does not matter which processor
-        # the second layer belongs to
-        exchanger = Exchanger()
-        boundaryCursor = self.mesh.nCells
-        for patchID in self.mesh.remotePatches:
-            nBoundaryCells = mesh.remoteCells['boundary'][patchID]
-            boundaryCursor += nBoundaryCells
-            nExtraRemoteBoundaryCells = mesh.remoteCells['extra'][patchID]
-            nLocalBoundaryCells = self.mesh.nLocalCells - self.mesh.nInternalCells
-            local, remote, tag = self.mesh.getProcessorPatchInfo(patchID)
-            # does it work if sendData/recvData is empty
-            #print patchID, nExtraRemoteBoundaryCells, len(mesh.localRemoteCells['extra'][patchID])
-            exchanger.exchange(remote, newStackedFields[-nLocalBoundaryCells + mesh.localRemoteCells['extra'][patchID]], newStackedFields[boundaryCursor-nExtraRemoteBoundaryCells:boundaryCursor], tag)
-        exchanger.wait()
-
-        return newStackedFields
-
-    def __init__(self, name, field, dimensions, boundary={}, ghost=False, padded=False):
+    
+    def __init__(self, name, field, dimensions, boundary={}, ghost=False):
         logger.debug('initializing CellField {0}'.format(name))
         super(self.__class__, self).__init__(name, field, dimensions)
         mesh = self.mesh
@@ -250,13 +204,11 @@ class CellField(Field):
 
     def updateGhostCells(self):
         logger.info('updating ghost cells for {0}'.format(self.name))
-        exchanger = Exchanger()
         for patchID in self.BC:
             if self.boundary[patchID]['type'] in config.processorPatches:
                 self.BC[patchID].update(exchanger)
             else:
                 self.BC[patchID].update()
-        exchanger.wait()
     
 
 class IOField(Field):

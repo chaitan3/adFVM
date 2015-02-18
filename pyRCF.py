@@ -3,16 +3,16 @@ import numpy as np
 import sys
 import time
 
+import config
+from config import ad
+from parallel import pprint
+
 from field import Field, CellField, IOField
 from op import  div, snGrad, grad, ddt, laplacian
 from solver import Solver
 from interp import central, TVD_dual
 
-from config import ad, Logger, T
-import config
-from parallel import pprint
-logger = Logger(__name__)
-import config, parallel
+logger = config.Logger(__name__)
 
 class RCF(Solver):
     defaultConfig = Solver.defaultConfig.copy()

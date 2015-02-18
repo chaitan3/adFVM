@@ -4,10 +4,11 @@ import re
 import time
 import copy
 
-from config import ad, adsparse, T, Logger
-from parallel import pprint, Exchanger
-logger = Logger(__name__)
 import config, parallel
+from config import ad, adsparse, T
+from parallel import pprint, Exchanger
+
+logger = config.Logger(__name__)
 
 class Mesh(object):
     def __init__(self, caseDir=None):
