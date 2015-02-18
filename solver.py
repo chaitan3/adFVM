@@ -60,8 +60,6 @@ class Solver(object):
         nDimensions = zip(nDimensions[:-1], nDimensions[1:])
         for name, dim, dimRange in zip(names, self.dimensions, nDimensions):
             phi = stackedFields[:, range(*dimRange)]
-            if dim == (1,):
-                phi.reshape((-1, 1))
             fields.append(mod(name, phi, dim))
         return fields
 

@@ -67,6 +67,7 @@ class Mesh(object):
         #self.areas = T.shared(self.areas)
         #self.volumes = T.shared(self.volumes)
         #self.cellCentres = T.shared(self.cellCentres)
+        #self.faceCentres = T.shared(self.faceCentres)
         #self.deltas = T.shared(self.deltas)
         #self.weights = T.shared(self.weights)
 

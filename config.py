@@ -23,7 +23,7 @@ import theano.sparse as adsparse
 ad.array = lambda x: x
 ad.value = lambda x: x
 # debugging
-#T.config.compute_test_value = 'raise'
+T.config.compute_test_value = 'raise'
 def inspect_inputs(i, node, fn):
     print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])
 def inspect_outputs(i, node, fn):

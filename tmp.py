@@ -134,22 +134,45 @@ from mpi4py import MPI
 #print x
 #print status.Get_count()
 
-mpi = MPI.COMM_WORLD
-rank = mpi.Get_rank()
-bufsize = (4, 3)
-order = 'F'
+#mpi = MPI.COMM_WORLD
+#rank = mpi.Get_rank()
+#bufsize = (4, 3)
+#order = 'F'
+#
+#other = 1 - rank
+#if rank == 0:
+#    x = np.array([[3, 1, 2], [1, 5, 4]], order=order)
+#    req = mpi.Isend(x, dest=other)
+#else:
+#    x = np.zeros(bufsize, np.int64, order=order)
+#    req = mpi.Irecv(x, source=other)
+#MPI.Request.Wait(req)
+#print rank, x
+#
+#a = np.random.rand(10, 3)
+#b = np.random.rand(10, 3)
+#c = np.cross(a,b)
+#print c.flags
 
-other = 1 - rank
-if rank == 0:
-    x = np.array([[3, 1, 2], [1, 5, 4]], order=order)
-    req = mpi.Isend(x, dest=other)
-else:
-    x = np.zeros(bufsize, np.int64, order=order)
-    req = mpi.Irecv(x, source=other)
-MPI.Request.Wait(req)
-print rank, x
+#x = ad.matrix()
+#z = ad.matrix()
+#y = ad.sum(x*z)
+#g = T.function([x, z], ad.grad(y, x))
+#a = np.random.rand(100, 10)
+#b = np.random.rand(100, 10)
+#print a.flags
+#print b.flags
+#print g(a, b).flags
 
+x = ad.matrix()
+y = ad.matrix()
+f = T.function([x,y], x*y)
+y = np.random.rand(10, 1)
+g = T.function([x], x*y)
 a = np.random.rand(10, 3)
-b = np.random.rand(10, 3)
-c = np.cross(a,b)
-print c.flags
+b = np.random.rand(10, 1)
+print a
+print b
+print a*b
+print g(a)
+print f(a, b)

@@ -64,6 +64,9 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         previousSolution = solutions[adjointIndex]
         paddedPreviousSolution = parallel.getRemoteCells(previousSolution, mesh)
         # adjoint time stepping
+        #print('sol', paddedPreviousSolution.flags)
+        #print('adj', stackedAdjointFields.flags)
+        #print('up', primal.gradient(paddedPreviousSolution, stackedAdjointFields).flags)
         paddedJacobian = np.ascontiguousarray(primal.gradient(paddedPreviousSolution, stackedAdjointFields))
         jacobian = parallel.getAdjointRemoteCells(paddedJacobian, mesh)
         stackedAdjointFields = jacobian + np.ascontiguousarray(objectiveGradient(previousSolution))
