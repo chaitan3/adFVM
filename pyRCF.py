@@ -153,6 +153,6 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = RCF(case, CFL=0.6)
-    #solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 0, timeIntegrator='euler')
+    #solver = RCF(case, CFL=0.6)
+    solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 0, timeIntegrator='euler')
     solver.run(startTime=time, nSteps=60000, writeInterval=1000)
