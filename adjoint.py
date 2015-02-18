@@ -6,6 +6,7 @@ import time
 import sys
 
 import config, parallel
+from parallel import pprint
 from field import IOField
 
 firstCheckpoint = 0
@@ -15,7 +16,7 @@ if len(sys.argv) > 1:
     if len(sys.argv) > 2:
         firstCheckpoint = int(sys.argv[2])
 else:
-    print('Primal run time step file not specified')
+    pprint('Primal run time step file not specified')
     exit()
 
 from problem import primal, nSteps, writeInterval, objectiveGradient
@@ -30,7 +31,7 @@ else:
 
 # local adjoint fields
 stackedAdjointFields = primal.stackFields(adjointFields, np)
-print('STARTING ADJOINT\n')
+pprint('STARTING ADJOINT\n')
 
 def writeAdjointFields(writeTime):
     global adjointFields
@@ -38,20 +39,20 @@ def writeAdjointFields(writeTime):
     for phi in adjointFields:
         phi.info()
         phi.write(writeTime)
-    print()
+    pprint()
 
 for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
-    print('PRIMAL FORWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
+    pprint('PRIMAL FORWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     primalIndex = nSteps - (checkpoint + 1)*writeInterval
     t, dt = timeSteps[primalIndex]
     solutions = primal.run(startTime=t, dt=dt, nSteps=writeInterval, mode='forward')
 
-    print('ADJOINT BACKWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
+    pprint('ADJOINT BACKWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     # if starting from 0, create the adjointField
     if checkpoint == 0:
         t, dt = timeSteps[-1]
         lastSolution = solutions[-1]
-        stackedAdjointFields  = objectiveGradient(lastSolution)
+        stackedAdjointFields  = np.ascontiguousarray(objectiveGradient(lastSolution))
         writeAdjointFields(t)
 
     for step in range(0, writeInterval):
@@ -61,14 +62,14 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         t, dt = timeSteps[primalIndex + adjointIndex]
         primal.dt.set_value(dt)
         previousSolution = solutions[adjointIndex]
-        paddedPreviousSolution = CellField.getRemoteCells(previousSolution, mesh)
+        paddedPreviousSolution = parallel.getRemoteCells(previousSolution, mesh)
         # adjoint time stepping
-        paddedJacobian = primal.gradient(paddedPreviousSolution, stackedAdjointFields)
+        paddedJacobian = np.ascontiguousarray(primal.gradient(paddedPreviousSolution, stackedAdjointFields))
         jacobian = parallel.getAdjointRemoteCells(paddedJacobian, mesh)
-        stackedAdjointFields = jacobian + objectiveGradient(previousSolution)
+        stackedAdjointFields = jacobian + np.ascontiguousarray(objectiveGradient(previousSolution))
 
         end = time.time()
-        print('Time for iteration: {0}'.format(end-start))
-        print('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
+        pprint('Time for iteration: {0}'.format(end-start))
+        pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
     writeAdjointFields(t)

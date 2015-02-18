@@ -6,6 +6,7 @@ import sys
 
 import config, parallel
 from config import ad, T
+from parallel import pprint
 from pyRCF import RCF
 from solver import euler as explicit
 from field import CellField, Field
@@ -49,21 +50,27 @@ from field import CellField, Field
 #
 #
 #
-primal = RCF('tests/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+#primal = RCF('tests/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+primal = RCF('tests/cylinder/', CFL=0.2, timeIntegrator='euler', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
 
 def objective(fields):
     rho, rhoU, rhoE = fields
     mesh = rhoE.mesh
     patchID = 'cylinder'
-    patch = rhoE.BC[patchID]
-    start, end = patch.startFace, patch.endFace
+    patch = mesh.boundary[patchID]
+    start, end = patch['startFace'], patch['startFace'] + patch['nFaces']
     areas = mesh.areas[start:end]
     nx = mesh.normals[start:end, 0].reshape((-1, 1))
-    start, end = patch.cellStartFace, patch.cellEndFace
+    cellStartFace = mesh.nInternalCells + start - mesh.nInternalFaces
+    cellEndFace = mesh.nInternalCells + end - mesh.nInternalFaces
+    internalIndices = mesh.owner[start:end]
+    start, end = cellStartFace, cellEndFace
     p = rhoE.field[start:end]*(primal.gamma-1)
-    deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
+    if start == end:
+        return 0*ad.sum(p)
+    deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices], axis=1).reshape(-1,1)
     T = rhoE/(rho*primal.Cv)
-    mungUx = (rhoU.field[start:end, 0].reshape((-1,1))/rho.field[start:end]-rhoU.field[patch.internalIndices, 0].reshape((-1,1))/rho.field[patch.internalIndices])*primal.mu(T).field[start:end]/deltas
+    mungUx = (rhoU.field[start:end, 0].reshape((-1,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((-1,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
     return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
 #
 #def perturb(fields):
@@ -98,12 +105,16 @@ def objective(fields):
 #    dT = 120
 #    return ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1))
 
-nSteps = 20000
-writeInterval = 100
+#nSteps = 20000
+#writeInterval = 100
+#startTime = 2.0
+#dt = 1e-9
+nSteps = 10
+writeInterval = 2
 startTime = 2.0
 dt = 1e-9
 
-print('Compiling objective')
+pprint('Compiling objective')
 stackedFields = ad.matrix()
 stackedFields.tag.test_value = np.random.rand(primal.mesh.nCells, 5).astype(config.precision)
 fields = primal.unstackFields(stackedFields, CellField)
@@ -205,7 +216,7 @@ if __name__ == "__main__":
 
 
     else:
-        print('WTF')
+        pprint('WTF')
         exit()
 
     with open(primal.mesh.case + '/objective.txt', 'a') as f:

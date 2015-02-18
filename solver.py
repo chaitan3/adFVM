@@ -42,7 +42,6 @@ class Solver(object):
         self.forward = T.function([paddedStackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
-            paddedStackedFields = ad.matrix()
             paddedGradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), paddedStackedFields)
             self.gradient = T.function([paddedStackedFields, stackedAdjointFields], paddedGradient)
 

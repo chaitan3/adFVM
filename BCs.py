@@ -1,5 +1,6 @@
 import numpy as np
 
+import config
 from config import ad
 from mesh import extractField
 logger = config.Logger(__name__)
