@@ -9,7 +9,10 @@ from field import Field, CellField
 logger = config.Logger(__name__)
 
 def internal_sum(phi, mesh):
-    return (adsparse.basic.dot(mesh.sumOp, (phi.field * mesh.areas)))/mesh.volumes
+    x = (adsparse.basic.dot(mesh.sumOp, (phi.field * mesh.areas)))/mesh.volumes
+    # retain pattern broadcasting
+    x = ad.patternbroadcast(x, phi.field.broadcastable)
+    return x
 
 def div(phi, U=None, ghost=False):
     logger.info('divergence of {0}'.format(phi.name))

@@ -136,7 +136,7 @@ from mpi4py import MPI
 
 #mpi = MPI.COMM_WORLD
 #rank = mpi.Get_rank()
-#bufsize = (4, 3)
+#bufsize = (2, 6)
 #order = 'F'
 #
 #other = 1 - rank
@@ -148,7 +148,7 @@ from mpi4py import MPI
 #    req = mpi.Irecv(x, source=other)
 #MPI.Request.Wait(req)
 #print rank, x
-#
+
 #a = np.random.rand(10, 3)
 #b = np.random.rand(10, 3)
 #c = np.cross(a,b)
@@ -165,7 +165,7 @@ from mpi4py import MPI
 #print g(a, b).flags
 
 x = ad.matrix()
-y = ad.matrix()
+y = ad.TensorType(T.config.floatX, broadcastable=[False, True])()
 f = T.function([x,y], x*y)
 y = np.random.rand(10, 1)
 g = T.function([x], x*y)
@@ -176,3 +176,11 @@ print b
 print a*b
 print g(a)
 print f(a, b)
+
+#c = 1e-300
+#x = ad.matrix()
+#f = T.function([x], ad.switch(ad.lt(x, 1.), x - c, x + c))
+#b = np.zeros((10, 3))
+#print b
+#print f(b)
+

@@ -39,7 +39,6 @@ class RCF(Solver):
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
         #WTF is this needed?
-        rho.field = rho.field.reshape((-1,1))
         U = rhoU/rho
         E = rhoE/rho
         e = E - 0.5*U.magSqr()
@@ -122,6 +121,7 @@ class RCF(Solver):
         # no TVD_dual for c in parallel
         cP = (self.gamma*pP/rhoP)**0.5
         c = CellField.getOrigField(cP)
+        c.name = 'c'
         gradC = grad(central(cP, paddedMesh), ghost=True)
         cLF, cRF = TVD_dual(c, gradC)
         #cLF, cRF = (self.gamma*pLF/rhoLF)**0.5, (self.gamma*pRF/rhoRF)**0.5
@@ -129,13 +129,13 @@ class RCF(Solver):
         #cF = (UnLF + cLF, UnRF + cLF, UnLF - cLF, UnRF - cLF)
         #aF = cF[0].abs()
         #for c in cF[1:]: aF = Field.max(aF, c.abs())
-        Z = Field('Z', ad.alloc(config.precision(0.), *(mesh.nFaces, 1)), (1,))
+        Z = Field('Z', ad.bcalloc(config.precision(0.), (mesh.nFaces, 1)), (1,))
         apF = Field.max(Field.max(UnLF + cLF, UnRF + cRF), Z)
         amF = Field.min(Field.min(UnLF - cLF, UnRF - cRF), Z)
         aF = Field.max(apF.abs(), amF.abs())
         aF.name = 'aF'
 
-        self.local = cLF.field
+        #self.local = cLF.field
 
         # CFL based time step: sparse update?
         aF2 = Field.max((UnLF + aF).abs(), (UnRF - aF).abs())*0.5
@@ -165,6 +165,7 @@ class RCF(Solver):
         # source terms
         source = self.source(self)
         #import pdb; pdb.set_trace()
+        #print(rhoFlux.field.broadcastable, div(rhoFlux).field.broadcastable)
         
         return [ddt(rho, self.dt) + div(rhoFlux) - source[0],
                 ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
@@ -189,7 +190,7 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = RCF(case, CFL=0.2, timeIntegrator='euler')
-    solver.run(startTime=time, dt=1e-9, nSteps=60000, writeInterval=100)
-    #solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 1e-30*T, timeIntegrator='euler')
-    #solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=100)
+    #solver = RCF(case, CFL=0.2, timeIntegrator='euler')
+    #solver.run(startTime=time, dt=1e-9, nSteps=60000, writeInterval=100)
+    solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 1e-30*T, timeIntegrator='euler')
+    solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=100)

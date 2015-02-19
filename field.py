@@ -157,7 +157,7 @@ class CellField(Field):
         if ghost:
             # can be not filled
             size = (mesh.nCells, ) + dimensions
-            self.field = ad.alloc(config.precision(1.), *size)
+            self.field = ad.bcalloc(config.precision(1.), size)
             self.field.tag.test_value = np.zeros(size, config.precision)
 
         self.BC = {}
@@ -184,7 +184,7 @@ class CellField(Field):
 
         mesh = self.mesh.paddedMesh
         # every cell gets filled
-        phiField = ad.alloc(config.precision(0.), *((self.mesh.nCells, ) + phi.dimensions))
+        phiField = ad.bcalloc(config.precision(0.), ((self.mesh.nCells, ) + phi.dimensions))
         phiField = ad.set_subtensor(phiField[:self.mesh.nInternalCells], phi.field[:self.mesh.nInternalCells])
         phiField = ad.set_subtensor(phiField[self.mesh.nInternalCells:self.mesh.nLocalCells], phi.field[mesh.nInternalCells:self.mesh.nCells])
         phiField = ad.set_subtensor(phiField[self.mesh.nLocalCells:], phi.field[self.mesh.nInternalCells:mesh.nInternalCells])

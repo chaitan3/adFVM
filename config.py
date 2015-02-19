@@ -22,6 +22,14 @@ import theano.tensor as ad
 import theano.sparse as adsparse
 ad.array = lambda x: x
 ad.value = lambda x: x
+broadcastPattern = (False, True)
+ad.bcmatrix = ad.TensorType(dtype, broadcastable=broadcastPattern)
+def bcalloc(value, shape):
+    X = ad.alloc(value, *shape)
+    if shape[1:] == (1,):
+        X = ad.patternbroadcast(X, broadcastPattern)
+    return X
+ad.bcalloc = bcalloc
 # debugging
 T.config.compute_test_value = 'raise'
 def inspect_inputs(i, node, fn):
@@ -49,14 +57,12 @@ def Logger(name):
 
 # CONSTANTS
 if precision == np.float64:
-    #SMALL = 1e-15
-    #VSMALL = 1e-300
-    SMALL = 1e-6
-    VSMALL = 1e-9
+    SMALL = 1e-14
+    VSMALL = 1e-300
     LARGE = 1e300
 else:
-    SMALL = 1e-3
-    VSMALL = 1e-5
+    SMALL = 1e-8
+    VSMALL = 1e-30
     LARGE = 1e30
 
 # FILE READING

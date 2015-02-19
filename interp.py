@@ -13,7 +13,7 @@ def TVD_dual(phi, gradPhi):
     mesh = phi.mesh
 
     # every face gets filled
-    faceField = ad.alloc(config.precision(0.), *(mesh.nFaces, phi.dimensions[0]))
+    faceField = ad.bcalloc(config.precision(0.), (mesh.nFaces, phi.dimensions[0]))
     faceFields = [faceField, faceField.copy()]
     # van leer
     psi = lambda r, rabs: (r + rabs)/(1 + rabs)
@@ -32,8 +32,13 @@ def TVD_dual(phi, gradPhi):
             if phi.dimensions[0] == 3:
                 gradC = gradC.dot(gradF)
                 gradF = gradF.magSqr()
-            r = 2.*gradC/gradF.stabilise(config.VSMALL) - 1.
-            #r = Field.switch(ad.gt(gradC.abs().field, 1000.*gradF.abs().field), 2.*1000.*gradC.sign()*gradF.sign() - 1., 2.*gradC/gradF - 1.)
+            #r = 2.*gradC/gradF.stabilise(config.SMALL) - 1
+            r = Field.switch(ad.gt(gradC.abs().field, 1000.*gradF.abs().field), 2.*1000.*gradC.sign()*gradF.sign() - 1., 2.*gradC/gradF.stabilise(config.SMALL) - 1.)
+            if phi.name == 'rhoE':
+                phi.solver.local = gradF.field
+                #phi.solver.local = r.field
+                #phi.solver.remote = psi(r, r.abs()).field
+                phi.solver.remote = gradF.stabilise(config.SMALL).field
             faceFields[index] = ad.set_subtensor(faceFields[index][start:end], phiC + 0.5*psi(r, r.abs()).field*phiDC)
             index += 1
 
@@ -54,7 +59,7 @@ def upwind(phi, U):
     assert len(phi.dimensions) == 1
     logger.info('upwinding {0} using {1}'.format(phi.name, U.name)) 
     mesh = phi.mesh
-    faceField = ad.alloc(config.precision(0.), *(mesh.nFaces, phi.dimensions[0]))
+    faceField = ad.bcalloc(config.precision(0.), (mesh.nFaces, phi.dimensions[0]))
     def update(start, end):
         positiveFlux = ad.value(ad.sum(U.field[start:end] * mesh.normals[start:end], axis=1)) > 0
         negativeFlux = 1 - positiveFlux
