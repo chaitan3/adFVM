@@ -57,11 +57,11 @@ def Logger(name):
 
 # CONSTANTS
 if precision == np.float64:
-    SMALL = 1e-14
+    SMALL = 1e-15
     VSMALL = 1e-300
     LARGE = 1e300
 else:
-    SMALL = 1e-8
+    SMALL = 1e-9
     VSMALL = 1e-30
     LARGE = 1e30
 

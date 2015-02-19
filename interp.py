@@ -24,7 +24,8 @@ def TVD_dual(phi, gradPhi):
         for C, D in [[owner, neighbour], [neighbour, owner]]:
             phiC = phi.field[C]
             phiD = phi.field[D]
-            phiDC = phiD-phiC
+            # wTF is *1 necessary over here for theano
+            phiDC = (phiD-phiC)*1
             R = Field('R', ad.array(mesh.cellCentres[D] - mesh.cellCentres[C]), (3,))
             gradC = Field('gradC({0})'.format(phi.name), gradPhi.field[C], gradPhi.dimensions)
             gradF = Field('gradF({0})'.format(phi.name), phiDC, phi.dimensions)
@@ -33,9 +34,9 @@ def TVD_dual(phi, gradPhi):
                 gradC = gradC.dot(gradF)
                 gradF = gradF.magSqr()
             #r = 2.*gradC/gradF.stabilise(config.SMALL) - 1
-            r = Field.switch(ad.gt(gradC.abs().field, 1000.*gradF.abs().field), 2.*1000.*gradC.sign()*gradF.sign() - 1., 2.*gradC/gradF.stabilise(config.SMALL) - 1.)
+            r = Field.switch(ad.gt(gradC.abs().field, 1000.*gradF.abs().field), 2.*1000.*gradC.sign()*gradF.sign() - 1., 2.*gradC/gradF.stabilise(config.VSMALL) - 1.)
             if phi.name == 'rhoE':
-                phi.solver.local = gradF.field
+                phi.solver.local = gradF.field*1 + config.SMALL
                 #phi.solver.local = r.field
                 #phi.solver.remote = psi(r, r.abs()).field
                 phi.solver.remote = gradF.stabilise(config.SMALL).field

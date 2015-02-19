@@ -103,8 +103,8 @@ class Solver(object):
             pprint('Time step', timeIndex)
             #stackedFields, dtc = self.forward(stackedFields)
             stackedFields, dtc, local, remote = self.forward(stackedFields)
-            print local.shape, local.dtype, local, np.abs(local).max(), np.abs(local).min()
-            print remote.shape, remote.dtype, remote, np.abs(remote).max(), np.abs(remote).min()
+            #print local.shape, local.dtype, local, np.abs(local).max(), np.abs(local).min()
+            #print remote.shape, remote.dtype, remote, np.abs(remote).max(), np.abs(remote).min()
 
             #lStart = 0
             #rStart = 0
