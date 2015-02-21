@@ -30,7 +30,7 @@ class Mesh(object):
         for attr in Mesh.constants:
             setattr(self, attr, 0)
         for attr in Mesh.fields:
-            setattr(self, attr, 0)
+            setattr(self, attr, np.array([]))
 
         #self.localRemoteCells = None
         #self.localRemoteFaces = None
@@ -530,8 +530,8 @@ class Mesh(object):
             mesh.volumes[internalCursor:internalCursor + nInternalCells] = remoteInternal['volumes'][patchID][:nInternalCells]
             internalCursor += nInternalCells
 
-        self.makeShared()
-        self.origMesh = cls.copy(self)
+        mesh.origMesh = cls.copy(mesh)
+        mesh.makeShared()
 
         return mesh
     
@@ -561,9 +561,9 @@ def removeCruft(content, keepHeader=False):
     return content
 
 
-def extractField(data, size, vector):
+def extractField(data, size, dimensions):
     extractScalar = lambda x: re.findall('[0-9\.Ee\-]+', x)
-    if vector:
+    if dimensions == (3,):
         extractor = lambda y: list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', y)))
     else:
         extractor = extractScalar
@@ -572,16 +572,15 @@ def extractField(data, size, vector):
     if nonUniform is not None:
         start = data.find('(') + 1
         end = data.rfind(')')
-        if config.fileFormat == 'binary':
+        if start == end:
+            internalField = np.zeros((size, ) + dimensions)
+        elif config.fileFormat == 'binary':
             internalField = np.array(np.fromstring(data[start:end], dtype=np.float64))
-            if vector:
-                internalField = internalField.reshape((len(internalField)/3, 3))
         else:
             internalField = np.array(np.array(extractor(data[start:end]), dtype=np.float64))
-        if not vector:
-            internalField = internalField.reshape((-1, 1))
     else:
         internalField = np.array(np.tile(np.array(extractor(data)), (size, 1)), dtype=np.float64)
+    internalField = internalField.reshape((size, ) + dimensions)
     return internalField.astype(config.precision)
 
 def writeField(handle, field, dtype, initial):

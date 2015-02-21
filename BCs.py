@@ -1,7 +1,7 @@
 import numpy as np
 
 import config
-from config import ad
+from config import ad, T
 from mesh import extractField
 logger = config.Logger(__name__)
 
@@ -27,7 +27,7 @@ class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         if 'value' in self.patch:
-            self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,)))
+            self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], extractField(self.patch['value'], self.nFaces, self.field.shape[1:]))
         else:
             self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], 0)
 
@@ -88,7 +88,8 @@ class fixedValue(BoundaryCondition):
         # mesh values required outside theano
         # TODO: big problem here for different compile dirs for every proc
         #self.fixedValue = extractField(self.patch['value'], self.nFaces, self.phi.dimensions == (3,))
-        self.fixedValue = extractField(self.patch['value'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions == (3,))
+        self.fixedValue = extractField(self.patch['value'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions)
+        self.fixedValue = T.shared(self.fixedValue)
 
     def update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
@@ -97,7 +98,7 @@ class fixedValue(BoundaryCondition):
 class turbulentInletVelocity(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        self.Umean = extractField(self.patch['Umean'], self.nFaces, self.field.shape[1:] == (3,))
+        self.Umean = extractField(self.patch['Umean'], self.nFaces, self.field.shape[1:])
         self.lengthScale = self.patch['lengthScale']
         self.turbulentIntensity = self.patch['turbulentIntensity']
         self.patch.pop('value', None)
@@ -111,7 +112,7 @@ class turbulentInletVelocity(BoundaryCondition):
 class totalPressure(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        self.p0 = extractField(self.patch['p0'], self.nFaces, False)
+        self.p0 = extractField(self.patch['p0'], self.nFaces, (1,))
         self.gamma = self.patch['gamma']
         self.patch.pop('value', None)
         self.patch['value'] = 'uniform (0 0 0)'

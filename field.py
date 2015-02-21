@@ -245,10 +245,11 @@ class IOField(Field):
         foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
         assert re.search('format[\s\t]+(.*?);', foamFile).group(1) == config.fileFormat
         vector = re.search('class[\s\t]+(.*?);', foamFile).group(1) == 'volVectorField'
+        dimensions = 1 + vector*2
         bytesPerField = 8*(1 + 2*vector)
         startBoundary = content.find('boundaryField')
         data = re.search(re.compile('internalField[\s\r\n]+(.*)', re.DOTALL), content[:startBoundary]).group(1)
-        internalField = extractField(data, mesh.nInternalCells, vector)
+        internalField = extractField(data, mesh.nInternalCells, (dimensions,))
         content = content[startBoundary:]
         boundary = {}
         def getToken(x): 

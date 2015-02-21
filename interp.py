@@ -43,15 +43,17 @@ def TVD_dual(phi, gradPhi):
             faceFields[index] = ad.set_subtensor(faceFields[index][start:end], phiC + 0.5*psi(r, r.abs()).field*phiDC)
             index += 1
 
+    # internal, then local patches and finally remote
     update(0, mesh.nInternalFaces)
     for patchID in phi.boundary:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        if phi.boundary[patchID]['type'] in config.coupledPatches:
+        if phi.boundary[patchID]['type'] == 'coupled':
             update(startFace, endFace)
         else:
             for index in range(0, len(faceFields)):
                 faceFields[index] = ad.set_subtensor(faceFields[index][startFace:endFace], phi.field[mesh.neighbour[startFace:endFace]])
+    update(mesh.nFaces-(mesh.nCells-mesh.nLocalCells), mesh.nFaces)
 
     return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
 
@@ -71,10 +73,11 @@ def upwind(phi, U):
     for patchID in phi.boundary:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        if phi.boundary[patchID]['type'] in config.coupledPatches:
+        if phi.boundary[patchID]['type'] == 'coupled':
             update(startFace, endFace)
         else:
             faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]
+    update(mesh.nFaces-(mesh.nCells-mesh.nLocalCells), mesh.nFaces)
 
     return Field('{0}F'.format(phi.name), faceField, phi.dimensions)
 
