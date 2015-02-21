@@ -164,18 +164,18 @@ from mpi4py import MPI
 #print b.flags
 #print g(a, b).flags
 
-x = ad.matrix()
-y = ad.TensorType(T.config.floatX, broadcastable=[False, True])()
-f = T.function([x,y], x*y)
-y = np.random.rand(10, 1)
-g = T.function([x], x*y)
-a = np.random.rand(10, 3)
-b = np.random.rand(10, 1)
-print a
-print b
-print a*b
-print g(a)
-print f(a, b)
+#x = ad.matrix()
+#y = ad.TensorType(T.config.floatX, broadcastable=[False, True])()
+#f = T.function([x,y], x*y)
+#y = np.random.rand(10, 1)
+#g = T.function([x], x*y)
+#a = np.random.rand(10, 3)
+#b = np.random.rand(10, 1)
+#print a
+#print b
+#print a*b
+#print g(a)
+#print f(a, b)
 
 #c = 1e-300
 #x = ad.matrix()
@@ -183,4 +183,12 @@ print f(a, b)
 #b = np.zeros((10, 3))
 #print b
 #print f(b)
+
+
+x = ad.TensorType(T.config.floatX, broadcastable=[False, True])()
+print x.broadcastable
+y = x[2:4]
+z = x[[2,3]]
+print y.broadcastable
+print y.broadcastable
 

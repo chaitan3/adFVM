@@ -290,6 +290,8 @@ class IOField(Field):
         name = self.name
         field = self.field
         boundary = self.boundary
+        # fetch processor information
+        parallel.getOrigRemoteCells(field, self.mesh)
         mesh = self.mesh.origMesh
         if time.is_integer():
             time = int(time)

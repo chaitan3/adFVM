@@ -119,8 +119,11 @@ class Solver(object):
             #    np.savetxt('remote_' + patchID, remote[rStart:rStart+n])
             #    #print 'remote', patchID, remote[rStart:rStart+n], remote.shape
             #    rStart += n
-                        
+
             fields = self.unstackFields(stackedFields, IOField)
+            # TODO: fix unstacking F_CONTIGUOUS
+            for phi in fields:
+                phi.field = np.ascontiguousarray(phi.field)
 
             end = time.time()
             pprint('Time for iteration:', end-start)

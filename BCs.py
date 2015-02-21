@@ -86,7 +86,6 @@ class fixedValue(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         # mesh values required outside theano
-        # TODO: big problem here for different compile dirs for every proc
         #self.fixedValue = extractField(self.patch['value'], self.nFaces, self.phi.dimensions == (3,))
         self.fixedValue = extractField(self.patch['value'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions)
         self.fixedValue = T.shared(self.fixedValue)

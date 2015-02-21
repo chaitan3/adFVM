@@ -38,7 +38,6 @@ class RCF(Solver):
 
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
-        #WTF is this needed?
         U = rhoU/rho
         E = rhoE/rho
         e = E - 0.5*U.magSqr()
