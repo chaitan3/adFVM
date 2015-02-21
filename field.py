@@ -45,7 +45,8 @@ class Field(object):
     def info(self):
         assert isinstance(self.field, np.ndarray)
         pprint(self.name + ':', end='')
-        field = self.field[:self.mesh.nLocalCells]
+        # mesh values required outside theano
+        field = self.field[:self.mesh.origMesh.nLocalCells]
         fieldMin = parallel.min(field)
         fieldMax = parallel.max(field)
         assert not np.isnan(fieldMin)
@@ -158,7 +159,7 @@ class CellField(Field):
             # can be not filled
             size = (mesh.nCells, ) + dimensions
             self.field = ad.bcalloc(config.precision(1.), size)
-            self.field.tag.test_value = np.zeros(size, config.precision)
+            self.field.tag.test_value = np.zeros((mesh.origMesh.nCells,) + dimensions, config.precision)
 
         self.BC = {}
         for patchID in self.boundary:
@@ -233,6 +234,8 @@ class IOField(Field):
 
     @classmethod
     def read(self, name, mesh, time):
+        # mesh values required outside theano
+        mesh = mesh.origMesh
         if time.is_integer():
             time = int(time)
         pprint('reading field {0}, time {1}'.format(name, time))
@@ -282,10 +285,11 @@ class IOField(Field):
         return self(name, internalField, dimensions, boundary)
 
     def write(self, time):
+        # mesh values required outside theano
         name = self.name
         field = self.field
         boundary = self.boundary
-        mesh = self.mesh
+        mesh = self.mesh.origMesh
         if time.is_integer():
             time = int(time)
         assert len(field.shape) == 2

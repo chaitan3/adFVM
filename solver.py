@@ -24,7 +24,7 @@ class Solver(object):
         for key in fullConfig:
             setattr(self, key, fullConfig[key])
 
-        self.mesh = Mesh(case)
+        self.mesh = Mesh.create(case)
         self.timeIntegrator = globals()[self.timeIntegrator]
         Field.setSolver(self)
 
@@ -34,7 +34,7 @@ class Solver(object):
 
         self.dt = T.shared(config.precision(1.))
         paddedStackedFields = ad.matrix()
-        paddedStackedFields.tag.test_value = np.random.rand(self.mesh.paddedMesh.nCells, 5).astype(config.precision)
+        paddedStackedFields.tag.test_value = np.random.rand(self.mesh.paddedMesh.origMesh.nCells, 5).astype(config.precision)
         fields = self.unstackFields(paddedStackedFields, CellField)
         fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
         newStackedFields = self.stackFields(fields, ad)
@@ -138,6 +138,7 @@ class Solver(object):
                 self.writeFields(fields, t)
             pprint()
 
+            # compute dt for next time step
             dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
             self.dt.set_value(config.precision(dt))
 

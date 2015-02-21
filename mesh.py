@@ -11,19 +11,48 @@ from parallel import pprint, Exchanger
 logger = config.Logger(__name__)
 
 class Mesh(object):
-    def __init__(self, caseDir=None):
-        if caseDir is None:
-            self.owner = self.neighbour = None
-            self.sumOp = None
-            self.areas = self.volumes = self.weights = self.normals = None
-            self.localRemoteCells = None
-            self.localRemoteFaces = None
-            self.remoteCells = None
-            self.remoteFaces = None
-            return
+    constants = ['nInternalFaces',
+                 'nFaces',
+                 'nBoundaryFaces',
+                 'nInternalCells',
+                 'nGhostCells',
+                 'nCells',
+                 'nLocalCells',
+                 'case']
+                 
+    fields = ['owner', 'neighbour',
+              'areas', 'volumes',
+              'weights', 'deltas', 'normals',
+              'cellCentres', 'faceCentres',
+              'boundary']
 
+    def __init__(self):
+        for attr in Mesh.constants:
+            setattr(self, attr, 0)
+        for attr in Mesh.fields:
+            setattr(self, attr, 0)
+
+        #self.localRemoteCells = None
+        #self.localRemoteFaces = None
+        #self.remoteCells = None
+        #self.remoteFaces = None
+
+    @classmethod
+    def copy(cls, mesh, constants=True, fields=False):
+        self = cls()
+        for attr in cls.fields:
+            if fields or attr == 'boundary':
+              setattr(self, attr, copy.deepcopy(getattr(mesh, attr)))
+        if constants:
+            for attr in cls.constants:
+              setattr(self, attr, getattr(mesh, attr))
+        return self
+
+    @classmethod
+    def create(cls, caseDir=None):
         start = time.time()
         pprint('Reading mesh')
+        self = cls()
 
         self.case = caseDir + parallel.processorDirectory
         meshDir = self.case + 'constant/polyMesh/'
@@ -58,22 +87,16 @@ class Mesh(object):
         self.weights = self.getWeights()   # nFaces
 
         # padded mesh
-        self.paddedMesh = self.createPaddedMesh()
-
+        self.paddedMesh = cls.createPaddedMesh(self)
         # theano shared variables
-        #self.owner = T.shared(self.owner)
-        #self.neighbour = T.shared(self.neighbour)
-        #self.normals = T.shared(self.normals)
-        #self.areas = T.shared(self.areas)
-        #self.volumes = T.shared(self.volumes)
-        #self.cellCentres = T.shared(self.cellCentres)
-        #self.faceCentres = T.shared(self.faceCentres)
-        #self.deltas = T.shared(self.deltas)
-        #self.weights = T.shared(self.weights)
+        self.origMesh = cls.copy(self)
+        self.makeShared()
 
         end = time.time()
         pprint('Time for reading mesh:', end-start)
         pprint()
+
+        return self
 
     def read(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
@@ -301,11 +324,12 @@ class Mesh(object):
 
         return nLocalCells
 
-    def createPaddedMesh(self):
+    @classmethod
+    def createPaddedMesh(cls, self):
         logger.info('generated padded mesh')
         if parallel.nProcessors == 1:
             return self
-        mesh = Mesh()
+        mesh = cls()
         # set correct values for faces whose neighbours are ghost cells
         nLocalBoundaryFaces = self.nLocalCells - self.nInternalCells
         nLocalRemoteBoundaryFaces = self.nCells - self.nLocalCells
@@ -452,7 +476,7 @@ class Mesh(object):
             size = (mesh.nFaces, ) + example.shape[1:]
             dtype = example.dtype
 
-            faceField = np.empty(size, dtype)
+            faceField = np.zeros(size, dtype)
             faceField[:self.nInternalFaces] = field[:self.nInternalFaces]
             faceField[self.nInternalFaces:nLocalInternalFaces] = field[nLocalFaces:]
             faceField[mesh.nInternalFaces:remoteGhostStartFace] = field[self.nInternalFaces:nLocalFaces]
@@ -498,7 +522,7 @@ class Mesh(object):
         mesh.weights = padFaceField('weights')
         mesh.sumOp = self.getSumOp(mesh)
 
-        mesh.volumes = np.empty((mesh.nInternalCells, 1), config.precision)
+        mesh.volumes = np.zeros((mesh.nInternalCells, 1), config.precision)
         mesh.volumes[:self.nInternalCells] = self.volumes
         internalCursor = self.nInternalCells
         for patchID in self.remotePatches:
@@ -506,8 +530,26 @@ class Mesh(object):
             mesh.volumes[internalCursor:internalCursor + nInternalCells] = remoteInternal['volumes'][patchID][:nInternalCells]
             internalCursor += nInternalCells
 
-        return mesh
+        self.makeShared()
+        self.origMesh = cls.copy(self)
 
+        return mesh
+    
+    def makeShared(self):
+        for attr in Mesh.constants:
+            setattr(self, attr, T.shared(getattr(self, attr)))
+        for attr in Mesh.fields:
+            value = getattr(self, attr) 
+            if attr == 'boundary': continue
+            if value.shape[1:] == (1,):
+                setattr(self, attr, T.shared(getattr(self, attr), broadcastable=config.broadcastPattern))
+            else:
+                setattr(self, attr, T.shared(getattr(self, attr)))
+        for patchID in self.boundary:
+            patch = self.boundary[patchID]
+            patch['startFace'] = T.shared(patch['startFace'])
+            patch['nFaces'] = T.shared(patch['nFaces'])
+ 
 def removeCruft(content, keepHeader=False):
     # remove comments and newlines
     content = re.sub(re.compile('/\*.*\*/',re.DOTALL ) , '' , content)

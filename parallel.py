@@ -46,6 +46,7 @@ class Exchanger(object):
         return self.statuses
 
 def getRemoteCells(stackedFields, mesh):
+    # mesh values required outside theano
     #logger.info('fetching remote cells')
     if nProcessors == 1:
         return stackedFields
@@ -92,6 +93,7 @@ def getRemoteCells(stackedFields, mesh):
     return paddedStackedFields
 
 def getAdjointRemoteCells(paddedJacobian, mesh):
+    # mesh values required outside theano
     #logger.info('fetching adjoint remote cells')
     if nProcessors == 1:
         return paddedJacobian

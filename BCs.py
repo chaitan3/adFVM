@@ -26,7 +26,6 @@ class BoundaryCondition(object):
 class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        #TODO
         if 'value' in self.patch:
             self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], extractField(self.patch['value'], self.nFaces, self.field.shape[1:] == (3,)))
         else:
@@ -81,19 +80,18 @@ class symmetryPlane(zeroGradient):
         # if vector
         if self.phi.dimensions == (3,):
             v = -self.mesh.normals[self.startFace:self.endFace]
-            #self.value -= ad.sum(self.value*v, axis=1).reshape((-1,1))*v
-            #TODO
             self.phi.field = ad.inc_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], -ad.sum(self.phi.field[self.cellStartFace:self.cellEndFace]*v, axis=1).reshape((-1,1))*v)
 
 class fixedValue(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        self.fixedValue = extractField(self.patch['value'], self.nFaces, self.phi.dimensions == (3,))
+        # mesh values required outside theano
+        # TODO: big problem here for different compile dirs for every proc
+        #self.fixedValue = extractField(self.patch['value'], self.nFaces, self.phi.dimensions == (3,))
+        self.fixedValue = extractField(self.patch['value'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions == (3,))
 
     def update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
-        #self.value[:] = self.fixedValue
-        #TODO
         self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.fixedValue)
 
 class turbulentInletVelocity(BoundaryCondition):
