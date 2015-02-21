@@ -56,14 +56,14 @@ class Field(object):
     # creates a view
     def component(self, component): 
         assert self.dimensions == (3,)
-        return self.__class__('{0}.{1}'.format(self.name, component), self.field[:, component].reshape((-1,1)), (1,))
+        return self.__class__('{0}.{1}'.format(self.name, component), self.field[:, component].reshape((self.field.shape[0],1)), (1,))
 
     def magSqr(self):
         assert self.dimensions == (3,)
         if isinstance(self.field, np.ndarray):
-            return self.__class__('magSqr({0})'.format(self.name), np.sum(self.field**2, axis=1).reshape((-1,1)), (1,))
+            return self.__class__('magSqr({0})'.format(self.name), np.sum(self.field**2, axis=1).reshape((self.field.shape[0],1)), (1,))
         else:
-            return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field**2, axis=1).reshape((-1,1)), (1,))
+            return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field**2, axis=1).reshape((self.field.shape[0],1)), (1,))
 
     def mag(self):
         return self.magSqr()**0.5
@@ -89,7 +89,7 @@ class Field(object):
         product = ad.sum(self.field * phi.field, axis=-1)
         # if summed over vector
         if len(self.dimensions) == 1:
-            product = product.reshape((-1,1))
+            product = product.reshape((self.field.shape[0],1))
         return self.__class__('dot({0},{1})'.format(self.name, phi.name), product, dimensions)
 
     def dotN(self):
@@ -107,7 +107,7 @@ class Field(object):
     def trace(self):
         assert len(self.dimensions) == 2
         phi = self.field
-        return self.__class__('tr({0})'.format(self.name), (phi[:,0,0] + phi[:,1,1] + phi[:,2,2]).reshape((-1,1)), (1,))
+        return self.__class__('tr({0})'.format(self.name), (phi[:,0,0] + phi[:,1,1] + phi[:,2,2]).reshape((phi.shape[0],1)), (1,))
 
     def __neg__(self):
         return self.__class__('-{0}'.format(self.name), -self.field, self.dimensions)

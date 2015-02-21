@@ -150,7 +150,7 @@ class RCF(Solver):
         
         UF = 0.5*(ULF + URF)
         #gradUTF = interpolate(grad(UF, ghost=True))
-        rhoR = Field(rho.name, rho.field.reshape((-1, 1, 1)), (1, 1))
+        rhoR = Field(rho.name, rho.field.reshape((mesh.nCells, 1, 1)), (1, 1))
         gradUT = (rhoR*gradRhoU.transpose()-gradRho.outer(rhoU))/(rhoR*rhoR)
         gradUTF = central(gradUT, rho.mesh)
 
