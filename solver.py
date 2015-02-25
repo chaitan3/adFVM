@@ -71,8 +71,6 @@ class Solver(object):
         mesh = self.mesh
         #initialize
         fields = self.initFields(startTime)
-        if perturb is not None:
-            perturb(fields)
         pprint()
 
         if not hasattr(self, 'forward'):
@@ -97,6 +95,8 @@ class Solver(object):
             for index in range(0, len(fields)):
                 fields[index].info()
 
+            if perturb is not None:
+                perturb(stackedFields, t)
             # mpi stuff, bloat stackedFields
             stackedFields = parallel.getRemoteCells(stackedFields, mesh)  
 
@@ -119,6 +119,7 @@ class Solver(object):
             #    np.savetxt('remote_' + patchID, remote[rStart:rStart+n])
             #    #print 'remote', patchID, remote[rStart:rStart+n], remote.shape
             #    rStart += n
+
 
             fields = self.unstackFields(stackedFields, IOField)
             # TODO: fix unstacking F_CONTIGUOUS
@@ -147,7 +148,7 @@ class Solver(object):
 
         if mode == 'forward':
             return solutions
-        if timeIndex % writeInterval != 0:
+        if (timeIndex % writeInterval != 0) and (timeIndex >= writeInterval):
             self.writeFields(fields, t)
         return timeSteps, result
 

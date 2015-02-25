@@ -25,6 +25,13 @@ def min(data):
         return mpi.allreduce(minData, op=MPI.MIN)
     else:
         return minData
+
+def sum(data):
+    sumData = np.sum(data)
+    if nProcessors > 1:
+        return mpi.allreduce(maxData, op=MPI.SUM)
+    else:
+        return sumData
     
 class Exchanger(object):
     def __init__(self):

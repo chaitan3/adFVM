@@ -89,7 +89,7 @@ class Mesh(object):
         # padded mesh
         self.paddedMesh = cls.createPaddedMesh(self)
         # theano shared variables
-        self.origMesh = cls.copy(self)
+        self.origMesh = cls.copy(self, fields=True)
         self.makeShared()
 
         end = time.time()
