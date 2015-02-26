@@ -9,7 +9,7 @@ from config import ad, T
 from parallel import pprint
 from pyRCF import RCF
 from solver import euler as explicit
-from field import CellField, Field
+from field import CellField, Field, IOField
 
 #primal = RCF('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 #
@@ -76,10 +76,13 @@ def objective(fields):
 
 def perturb(stackedFields, t):
     mesh = primal.mesh.origMesh
-    mid = np.array([-0.0048, 0.0008, 0.])
-    G = 1e-3*np.exp(-100*config.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    mid = np.array([-0.0032, 0.0, 0.])
+    G = 1e-3*np.exp(-1e7*config.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #rho
-    stackedFields[:mesh.nInternalCells, 0] += G
+    if t == startTime:
+        stackedFields[:mesh.nInternalCells, 0] += G
+        stackedFields[:mesh.nInternalCells, 1] += G*100
+        stackedFields[:mesh.nInternalCells, 4] += G*2e5
 
 #primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.6)
 #def objective(fields):
@@ -100,14 +103,14 @@ def perturb(stackedFields, t):
 #    dT = 120
 #    return ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1))
 
-#nSteps = 20000
-#writeInterval = 100
-#startTime = 2.0
-#dt = 1e-9
-nSteps = 10
-writeInterval = 2
+nSteps = 20000
+writeInterval = 100
 startTime = 2.0
 dt = 1e-9
+#nSteps = 10
+#writeInterval = 2
+#startTime = 2.0
+#dt = 1e-9
 
 pprint('Compiling objective')
 stackedFields = ad.matrix()
@@ -119,6 +122,15 @@ objectiveFunction = T.function([stackedFields], objectiveValue)
 # so no additional code req to handle parallel case
 objectiveGradient = T.function([stackedFields], ad.grad(objectiveValue, stackedFields))
 
+def writeResult(option, result):
+    mesh = primal.mesh.origMesh
+    globalResult = parallel.sum(result)
+    print(mesh.case, parallel.rank)
+    if parallel.rank == 0:
+        f = open(mesh.case + '/objective.txt', 'a')
+        f.write('{0} {1}\n'.format(option, globalResult))
+        f.close()
+
 if __name__ == "__main__":
     mesh = primal.mesh.origMesh
     option = sys.argv[1]
@@ -127,15 +139,18 @@ if __name__ == "__main__":
         perturb = None
     elif option == 'perturb':
         writeInterval = config.LARGE
+    elif option == 'test':
+        primal.initFields(startTime)
+        a = np.zeros((mesh.nCells, 5))
+        perturb(a, startTime)
+        fields = primal.unstackFields(a, IOField)
+        primal.writeFields(fields, 100.0)
+        exit()
     else:
         print('WTF')
         exit()
 
     timeSteps, result = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction, perturb=perturb)
-    globalResult = parallel.sum(result)
-    if parallel.rank == 0:
-        f = open(mesh.case + '/objective.txt', 'a')
-        f.write('{0} {1}\n'.format(option, globalResult))
-        f.close()
-        if option == 'orig':
+    writeResult(option, result)
+    if option == 'orig' and parallel.rank == 0:
             np.savetxt(mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval), timeSteps)

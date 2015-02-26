@@ -29,7 +29,7 @@ def min(data):
 def sum(data):
     sumData = np.sum(data)
     if nProcessors > 1:
-        return mpi.allreduce(maxData, op=MPI.SUM)
+        return mpi.allreduce(sumData, op=MPI.SUM)
     else:
         return sumData
     

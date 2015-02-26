@@ -19,13 +19,13 @@ else:
     pprint('Primal run time step file not specified')
     exit()
 
-from problem import primal, nSteps, writeInterval, objectiveGradient
+from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
 primal.adjoint = True
 mesh = primal.mesh
 
 # provision for restaring adjoint
 if firstCheckpoint == 0:
-    adjointFields = [IOField('{0}a'.format(name), np.zeros((mesh.nInternalCells, dimensions[0]), config.precision), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
+    adjointFields = [IOField('{0}a'.format(name), np.zeros((mesh.origMesh.nInternalCells, dimensions[0]), config.precision), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
 else:
     adjointFields = [IOField.read('{0}a'.format(name), timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in primal.names]
 
@@ -41,6 +41,7 @@ def writeAdjointFields(writeTime):
         phi.write(writeTime)
     pprint()
 
+result = 0.
 for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
     pprint('PRIMAL FORWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     primalIndex = nSteps - (checkpoint + 1)*writeInterval
@@ -70,9 +71,15 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         paddedJacobian = np.ascontiguousarray(primal.gradient(paddedPreviousSolution, stackedAdjointFields))
         jacobian = parallel.getAdjointRemoteCells(paddedJacobian, mesh)
         stackedAdjointFields = jacobian + np.ascontiguousarray(objectiveGradient(previousSolution))
+        # compute sensitivity using adjoint solution
+        perturbation = np.zeros_like(stackedAdjointFields)
+        perturb(perturbation, t)
+        result += np.sum(stackedAdjointFields * perturbation)
 
         end = time.time()
         pprint('Time for iteration: {0}'.format(end-start))
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
     writeAdjointFields(t)
+
+writeResult('adjoint', result)
