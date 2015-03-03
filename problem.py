@@ -67,8 +67,6 @@ def objective(fields):
     internalIndices = mesh.owner[start:end]
     start, end = cellStartFace, cellEndFace
     p = rhoE.field[start:end]*(primal.gamma-1)
-    if start == end:
-        return 0*ad.sum(p)
     deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nF,1))
     T = rhoE/(rho*primal.Cv)
     mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
@@ -125,7 +123,6 @@ objectiveGradient = T.function([stackedFields], ad.grad(objectiveValue, stackedF
 def writeResult(option, result):
     mesh = primal.mesh.origMesh
     globalResult = parallel.sum(result)
-    print(mesh.case, parallel.rank)
     if parallel.rank == 0:
         f = open(mesh.case + '/objective.txt', 'a')
         f.write('{0} {1}\n'.format(option, globalResult))

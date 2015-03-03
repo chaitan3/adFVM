@@ -6,7 +6,7 @@ from config import ad
 
 from field import Field, CellField
 from mesh import Mesh
-from interp import interpolate, TVD_dual
+from interp import central, TVD_dual
 from op import grad, div, laplacian, snGrad
 
 def check(self, res, ref, maxThres=1e-7, sumThres=1e-4):

@@ -36,7 +36,10 @@ pprint('STARTING ADJOINT\n')
 def writeAdjointFields(writeTime):
     global adjointFields
     adjointFields = primal.unstackFields(stackedAdjointFields, IOField, names=[phi.name for phi in adjointFields])
+
     for phi in adjointFields:
+    # TODO: fix unstacking F_CONTIGUOUS
+        phi.field = np.ascontiguousarray(phi.field)
         phi.info()
         phi.write(writeTime)
     pprint()
