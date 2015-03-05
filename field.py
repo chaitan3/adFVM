@@ -206,10 +206,10 @@ class CellField(Field):
     def updateGhostCells(self):
         logger.info('updating ghost cells for {0}'.format(self.name))
         for patchID in self.BC:
-            if self.boundary[patchID]['type'] in config.processorPatches:
-                self.BC[patchID].update(exchanger)
-            else:
-                self.BC[patchID].update()
+            #if self.boundary[patchID]['type'] in config.processorPatches:
+            #    self.BC[patchID].update(exchanger)
+            #else:
+            self.BC[patchID].update()
     
 
 class IOField(Field):

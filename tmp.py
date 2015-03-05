@@ -185,10 +185,101 @@ from mpi4py import MPI
 #print f(b)
 
 
-x = ad.TensorType(T.config.floatX, broadcastable=[False, True])()
-print x.broadcastable
-y = x[2:4]
-z = x[[2,3]]
-print y.broadcastable
-print y.broadcastable
+#x = ad.TensorType(T.config.floatX, broadcastable=[False, True])()
+#print x.broadcastable
+#y = x[2:4]
+#z = x[[2,3]]
+#print y.broadcastable
+#print y.broadcastable
 
+import parallel
+from op import grad
+from interp import central
+from pyRCF import RCF
+from field import IOField
+case = 'tests/cylinder'
+solver = RCF(case, CFL=0.2, timeIntegrator='euler')
+mesh = solver.mesh
+meshC = mesh
+meshP = mesh.paddedMesh
+mesh = mesh.origMesh
+
+paddedStackedFields = ad.matrix()
+rho, rhoU, rhoE = solver.unstackFields(paddedStackedFields, CellField)
+rhoPF = central(rho, meshP)
+gradRho = grad(rhoPF, ghost=True)
+function = T.function([paddedStackedFields], [gradRho.field, rhoPF.field])
+
+stackedFields = ad.matrix()
+rho, rhoU, rhoE = solver.unstackFields(stackedFields, CellField)
+rhoF = central(rho, meshC)
+function2 = T.function([stackedFields], rhoF.field)
+
+fields = solver.initFields(2.0)
+stackedFields = solver.stackFields(fields, np)
+parallel.getOrigRemoteCells(stackedFields, meshC)
+paddedStackedFields = parallel.getRemoteCells(stackedFields, meshC)
+grad, faceP = function(paddedStackedFields)
+face = function2(stackedFields)
+
+nLocalBoundaryFaces = mesh.nLocalCells - mesh.nInternalCells
+nLocalRemoteBoundaryFaces = mesh.nCells - mesh.nLocalCells
+nLocalInternalFaces = mesh.nInternalFaces + nLocalRemoteBoundaryFaces
+remoteGhostStartFace = meshP.origMesh.nInternalFaces + nLocalBoundaryFaces
+
+#face = mesh.areas
+#faceP = meshP.origMesh.areas
+faceRemote = faceP.copy()
+internalCursor = nLocalInternalFaces
+boundaryCursor = remoteGhostStartFace
+exchanger = parallel.Exchanger()
+for patchID in meshC.remotePatches:
+    nInternalFaces = len(meshP.remoteFaces['internal'][patchID])
+    local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+
+    exchanger.exchange(remote, face[meshP.localRemoteFaces['internal'][patchID]], faceRemote[internalCursor:internalCursor + nInternalFaces], tag)
+    internalCursor += nInternalFaces
+    nBoundaryFaces = len(meshP.remoteFaces['boundary'][patchID])
+    tag += len(meshC.origPatches) + 1
+    exchanger.exchange(remote, face[meshP.localRemoteFaces['boundary'][patchID]], faceRemote[boundaryCursor:boundaryCursor + nBoundaryFaces], tag)
+    boundaryCursor += nBoundaryFaces
+exchanger.wait()
+
+start, end = meshP.origMesh.nInternalFaces, remoteGhostStartFace
+diff = np.abs(faceP[start:end]-faceRemote[start:end])
+print 'local boundary', np.max(diff)
+
+internalCursor = nLocalInternalFaces
+boundaryCursor = remoteGhostStartFace
+for patchID in meshC.remotePatches:
+    nInternalFaces = len(meshP.remoteFaces['internal'][patchID])
+    start, end = internalCursor, internalCursor + nInternalFaces
+    diff = np.abs(faceP[start:end]-faceRemote[start:end])
+    print 'internal', patchID, np.max(diff), np.argmax(diff)
+    internalCursor += nInternalFaces
+    nBoundaryFaces = len(meshP.remoteFaces['boundary'][patchID])
+    start, end = boundaryCursor, boundaryCursor + nBoundaryFaces
+    diff = np.abs(faceP[start:end]-faceRemote[start:end])
+    print 'boundary', patchID, np.max(diff), np.argmax(diff)
+    boundaryCursor += nBoundaryFaces
+
+gradRemote = grad.copy()
+parallel.getOrigRemoteCells(gradRemote, meshC)
+for patchID in meshC.remotePatches:
+    patch = mesh.boundary[patchID]
+    startFace = patch['startFace']
+    endFace = startFace + patch['nFaces']
+
+    start = mesh.nInternalCells + startFace - mesh.nInternalFaces
+    end = mesh.nInternalCells + endFace - mesh.nInternalFaces
+    g1 = grad[start:end]
+    g2 = gradRemote[start:end]
+    diff = np.abs(np.linalg.norm(g1, axis=1)-np.linalg.norm(g2, axis=1))
+    maxd = np.argmax(diff)
+    print patchID, np.max(diff)
+    #P = T.function([], meshP.sumOp)()
+    #C = T.function([], meshC.sumOp)()
+    #x = C*face
+    #y = P*faceP
+    #i = np.argmax(y[:mesh.nInternalCells]-x)
+    ##import pdb;pdb.set_trace()

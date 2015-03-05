@@ -92,8 +92,8 @@ def getRemoteCells(stackedFields, mesh):
     internalCursor = origMesh.nInternalCells
     boundaryCursor = origMesh.nCells
     for patchID in meshC.remotePatches:
-        nInternalCells = meshP.remoteCells['internal'][patchID]
-        nBoundaryCells = meshP.remoteCells['boundary'][patchID]
+        nInternalCells = len(meshP.remoteCells['internal'][patchID])
+        nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
         local, remote, tag = origMesh.getProcessorPatchInfo(patchID)
         exchanger.exchange(remote, stackedFields[meshP.localRemoteCells['internal'][patchID]], paddedStackedFields[internalCursor:internalCursor+nInternalCells], tag)
         tag += len(meshC.origPatches) + 1
@@ -108,9 +108,9 @@ def getRemoteCells(stackedFields, mesh):
     exchanger = Exchanger()
     boundaryCursor = origMesh.nCells
     for patchID in meshC.remotePatches:
-        nBoundaryCells = meshP.remoteCells['boundary'][patchID]
+        nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
         boundaryCursor += nBoundaryCells
-        nExtraRemoteBoundaryCells = meshP.remoteCells['extra'][patchID]
+        nExtraRemoteBoundaryCells = len(meshP.remoteCells['extra'][patchID])
         nLocalBoundaryCells = origMesh.nLocalCells - origMesh.nInternalCells
         local, remote, tag = origMesh.getProcessorPatchInfo(patchID)
         # does it work if sendData/recvData is empty
@@ -142,8 +142,8 @@ def getAdjointRemoteCells(paddedJacobian, mesh):
     boundaryCursor = origMesh.nCells
     adjointRemoteCells = {'internal':{}, 'boundary':{}, 'extra':{}}
     for patchID in meshC.remotePatches:
-        nInternalCells = meshP.remoteCells['internal'][patchID]
-        nBoundaryCells = meshP.remoteCells['boundary'][patchID]
+        nInternalCells = len(meshP.remoteCells['internal'][patchID])
+        nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
         local, remote, tag = origMesh.getProcessorPatchInfo(patchID)
         
         size = (len(meshP.localRemoteCells['internal'][patchID]), ) + dimensions
@@ -183,3 +183,4 @@ def getAdjointRemoteCells(paddedJacobian, mesh):
     jacobian[origMesh.nLocalCells:] = 0.
 
     return jacobian
+

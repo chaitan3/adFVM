@@ -88,6 +88,7 @@ def central(phi, mesh):
     if len(phi.dimensions) == 2:
         factor = factor.reshape((factor.shape[0], 1, 1))
     faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1.-factor), phi.dimensions)
+    #faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner] + phi.field[mesh.neighbour], phi.dimensions)
     # retain pattern broadcasting
     faceField.field = ad.patternbroadcast(faceField.field, phi.field.broadcastable)
     return faceField

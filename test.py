@@ -25,7 +25,7 @@ class TestField(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.case = 'tests/convection/'
-        self.mesh = Mesh(self.case)
+        self.mesh = Mesh.create(self.case)
         Field.setSolver(self)
         self.X = self.mesh.cellCentres[:self.mesh.nInternalCells, 0]
         self.Y = self.mesh.cellCentres[:self.mesh.nInternalCells, 1]
@@ -106,7 +106,7 @@ class TestInterp(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.case = 'tests/convection/'
-        self.mesh = Mesh(self.case)
+        self.mesh = Mesh.create(self.case)
         Field.setSolver(self)
         self.T = CellField('T', ad.zeros((self.mesh.nInternalCells, 1)))
         self.U = CellField('U', ad.zeros((self.mesh.nInternalCells, 3)))
@@ -132,7 +132,7 @@ class TestOp(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.case = 'tests/convection/'
-        self.mesh = Mesh(self.case)
+        self.mesh = Mesh.create(self.case)
         Field.setSolver(self)
         self.T = CellField('T', ad.zeros((self.mesh.nInternalCells, 1)))
         self.U = CellField('U', ad.zeros((self.mesh.nInternalCells, 3)))

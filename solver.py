@@ -83,6 +83,8 @@ class Solver(object):
         
         timeSteps = []
         # objective is local
+        if perturb is not None:
+            perturb(stackedFields, t)
         result = objective(stackedFields)
         # writing and returning local solutions
         if mode == 'forward':
@@ -95,8 +97,6 @@ class Solver(object):
             for index in range(0, len(fields)):
                 fields[index].info()
 
-            if perturb is not None:
-                perturb(stackedFields, t)
             # mpi stuff, bloat stackedFields
             stackedFields = parallel.getRemoteCells(stackedFields, mesh)  
 

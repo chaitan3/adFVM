@@ -209,21 +209,39 @@ class Mesh(object):
         weights = neighbourDist/(neighbourDist + ownerDist)
         return weights.reshape(-1,1)
 
-    def getSumOp(self, mesh):
+    def getSumOp(self, mesh, ghost=False):
         logger.info('generated sum op')
         owner = sp.csc_matrix((np.ones(mesh.nFaces, config.precision), mesh.owner, np.arange(0, mesh.nFaces+1, dtype=np.int32)), shape=(mesh.nInternalCells, mesh.nFaces))
         Nindptr = np.concatenate((np.arange(0, mesh.nInternalFaces+1, dtype=np.int32), mesh.nInternalFaces*np.ones(mesh.nFaces-mesh.nInternalFaces, np.int32)))
         neighbour = sp.csc_matrix((-np.ones(mesh.nInternalFaces, config.precision), mesh.neighbour[:mesh.nInternalFaces], Nindptr), shape=(mesh.nInternalCells, mesh.nFaces))
         # skip empty patches
-        for patchID in self.boundary:
-            patch = self.boundary[patchID]
-            if patch['type'] == 'empty' and patch['nFaces'] != 0:
-                pprint('Deleting empty patch ', patchID)
-                startFace = mesh.nInternalFaces + patch['startFace'] - self.nInternalFaces
-                endFace = startFace + patch['nFaces']
-                owner.data[startFace:endFace] = 0
+        #for patchID in self.boundary:
+        #    patch = self.boundary[patchID]
+        #    if patch['type'] == 'empty' and patch['nFaces'] != 0:
+        #        pprint('Deleting empty patch ', patchID)
+        #        startFace = mesh.nInternalFaces + patch['startFace'] - self.nInternalFaces
+        #        endFace = startFace + patch['nFaces']
+        #        owner.data[startFace:endFace] = 0
         sumOp = (owner + neighbour).tocsr()
-        #return sumOp
+    
+        # different faces, same owner repeat fix
+        if ghost:
+            correction = sp.lil_matrix((mesh.nInternalCells, mesh.nInternalCells))
+            correction.setdiag(1.)
+            internalCursor = self.nInternalCells
+            for patchID in self.remotePatches:
+                internal = mesh.remoteCells['internal'][patchID]
+                uniqueInternal, inverse = np.unique(internal, return_inverse=True)
+                repeat = np.where(np.bincount(inverse) > 1)
+                for index in uniqueInternal[repeat]:
+                    indices = internalCursor + np.where(internal == index)[0]
+                    #print indices, patchID, index
+                    for ind in indices:
+                        correction[indices, ind] = 1.
+
+                internalCursor += len(internal)
+            sumOp = (correction.tocsr())*sumOp
+
         return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
 
     def getDefaultBoundary(self):
@@ -259,8 +277,6 @@ class Mesh(object):
                 commonPatch = self.boundary[commonPatch]['neighbourPatch']
             tag = 1 + self.origPatches.index(commonPatch)
         return local, remote, tag
-
-
 
     def createGhostCells(self):
         logger.info('generated ghost cells')
@@ -366,7 +382,7 @@ class Mesh(object):
             extraGhostCells = np.setdiff1d(extraCells, extraInternalCells)
             # extra = localRemote
             # check cells on another processor
-            extraIndex = extraGhostCells >= self.nLocalCells
+            extraIndex = (extraGhostCells >= self.nLocalCells)
             extraRemoteCells = extraGhostCells[extraIndex]
             # rearrange extraGhostCells 
             extraGhostCells = np.concatenate((extraGhostCells[np.invert(extraIndex)], extraRemoteCells))
@@ -451,11 +467,11 @@ class Mesh(object):
             remoteBoundary['mapping'][patchID] = remoteBoundary['mapping'][patchID][:getCount(index*total + 3)]
             remoteInternal['owner'][patchID] = remoteInternal['owner'][patchID][:getCount(index*total + 7)]
             remoteBoundary['owner'][patchID] = remoteBoundary['owner'][patchID][:getCount(index*total + 9)]
-            mesh.remoteCells['internal'][patchID] = len(remoteInternal['mapping'][patchID])
-            mesh.remoteCells['boundary'][patchID] = len(remoteBoundary['mapping'][patchID])
-            mesh.remoteCells['extra'][patchID] = len(remoteExtra[patchID][:getCount(index*total + 5)])
-            mesh.remoteFaces['internal'][patchID] = len(remoteInternal['owner'][patchID])
-            mesh.remoteFaces['boundary'][patchID] = len(remoteBoundary['owner'][patchID])
+            mesh.remoteCells['internal'][patchID] = remoteInternal['mapping'][patchID]
+            mesh.remoteCells['boundary'][patchID] = remoteBoundary['mapping'][patchID]
+            mesh.remoteCells['extra'][patchID] = remoteExtra[patchID][:getCount(index*total + 5)]
+            mesh.remoteFaces['internal'][patchID] = remoteInternal['owner'][patchID]
+            mesh.remoteFaces['boundary'][patchID] = remoteBoundary['owner'][patchID]
             #print(getCount(index*total+3))
             #print(parallel.rank, remoteBoundary['mapping'][patchID])
             nRemoteInternalFaces += len(remoteInternal['owner'][patchID])
@@ -476,6 +492,9 @@ class Mesh(object):
             size = (mesh.nFaces, ) + example.shape[1:]
             dtype = example.dtype
 
+            # padded face field structure:
+            # internal, proc boundary, remote internal, local boundary, remote boundary
+
             faceField = np.zeros(size, dtype)
             faceField[:self.nInternalFaces] = field[:self.nInternalFaces]
             faceField[self.nInternalFaces:nLocalInternalFaces] = field[nLocalFaces:]
@@ -491,6 +510,7 @@ class Mesh(object):
                 boundaryCursor += nBoundaryFaces
             return faceField
 
+    
         mesh.owner = padFaceField('owner')
         mesh.neighbour = padFaceField('neighbour')
         mesh.neighbour[self.nInternalFaces:nLocalInternalFaces] -= nLocalBoundaryFaces
@@ -515,12 +535,13 @@ class Mesh(object):
                 mesh.neighbour[index] = reverseBoundaryMapping[mesh.neighbour[index]]
             boundaryCursor += nBoundaryFaces
             boundaryCellsCursor += len(remoteBoundary['mapping'][patchID])
-     
+ 
+
         mesh.areas = padFaceField('areas')
         mesh.normals = padFaceField('normals')
         #print sum(np.linalg.norm(mesh.normals[remoteGhostStartFace:], axis=1)), nRemoteBoundaryFaces
         mesh.weights = padFaceField('weights')
-        mesh.sumOp = self.getSumOp(mesh)
+        mesh.sumOp = self.getSumOp(mesh, ghost=True)
 
         mesh.volumes = np.zeros((mesh.nInternalCells, 1), config.precision)
         mesh.volumes[:self.nInternalCells] = self.volumes
@@ -530,7 +551,7 @@ class Mesh(object):
             mesh.volumes[internalCursor:internalCursor + nInternalCells] = remoteInternal['volumes'][patchID][:nInternalCells]
             internalCursor += nInternalCells
 
-        mesh.origMesh = cls.copy(mesh)
+        mesh.origMesh = cls.copy(mesh, fields=True)
         mesh.makeShared()
 
         return mesh

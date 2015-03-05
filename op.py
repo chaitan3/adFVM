@@ -10,6 +10,7 @@ logger = config.Logger(__name__)
 
 def internal_sum(phi, mesh):
     x = (adsparse.basic.dot(mesh.sumOp, (phi.field * mesh.areas)))/mesh.volumes
+    #x = mesh.volumes
     # retain pattern broadcasting
     x = ad.patternbroadcast(x, phi.field.broadcastable)
     return x
