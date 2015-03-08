@@ -86,17 +86,19 @@ def objective(fields):
     rho, rhoU, rhoE = fields
     solver = rhoE.solver
     mesh = rhoE.mesh
-    patchID = 'suction'
-    patch = rhoE.BC[patchID]
-    start, end = patch.startFace, patch.endFace
-    areas = mesh.areas[start:end]
-    Ti = solver.T.field[mesh.owner[start:end]] 
-    Tw = 300*Ti/Ti
-    deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
-    dtdn = (Tw-Ti)/deltas
-    k = solver.Cp*solver.mu(Tw)/solver.Pr
-    dT = 120
-    return ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1))
+    res = 0.
+    for patchID in ['suction', 'pressure']:
+        patch = rhoE.BC[patchID]
+        start, end = patch.startFace, patch.endFace
+        areas = mesh.areas[start:end]
+        Ti = solver.T.field[mesh.owner[start:end]] 
+        Tw = 300*Ti/Ti
+        deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
+        dtdn = (Tw-Ti)/deltas
+        k = solver.Cp*solver.mu(Tw)/solver.Pr
+        dT = 120
+        res += ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1))
+    return res
 
 
 nSteps = 20000
@@ -180,7 +182,12 @@ if __name__ == "__main__":
 
     elif option == 'orig':
         timeSteps, result = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objective)
-        np.savetxt(mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval), timeSteps)
+        globalResult = parallel.sum(result)
+        if parallel.rank == 0:
+            f = open(primal.mesh.case + '/objective.txt', 'a')
+            f.write('{0} {1}\n'.format(option, globalResult))
+            f.close()
+            np.savetxt(mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval), timeSteps)
     elif option == 'perturb':
         timeSteps, result = primal.run([startTime, dt], nSteps, objective=objective, perturb=perturb)
     elif option == 'adjoint':
@@ -194,6 +201,4 @@ if __name__ == "__main__":
         print('WTF')
         exit()
 
-    with open(primal.mesh.case + '/objective.txt', 'a') as f:
-        f.write('{0} {1}\n'.format(option, result))
 
