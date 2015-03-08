@@ -88,12 +88,14 @@ def objective(fields):
     mesh = rhoE.mesh
     res = 0.
     for patchID in ['suction', 'pressure']:
-        patch = rhoE.BC[patchID]
-        start, end = patch.startFace, patch.endFace
+        if patchID not in rhoE.BC:
+            continue
+        patch = mesh.boundary[patchID]
+        start, end = patch['startFace'], patch['startFace'] + patch['nFaces']
         areas = mesh.areas[start:end]
         Ti = solver.T.field[mesh.owner[start:end]] 
         Tw = 300*Ti/Ti
-        deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
+        deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[mesh.owner[start:end]], axis=1).reshape(-1,1)
         dtdn = (Tw-Ti)/deltas
         k = solver.Cp*solver.mu(Tw)/solver.Pr
         dT = 120
