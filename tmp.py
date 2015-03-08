@@ -287,17 +287,28 @@ for patchID in meshC.remotePatches:
     ##import pdb;pdb.set_trace()
 
 from config import adsparse
+import config
 rho = ad.matrix()
 rhoF = rho[meshP.owner] + rho[meshP.neighbour]
 rhoC = adsparse.basic.dot(adsparse.sqr(meshP.sumOp), rhoF)
-
 J = T.function([rho], ad.grad(rhoC[:meshC.nInternalCells].sum(), rho))
+
+rhoD = ad.bcalloc(config.precision(0.), (mesh.nCells, 1))
+rhoD = ad.set_subtensor(rhoD[:meshC.nInternalCells],rhoC[:meshC.nInternalCells])
+rhoD = ad.set_subtensor(rhoD[meshC.nLocalCells:meshC.nCells], rhoC[meshC.nInternalCells:])
+rhoG = rhoD[meshC.owner] + rhoD[meshC.neighbour]
+rhoE = adsparse.basic.dot(adsparse.sqr(meshC.sumOp), rhoG)
+K = T.function([rho], ad.grad(rhoE.sum(), rho))
+
 rho = np.ones((meshO.nCells, 1))
 J = J(rho)
 J = parallel.getAdjointRemoteCells(J, meshC)
+K = K(rho)
+K = parallel.getAdjointRemoteCells(K, meshC)
 
 for patchID in meshC.remotePatches:
     start = mesh.boundary[patchID]['startFace']
     end = start + mesh.boundary[patchID]['nFaces']
     print patchID, J[mesh.owner[start:end]].ravel()
+    print patchID, K[mesh.owner[start:end]].ravel()
 
