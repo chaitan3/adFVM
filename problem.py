@@ -67,16 +67,18 @@ def objective(fields):
     internalIndices = mesh.owner[start:end]
     start, end = cellStartFace, cellEndFace
     p = rhoE.field[start:end]*(primal.gamma-1)
-    deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1, keepdims=True)
+    #deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1, keepdims=True)
+    deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nF,1))
     T = rhoE/(rho*primal.Cv)
-    mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
+    #mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
+    mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
     return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
 
 def perturb(stackedFields, t):
     mesh = primal.mesh.origMesh
     mid = np.array([-0.0032, 0.0, 0.])
-    #G = 1e-3*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 1e-5*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    #G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #rho
     if t == startTime:
         stackedFields[:mesh.nInternalCells, 0] += G
@@ -102,14 +104,14 @@ def perturb(stackedFields, t):
 #    dT = 120
 #    return ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1))
 
-#nSteps = 20000
-#writeInterval = 100
-#startTime = 2.0
-#dt = 1e-9
-nSteps = 10
-writeInterval = 2
+nSteps = 20000
+writeInterval = 100
 startTime = 2.0
 dt = 1e-9
+#nSteps = 10
+#writeInterval = 2
+#startTime = 2.0
+#dt = 1e-9
 
 pprint('Compiling objective')
 stackedFields = ad.matrix()

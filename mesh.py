@@ -228,8 +228,8 @@ class Mesh(object):
         nFaces = 6
         repeat = [[-1]*nFaces]
         if ghost:
-            correction = sp.lil_matrix((mesh.nInternalCells, mesh.nInternalCells))
-            correction.setdiag(1.)
+            correction = sp.lil_matrix((mesh.nInternalCells, mesh.nInternalCells), dtype=config.precision)
+            correction.setdiag(config.precision(1.))
             internalCursor = self.nInternalCells
             for patchID in self.remotePatches:
                 internal = mesh.remoteCells['internal'][patchID]
