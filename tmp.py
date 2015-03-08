@@ -203,6 +203,8 @@ mesh = solver.mesh
 meshC = mesh
 meshP = mesh.paddedMesh
 mesh = mesh.origMesh
+meshO = meshP.origMesh
+
 
 paddedStackedFields = ad.matrix()
 rho, rhoU, rhoE = solver.unstackFields(paddedStackedFields, CellField)
@@ -276,10 +278,26 @@ for patchID in meshC.remotePatches:
     g2 = gradRemote[start:end]
     diff = np.abs(np.linalg.norm(g1, axis=1)-np.linalg.norm(g2, axis=1))
     maxd = np.argmax(diff)
-    print patchID, np.max(diff)
+    print 'grad', patchID, np.max(diff)
     #P = T.function([], meshP.sumOp)()
     #C = T.function([], meshC.sumOp)()
     #x = C*face
     #y = P*faceP
     #i = np.argmax(y[:mesh.nInternalCells]-x)
     ##import pdb;pdb.set_trace()
+
+from config import adsparse
+rho = ad.matrix()
+rhoF = rho[meshP.owner] + rho[meshP.neighbour]
+rhoC = adsparse.basic.dot(adsparse.sqr(meshP.sumOp), rhoF)
+
+J = T.function([rho], ad.grad(rhoC[:meshC.nInternalCells].sum(), rho))
+rho = np.ones((meshO.nCells, 1))
+J = J(rho)
+J = parallel.getAdjointRemoteCells(J, meshC)
+
+for patchID in meshC.remotePatches:
+    start = mesh.boundary[patchID]['startFace']
+    end = start + mesh.boundary[patchID]['nFaces']
+    print patchID, J[mesh.owner[start:end]].ravel()
+

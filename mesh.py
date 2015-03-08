@@ -225,6 +225,7 @@ class Mesh(object):
         sumOp = (owner + neighbour).tocsr()
     
         # different faces, same owner repeat fix
+        repeat = []
         if ghost:
             correction = sp.lil_matrix((mesh.nInternalCells, mesh.nInternalCells))
             correction.setdiag(1.)
@@ -232,15 +233,19 @@ class Mesh(object):
             for patchID in self.remotePatches:
                 internal = mesh.remoteCells['internal'][patchID]
                 uniqueInternal, inverse = np.unique(internal, return_inverse=True)
-                repeat = np.where(np.bincount(inverse) > 1)
-                for index in uniqueInternal[repeat]:
+                repeaters = np.where(np.bincount(inverse) > 1)
+                for index in uniqueInternal[repeaters]:
                     indices = internalCursor + np.where(internal == index)[0]
                     #print indices, patchID, index
                     for ind in indices:
+                        # rotate and pad this
+                        repeat.append(indices)
                         correction[indices, ind] = 1.
 
                 internalCursor += len(internal)
             sumOp = (correction.tocsr())*sumOp
+        #mesh.repeat = T.shared(np.array(repeat, dtype=np.int32).T)
+        #print mesh.repeat
 
         return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
 

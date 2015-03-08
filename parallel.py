@@ -160,8 +160,8 @@ def getAdjointRemoteCells(paddedJacobian, mesh):
 
     exchanger.wait()
     for patchID in meshC.remotePatches:
-        jacobian[meshP.localRemoteCells['internal'][patchID]] += adjointRemoteCells['internal'][patchID]
-        jacobian[meshP.localRemoteCells['boundary'][patchID]] += adjointRemoteCells['boundary'][patchID]
+        np.add.at(jacobian, meshP.localRemoteCells['internal'][patchID], adjointRemoteCells['internal'][patchID])
+        np.add.at(jacobian, meshP.localRemoteCells['boundary'][patchID], adjointRemoteCells['boundary'][patchID])
 
     # code for second layer: transfer to remote jacobians again and add up
     exchanger = Exchanger()
@@ -177,7 +177,7 @@ def getAdjointRemoteCells(paddedJacobian, mesh):
 
     exchanger.wait()
     for patchID in meshC.remotePatches:
-        jacobian[meshP.localRemoteCells['internal'][patchID]] += adjointRemoteCells['extra'][patchID]
+        np.add.at(jacobian, meshP.localRemoteCells['internal'][patchID], adjointRemoteCells['extra'][patchID])
 
     # make processor cells zero again
     jacobian[origMesh.nLocalCells:] = 0.
