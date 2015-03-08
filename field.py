@@ -56,14 +56,14 @@ class Field(object):
     # creates a view
     def component(self, component): 
         assert self.dimensions == (3,)
-        return self.__class__('{0}.{1}'.format(self.name, component), self.field[:, component].reshape((self.field.shape[0],1)), (1,))
+        return self.__class__('{0}.{1}'.format(self.name, component), self.field[:,[0]], (1,))
 
     def magSqr(self):
         assert self.dimensions == (3,)
         if isinstance(self.field, np.ndarray):
-            return self.__class__('magSqr({0})'.format(self.name), np.sum(self.field**2, axis=1).reshape((self.field.shape[0],1)), (1,))
+            return self.__class__('magSqr({0})'.format(self.name), np.sum(self.field**2, axis=1, keepdims=True), (1,))
         else:
-            return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field**2, axis=1).reshape((self.field.shape[0],1)), (1,))
+            return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field**2, axis=1, keepdims=True), (1,))
 
     def mag(self):
         return self.magSqr()**0.5

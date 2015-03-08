@@ -18,7 +18,7 @@ from field import CellField, Field, IOField
 #    mesh = rho.mesh
 #    mid = np.array([0.75, 0.5, 0.5])
 #    indices = range(0, mesh.nInternalCells)
-#    G = np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1)*mesh.volumes[indices]
+#    G = np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1)*mesh.volumes[indices]
 #    return ad.sum(rho.field[indices]*G)/(nSteps + 1)
 #
 #def perturb(fields, eps=1E-2):
@@ -26,7 +26,7 @@ from field import CellField, Field, IOField
 #    mesh = rho.mesh
 #    mid = np.array([0.5, 0.5, 0.5])
 #    indices = range(0, mesh.nInternalCells)
-#    G = eps*ad.array(np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
+#    G = eps*ad.array(np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
 #    rho.field[indices] += G
 
 #primal = RCF('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
@@ -67,16 +67,16 @@ def objective(fields):
     internalIndices = mesh.owner[start:end]
     start, end = cellStartFace, cellEndFace
     p = rhoE.field[start:end]*(primal.gamma-1)
-    deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nF,1))
+    deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1, keepdims=True)
     T = rhoE/(rho*primal.Cv)
-    mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
+    mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
     return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
 
 def perturb(stackedFields, t):
     mesh = primal.mesh.origMesh
     mid = np.array([-0.0032, 0.0, 0.])
-    #G = 1e-3*np.exp(-1e7*config.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    G = 1e-4*np.exp(-1e2*config.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    #G = 1e-3*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #rho
     if t == startTime:
         stackedFields[:mesh.nInternalCells, 0] += G
@@ -96,7 +96,7 @@ def perturb(stackedFields, t):
 #    
 #    Ti = T.field[mesh.owner[start:end]] 
 #    Tw = 300*Ti/Ti
-#    deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1).reshape(-1,1)
+#    deltas = np.linalg.norm(mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices], axis=1, keepdims=True)
 #    dtdn = (Tw-Ti)/deltas
 #    k = solver.Cp*solver.mu(Tw)/solver.Pr
 #    dT = 120

@@ -38,9 +38,10 @@ def inspect_outputs(i, node, fn):
     print("output(s) value(s):", [output[0] for output in fn.outputs])
 
 # custom norm for numpy 1.7
-def norm(a, axis):
+def norm(a, axis, **kwargs):
     try:
-        return np.linalg.norm(a, axis=axis)
+        #return np.linalg.norm(a, axis=axis, keepdims=True)
+        return np.linalg.norm(a, axis=axis).reshape((-1,1))
     except:
         return np.einsum('ij,ij->i', a, a)**0.5
 

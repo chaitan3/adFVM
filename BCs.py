@@ -80,7 +80,7 @@ class symmetryPlane(zeroGradient):
         # if vector
         if self.phi.dimensions == (3,):
             v = -self.mesh.normals[self.startFace:self.endFace]
-            self.phi.field = ad.inc_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], -ad.sum(self.phi.field[self.cellStartFace:self.cellEndFace]*v, axis=1).reshape((self.nFaces,1))*v)
+            self.phi.field = ad.inc_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], -ad.sum(self.phi.field[self.cellStartFace:self.cellEndFace]*v, axis=1, keepdims=True)*v)
 
 class fixedValue(BoundaryCondition):
     def __init__(self, phi, patchID):

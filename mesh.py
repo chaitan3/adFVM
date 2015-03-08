@@ -149,7 +149,7 @@ class Mesh(object):
         normals = np.cross(v1, v2)
         # change back to contiguous
         normals = np.ascontiguousarray(normals)
-        return normals / config.norm(normals, axis=1).reshape(-1,1)
+        return normals / config.norm(normals, axis=1, keepdims=True)
 
     def getCellFaces(self):
         logger.info('generated cell faces')
@@ -164,12 +164,12 @@ class Mesh(object):
         nCellFaces = self.cellFaces.shape[1]
         cellCentres = np.mean(self.faceCentres[self.cellFaces], axis=1)
         sumCentres = cellCentres*0
-        sumVolumes = np.sum(sumCentres, axis=1).reshape(-1,1)
+        sumVolumes = np.sum(sumCentres, axis=1, keepdims=True)
         areaNormals = self.areas * self.normals
         for index in range(0, nCellFaces):
             indices = self.cellFaces[:,index]
             height = cellCentres-self.faceCentres[indices]
-            volumes = np.abs(np.sum(areaNormals[indices]*height, axis=1)).reshape(-1,1)/3
+            volumes = np.abs(np.sum(areaNormals[indices]*height, axis=1, keepdims=True))/3
             centres = (3./4)*self.faceCentres[indices] + (1./4)*cellCentres
             sumCentres += volumes * centres
             sumVolumes += volumes
@@ -187,7 +187,7 @@ class Mesh(object):
             nextPoints = self.points[self.faces[:, (index % nFacePoints)+1]]
             centres = (points + nextPoints + faceCentres)/3
             normals = np.cross((nextPoints - points), (faceCentres - points))
-            areas = (config.norm(normals, axis=1)/2).reshape(-1,1)
+            areas = config.norm(normals, axis=1, keepdims=True)/2
             sumAreas += areas
             sumCentres += areas*centres
         faceCentres = sumCentres/sumAreas
@@ -197,17 +197,17 @@ class Mesh(object):
         logger.info('generated deltas')
         P = self.cellCentres[self.owner]
         N = self.cellCentres[self.neighbour]
-        return config.norm(P-N, axis=1).reshape(-1,1)
+        return config.norm(P-N, axis=1, keepdims=True)
 
     def getWeights(self):
         logger.info('generated face deltas')
         P = self.cellCentres[self.owner]
         N = self.cellCentres[self.neighbour]
         F = self.faceCentres
-        neighbourDist = np.abs(np.sum((F-N)*self.normals, axis=1))
-        ownerDist = np.abs(np.sum((F-P)*self.normals, axis=1))
+        neighbourDist = np.abs(np.sum((F-N)*self.normals, axis=1, keepdims=True))
+        ownerDist = np.abs(np.sum((F-P)*self.normals, axis=1, keepdims=True))
         weights = neighbourDist/(neighbourDist + ownerDist)
-        return weights.reshape(-1,1)
+        return weights
 
     def getSumOp(self, mesh, ghost=False):
         logger.info('generated sum op')
@@ -225,7 +225,8 @@ class Mesh(object):
         sumOp = (owner + neighbour).tocsr()
     
         # different faces, same owner repeat fix
-        repeat = []
+        nFaces = 6
+        repeat = [[-1]*nFaces]
         if ghost:
             correction = sp.lil_matrix((mesh.nInternalCells, mesh.nInternalCells))
             correction.setdiag(1.)
@@ -237,15 +238,16 @@ class Mesh(object):
                 for index in uniqueInternal[repeaters]:
                     indices = internalCursor + np.where(internal == index)[0]
                     #print indices, patchID, index
-                    for ind in indices:
+                    for i,j in enumerate(indices):
                         # rotate and pad this
-                        repeat.append(indices)
-                        correction[indices, ind] = 1.
+                        padded = -np.ones(nFaces, dtype=np.int32)
+                        padded[:len(indices)] = np.roll(indices, -i)
+                        repeat.append(padded)
+                        correction[indices, j] = 1.
 
                 internalCursor += len(internal)
             sumOp = (correction.tocsr())*sumOp
-        #mesh.repeat = T.shared(np.array(repeat, dtype=np.int32).T)
-        #print mesh.repeat
+        mesh.repeat = T.shared(np.array(repeat, dtype=np.int32).T)
 
         return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
 
@@ -544,7 +546,7 @@ class Mesh(object):
 
         mesh.areas = padFaceField('areas')
         mesh.normals = padFaceField('normals')
-        #print sum(np.linalg.norm(mesh.normals[remoteGhostStartFace:], axis=1)), nRemoteBoundaryFaces
+        #print sum(config.norm(mesh.normals[remoteGhostStartFace:], axis=1)), nRemoteBoundaryFaces
         mesh.weights = padFaceField('weights')
         mesh.sumOp = self.getSumOp(mesh, ghost=True)
 
