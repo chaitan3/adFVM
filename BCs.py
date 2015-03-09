@@ -97,16 +97,16 @@ class fixedValue(BoundaryCondition):
 class turbulentInletVelocity(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        self.Umean = extractField(self.patch['Umean'], self.nFaces, self.field.shape[1:])
+        self.Umean = T.shared(extractField(self.patch['Umean'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions))
         self.lengthScale = self.patch['lengthScale']
         self.turbulentIntensity = self.patch['turbulentIntensity']
-        self.patch.pop('value', None)
-        self.patch['value'] = 'uniform (0 0 0)'
+        #self.patch.pop('value', None)
+        #self.patch['value'] = 'uniform (0 0 0)'
 
     def update(self):
         logger.debug('turbulentInletVelocity BC for {0}'.format(self.patchID))
         #self.value[:] = self.fixedValue
-        self.field[self.cellStartFace:self.cellEndFace] = self.Umean
+        self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.Umean)
 
 class totalPressure(BoundaryCondition):
     def __init__(self, phi, patchID):

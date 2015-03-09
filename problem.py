@@ -86,8 +86,8 @@ from field import CellField, Field, IOField
 #        stackedFields[:mesh.nInternalCells, 4] += G*2e5
 
 #primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.6)
-#primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.2, timeIntegrator='euler')
-primal = RCF('/lustre/atlas/proj-shared/tur103/laminar/', CFL=0.2, timeIntegrator='euler')
+primal = RCF('/home/talnikar/foam/blade/les/', CFL=0.2, timeIntegrator='euler')
+#primal = RCF('/lustre/atlas/proj-shared/tur103/les/', CFL=0.2, timeIntegrator='euler')
 def objective(fields):
     rho, rhoU, rhoE = fields
     solver = rhoE.solver
@@ -96,12 +96,13 @@ def objective(fields):
     for patchID in ['suction', 'pressure']:
         patch = rhoE.BC[patchID]
         start, end = patch.startFace, patch.endFace
+        cellStart, cellEnd = patch.cellStartFace, patch.cellEndFace
         areas = mesh.areas[start:end]
         U, T, p = solver.primitive(rho, rhoU, rhoE)
         
         Ti = T.field[mesh.owner[start:end]] 
         Tw = 300*Ti/Ti
-        deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[patch.internalIndices]).norm(2, axis=1).reshape((end-start, 1))
+        deltas = (mesh.cellCentres[cellStart:cellEnd]-mesh.cellCentres[patch.internalIndices]).norm(2, axis=1).reshape((end-start, 1))
         dtdn = (Tw-Ti)/deltas
         k = solver.Cp*solver.mu(Tw)/solver.Pr
         dT = 120
@@ -111,7 +112,7 @@ def objective(fields):
 def perturb(stackedFields, t):
     mesh = primal.mesh.origMesh
     mid = np.array([-0.08, 0.014, 0.005])
-    G = 1e-5*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 1e-3*np.exp(-1e5*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #rho
     if t == startTime:
@@ -155,11 +156,11 @@ if __name__ == "__main__":
     elif option == 'perturb':
         writeInterval = config.LARGE
     elif option == 'test':
-        #primal.initFields(startTime)
-        #a = np.zeros((mesh.nCells, 5))
-        #perturb(a, startTime)
-        #fields = primal.unstackFields(a, IOField)
-        #primal.writeFields(fields, 100.0)
+        primal.initFields(startTime)
+        a = np.zeros((mesh.nCells, 5))
+        perturb(a, startTime)
+        fields = primal.unstackFields(a, IOField)
+        primal.writeFields(fields, 100.0)
 
         #p = np.zeros((mesh.nCells, 5))
         #fields = primal.initFields(startTime)
@@ -171,19 +172,19 @@ if __name__ == "__main__":
         #resultp = objectiveFunction(stackedFields)
         #print(resultp-result)
 
-        primal.adjoint = True
-        p = np.zeros((mesh.nCells, 5))
-        perturb(p, startTime)
-        writeInterval = config.LARGE
-        timeSteps, result = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction, perturb=None)
-        timeSteps, resultp = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction, perturb=perturb)
-        solutions = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, mode='forward')
-        grad1 = np.ascontiguousarray(objectiveGradient(solutions[-1]))
-        grad2 = np.ascontiguousarray(primal.gradient(solutions[0], grad1))
-        grad3 = np.ascontiguousarray(objectiveGradient(solutions[0]))
-        grad = grad2 + grad3
-        print(np.sum(grad*p))
-        print(resultp-result)
+        #primal.adjoint = True
+        #p = np.zeros((mesh.nCells, 5))
+        #perturb(p, startTime)
+        #writeInterval = config.LARGE
+        #timeSteps, result = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction, perturb=None)
+        #timeSteps, resultp = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction, perturb=perturb)
+        #solutions = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, mode='forward')
+        #grad1 = np.ascontiguousarray(objectiveGradient(solutions[-1]))
+        #grad2 = np.ascontiguousarray(primal.gradient(solutions[0], grad1))
+        #grad3 = np.ascontiguousarray(objectiveGradient(solutions[0]))
+        #grad = grad2 + grad3
+        #print(np.sum(grad*p))
+        #print(resultp-result)
 
         exit()
     else:

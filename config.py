@@ -12,8 +12,8 @@ precision = np.float64
 import os
 project = 'adFVM'
 dtype = str(np.zeros(1, precision).dtype)
-#home = '~'
-home = '/lustre/atlas/proj-shared/tur103'
+home = '~'
+#home = '/lustre/atlas/proj-shared/tur103'
 os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
