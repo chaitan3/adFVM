@@ -358,7 +358,6 @@ class Mesh(object):
         nLocalRemoteBoundaryFaces = self.nCells - self.nLocalCells
         nLocalFaces = self.nInternalFaces + nLocalBoundaryFaces
 
-        exchanger = Exchanger()
         # processor patches are in increasing order
         remoteInternal = {'mapping':{},'owner':{}, 'neighbour':{}, 'areas':{}, 'weights':{}, 'normals':{}, 'volumes':{}}
         remoteBoundary = copy.deepcopy(remoteInternal)
@@ -367,6 +366,11 @@ class Mesh(object):
         mesh.localRemoteFaces = copy.deepcopy(mesh.localRemoteCells)
         mesh.remoteCells = copy.deepcopy(mesh.localRemoteCells)
         mesh.remoteFaces = copy.deepcopy(mesh.localRemoteCells)
+        localNormals = copy.deepcopy(mesh.localRemoteCells)
+        localWeights = copy.deepcopy(mesh.localRemoteCells)
+        localOwner = copy.deepcopy(mesh.localRemoteCells)
+        localNeighbour = copy.deepcopy(mesh.localRemoteCells)
+        exchanger = Exchanger()
         for patchID in self.remotePatches:
             patch = self.boundary[patchID]
             startFace = patch['startFace']
@@ -411,76 +415,98 @@ class Mesh(object):
             extraBoundaryFaces = extraFaces[boundaryIndex]
             extraInternalFaces = extraFaces[internalIndex]
 
+            localNormals['internal'][patchID] = normals[internalIndex]
+            localNormals['boundary'][patchID] = normals[boundaryIndex]
+            localWeights['internal'][patchID] = weights[internalIndex]
+            localWeights['boundary'][patchID] = weights[boundaryIndex]
+            localOwner['internal'][patchID] = owner[internalIndex]
+            localOwner['boundary'][patchID] = owner[boundaryIndex]
+            localNeighbour['internal'][patchID] = neighbour[internalIndex]
+            localNeighbour['boundary'][patchID] = neighbour[boundaryIndex]
+
+            mesh.localRemoteCells['internal'][patchID] = extraInternalCells
+            mesh.localRemoteCells['boundary'][patchID] = extraGhostCells
+            mesh.localRemoteCells['extra'][patchID] = extraRemoteCells
+            mesh.localRemoteFaces['internal'][patchID] = extraInternalFaces
+            mesh.localRemoteFaces['boundary'][patchID] = extraBoundaryFaces
+
+            # exchange sizes
             local, remote, tag = self.getProcessorPatchInfo(patchID)
             tag = {0:tag}
             tagIncrement = len(self.origPatches) + 1
 
-            def remoteExchange(field, sendData, location):
+            def remoteExchange(sendData, buff):
+                buff[patchID] = np.zeros(1, int)
+                sendData = np.array([sendData])
+                exchanger.exchange(remote, sendData, buff[patchID], tag[0])
+                tag[0] += tagIncrement
+
+            remoteExchange(len(extraInternalCells), mesh.remoteCells['internal'])
+            remoteExchange(len(extraGhostCells), mesh.remoteCells['boundary'])
+            remoteExchange(len(extraRemoteCells), mesh.remoteCells['extra'])
+            remoteExchange(len(extraInternalFaces), mesh.remoteFaces['internal'])
+            remoteExchange(len(extraBoundaryFaces), mesh.remoteFaces['boundary'])
+
+        exchanger.wait()
+
+        exchanger = Exchanger()
+        for patchID in self.remotePatches:
+
+            local, remote, tag = self.getProcessorPatchInfo(patchID)
+            tag = {0:tag}
+            tagIncrement = len(self.origPatches) + 1
+
+            def remoteExchange(field, sendData, size, location):
                 order = 'C'
+                size = (size[0], ) + sendData.shape[1:]
                 if location == 'internal':
-                    size = (sendData.shape[0]*2, ) + sendData.shape[1:]
                     remoteInternal[field][patchID] = np.zeros(size, sendData.dtype, order)
                     #print field, sendData.flags['F_CONTIGUOUS'], remoteInternal[field][patchID].flags['F_CONTIGUOUS']
                     exchanger.exchange(remote, sendData, remoteInternal[field][patchID], tag[0])
                 elif location == 'boundary':
-                    size = (sendData.shape[0]*4, ) + sendData.shape[1:]
                     remoteBoundary[field][patchID] = np.zeros(size, sendData.dtype, order)
                     exchanger.exchange(remote, sendData, remoteBoundary[field][patchID], tag[0])
                 else:
-                    size = (len(extraGhostCells)*2, ) + sendData.shape[1:]
                     remoteExtra[patchID] = np.zeros(size, sendData.dtype, order)
                     exchanger.exchange(remote, sendData, remoteExtra[patchID], tag[0])
                 tag[0] += tagIncrement
 
 
             #0: send extraInternalCells, first layer mapping
-            remoteExchange('mapping', extraInternalCells, 'internal')
+            remoteExchange('mapping', mesh.localRemoteCells['internal'][patchID], mesh.remoteCells['internal'][patchID], 'internal')
 
             #2: send extraGhostCells, second layer mapping
-            remoteExchange('mapping', extraGhostCells, 'boundary')
+            remoteExchange('mapping', mesh.localRemoteCells['boundary'][patchID], mesh.remoteCells['boundary'][patchID], 'boundary')
 
             # extraRemoteCells
-            remoteExchange('extra', extraRemoteCells, 'extra')
+            remoteExchange('extra', mesh.localRemoteCells['extra'][patchID], mesh.remoteCells['extra'][patchID], 'extra')
 
             #6: send owner and neighbour and do the mapping
-            remoteExchange('owner', owner[internalIndex], 'internal')
-            remoteExchange('owner', owner[boundaryIndex], 'boundary')
-            remoteExchange('neighbour', neighbour[internalIndex], 'internal')
-            remoteExchange('neighbour', neighbour[boundaryIndex], 'boundary')
+            remoteExchange('owner', localOwner['internal'][patchID], mesh.remoteFaces['internal'][patchID], 'internal')
+            remoteExchange('owner', localOwner['boundary'][patchID], mesh.remoteFaces['boundary'][patchID],'boundary')
+            remoteExchange('neighbour', localNeighbour['internal'][patchID], mesh.remoteFaces['internal'][patchID], 'internal')
+            remoteExchange('neighbour', localNeighbour['boundary'][patchID], mesh.remoteFaces['boundary'][patchID], 'boundary')
 
             #14: send rest
-            remoteExchange('areas', self.areas[extraInternalFaces], 'internal')
-            remoteExchange('areas', self.areas[extraBoundaryFaces], 'boundary')
+            remoteExchange('areas', self.areas[mesh.localRemoteFaces['internal'][patchID]], mesh.remoteFaces['internal'][patchID], 'internal')
+            remoteExchange('areas', self.areas[mesh.localRemoteFaces['boundary'][patchID]], mesh.remoteFaces['boundary'][patchID], 'boundary')
             # WHY THE FUCK IS normals F_CONTIGUOUS
-            remoteExchange('normals', normals[internalIndex], 'internal')
-            remoteExchange('normals', normals[boundaryIndex], 'boundary')
-            remoteExchange('weights', weights[internalIndex], 'internal')
-            remoteExchange('weights', weights[boundaryIndex], 'boundary')
-            remoteExchange('volumes', self.volumes[extraInternalCells], 'internal')
+            remoteExchange('normals', localNormals['internal'][patchID], mesh.remoteFaces['internal'][patchID], 'internal')
+            remoteExchange('normals', localNormals['boundary'][patchID], mesh.remoteFaces['boundary'][patchID], 'boundary')
+            remoteExchange('weights', localWeights['internal'][patchID], mesh.remoteFaces['internal'][patchID], 'internal')
+            remoteExchange('weights', localWeights['boundary'][patchID], mesh.remoteFaces['boundary'][patchID], 'boundary')
+            remoteExchange('volumes', self.volumes[mesh.localRemoteCells['internal'][patchID]], mesh.remoteCells['internal'][patchID], 'internal')
             
-            mesh.localRemoteCells['internal'][patchID] = extraInternalCells
-            mesh.localRemoteCells['boundary'][patchID] = extraGhostCells
-            mesh.localRemoteCells['extra'][patchID] = extraRemoteCells
-            mesh.localRemoteFaces['internal'][patchID] = extraInternalFaces
-            mesh.localRemoteFaces['boundary'][patchID] = extraBoundaryFaces
         statuses = exchanger.wait()
 
-        getCount = lambda index: statuses[index].Get_count()/4
         nRemoteInternalFaces = 0
         nRemoteBoundaryFaces = 0
-        total = 28
         for index, patchID in enumerate(self.remotePatches):
-            remoteInternal['mapping'][patchID] = remoteInternal['mapping'][patchID][:getCount(index*total + 1)]
-            remoteBoundary['mapping'][patchID] = remoteBoundary['mapping'][patchID][:getCount(index*total + 3)]
-            remoteInternal['owner'][patchID] = remoteInternal['owner'][patchID][:getCount(index*total + 7)]
-            remoteBoundary['owner'][patchID] = remoteBoundary['owner'][patchID][:getCount(index*total + 9)]
             mesh.remoteCells['internal'][patchID] = remoteInternal['mapping'][patchID]
             mesh.remoteCells['boundary'][patchID] = remoteBoundary['mapping'][patchID]
-            mesh.remoteCells['extra'][patchID] = remoteExtra[patchID][:getCount(index*total + 5)]
+            mesh.remoteCells['extra'][patchID] = remoteExtra[patchID]
             mesh.remoteFaces['internal'][patchID] = remoteInternal['owner'][patchID]
             mesh.remoteFaces['boundary'][patchID] = remoteBoundary['owner'][patchID]
-            #print(getCount(index*total+3))
-            #print(parallel.rank, remoteBoundary['mapping'][patchID])
             nRemoteInternalFaces += len(remoteInternal['owner'][patchID])
             nRemoteBoundaryFaces += len(remoteBoundary['owner'][patchID])
 
