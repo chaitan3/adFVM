@@ -81,7 +81,8 @@ import config
 #    G = 1e-3*ad.array(np.exp(-100*config.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
 #    rho.field[indices] += G
 
-primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.6)
+#primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.6)
+primal = RCF('/lustre/atlas/proj-shared/tur103/les/', CFL=0.6)
 def objective(fields):
     rho, rhoU, rhoE = fields
     solver = rhoE.solver
@@ -95,7 +96,8 @@ def objective(fields):
         areas = mesh.areas[start:end]
         Ti = solver.T.field[mesh.owner[start:end]] 
         Tw = 300*Ti/Ti
-        deltas = config.norm(mesh.cellCentres[start:end]-mesh.cellCentres[mesh.owner[start:end]], axis=1).reshape(-1,1)
+	cellStart, cellEnd = rhoE.BC[patchID].cellStartFace, rhoE.BC[patchID].cellEndFace
+        deltas = config.norm(mesh.cellCentres[cellStart:cellEnd]-mesh.cellCentres[mesh.owner[start:end]], axis=1).reshape(-1,1)
         dtdn = (Tw-Ti)/deltas
         k = solver.Cp*solver.mu(Tw)/solver.Pr
         dT = 120
@@ -104,9 +106,9 @@ def objective(fields):
 
 
 nSteps = 20000
-writeInterval = 100
+writeInterval = 1000
 startTime = 2.0
-dt = 1
+dt = 1e-9
 
 if __name__ == "__main__":
     mesh = primal.mesh
