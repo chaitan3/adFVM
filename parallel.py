@@ -63,7 +63,7 @@ def getOrigRemoteCells(field, mesh):
     mesh = mesh.origMesh
     for patchID in meshC.remotePatches:
         patch = mesh.boundary[patchID]
-        local, remote, tag = mesh.getProcessorPatchInfo(patchID)
+        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
         startFace = patch['startFace']
         endFace = startFace + patch['nFaces']
         cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
@@ -94,7 +94,7 @@ def getRemoteCells(stackedFields, mesh):
     for patchID in meshC.remotePatches:
         nInternalCells = len(meshP.remoteCells['internal'][patchID])
         nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
-        local, remote, tag = origMesh.getProcessorPatchInfo(patchID)
+        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
         exchanger.exchange(remote, stackedFields[meshP.localRemoteCells['internal'][patchID]], paddedStackedFields[internalCursor:internalCursor+nInternalCells], tag)
         tag += len(meshC.origPatches) + 1
         exchanger.exchange(remote, stackedFields[meshP.localRemoteCells['boundary'][patchID]], paddedStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
@@ -112,7 +112,7 @@ def getRemoteCells(stackedFields, mesh):
         boundaryCursor += nBoundaryCells
         nExtraRemoteBoundaryCells = len(meshP.remoteCells['extra'][patchID])
         nLocalBoundaryCells = origMesh.nLocalCells - origMesh.nInternalCells
-        local, remote, tag = origMesh.getProcessorPatchInfo(patchID)
+        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
         # does it work if sendData/recvData is empty
         exchanger.exchange(remote, paddedStackedFields[-nLocalBoundaryCells + meshP.localRemoteCells['extra'][patchID]], paddedStackedFields[boundaryCursor-nExtraRemoteBoundaryCells:boundaryCursor], tag)
     exchanger.wait()
@@ -144,7 +144,7 @@ def getAdjointRemoteCells(paddedJacobian, mesh):
     for patchID in meshC.remotePatches:
         nInternalCells = len(meshP.remoteCells['internal'][patchID])
         nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
-        local, remote, tag = origMesh.getProcessorPatchInfo(patchID)
+        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
         
         size = (len(meshP.localRemoteCells['internal'][patchID]), ) + dimensions
         adjointRemoteCells['internal'][patchID] = np.zeros(size, precision)
@@ -168,7 +168,7 @@ def getAdjointRemoteCells(paddedJacobian, mesh):
     internalCursor = origMesh.nLocalCells
     for patchID in meshC.remotePatches:
         nInternalCells = len(meshP.localRemoteCells['internal'][patchID])
-        local, remote, tag = origMesh.getProcessorPatchInfo(patchID)
+        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
         
         size = (nInternalCells, ) + dimensions
         adjointRemoteCells['extra'][patchID] = np.zeros(size, precision)

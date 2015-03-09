@@ -590,6 +590,8 @@ def removeCruft(content, keepHeader=False):
 
 
 def extractField(data, size, dimensions):
+    if size == 0:
+        return np.zeros((0,) + dimensions, config.precision)
     extractScalar = lambda x: re.findall('[0-9\.Ee\-]+', x)
     if dimensions == (3,):
         extractor = lambda y: list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', y)))

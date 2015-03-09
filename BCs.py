@@ -87,8 +87,8 @@ class fixedValue(BoundaryCondition):
         super(self.__class__, self).__init__(phi, patchID)
         # mesh values required outside theano
         #self.fixedValue = extractField(self.patch['value'], self.nFaces, self.phi.dimensions == (3,))
-        self.fixedValue = extractField(self.patch['value'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions)
-        self.fixedValue = T.shared(self.fixedValue)
+        fixedValue = extractField(self.patch['value'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions)
+        self.fixedValue = T.shared(fixedValue)
 
     def update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
