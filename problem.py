@@ -108,6 +108,17 @@ def objective(fields):
         res += ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1) + config.VSMALL)
     return res
 
+def perturb(stackedFields, t):
+    mesh = primal.mesh.origMesh
+    mid = np.array([-0.08, 0.014, 0.005])
+    G = 1e-5*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    #G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    #rho
+    if t == startTime:
+        stackedFields[:mesh.nInternalCells, 0] += G
+        stackedFields[:mesh.nInternalCells, 1] += G*100
+        stackedFields[:mesh.nInternalCells, 4] += G*2e5
+
 nSteps = 20000
 writeInterval = 1000
 startTime = 2.0
