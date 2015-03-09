@@ -45,7 +45,7 @@ def norm(a, axis, **kwargs):
         #return np.linalg.norm(a, axis=axis, keepdims=True)
         return np.linalg.norm(a, axis=axis).reshape((-1,1))
     except:
-        return np.einsum('ij,ij->i', a, a)**0.5
+        return (np.einsum('ij,ij->i', a, a)**0.5).reshape((-1,1))
 
 # LOGGING
 

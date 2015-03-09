@@ -86,7 +86,8 @@ from field import CellField, Field, IOField
 #        stackedFields[:mesh.nInternalCells, 4] += G*2e5
 
 #primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.6)
-primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.2, timeIntegrator='euler')
+#primal = RCF('/home/talnikar/foam/blade/laminar/', CFL=0.2, timeIntegrator='euler')
+primal = RCF('/lustre/atlas/proj-shared/tur103/laminar/', CFL=0.2, timeIntegrator='euler')
 def objective(fields):
     rho, rhoU, rhoE = fields
     solver = rhoE.solver
@@ -108,7 +109,7 @@ def objective(fields):
     return res
 
 nSteps = 20000
-writeInterval = 100
+writeInterval = 1000
 startTime = 2.0
 dt = 1e-9
 #nSteps = 10
