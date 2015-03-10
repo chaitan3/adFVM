@@ -4,8 +4,8 @@ import parallel
 
 # compute type
 device = 'cpu'
-precision = np.float64
 #device = 'gpu0'
+precision = np.float64
 #precision = np.float32
 
 # theano
@@ -79,8 +79,8 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 \*---------------------------------------------------------------------------*/
 '''
 
-#fileFormat = 'binary'
-fileFormat = 'ascii'
+fileFormat = 'binary'
+#fileFormat = 'ascii'
 foamFile = {'version':'2.0', 'format': fileFormat, 'class': 'volScalarField', 'object': ''}
 
 # group patches

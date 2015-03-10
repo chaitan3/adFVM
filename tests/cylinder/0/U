@@ -8,42 +8,38 @@
 FoamFile
 {
     version     2.0;
-    format      ascii;
+    format      binary;
     class       volVectorField;
+    location    "0";
     object      U;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 1 -1 0 0 0 0];
+dimensions      [ 0 1 -1 0 0 0 0 ];
 
-internalField   uniform (0 0 0);
+internalField   uniform ( 0 0 0 );
 
 boundaryField
 {
-
     right
     {
         type            zeroGradient;
     }
-
     up
     {
         type            fixedValue;
-        value           uniform (100 0 0);
+        value           uniform ( 100 0 0 );
     }
-
     left
     {
         type            fixedValue;
-        value           uniform (100 0 0);
+        value           uniform ( 100 0 0 );
     }
-
     cylinder
     {
         type            fixedValue;
-        value           uniform (0 0 0);
+        value           uniform ( 0 0 0 );
     }
-
     z1
     {
         type            cyclic;
@@ -52,7 +48,7 @@ boundaryField
     {
         type            cyclic;
     }
-
 }
+
 
 // ************************************************************************* //

@@ -77,7 +77,7 @@ class Solver(object):
             self.compile()
 
         t = startTime
-        self.dt.set_value(dt)
+        self.dt.set_value(config.precision(dt))
         timeIndex = 0
         stackedFields = self.stackFields(fields, np)
         

@@ -12,7 +12,7 @@ from field import IOField
 firstCheckpoint = 0
 if len(sys.argv) > 1:
     timeSteps = np.loadtxt(sys.argv[1], ndmin=2)
-    timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(9), 0]]))).astype(config.precision)
+    timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(9), 0]])))
     if len(sys.argv) > 2:
         firstCheckpoint = int(sys.argv[2])
 else:
@@ -64,7 +64,7 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
 
         adjointIndex = writeInterval-1 - step
         t, dt = timeSteps[primalIndex + adjointIndex]
-        primal.dt.set_value(dt)
+        primal.dt.set_value(config.precision(dt))
         previousSolution = solutions[adjointIndex]
         paddedPreviousSolution = parallel.getRemoteCells(previousSolution, mesh)
         # adjoint time stepping
