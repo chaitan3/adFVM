@@ -235,11 +235,11 @@ class IOField(Field):
     @classmethod
     def read(self, name, mesh, time):
         # mesh values required outside theano
-        mesh = mesh.origMesh
         if time.is_integer():
             time = int(time)
         pprint('reading field {0}, time {1}'.format(name, time))
         timeDir = '{0}/{1}/'.format(mesh.case, time)
+        mesh = mesh.origMesh
 
         content = open(timeDir + name).read()
         foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)

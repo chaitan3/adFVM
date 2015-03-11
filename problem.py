@@ -77,8 +77,8 @@ def objective(fields):
 def perturb(stackedFields, t):
     mesh = primal.mesh.origMesh
     mid = np.array([-0.0032, 0.0, 0.])
-    G = 1e-6*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    #G = 1e-6*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    #G = 1e-6*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 1e-5*np.exp(-1e4*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #rho
     if t == startTime:
         stackedFields[:mesh.nInternalCells, 0] += G
@@ -120,14 +120,14 @@ def perturb(stackedFields, t):
 #        stackedFields[:mesh.nInternalCells, 1] += G*100
 #        stackedFields[:mesh.nInternalCells, 4] += G*2e5
 
-nSteps = 20000
+#nSteps = 20000
+#writeInterval = 100
+#startTime = 2.0
+#dt = 1e-9
+nSteps = 1000
 writeInterval = 100
 startTime = 2.0
-dt = 1e-9
-#nSteps = 10
-#writeInterval = 2
-#startTime = 2.0
-#dt = 2e-9
+dt = 2e-9
 
 pprint('Compiling objective')
 stackedFields = ad.matrix()

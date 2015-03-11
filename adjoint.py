@@ -9,19 +9,21 @@ import config, parallel
 from parallel import pprint
 from field import IOField
 
-firstCheckpoint = 0
-if len(sys.argv) > 1:
-    timeSteps = np.loadtxt(sys.argv[1], ndmin=2)
-    timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(9), 0]])))
-    if len(sys.argv) > 2:
-        firstCheckpoint = int(sys.argv[2])
-else:
-    pprint('Primal run time step file not specified')
-    exit()
-
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
 primal.adjoint = True
 mesh = primal.mesh
+
+firstCheckpoint = 0
+if parallel.rank == 0:
+    timeStepFile = mesh.case + '{0}.{1}.txt'.format(nSteps, writeInterval)
+    timeSteps = np.loadtxt(timeStepFile, ndmin=2)
+    timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(9), 0]])))
+else:
+    timeSteps = np.zeros((nSteps + 1, 2))
+parallel.mpi.Bcast(timeSteps, root=0)
+
+if len(sys.argv) > 2:
+    firstCheckpoint = int(sys.argv[2])
 
 # provision for restaring adjoint
 if firstCheckpoint == 0:

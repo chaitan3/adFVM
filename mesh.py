@@ -17,8 +17,7 @@ class Mesh(object):
                  'nInternalCells',
                  'nGhostCells',
                  'nCells',
-                 'nLocalCells',
-                 'case']
+                 'nLocalCells']
                  
     fields = ['owner', 'neighbour',
               'areas', 'volumes',
