@@ -77,8 +77,12 @@ class Solver(object):
             self.compile()
 
         t = startTime
-        self.dt.set_value(config.precision(dt))
+        dts = dt
         timeIndex = 0
+        if isinstance(dts, np.ndarray):
+            self.dt.set_value(config.precision(dts[timeIndex]))
+        else:
+            self.dt.set_value(config.precision(dts))
         stackedFields = self.stackFields(fields, np)
         
         timeSteps = []
@@ -144,7 +148,10 @@ class Solver(object):
 
             # compute dt for next time step
             dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
-            self.dt.set_value(config.precision(dt))
+            if isinstance(dts, np.ndarray):
+                self.dt.set_value(config.precision(dts[timeIndex]))
+            else:
+                self.dt.set_value(config.precision(dt))
 
         if mode == 'forward':
             return solutions
@@ -157,6 +164,9 @@ def euler(equation, boundary, fields, solver):
     internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields))]
     newFields = boundary(*internalFields)
     return newFields
+
+def RK2(equation, boundary, fields, solver):
+    return fields
 
 def RK(equation, boundary, fields, solver):
     def NewFields(a, LHS):

@@ -221,16 +221,20 @@ class IOField(Field):
             self.boundary = self.mesh.defaultBoundary
         else:
             self.boundary = boundary
+        self.func = None
 
 
-    def complete(self):
+    def complete(self, func=None):
         logger.debug('completing field {0}'.format(self.name))
-        X = ad.matrix()
-        X.tag.test_value = self.field
-        phi = CellField(self.name, X, self.dimensions, self.boundary, ghost=True)
-        Y = phi.field
-        func = T.function([X], Y, on_unused_input='warn')
+        if func is None:
+            X = ad.matrix()
+            X.tag.test_value = self.field
+            phi = CellField(self.name, X, self.dimensions, self.boundary, ghost=True)
+            Y = phi.field
+            func = T.function([X], Y, on_unused_input='warn')
+
         self.field = func(self.field)
+        return func
 
     @classmethod
     def read(self, name, mesh, time):
@@ -292,13 +296,12 @@ class IOField(Field):
         boundary = self.boundary
         # fetch processor information
         parallel.getOrigRemoteCells(field, self.mesh)
-        mesh = self.mesh.origMesh
         if time.is_integer():
             time = int(time)
         assert len(field.shape) == 2
         np.set_printoptions(precision=16)
         pprint('writing field {0}, time {1}'.format(name, time))
-        timeDir = '{0}/{1}/'.format(mesh.case, time)
+        timeDir = '{0}/{1}/'.format(self.mesh.case, time)
         if not exists(timeDir):
             makedirs(timeDir)
         handle = open(timeDir + name, 'w')
@@ -317,6 +320,7 @@ class IOField(Field):
         handle.write('}\n')
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
         handle.write('dimensions      [0 1 -1 0 0 0 0];\n')
+        mesh = self.mesh.origMesh
         writeField(handle, field[:mesh.nInternalCells], dtype, 'internalField')
         handle.write('boundaryField\n{\n')
         for patchID in boundary:

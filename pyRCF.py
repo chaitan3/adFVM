@@ -59,9 +59,11 @@ class RCF(Solver):
         self.p = IOField.read('p', self.mesh, t)
         self.T = IOField.read('T', self.mesh, t)
         self.U = IOField.read('U', self.mesh, t)
-        self.p.complete()
-        self.T.complete()
-        self.U.complete()
+        if not hasattr(self, "pfunc"):
+            self.pfunc = self.Tfunc = self.Ufunc = None
+        self.pfunc = self.p.complete(self.pfunc)
+        self.Tfunc = self.T.complete(self.Tfunc)
+        self.Ufunc = self.U.complete(self.Ufunc)
         return self.conservative(self.U, self.T, self.p)
     
     def writeFields(self, fields, t):

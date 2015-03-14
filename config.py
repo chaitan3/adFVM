@@ -17,6 +17,7 @@ home = '~'
 os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
+os.environ['THEANO_FLAGS'] += ',nocleanup=True'
 # profiling
 #os.environ['THEANO_FLAGS'] += ',profile=True'
 import theano as T
