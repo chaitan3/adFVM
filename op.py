@@ -9,14 +9,17 @@ from field import Field, CellField
 logger = config.Logger(__name__)
 
 def internal_sum(phi, mesh):
-    x = (adsparse.basic.dot(mesh.sumOp, (phi.field * mesh.areas)))/mesh.volumes
-    #phiF = phi.field*mesh.areas
-    #dimensions = (np.product(phi.dimensions),)
-    #x = ad.bcalloc(config.precision(0.), (mesh.nInternalCells+1,) + dimensions)
-    #x = ad.inc_subtensor(x[mesh.owner], phiF)
-    #x = ad.inc_subtensor(x[mesh.neighbour[:mesh.nInternalFaces]], -phiF[:mesh.nInternalFaces])
-    #x = ad.set_subtensor(x[mesh.repeat[0]], x[mesh.repeat].sum(axis=0))
-    #x = x[:-1]/mesh.volumes
+    if config.device == "cpu":
+        x = (adsparse.basic.dot(mesh.sumOp, (phi.field * mesh.areas)))/mesh.volumes
+    else:
+        phiF = phi.field*mesh.areas
+        dimensions = (np.product(phi.dimensions),)
+        x = ad.bcalloc(config.precision(0.), (mesh.nInternalCells+1,) + dimensions)
+        x = ad.inc_subtensor(x[mesh.owner], phiF)
+        x = ad.inc_subtensor(x[mesh.neighbour[:mesh.nInternalFaces]], -phiF[:mesh.nInternalFaces])
+        x = ad.set_subtensor(x[mesh.repeat[0]], x[mesh.repeat].sum(axis=0))
+        x = x[:-1]/mesh.volumes
+
     # retain pattern broadcasting
     x = ad.patternbroadcast(x, phi.field.broadcastable)
     return x
