@@ -50,9 +50,7 @@ from field import CellField, Field, IOField
 #
 #
 #
-#primal = RCF('tests/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
-primal = RCF('tests/cylinder/', CFL=0.2, timeIntegrator='euler', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
-#
+primal = RCF('tests/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
 def objective(fields):
     rho, rhoU, rhoE = fields
     mesh = rho.mesh
@@ -78,16 +76,16 @@ def perturb(stackedFields, t):
     mesh = primal.mesh.origMesh
     mid = np.array([-0.0032, 0.0, 0.])
     #G = 1e-6*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    G = 1e-6*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #rho
     if t == startTime:
         stackedFields[:mesh.nInternalCells, 0] += G
         stackedFields[:mesh.nInternalCells, 1] += G*100
         stackedFields[:mesh.nInternalCells, 4] += G*2e5
 
-#primal = RCF('/home/talnikar/foam/blade/les/', CFL=0.2, timeIntegrator='euler')
-#primal = RCF('/master/home/talnikar/foam/blade/les/', CFL=0.2, timeIntegrator='euler')
-#primal = RCF('/lustre/atlas/proj-shared/tur103/les/', CFL=0.2, timeIntegrator='euler')
+#primal = RCF('/home/talnikar/foam/blade/les/')
+#primal = RCF('/master/home/talnikar/foam/blade/les/')
+#primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 #def objective(fields):
 #    rho, rhoU, rhoE = fields
 #    solver = rhoE.solver

@@ -24,7 +24,7 @@ class RCF(Solver):
                              'Pr': 0.7, 
                              'CFL': 0.6,
                              'stepFactor': 1.2,
-                             'timeIntegrator': 'RK', 
+                             'timeIntegrator': 'SSPRK', 
                              'source': lambda x: [0, 0, 0]
                         })
 
@@ -191,7 +191,7 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = RCF(case, CFL=0.2, timeIntegrator='euler')
-    solver.run(startTime=time, dt=1e-9, nSteps=60000, writeInterval=1000)
-    #solver = RCF(case, CFL=0.2, Cp=2.5, mu=lambda T: 1e-30*T, timeIntegrator='euler')
-    #solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=100)
+    #solver = RCF(case, CFL=0.2, timeIntegrator='euler')
+    #solver.run(startTime=time, dt=1e-9, nSteps=60000, writeInterval=1000)
+    solver = RCF(case, CFL=0.7, Cp=2.5, mu=lambda T: 1e-30*T)
+    solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=1000)

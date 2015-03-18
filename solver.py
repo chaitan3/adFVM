@@ -38,13 +38,13 @@ class Solver(object):
 
         #paddedStackedFields = ad.matrix()
         #paddedStackedFields.tag.test_value = np.random.rand(self.mesh.paddedMesh.origMesh.nCells, 5).astype(config.precision)
-        stackedFields = ad.matrix()
-        paddedStackedFields = self.padField(stackedFields)
-
-        fields = self.unstackFields(paddedStackedFields, CellField)
-        fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
-        newStackedFields = self.stackFields(fields, ad)
+        #fields = self.unstackFields(paddedStackedFields, CellField)
+        #fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
+        #newStackedFields = self.stackFields(fields, ad)
         #self.forward = T.function([paddedStackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
+
+        stackedFields = ad.matrix()
+        newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
         self.forward = T.function([stackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
@@ -168,16 +168,33 @@ class Solver(object):
             self.writeFields(fields, t)
         return timeSteps, result
 
-def euler(equation, boundary, fields, solver):
-    LHS = equation(*fields)
-    internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields))]
+def euler(equation, boundary, stackedFields, solver):
+    paddedStackedFields = solver.padField(stackedFields)
+    paddedFields = solver.unstackFields(paddedStackedFields, CellField)
+    LHS = equation(*paddedFields)
+    internalFields = [(paddedFields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(paddedFields))]
     newFields = boundary(*internalFields)
-    return newFields
+    return solver.stackFields(newFields, ad)
 
-def RK2(equation, boundary, fields, solver):
-    return fields
+# classical
+def RK2(equation, boundary, stackedFields, solver):
+    paddedStackedFields0 = solver.padField(stackedFields)
+    paddedFields0 = solver.unstackFields(paddedStackedFields0, CellField)
+    LHS = equation(*paddedFields0)
+    internalFields = [(paddedFields0[index].getInternalField() - LHS[index].field*solver.dt/2) for index in range(0, len(paddedFields0))]
+    fields1 = boundary(*internalFields)
 
-def RK(equation, boundary, fields, solver):
+    paddedStackedFields1 = solver.padField(solver.stackFields(fields1, ad))
+    paddedFields1 = solver.unstackFields(paddedStackedFields1, CellField)
+    LHS = equation(*paddedFields1)
+    internalFields = [(paddedFields0[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(paddedFields0))]
+
+    newFields = boundary(*internalFields)
+    return solver.stackFields(newFields, ad)
+
+# classical
+def RK4(equation, boundary, stackedFields, solver):
+    fields = solver.unstackFields(stackedFields, CellField)
     def NewFields(a, LHS):
         internalFields = [phi.getInternalField() for phi in fields]
         for termIndex in range(0, len(a)):
@@ -190,7 +207,9 @@ def RK(equation, boundary, fields, solver):
             newFields = NewFields(a, LHS)
         else:
             newFields = fields
-        return equation(*newFields)
+        paddedStackedFields = solver.padField(solver.stackFields(newFields, ad))
+        paddedFields = solver.unstackFields(paddedStackedFields, CellField)
+        return equation(*paddedFields)
 
     k1 = f([0.])
     k2 = f([0.5], k1)
@@ -198,7 +217,34 @@ def RK(equation, boundary, fields, solver):
     k4 = f([1.], k3)
     newFields = NewFields([1./6, 1./3, 1./3, 1./6], [k1, k2, k3, k4])
 
-    return newFields
+    return solver.stackFields(newFields, ad)
+
+# classical
+def SSPRK(equation, boundary, stackedFields, solver):
+    # 2nd order
+    #alpha = np.array([[1.,0],[1./2,1./2]])
+    #beta = np.array([[1,0],[0,1./2]])
+    # 3rd order
+    alpha = np.array([[1,0,0],[3./4,1./4, 0],[1./3,0,2./3]])
+    beta = np.array([[1,0,0],[0,1./4,0],[0,0,2./3]])
+    nStages = alpha.shape[0]
+    LHS = []
+    fields = []
+    fields.append(solver.unstackFields(stackedFields, CellField))
+    nFields = len(fields[0])
+    for i in range(0, nStages):
+        paddedStackedFields = solver.padField(solver.stackFields(fields[i], ad))
+        paddedFields = solver.unstackFields(paddedStackedFields, CellField)
+        LHS.append(equation(*paddedFields))
+        internalFields = [0]*nFields
+        for j in range(0, i+1):
+            for index in range(0, nFields):
+                internalFields[index] += alpha[i,j]*fields[j][index].getInternalField()-beta[i,j]*LHS[j][index].field*solver.dt
+        fields.append(boundary(*internalFields))
+        
+    return solver.stackFields(fields[-1], ad)
+
+
 
 # DOES NOT WORK
 def implicit(equation, boundary, fields, garbage):
@@ -247,8 +293,9 @@ class PadFieldOp(T.Op):
         return T.Apply(self, [x], [x.type()])
 
     def perform(self, node, inputs, output_storage):
-        assert inputs[0].flags['C_CONTIGUOUS'] == True
-        output_storage[0][0] = parallel.getRemoteCells(inputs[0], self.mesh)
+        #assert inputs[0].flags['C_CONTIGUOUS'] == True
+        #output_storage[0][0] = parallel.getRemoteCells(inputs[0], self.mesh)
+        output_storage[0][0] = parallel.getRemoteCells(np.ascontiguousarray(inputs[0]), self.mesh)
 
     def grad(self, inputs, output_grads):
         return [self.solver.gradPadField(output_grads[0])]
