@@ -312,22 +312,30 @@ from mpi4py import MPI
 #    print patchID, J[mesh.owner[start:end]].ravel()
 #    print patchID, K[mesh.owner[start:end]].ravel()
 
-import theano
+import parallel
+from config import ad, T
 
-class DoubleOp(theano.Op):
+class ExchangerOp(T.Op):
     __props__ = ()
+
+    def __init__(self, mesh):
+        self.mesh = mesh
 
     def make_node(self, x):
         assert hasattr(self, '_props')
-        x = theano.tensor.as_tensor_variable(x)
-        return theano.Apply(self, [x], [x.type()])
+        x = ad.as_tensor_variable(x)
+        return T.Apply(self, [x], [x.type()])
 
     def perform(self, node, inputs, output_storage):
-        print inputs, output_storage
         x = inputs[0]
-        z = output_storage[0]
-        z[0] = x * 2
+        y = output_storage[0]
+        y[0] = parallel.getRemoteCells(x, self.mesh)
 
+    #def c_code(*args):
+    #    return "a"
+
+    #def __str__():
+    #    return "Exchanger{}"
 
     #def grad(self, inputs, output_grads):
     #    return [output_grads[0] * 2]
@@ -343,3 +351,16 @@ class DoubleOp(theano.Op):
     #    if eval_points[0] is None:
     #        return eval_points
     #    return self.grad(inputs, eval_points)
+
+from pyRCF import RCF
+from field import IOField
+case = 'tests/cylinder'
+solver = RCF(case, CFL=0.2, timeIntegrator='euler')
+mesh = solver.mesh
+
+ex = ExchangerOp(mesh)
+x = ad.matrix()
+f = T.function([x], ex(x))
+
+x = np.random.rand(mesh.origMesh.nCells, 5)
+print x.shape, f(x).shape

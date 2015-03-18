@@ -26,6 +26,8 @@ class Solver(object):
 
         self.mesh = Mesh.create(case)
         self.timeIntegrator = globals()[self.timeIntegrator]
+        self.padField = PadFieldOp(self)
+        self.gradPadField = gradPadFieldOp(self)
         Field.setSolver(self)
 
     def compile(self):
@@ -33,17 +35,23 @@ class Solver(object):
         start = time.time()
 
         self.dt = T.shared(config.precision(1.))
-        paddedStackedFields = ad.matrix()
-        paddedStackedFields.tag.test_value = np.random.rand(self.mesh.paddedMesh.origMesh.nCells, 5).astype(config.precision)
+
+        #paddedStackedFields = ad.matrix()
+        #paddedStackedFields.tag.test_value = np.random.rand(self.mesh.paddedMesh.origMesh.nCells, 5).astype(config.precision)
+        stackedFields = ad.matrix()
+        paddedStackedFields = self.padField(stackedFields)
+
         fields = self.unstackFields(paddedStackedFields, CellField)
         fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
         newStackedFields = self.stackFields(fields, ad)
-        #self.forward = T.function([paddedStackedFields], [newStackedFields, self.dtc], on_unused_input='warn')
-        self.forward = T.function([paddedStackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
+        #self.forward = T.function([paddedStackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
+        self.forward = T.function([stackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
-            paddedGradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), paddedStackedFields)
-            self.gradient = T.function([paddedStackedFields, stackedAdjointFields], paddedGradient)
+            #paddedGradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), paddedStackedFields)
+            #self.gradient = T.function([paddedStackedFields, stackedAdjointFields], paddedGradient)
+            gradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields)
+            self.gradient = T.function([stackedFields, stackedAdjointFields], gradient)
 
         end = time.time()
         pprint('Time for compilation:', end-start)
@@ -102,7 +110,8 @@ class Solver(object):
                 fields[index].info()
 
             # mpi stuff, bloat stackedFields
-            stackedFields = parallel.getRemoteCells(stackedFields, mesh)  
+            #TESTING
+            #stackedFields = parallel.getRemoteCells(stackedFields, mesh)  
 
             pprint('Time step', timeIndex)
             #stackedFields, dtc = self.forward(stackedFields)
@@ -224,3 +233,39 @@ def implicit(equation, boundary, fields, garbage):
     end = time.time()
     pprint('Time for iteration:', end-start)
     return newFields
+
+class PadFieldOp(T.Op):
+    __props__ = ()
+
+    def __init__(self, solver):
+        self.solver = solver
+        self.mesh = solver.mesh
+
+    def make_node(self, x):
+        assert hasattr(self, '_props')
+        x = ad.as_tensor_variable(x)
+        return T.Apply(self, [x], [x.type()])
+
+    def perform(self, node, inputs, output_storage):
+        assert inputs[0].flags['C_CONTIGUOUS'] == True
+        output_storage[0][0] = parallel.getRemoteCells(inputs[0], self.mesh)
+
+    def grad(self, inputs, output_grads):
+        return [self.solver.gradPadField(output_grads[0])]
+
+class gradPadFieldOp(T.Op):
+    __props__ = ()
+
+    def __init__(self, solver):
+        self.solver = solver
+        self.mesh = solver.mesh
+
+    def make_node(self, x):
+        assert hasattr(self, '_props')
+        x = ad.as_tensor_variable(x)
+        return T.Apply(self, [x], [x.type()])
+
+    def perform(self, node, inputs, output_storage):
+        #assert inputs[0].flags['C_CONTIGUOUS'] == True
+        #output_storage[0][0] = parallel.getAdjointRemoteCells(inputs[0], self.mesh)
+        output_storage[0][0] = parallel.getAdjointRemoteCells(np.ascontiguousarray(inputs[0]), self.mesh)

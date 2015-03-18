@@ -16,10 +16,7 @@ class Field(object):
     @staticmethod
     def setSolver(solver):
         Field.solver = solver
-        Field.setMesh(solver.mesh)
-
-    @staticmethod
-    def setMesh(mesh):
+        mesh = solver.mesh
         Field.mesh = mesh
         if not hasattr(mesh, 'Normals'):
             mesh.Normals = Field('nF', mesh.normals, (3,))
