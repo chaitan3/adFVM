@@ -3,10 +3,10 @@ import numpy as np
 import parallel
 
 # compute type
-device = 'cpu'
-#device = 'gpu0'
-precision = np.float64
-#precision = np.float32
+#device = 'cpu'
+device = 'cuda0'
+#precision = np.float64
+precision = np.float32
 
 # theano
 import os
@@ -17,9 +17,10 @@ home = '~'
 os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
+# options, profiling, gc, cleanup
+os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
-# profiling
-#os.environ['THEANO_FLAGS'] += ',profile=True'
+os.environ['THEANO_FLAGS'] += ',profile=True'
 import theano as T
 import theano.tensor as ad
 import theano.sparse as adsparse

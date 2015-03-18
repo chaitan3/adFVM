@@ -184,3 +184,4 @@ def getAdjointRemoteCells(paddedJacobian, mesh):
 
     return jacobian
 
+

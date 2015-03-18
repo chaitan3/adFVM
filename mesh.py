@@ -594,10 +594,12 @@ class Mesh(object):
         for attr in Mesh.fields:
             value = getattr(self, attr) 
             if attr == 'boundary': continue
+            #if value.dtype == np.int32:
+            #    value = value.astype(np.int64)
             if value.shape[1:] == (1,):
-                setattr(self, attr, T.shared(getattr(self, attr), broadcastable=config.broadcastPattern))
+                setattr(self, attr, T.shared(value, broadcastable=config.broadcastPattern))
             else:
-                setattr(self, attr, T.shared(getattr(self, attr)))
+                setattr(self, attr, T.shared(value))
         for patchID in self.boundary:
             patch = self.boundary[patchID]
             patch['startFace'] = T.shared(patch['startFace'])

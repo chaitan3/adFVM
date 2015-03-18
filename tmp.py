@@ -192,123 +192,154 @@ from mpi4py import MPI
 #print y.broadcastable
 #print y.broadcastable
 
-import parallel
-from op import grad
-from interp import central
-from pyRCF import RCF
-from field import IOField
-case = 'tests/cylinder'
-solver = RCF(case, CFL=0.2, timeIntegrator='euler')
-mesh = solver.mesh
-meshC = mesh
-meshP = mesh.paddedMesh
-mesh = mesh.origMesh
-meshO = meshP.origMesh
+#import parallel
+#from op import grad
+#from interp import central
+#from pyRCF import RCF
+#from field import IOField
+#case = 'tests/cylinder'
+#solver = RCF(case, CFL=0.2, timeIntegrator='euler')
+#mesh = solver.mesh
+#meshC = mesh
+#meshP = mesh.paddedMesh
+#mesh = mesh.origMesh
+#meshO = meshP.origMesh
+#
+#
+#paddedStackedFields = ad.matrix()
+#rho, rhoU, rhoE = solver.unstackFields(paddedStackedFields, CellField)
+#rhoPF = central(rho, meshP)
+#gradRho = grad(rhoPF, ghost=True)
+#function = T.function([paddedStackedFields], [gradRho.field, rhoPF.field])
+#
+#stackedFields = ad.matrix()
+#rho, rhoU, rhoE = solver.unstackFields(stackedFields, CellField)
+#rhoF = central(rho, meshC)
+#function2 = T.function([stackedFields], rhoF.field)
+#
+#fields = solver.initFields(2.0)
+#stackedFields = solver.stackFields(fields, np)
+#parallel.getOrigRemoteCells(stackedFields, meshC)
+#paddedStackedFields = parallel.getRemoteCells(stackedFields, meshC)
+#grad, faceP = function(paddedStackedFields)
+#face = function2(stackedFields)
+#
+#nLocalBoundaryFaces = mesh.nLocalCells - mesh.nInternalCells
+#nLocalRemoteBoundaryFaces = mesh.nCells - mesh.nLocalCells
+#nLocalInternalFaces = mesh.nInternalFaces + nLocalRemoteBoundaryFaces
+#remoteGhostStartFace = meshP.origMesh.nInternalFaces + nLocalBoundaryFaces
+#
+##face = mesh.areas
+##faceP = meshP.origMesh.areas
+#faceRemote = faceP.copy()
+#internalCursor = nLocalInternalFaces
+#boundaryCursor = remoteGhostStartFace
+#exchanger = parallel.Exchanger()
+#for patchID in meshC.remotePatches:
+#    nInternalFaces = len(meshP.remoteFaces['internal'][patchID])
+#    local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+#
+#    exchanger.exchange(remote, face[meshP.localRemoteFaces['internal'][patchID]], faceRemote[internalCursor:internalCursor + nInternalFaces], tag)
+#    internalCursor += nInternalFaces
+#    nBoundaryFaces = len(meshP.remoteFaces['boundary'][patchID])
+#    tag += len(meshC.origPatches) + 1
+#    exchanger.exchange(remote, face[meshP.localRemoteFaces['boundary'][patchID]], faceRemote[boundaryCursor:boundaryCursor + nBoundaryFaces], tag)
+#    boundaryCursor += nBoundaryFaces
+#exchanger.wait()
+#
+#start, end = meshP.origMesh.nInternalFaces, remoteGhostStartFace
+#diff = np.abs(faceP[start:end]-faceRemote[start:end])
+#print 'local boundary', np.max(diff)
+#
+#internalCursor = nLocalInternalFaces
+#boundaryCursor = remoteGhostStartFace
+#for patchID in meshC.remotePatches:
+#    nInternalFaces = len(meshP.remoteFaces['internal'][patchID])
+#    start, end = internalCursor, internalCursor + nInternalFaces
+#    diff = np.abs(faceP[start:end]-faceRemote[start:end])
+#    print 'internal', patchID, np.max(diff), np.argmax(diff)
+#    internalCursor += nInternalFaces
+#    nBoundaryFaces = len(meshP.remoteFaces['boundary'][patchID])
+#    start, end = boundaryCursor, boundaryCursor + nBoundaryFaces
+#    diff = np.abs(faceP[start:end]-faceRemote[start:end])
+#    print 'boundary', patchID, np.max(diff), np.argmax(diff)
+#    boundaryCursor += nBoundaryFaces
+#
+#gradRemote = grad.copy()
+#parallel.getOrigRemoteCells(gradRemote, meshC)
+#for patchID in meshC.remotePatches:
+#    patch = mesh.boundary[patchID]
+#    startFace = patch['startFace']
+#    endFace = startFace + patch['nFaces']
+#
+#    start = mesh.nInternalCells + startFace - mesh.nInternalFaces
+#    end = mesh.nInternalCells + endFace - mesh.nInternalFaces
+#    g1 = grad[start:end]
+#    g2 = gradRemote[start:end]
+#    diff = np.abs(np.linalg.norm(g1, axis=1)-np.linalg.norm(g2, axis=1))
+#    maxd = np.argmax(diff)
+#    print 'grad', patchID, np.max(diff)
+#    #P = T.function([], meshP.sumOp)()
+#    #C = T.function([], meshC.sumOp)()
+#    #x = C*face
+#    #y = P*faceP
+#    #i = np.argmax(y[:mesh.nInternalCells]-x)
+#    ##import pdb;pdb.set_trace()
+#
+#from config import adsparse
+#import config
+#rho = ad.matrix()
+#rhoF = rho[meshP.owner] + rho[meshP.neighbour]
+#rhoC = adsparse.basic.dot(adsparse.sqr(meshP.sumOp), rhoF)
+#J = T.function([rho], ad.grad(rhoC[:meshC.nInternalCells].sum(), rho))
+#
+#rhoD = ad.bcalloc(config.precision(0.), (mesh.nCells, 1))
+#rhoD = ad.set_subtensor(rhoD[:meshC.nInternalCells],rhoC[:meshC.nInternalCells])
+#rhoD = ad.set_subtensor(rhoD[meshC.nLocalCells:meshC.nCells], rhoC[meshC.nInternalCells:])
+#rhoG = rhoD[meshC.owner] + rhoD[meshC.neighbour]
+#rhoE = adsparse.basic.dot(adsparse.sqr(meshC.sumOp), rhoG)
+#K = T.function([rho], ad.grad(rhoE.sum(), rho))
+#
+#rho = np.ones((meshO.nCells, 1))
+#J = J(rho)
+#J = parallel.getAdjointRemoteCells(J, meshC)
+#K = K(rho)
+#K = parallel.getAdjointRemoteCells(K, meshC)
+#
+#for patchID in meshC.remotePatches:
+#    start = mesh.boundary[patchID]['startFace']
+#    end = start + mesh.boundary[patchID]['nFaces']
+#    print patchID, J[mesh.owner[start:end]].ravel()
+#    print patchID, K[mesh.owner[start:end]].ravel()
+
+import theano
+
+class DoubleOp(theano.Op):
+    __props__ = ()
+
+    def make_node(self, x):
+        assert hasattr(self, '_props')
+        x = theano.tensor.as_tensor_variable(x)
+        return theano.Apply(self, [x], [x.type()])
+
+    def perform(self, node, inputs, output_storage):
+        print inputs, output_storage
+        x = inputs[0]
+        z = output_storage[0]
+        z[0] = x * 2
 
 
-paddedStackedFields = ad.matrix()
-rho, rhoU, rhoE = solver.unstackFields(paddedStackedFields, CellField)
-rhoPF = central(rho, meshP)
-gradRho = grad(rhoPF, ghost=True)
-function = T.function([paddedStackedFields], [gradRho.field, rhoPF.field])
+    #def grad(self, inputs, output_grads):
+    #    return [output_grads[0] * 2]
 
-stackedFields = ad.matrix()
-rho, rhoU, rhoE = solver.unstackFields(stackedFields, CellField)
-rhoF = central(rho, meshC)
-function2 = T.function([stackedFields], rhoF.field)
+    #def infer_shape(self, node, i0_shapes):
+    #    return i0_shapes
 
-fields = solver.initFields(2.0)
-stackedFields = solver.stackFields(fields, np)
-parallel.getOrigRemoteCells(stackedFields, meshC)
-paddedStackedFields = parallel.getRemoteCells(stackedFields, meshC)
-grad, faceP = function(paddedStackedFields)
-face = function2(stackedFields)
-
-nLocalBoundaryFaces = mesh.nLocalCells - mesh.nInternalCells
-nLocalRemoteBoundaryFaces = mesh.nCells - mesh.nLocalCells
-nLocalInternalFaces = mesh.nInternalFaces + nLocalRemoteBoundaryFaces
-remoteGhostStartFace = meshP.origMesh.nInternalFaces + nLocalBoundaryFaces
-
-#face = mesh.areas
-#faceP = meshP.origMesh.areas
-faceRemote = faceP.copy()
-internalCursor = nLocalInternalFaces
-boundaryCursor = remoteGhostStartFace
-exchanger = parallel.Exchanger()
-for patchID in meshC.remotePatches:
-    nInternalFaces = len(meshP.remoteFaces['internal'][patchID])
-    local, remote, tag = meshC.getProcessorPatchInfo(patchID)
-
-    exchanger.exchange(remote, face[meshP.localRemoteFaces['internal'][patchID]], faceRemote[internalCursor:internalCursor + nInternalFaces], tag)
-    internalCursor += nInternalFaces
-    nBoundaryFaces = len(meshP.remoteFaces['boundary'][patchID])
-    tag += len(meshC.origPatches) + 1
-    exchanger.exchange(remote, face[meshP.localRemoteFaces['boundary'][patchID]], faceRemote[boundaryCursor:boundaryCursor + nBoundaryFaces], tag)
-    boundaryCursor += nBoundaryFaces
-exchanger.wait()
-
-start, end = meshP.origMesh.nInternalFaces, remoteGhostStartFace
-diff = np.abs(faceP[start:end]-faceRemote[start:end])
-print 'local boundary', np.max(diff)
-
-internalCursor = nLocalInternalFaces
-boundaryCursor = remoteGhostStartFace
-for patchID in meshC.remotePatches:
-    nInternalFaces = len(meshP.remoteFaces['internal'][patchID])
-    start, end = internalCursor, internalCursor + nInternalFaces
-    diff = np.abs(faceP[start:end]-faceRemote[start:end])
-    print 'internal', patchID, np.max(diff), np.argmax(diff)
-    internalCursor += nInternalFaces
-    nBoundaryFaces = len(meshP.remoteFaces['boundary'][patchID])
-    start, end = boundaryCursor, boundaryCursor + nBoundaryFaces
-    diff = np.abs(faceP[start:end]-faceRemote[start:end])
-    print 'boundary', patchID, np.max(diff), np.argmax(diff)
-    boundaryCursor += nBoundaryFaces
-
-gradRemote = grad.copy()
-parallel.getOrigRemoteCells(gradRemote, meshC)
-for patchID in meshC.remotePatches:
-    patch = mesh.boundary[patchID]
-    startFace = patch['startFace']
-    endFace = startFace + patch['nFaces']
-
-    start = mesh.nInternalCells + startFace - mesh.nInternalFaces
-    end = mesh.nInternalCells + endFace - mesh.nInternalFaces
-    g1 = grad[start:end]
-    g2 = gradRemote[start:end]
-    diff = np.abs(np.linalg.norm(g1, axis=1)-np.linalg.norm(g2, axis=1))
-    maxd = np.argmax(diff)
-    print 'grad', patchID, np.max(diff)
-    #P = T.function([], meshP.sumOp)()
-    #C = T.function([], meshC.sumOp)()
-    #x = C*face
-    #y = P*faceP
-    #i = np.argmax(y[:mesh.nInternalCells]-x)
-    ##import pdb;pdb.set_trace()
-
-from config import adsparse
-import config
-rho = ad.matrix()
-rhoF = rho[meshP.owner] + rho[meshP.neighbour]
-rhoC = adsparse.basic.dot(adsparse.sqr(meshP.sumOp), rhoF)
-J = T.function([rho], ad.grad(rhoC[:meshC.nInternalCells].sum(), rho))
-
-rhoD = ad.bcalloc(config.precision(0.), (mesh.nCells, 1))
-rhoD = ad.set_subtensor(rhoD[:meshC.nInternalCells],rhoC[:meshC.nInternalCells])
-rhoD = ad.set_subtensor(rhoD[meshC.nLocalCells:meshC.nCells], rhoC[meshC.nInternalCells:])
-rhoG = rhoD[meshC.owner] + rhoD[meshC.neighbour]
-rhoE = adsparse.basic.dot(adsparse.sqr(meshC.sumOp), rhoG)
-K = T.function([rho], ad.grad(rhoE.sum(), rho))
-
-rho = np.ones((meshO.nCells, 1))
-J = J(rho)
-J = parallel.getAdjointRemoteCells(J, meshC)
-K = K(rho)
-K = parallel.getAdjointRemoteCells(K, meshC)
-
-for patchID in meshC.remotePatches:
-    start = mesh.boundary[patchID]['startFace']
-    end = start + mesh.boundary[patchID]['nFaces']
-    print patchID, J[mesh.owner[start:end]].ravel()
-    print patchID, K[mesh.owner[start:end]].ravel()
-
+    #def R_op(self, inputs, eval_points):
+    #    # R_op can receive None as eval_points.
+    #    # That mean there is no diferientiable path through that input
+    #    # If this imply that you cannot compute some outputs,
+    #    # return None for those.
+    #    if eval_points[0] is None:
+    #        return eval_points
+    #    return self.grad(inputs, eval_points)

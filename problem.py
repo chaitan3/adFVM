@@ -85,8 +85,8 @@ from field import CellField, Field, IOField
 #        stackedFields[:mesh.nInternalCells, 1] += G*100
 #        stackedFields[:mesh.nInternalCells, 4] += G*2e5
 
-#primal = RCF('/home/talnikar/foam/blade/laminar-lowRe2/', CFL=0.2, timeIntegrator='euler')
 primal = RCF('/home/talnikar/foam/blade/les/', CFL=0.2, timeIntegrator='euler')
+#primal = RCF('/master/home/talnikar/foam/blade/les/', CFL=0.2, timeIntegrator='euler')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/', CFL=0.2, timeIntegrator='euler')
 def objective(fields):
     rho, rhoU, rhoE = fields
