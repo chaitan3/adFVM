@@ -38,16 +38,64 @@ class TestField(unittest.TestCase):
         #self.T.field[:, 2, 2] = 1.
 
     def test_max(self):
-        self.assertTrue(False)
+        FU = Field('F', self.U, (1,))
+        FV = Field('F', self.V, (1,))
+        R = Field.max(FU, FV)
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (1,))
+
+        S = np.random.rand(self.meshO.nFaces, 1) 
+        T = np.random.rand(self.meshO.nFaces, 1)
+        res = evaluate(R.field, [self.U, self.V], [S,T])
+        ref = np.maximum(S, T)
+        checkArray(self, res, ref)
 
     def test_switch(self):
-        self.assertTrue(False)
+        C = ad.matrix()
+        FU = Field('F', self.U, (1,))
+        FV = Field('F', self.V, (1,))
+        R = Field.switch(C, FU, FV)
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (1,))
+
+        S = np.random.rand(self.meshO.nFaces, 1)
+        T = np.random.rand(self.meshO.nFaces, 1)
+        P = S > T
+        res = evaluate(R.field, [C, self.U, self.V], [P,S,T])
+        ref = np.maximum(S, T)
+        checkArray(self, res, ref)
 
     def test_abs(self):
-        self.assertTrue(False)
+        R = self.FU.abs()
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (3,))
+
+        T = np.zeros((self.meshO.nInternalCells, 3))
+        T[:,0] = self.X
+        T[:,1] = -1
+        T[:,2] = 2.
+        res = evaluate(R.field, self.U, T)
+        ref = np.zeros_like(T)
+        ref[:,0] = np.abs(self.X)
+        ref[:,1] = 1.
+        ref[:,2] = 2.
+        checkArray(self, res, ref)
 
     def test_sign(self):
-        self.assertTrue(False)
+        R = self.FU.sign()
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (3,))
+
+        T = np.zeros((self.meshO.nInternalCells, 3))
+        T[:,0] = self.X
+        T[:,1] = -1
+        T[:,2] = 2.
+        res = evaluate(R.field, self.U, T)
+        ref = np.zeros_like(T)
+        ref[:,0] = np.sign(self.X)
+        ref[:,1] = -1.
+        ref[:,2] = 1.
+        checkArray(self, res, ref)
 
     def test_component(self):
         R = self.FU.component(0)
@@ -158,13 +206,67 @@ class TestField(unittest.TestCase):
         checkArray(self, res, ref)
 
     def test_add(self):
-        self.assertTrue(False)
+        R = self.FU + self.FV
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (3,))
+
+        S = np.zeros((self.meshO.nInternalCells, 3))
+        T = np.zeros((self.meshO.nInternalCells, 3))
+        S[:,0], S[:,1] = self.X, self.Y
+        T[:,0], T[:,1] = self.Y, -self.X
+        res = evaluate(R.field, [self.U, self.V], [S, T])
+        ref = np.zeros((self.meshO.nInternalCells, 3))
+        ref[:,0] = self.X + self.Y
+        ref[:,1] = self.Y - self.X
+        checkArray(self, res, ref)
 
     def test_mul(self):
-        self.assertTrue(False)
+        R = self.FU * self.FV
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (3,))
+
+        S = np.zeros((self.meshO.nInternalCells, 3))
+        T = np.zeros((self.meshO.nInternalCells, 3))
+        S[:,0], S[:,1] = self.X, self.Y
+        T[:,0], T[:,1] = self.Y, -self.X
+        res = evaluate(R.field, [self.U, self.V], [S, T])
+        ref = np.zeros((self.meshO.nInternalCells, 3))
+        ref[:,0] = self.X * self.Y
+        ref[:,1] = self.Y * -self.X
+        checkArray(self, res, ref)
+
+    def test_mul_vector(self):
+        V = ad.bcmatrix()
+        FV = Field('F', V, (1,))
+        R = self.FU * FV
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (3,))
+
+        S = np.zeros((self.meshO.nInternalCells, 3))
+        T = np.zeros((self.meshO.nInternalCells, 1))
+        S[:,0], S[:,1] = self.X, self.Y
+        T[:,0] = self.Y
+        res = evaluate(R.field, [self.U, V], [S, T])
+        ref = np.zeros((self.meshO.nInternalCells, 3))
+        ref[:,0] = self.X*self.Y
+        ref[:,1] = self.Y*self.Y
+        checkArray(self, res, ref)
 
     def test_neg(self):
-        self.assertTrue(False)
+        R = self.FU.abs()
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (3,))
+
+        T = np.zeros((self.meshO.nInternalCells, 3))
+        T[:,0] = self.X
+        T[:,1] = -1
+        T[:,2] = 2.
+        res = evaluate(R.field, self.U, T)
+        ref = np.zeros_like(T)
+        ref[:,0] = np.abs(self.X)
+        ref[:,1] = 1.
+        ref[:,2] = 2.
+        checkArray(self, res, ref)
 
 if __name__ == "__main__":
         unittest.main(verbosity=2, buffer=True)

@@ -1,29 +1,47 @@
+from __future__ import print_function
+from test import *
+
+from field import Field, CellField
+from mesh import Mesh
+
 from interp import central, TVD_dual
 
 class TestInterp(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.case = 'tests/convection/'
+        self.case = '../cases/convection/'
         self.mesh = Mesh.create(self.case)
         Field.setSolver(self)
-        self.T = CellField('T', ad.zeros((self.mesh.nInternalCells, 1)))
-        self.U = CellField('U', ad.zeros((self.mesh.nInternalCells, 3)))
-        self.X = self.mesh.cellCentres[:, 0]
-        self.XF = self.mesh.faceCentres[:, 0]
-        self.Y = self.mesh.cellCentres[:, 1]
-        self.YF = self.mesh.faceCentres[:, 1]
- 
+        self.meshO = self.mesh.origMesh
+
+        self.X = self.meshO.cellCentres[:, 0]
+        self.Y = self.meshO.cellCentres[:, 1]
+        self.XF = self.meshO.faceCentres[:, 0]
+        self.YF = self.meshO.faceCentres[:, 1]
+
+        self.U = ad.matrix()
+        self.FU = CellField('F', self.U, (3,))
 
     def test_TVD_scalar(self):
-        pass
+        self.assertTrue(False)
 
     def test_TVD_vector(self):
-        pass
+        self.assertTrue(False)
 
     def test_interpolate(self):
-        self.T.field[:, 0] = self.X + self.Y
-        res = ad.value(interpolate(self.T).field)
-        ref = (self.XF + self.YF).reshape(-1,1)
-        check(self, res, ref)
-     
+        R = central(self.FU, self.mesh)
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (3,))
 
+        T = np.zeros((self.meshO.nCells, 3))
+        T[:,0] = self.X + self.Y
+        T[:,1] = self.X * self.Y
+
+        res = evaluate(R.field, self.U, T)
+        ref = np.zeros((self.meshO.nFaces, 3))
+        ref[:,0] = (self.XF + self.YF)
+        ref[:,1] = (self.XF * self.YF)
+        checkArray(self, res, ref)
+
+if __name__ == "__main__":
+        unittest.main(verbosity=2, buffer=True)

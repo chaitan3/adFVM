@@ -1,54 +1,86 @@
+from __future__ import print_function
+from test import *
+
+from field import Field, CellField
+from mesh import Mesh
 
 from op import grad, div, laplacian, snGrad
 
 class TestOp(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.case = 'tests/convection/'
+        self.case = '../cases/convection/'
         self.mesh = Mesh.create(self.case)
         Field.setSolver(self)
-        self.T = CellField('T', ad.zeros((self.mesh.nInternalCells, 1)))
-        self.U = CellField('U', ad.zeros((self.mesh.nInternalCells, 3)))
-        self.X = self.mesh.cellCentres[:, 0]
-        self.Y = self.mesh.cellCentres[:, 1]
- 
-    def test_grad_scalar(self):
-        self.T.field[:, 0] = self.X*self.Y + self.X**2 + self.Y**2 + self.X
-        res = ad.value(grad(self.T).field)
-        ref = np.zeros((self.mesh.nInternalCells, 3))
-        x = self.X[:self.mesh.nInternalCells]
-        y = self.Y[:self.mesh.nInternalCells]
-        ref[:, 0] = y + 2*x + 1
-        ref[:, 1] = x + 2*y
-        checkSum(self, res, ref)
+        self.meshO = self.mesh.origMesh
+        
+        self.X = self.meshO.cellCentres[:, 0]
+        self.Y = self.meshO.cellCentres[:, 1]
+        self.XF = self.meshO.faceCentres[:, 0]
+        self.YF = self.meshO.faceCentres[:, 1]
 
+        self.U = ad.matrix()
+        self.FU = CellField('F', self.U, (3,))
+        self.V = ad.bcmatrix()
+        self.FV = CellField('F', self.V, (1,))
+
+    def test_grad_scalar(self):
+        R = grad(self.FV)
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (3,))
+
+        T = np.zeros((self.meshO.nFaces, 1))
+        T[:,0] = self.XF*self.YF + self.XF**2 + self.YF**2 + self.XF
+        res = evaluate(R.field, self.V, T)
+        ref = np.zeros((self.meshO.nInternalCells, 3))
+        X = self.X[:self.meshO.nInternalCells]
+        Y = self.Y[:self.meshO.nInternalCells]
+        ref[:, 0] = Y + 2*X + 1
+        ref[:, 1] = X + 2*Y
+        checkVolSum(self, res, ref)
+        
     def test_grad_vector(self):
-        self.U.field[:, 0] = self.X*self.Y + self.X**2
-        self.U.field[:, 1] = self.Y + self.Y**2 
-        self.U.field[:, 2] = 1.
-        res = ad.value(grad(self.U).field)
-        ref = np.zeros((self.mesh.nInternalCells, 3, 3))
-        x = self.X[:self.mesh.nInternalCells]
-        y = self.Y[:self.mesh.nInternalCells]
-        ref[:, 0, 0] = y + 2*x
-        ref[:, 1, 0] = x
-        ref[:, 1, 1] = 1 + 2*y
-        checkSum(self, res, ref)
+        R = grad(self.FU)
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (3,3))
+
+        T = np.zeros((self.meshO.nFaces, 3))
+        T[:, 0] = self.XF*self.YF + self.XF**2
+        T[:, 1] = self.YF + self.YF**2 
+        T[:, 2] = 1.
+        res = evaluate(R.field, self.U, T)
+        ref = np.zeros((self.meshO.nInternalCells, 3, 3))
+        X = self.X[:self.meshO.nInternalCells]
+        Y = self.Y[:self.meshO.nInternalCells]
+        ref[:, 0, 0] = Y + 2*X
+        ref[:, 1, 0] = X
+        ref[:, 1, 1] = 1 + 2*Y
+        checkVolSum(self, res, ref)
 
     def test_div(self):
-        self.T.field[:, 0] = 1.
-        self.U.field[:, 0] = self.X + np.sin(2*np.pi*self.X)*np.cos(2*np.pi*self.Y)
-        self.U.field[:, 1] = self.Y**2 - np.cos(2*np.pi*self.X)*np.sin(2*np.pi*self.Y)
-        self.U.field[:, 2] = self.X
-        res = ad.value(div(self.T, self.U).field)
-        y = self.Y[:self.mesh.nInternalCells]
-        ref = (1 + 2*y).reshape(-1,1)
-        checkSum(self, res, ref)
+        R = div(self.FU.dotN())
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (1,))
+
+        T = np.zeros((self.meshO.nFaces, 3))
+        T[:, 0] = self.XF + np.sin(2*np.pi*self.XF)*np.cos(2*np.pi*self.YF)
+        T[:, 1] = self.YF**2 - np.cos(2*np.pi*self.XF)*np.sin(2*np.pi*self.YF)
+        T[:, 2] = self.XF
+        res = evaluate(R.field, self.U, T)
+        Y = self.Y[:self.meshO.nInternalCells]
+        ref = (1 + 2*Y).reshape(-1,1)
+        checkVolSum(self, res, ref)
 
     def test_laplacian(self):
-        self.T.field[:, 0] = self.X**2 + self.Y**2 + self.X*self.Y
-        res = ad.value(laplacian(self.T, 1.).field)
-        ref = 4.*np.ones((self.mesh.nInternalCells, 1))
-        checkSum(self, res, ref, relThres=1e-2)
+        R = laplacian(self.FV, 1.)
+        self.assertTrue(isinstance(R, Field))
+        self.assertEqual(R.dimensions, (1,))
 
+        T = np.zeros((self.meshO.nCells, 1))
+        T[:, 0] = self.X**2 + self.Y**2 + self.X*self.Y
+        res = evaluate(R.field, self.V, T)
+        ref = 4.*np.ones((self.meshO.nInternalCells, 1))
+        checkVolSum(self, res, ref, relThres=1e-2)
 
+if __name__ == "__main__":
+        unittest.main(verbosity=2, buffer=True)

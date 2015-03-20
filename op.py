@@ -30,8 +30,8 @@ def div(phi, U=None, ghost=False):
     if U is None:
         divField = internal_sum(phi, mesh)
     else:
-        assert phi.dimensions == (1,)
         raise Exception('not tested')
+        assert phi.dimensions == (1,)
         divField = internal_sum((phi*U).dotN(), mesh)
     if ghost:
         return CellField('div({0})'.format(phi.name), divField, phi.dimensions, internal=True)
