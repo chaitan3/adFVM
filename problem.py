@@ -11,7 +11,7 @@ from pyRCF import RCF
 from solver import euler as explicit
 from field import CellField, Field, IOField
 
-#primal = RCF('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
+#primal = RCF('cases/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 #
 #def objective(fields):
 #    rho, rhoU, rhoE = fields
@@ -29,7 +29,7 @@ from field import CellField, Field, IOField
 #    G = eps*ad.array(np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
 #    rho.field[indices] += G
 
-#primal = RCF('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
+#primal = RCF('cases/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 #
 #def objective(fields):
 #    rho, rhoU, rhoE = fields
@@ -50,7 +50,7 @@ from field import CellField, Field, IOField
 #
 #
 #
-#primal = RCF('tests/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+#primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
 #def objective(fields):
 #    rho, rhoU, rhoE = fields
 #    mesh = rho.mesh
