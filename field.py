@@ -232,6 +232,9 @@ class IOField(Field):
         self.field = func(self.field)
         return func
 
+    def getInternalField(self):
+        return self.field[:self.mesh.origMesh.nInternalCells]
+
     @classmethod
     def read(self, name, mesh, time):
         # mesh values required outside theano

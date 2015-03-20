@@ -1,61 +1,90 @@
-#!/usr/bin/python2
 from __future__ import print_function
-import unittest
-import numpy as np
+from test import *
+import config
 
-from field import CellField
+from field import CellField, IOField
 from pyRCF import RCF
-from mms import source, solution
-
-def checkSum(self, res, ref, vols, relThres=0.01):
-    diff = np.abs(res-ref)*vols
-    rel = diff.sum()/(ref*vols).sum()
-    self.assertAlmostEqual(0, rel, delta=relThres)
+#from mms import source, solution
 
 class TestCases(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        pass
+        self.mesh = None
     
     # analytical inviscid comparison
     def test_shockTube(self):
         skip
-        case = 'tests/shockTube'
+        config.fileFormat = 'ascii'
+        case = '../cases/shockTube'
         solver = RCF(case, mu=lambda T: T*0., CFL=0.6)
         timeRef = 0.006
-        solver.run(endTime=timeRef)
+        solver.run(endTime=timeRef, dt=1e-5)
 
         f = open(case + '/output')
         f.readline()
         f.readline()
         data = np.loadtxt(f)
-        rho = CellField.read('rho', timeRef)    
-        p = CellField.read('p', timeRef)    
-        U = CellField.read('U', timeRef)    
-        vols = solver.mesh.volumes
-        checkSum(self, rho.getInternalField(), data[:, 2].reshape((-1,1)), vols)
-        checkSum(self, p.getInternalField(), data[:, 3].reshape((-1,1)), vols)
-        checkSum(self, U.getInternalField()[:,0].reshape((-1,1)), data[:, 4].reshape((-1,1)), vols, relThres=0.02)
+        rho = IOField.read('rho', solver.mesh, timeRef)    
+        p = IOField.read('p', solver.mesh, timeRef)    
+        U = IOField.read('U', solver.mesh, timeRef)    
+        rho.complete()
+        p.complete()
+        U.complete()
+        self.mesh = solver.mesh
+        checkVolSum(self, rho.getInternalField(), data[:, 2].reshape((-1,1)), relThres=0.01)
+        checkVolSum(self, p.getInternalField(), data[:, 3].reshape((-1,1)), relThres=0.01)
+        checkVolSum(self, U.getInternalField()[:,0].reshape((-1,1)), data[:, 4].reshape((-1,1)),relThres=0.02)
+        config.fileFormat = 'binary'
 
     # openfoam inviscid comparison
     def test_forwardStep(self):
         skip
-        case = 'tests/forwardStep'
-        solver = RCF(case, Cp=2.5, mu=lambda T: T*0., CFL=1.2)
+        case = '../cases/forwardStep'
+        solver = RCF(case, Cp=2.5, mu=lambda T: T*0., CFL=0.8)
         time = 1.7
-        timeSteps, res = solver.run(endTime=time)
+        timeSteps, res = solver.run(endTime=time, writeInterval=500)
         timeRef = 10.0
 
-        rho = CellField.read('rho', time)    
-        p = CellField.read('p', time)    
-        U = CellField.read('U', time)    
-        rhoRef = CellField.read('rho', timeRef)    
-        pRef = CellField.read('p', timeRef)    
-        URef = CellField.read('U', timeRef)    
-        vols = solver.mesh.volumes
-        checkSum(self, rho.getInternalField(), rhoRef.getInternalField(), vols, relThres=0.05)
-        checkSum(self, p.getInternalField(), pRef.getInternalField(), vols, relThres=0.07)
-        checkSum(self, U.getInternalField(), URef.getInternalField(), vols, relThres=0.05)
+        rho = IOField.read('rho', solver.mesh, time)    
+        p = IOField.read('p', solver.mesh, time)    
+        U = IOField.read('U', solver.mesh, time)    
+        rho.complete()
+        p.complete()
+        U.complete()
+        rhoRef = IOField.read('rho', solver.mesh, timeRef)    
+        pRef = IOField.read('p', solver.mesh, timeRef)    
+        URef = IOField.read('U', solver.mesh, timeRef)    
+        rhoRef.complete()
+        pRef.complete()
+        URef.complete()
+        self.mesh = solver.mesh
+        checkVolSum(self, rho.getInternalField(), rhoRef.getInternalField(), relThres=0.01)
+        checkVolSum(self, rhoU.getInternalField(), rhoURef.getInternalField(), relThres=0.01)
+        checkVolSum(self, rhoE.getInternalField(), rhoERef.getInternalField(), relThres=0.01)
+
+    # openfoam viscous comparison
+    def test_cylinder(self):
+        case = '../cases/cylinder'
+        solver = RCF(case, mu=lambda T: 2.5e-5*T/T)
+        time = 1 + 1e-4
+        timeRef = 10
+        solver.run(startTime=1.0, dt=5e-9, endTime=time, writeInterval=5000)
+        rho = IOField.read('rho', solver.mesh, time)    
+        p = IOField.read('p', solver.mesh, time)    
+        U = IOField.read('U', solver.mesh, time)    
+        rho.complete()
+        p.complete()
+        U.complete()
+        rhoRef = IOField.read('rho', solver.mesh, timeRef)    
+        pRef = IOField.read('p', solver.mesh, timeRef)    
+        URef = IOField.read('U', solver.mesh, timeRef)    
+        rhoRef.complete()
+        pRef.complete()
+        URef.complete()
+        self.mesh = solver.mesh
+        checkVolSum(self, rho.getInternalField(), rhoRef.getInternalField(), relThres=0.01)
+        checkVolSum(self, rhoU.getInternalField(), rhoURef.getInternalField(), relThres=0.01)
+        checkVolSum(self, rhoE.getInternalField(), rhoERef.getInternalField(), relThres=0.01)
 
     # analytical viscous comparison
     def test_mms(self):
@@ -68,31 +97,9 @@ class TestCases(unittest.TestCase):
         rho = CellField.read('rho', timeRef)    
         rhoU = CellField.read('rhoU', timeRef)    
         rhoE = CellField.read('rhoE', timeRef)    
-        vols = solver.mesh.volumes
-        checkSum(self, rho.getInternalField(), rhoRef.getInternalField(), vols, relThres=0.01)
-        checkSum(self, rhoU.getInternalField(), rhoURef.getInternalField(), vols, relThres=0.01)
-        checkSum(self, rhoE.getInternalField(), rhoERef.getInternalField(), vols, relThres=0.01)
-
-    # openfoam viscous comparison
-    def test_cylinder(self):
-        skip
-        case = 'tests/cylinder'
-        solver = RCF(case, mu=lambda T: 2.5e-5*T/T)
-        time = 1 + 1e-4
-        timeRef = 10.0
-        #solver.run(startTime=1.0, endTime=time, writeInterval=1000)
-        rho = CellField.read('rho', time)    
-        p = CellField.read('p', time)    
-        U = CellField.read('U', time)    
-        rhoRef = CellField.read('rho', timeRef)    
-        pRef = CellField.read('p', timeRef)    
-        URef = CellField.read('U', timeRef)    
-        vols = solver.mesh.volumes
-        checkSum(self, rho.getInternalField(), rhoRef.getInternalField(), vols, relThres=0.01)
-        checkSum(self, p.getInternalField(), pRef.getInternalField(), vols, relThres=0.01)
-        checkSum(self, U.getInternalField(), URef.getInternalField(), vols, relThres=0.02)
-
-
+        checkVolSum(self, rho.getInternalField(), rhoRef.getInternalField(), relThres=0.01)
+        checkVolSum(self, rhoU.getInternalField(), rhoURef.getInternalField(), relThres=0.01)
+        checkVolSum(self, rhoE.getInternalField(), rhoERef.getInternalField(), relThres=0.01)
 
 if __name__ == "__main__":
         unittest.main(verbosity=2)
