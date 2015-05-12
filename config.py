@@ -17,12 +17,15 @@ home = '~'
 os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
-os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'
 # options, profiling, gc, cleanup
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
-#os.environ['THEANO_FLAGS'] += ',profile=True'
-os.environ['THEANO_FLAGS'] += ',gcc.cxxflags=-I/master-usr/include/python2.7/ -I/master-usr/include/ -L/usr/lib/python2.7/config-x86_64-linux-gnu/'
+os.environ['THEANO_FLAGS'] += ',profile=True'
+os.environ['THEANO_FLAGS'] += ',profile_memory=True'
+# openmp
+#os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'
+# for voyager
+#os.environ['THEANO_FLAGS'] += ',gcc.cxxflags=-I/master-usr/include/python2.7/ -I/master-usr/include/ -L/usr/lib/python2.7/config-x86_64-linux-gnu/'
 import theano as T
 import theano.tensor as ad
 import theano.sparse as adsparse
