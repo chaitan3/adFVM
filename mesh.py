@@ -594,8 +594,8 @@ class Mesh(object):
         for attr in Mesh.fields:
             value = getattr(self, attr) 
             if attr == 'boundary': continue
-            #if value.dtype == np.int32:
-            #    value = value.astype(np.int64)
+            if value.dtype == np.int32:
+                value = value.astype(np.int64)
             if value.shape[1:] == (1,):
                 setattr(self, attr, T.shared(value, broadcastable=config.broadcastPattern))
             else:

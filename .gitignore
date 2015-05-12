@@ -5,6 +5,7 @@
 *.txt
 
 *.o
+*.out
 *.exe
 
 faces

@@ -4,7 +4,7 @@ import parallel
 
 # compute type
 device = 'cpu'
-#device = 'cuda0'
+#device = 'gpu0'
 precision = np.float64
 #precision = np.float32
 
@@ -17,8 +17,9 @@ home = '~'
 os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
+os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'
 # options, profiling, gc, cleanup
-os.environ['THEANO_FLAGS'] += ',allow_gc=False'
+#os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
 #os.environ['THEANO_FLAGS'] += ',profile=True'
 import theano as T

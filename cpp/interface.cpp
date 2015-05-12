@@ -9,10 +9,11 @@ Mesh::Mesh (string caseDir) {
     assert(this->meshModule);
     this->meshClass = PyObject_GetAttrString(this->meshModule, "Mesh");
     assert(this->meshClass);
+    PyObject *meshCreate = PyObject_GetAttrString(this->meshClass, "create");
     PyObject *caseString = PyString_FromString(caseDir.c_str());
     PyObject *args = PyTuple_New(1);
     PyTuple_SetItem(args, 0, caseString);
-    this->mesh = PyObject_CallObject(this->meshClass, args);
+    this->mesh = PyObject_CallObject(meshCreate, args);
     Py_DECREF(caseString);
     //Py_DECREF(args);
     assert(this->mesh);
