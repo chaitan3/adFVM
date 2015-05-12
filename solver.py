@@ -141,6 +141,7 @@ class Solver(object):
 
             end = time.time()
             pprint('Time for iteration:', end-start)
+            pprint('objective: ', parallel.sum(result))
             
             result += objective(stackedFields)
             dt = self.dt.get_value()

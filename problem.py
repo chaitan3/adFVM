@@ -11,7 +11,7 @@ from pyRCF import RCF
 from solver import euler as explicit
 from field import CellField, Field, IOField
 
-#primal = RCF('tests/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
+#primal = RCF('cases/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 #
 #def objective(fields):
 #    rho, rhoU, rhoE = fields
@@ -29,7 +29,7 @@ from field import CellField, Field, IOField
 #    G = eps*ad.array(np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
 #    rho.field[indices] += G
 
-#primal = RCF('tests/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
+#primal = RCF('cases/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 #
 #def objective(fields):
 #    rho, rhoU, rhoE = fields
@@ -50,77 +50,77 @@ from field import CellField, Field, IOField
 #
 #
 #
-primal = RCF('tests/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
-def objective(fields):
-    rho, rhoU, rhoE = fields
-    mesh = rho.mesh
-    patchID = 'cylinder'
-    patch = mesh.boundary[patchID]
-    nF = patch['nFaces']
-    start, end = patch['startFace'], patch['startFace'] + nF
-    areas = mesh.areas[start:end]
-    nx = mesh.normals[start:end, 0].reshape((-1, 1))
-    cellStartFace = mesh.nInternalCells + start - mesh.nInternalFaces
-    cellEndFace = mesh.nInternalCells + end - mesh.nInternalFaces
-    internalIndices = mesh.owner[start:end]
-    start, end = cellStartFace, cellEndFace
-    p = rhoE.field[start:end]*(primal.gamma-1)
-    #deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1, keepdims=True)
-    deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nF,1))
-    T = rhoE/(rho*primal.Cv)
-    #mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
-    mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
-    return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
-
-def perturb(stackedFields, t):
-    mesh = primal.mesh.origMesh
-    mid = np.array([-0.0032, 0.0, 0.])
-    #G = 1e-6*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    #rho
-    if t == startTime:
-        stackedFields[:mesh.nInternalCells, 0] += G
-        stackedFields[:mesh.nInternalCells, 1] += G*100
-        stackedFields[:mesh.nInternalCells, 4] += G*2e5
-
-#primal = RCF('/home/talnikar/foam/blade/les/')
-#primal = RCF('/master/home/talnikar/foam/blade/les/')
-#primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
+#primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
 #def objective(fields):
 #    rho, rhoU, rhoE = fields
-#    solver = rhoE.solver
-#    mesh = rhoE.mesh
-#
-#    res = 0
-#    for patchID in ['suction', 'pressure']:
-#        patch = rhoE.BC[patchID]
-#        start, end = patch.startFace, patch.endFace
-#        cellStart, cellEnd = patch.cellStartFace, patch.cellEndFace
-#        areas = mesh.areas[start:end]
-#        U, T, p = solver.primitive(rho, rhoU, rhoE)
-#        
-#        Ti = T.field[mesh.owner[start:end]] 
-#        Tw = 300*Ti/Ti
-#        deltas = (mesh.cellCentres[cellStart:cellEnd]-mesh.cellCentres[patch.internalIndices]).norm(2, axis=1).reshape((end-start, 1))
-#        dtdn = (Tw-Ti)/deltas
-#        k = solver.Cp*solver.mu(Tw)/solver.Pr
-#        dT = 120
-#        res += ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1) + config.VSMALL)
-#    return res
+#    mesh = rho.mesh
+#    patchID = 'cylinder'
+#    patch = mesh.boundary[patchID]
+#    nF = patch['nFaces']
+#    start, end = patch['startFace'], patch['startFace'] + nF
+#    areas = mesh.areas[start:end]
+#    nx = mesh.normals[start:end, 0].reshape((-1, 1))
+#    cellStartFace = mesh.nInternalCells + start - mesh.nInternalFaces
+#    cellEndFace = mesh.nInternalCells + end - mesh.nInternalFaces
+#    internalIndices = mesh.owner[start:end]
+#    start, end = cellStartFace, cellEndFace
+#    p = rhoE.field[start:end]*(primal.gamma-1)
+#    #deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1, keepdims=True)
+#    deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nF,1))
+#    T = rhoE/(rho*primal.Cv)
+#    #mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
+#    mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
+#    return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
 #
 #def perturb(stackedFields, t):
 #    mesh = primal.mesh.origMesh
-#    mid = np.array([-0.08, 0.014, 0.005])
-#    G = 1e-3*np.exp(-1e5*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#    #G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+#    mid = np.array([-0.0032, 0.0, 0.])
+#    #G = 1e-6*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+#    G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
 #    #rho
 #    if t == startTime:
 #        stackedFields[:mesh.nInternalCells, 0] += G
 #        stackedFields[:mesh.nInternalCells, 1] += G*100
 #        stackedFields[:mesh.nInternalCells, 4] += G*2e5
 
-nSteps = 10
-writeInterval = 2
+#primal = RCF('/home/talnikar/foam/blade/les/')
+primal = RCF('/master/home/talnikar/foam/blade/les/')
+#primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
+def objective(fields):
+    rho, rhoU, rhoE = fields
+    solver = rhoE.solver
+    mesh = rhoE.mesh
+
+    res = 0
+    for patchID in ['suction', 'pressure']:
+        patch = rhoE.BC[patchID]
+        start, end = patch.startFace, patch.endFace
+        cellStart, cellEnd = patch.cellStartFace, patch.cellEndFace
+        areas = mesh.areas[start:end]
+        U, T, p = solver.primitive(rho, rhoU, rhoE)
+        
+        Ti = T.field[mesh.owner[start:end]] 
+        Tw = 300*Ti/Ti
+        deltas = (mesh.cellCentres[cellStart:cellEnd]-mesh.cellCentres[patch.internalIndices]).norm(2, axis=1).reshape((end-start, 1))
+        dtdn = (Tw-Ti)/deltas
+        k = solver.Cp*solver.mu(Tw)/solver.Pr
+        dT = 120
+        res += ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1) + config.VSMALL)
+    return res
+
+def perturb(stackedFields, t):
+    mesh = primal.mesh.origMesh
+    mid = np.array([-0.08, 0.014, 0.005])
+    G = 1e-3*np.exp(-1e5*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    #G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    #rho
+    if t == startTime:
+        stackedFields[:mesh.nInternalCells, 0] += G
+        stackedFields[:mesh.nInternalCells, 1] += G*100
+        stackedFields[:mesh.nInternalCells, 4] += G*2e5
+
+nSteps = 20000
+writeInterval = 100
 startTime = 2.0
 dt = 1e-9
 

@@ -140,7 +140,6 @@ class Field(object):
         return self.__class__('{0}/{1}'.format(self.name, phi.name), self.field / phi.field, self.dimensions)
 
 class CellField(Field):
-    
     def __init__(self, name, field, dimensions, boundary={}, ghost=False):
         logger.debug('initializing CellField {0}'.format(name))
         super(self.__class__, self).__init__(name, field, dimensions)
@@ -232,6 +231,9 @@ class IOField(Field):
 
         self.field = func(self.field)
         return func
+
+    def getInternalField(self):
+        return self.field[:self.mesh.origMesh.nInternalCells]
 
     @classmethod
     def read(self, name, mesh, time):
