@@ -105,6 +105,7 @@ class Solver(object):
 
         while t < endTime and timeIndex < nSteps:
             #import resource; print resource.getrusage(resource.RUSAGE_SELF)[2]*resource.getpagesize()/(1024*1024)
+            #import guppy; print guppy.hpy().heap()
             start = time.time()
 
             pprint('Time marching for', ' '.join(self.names))
