@@ -102,7 +102,9 @@ class Solver(object):
         if mode == 'forward':
             solutions = [stackedFields]
 
+
         while t < endTime and timeIndex < nSteps:
+            #import resource; print resource.getrusage(resource.RUSAGE_SELF)[2]*resource.getpagesize()/(1024*1024)
             start = time.time()
 
             pprint('Time marching for', ' '.join(self.names))
