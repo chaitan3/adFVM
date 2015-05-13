@@ -227,7 +227,7 @@ class IOField(Field):
             X.tag.test_value = self.field
             phi = CellField(self.name, X, self.dimensions, self.boundary, ghost=True)
             Y = phi.field
-            func = T.function([X], Y, on_unused_input='warn')
+            func = T.function([X], Y, on_unused_input='warn', mode=config.compile_mode)
 
         self.field = func(self.field)
         return func

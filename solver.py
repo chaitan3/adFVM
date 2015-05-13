@@ -45,13 +45,13 @@ class Solver(object):
 
         stackedFields = ad.matrix()
         newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
-        self.forward = T.function([stackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
+        self.forward = T.function([stackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn', mode=config.compile_mode)
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
             #paddedGradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), paddedStackedFields)
             #self.gradient = T.function([paddedStackedFields, stackedAdjointFields], paddedGradient)
             gradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields)
-            self.gradient = T.function([stackedFields, stackedAdjointFields], gradient)
+            self.gradient = T.function([stackedFields, stackedAdjointFields], gradient, mode=config.compile_mode)
 
         end = time.time()
         pprint('Time for compilation:', end-start)

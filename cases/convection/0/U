@@ -1,44 +1,51 @@
-/*--------------------------------*- C++ -*----------------------------------*| =========                 |                                                 |
-| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \    /   O peration     | Version:  2.2.2                                 |
-|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \/     M anipulation  |                                                 |
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.2.2                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
-	version 2.0;
-	class volVectorField;
-	object U;
-	format ascii;
+    version     2.0;
+    format      binary;
+    class       volVectorField;
+    location    "0";
+    object      U;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-dimensions      [0 1 -1 0 0 0 0];
-internalField uniform (100 0 0);
+
+dimensions      [ 0 1 -1 0 0 0 0 ];
+
+internalField   uniform ( 100 0 0 );
 
 boundaryField
 {
     patch0_half0
     {
-        type empty;
+        type            cyclic;
     }
     patch0_half1
     {
-        type empty;
+        type            cyclic;
     }
     patch1_half0
     {
-        type zeroGradient;
+        type            zeroGradient;
     }
     patch1_half1
     {
-        type zeroGradient;
+        type            zeroGradient;
     }
     patch2_half0
     {
-        type zeroGradient;
+        type            cyclic;
     }
     patch2_half1
     {
-        type zeroGradient;
+        type            cyclic;
     }
 }
+
+
+// ************************************************************************* //

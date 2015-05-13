@@ -1,14 +1,14 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  2.2.x                                 |
+|  \\    /   O peration     | Version:  2.2.2                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
     version     2.0;
-    format      ascii;
+    format      binary;
     class       polyBoundaryMesh;
     location    "constant/polyMesh";
     object      boundary;
@@ -19,39 +19,55 @@ FoamFile
 (
     patch0_half0
     {
-        type            empty;
-        nFaces          10000;
-        startFace       19800;
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          100000;
+        startFace       198900;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  patch0_half1;
     }
     patch0_half1
     {
-        type            empty;
-        nFaces          10000;
-        startFace       29800;
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          100000;
+        startFace       298900;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  patch0_half0;
     }
     patch1_half0
     {
         type            patch;
         nFaces          100;
-        startFace       39800;
+        startFace       398900;
     }
     patch1_half1
     {
         type            patch;
         nFaces          100;
-        startFace       39900;
+        startFace       399000;
     }
     patch2_half0
     {
-        type            patch;
-        nFaces          100;
-        startFace       40000;
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          1000;
+        startFace       399100;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  patch2_half1;
     }
     patch2_half1
     {
-        type            patch;
-        nFaces          100;
-        startFace       40100;
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          1000;
+        startFace       400100;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  patch2_half0;
     }
 )
 

@@ -17,11 +17,11 @@ home = '~'
 os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
-# options, profiling, gc, cleanup
+# profiling, gc, cleanup
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
-os.environ['THEANO_FLAGS'] += ',profile=True'
-os.environ['THEANO_FLAGS'] += ',profile_memory=True'
+#os.environ['THEANO_FLAGS'] += ',profile=True'
+#os.environ['THEANO_FLAGS'] += ',profile_memory=True'
 # openmp
 #os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'
 # for voyager
@@ -39,7 +39,9 @@ def bcalloc(value, shape):
         X = ad.patternbroadcast(X, broadcastPattern)
     return X
 ad.bcalloc = bcalloc
-# debugging
+# debugging/compiling
+#compile_mode = 'FAST_COMPILE'
+compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
 #T.config.compute_test_value = 'raise'
 def inspect_inputs(i, node, fn):
     print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])

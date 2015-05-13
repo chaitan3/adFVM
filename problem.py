@@ -129,10 +129,10 @@ stackedFields = ad.matrix()
 stackedFields.tag.test_value = np.random.rand(primal.mesh.origMesh.nCells, 5).astype(config.precision)
 fields = primal.unstackFields(stackedFields, CellField)
 objectiveValue = objective(fields)
-objectiveFunction = T.function([stackedFields], objectiveValue)
+objectiveFunction = T.function([stackedFields], objectiveValue, mode=config.compile_Mode)
 # objective is anyways going to be a sum over all processors
 # so no additional code req to handle parallel case
-objectiveGradient = T.function([stackedFields], ad.grad(objectiveValue, stackedFields))
+objectiveGradient = T.function([stackedFields], ad.grad(objectiveValue, stackedFields), mode=config.compile_mode)
 
 def writeResult(option, result):
     resultFile = primal.mesh.case + '/objective.txt'
