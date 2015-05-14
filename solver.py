@@ -33,7 +33,6 @@ class Solver(object):
 
     def compile(self):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
-        start = time.time()
 
         self.dt = ad.scalar()
 
@@ -47,15 +46,13 @@ class Solver(object):
         stackedFields = ad.matrix()
         newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
         self.forward = self.function([stackedFields, self.dt], [newStackedFields, self.dtc, self.local, self.remote])
+        pprint()
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
             #paddedGradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), paddedStackedFields)
             #self.gradient = T.function([paddedStackedFields, stackedAdjointFields], paddedGradient)
             gradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields)
             self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], gradient)
-        end = time.time()
-        pprint('Time for compilation:', end-start)
-        pprint()
 
     def stackFields(self, fields, mod): 
         return mod.concatenate([phi.field for phi in fields], axis=1)
@@ -205,11 +202,14 @@ class SolverFunction(object):
     def generate(self, inputs, outputs):
         inputs.extend(self.symbolic)
         if parallel.rank == 0:
+            start = time.time()
             fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
             #T.printing.pydotprint(fn, outfile='graph.png')
-            #import cPickle
-            #pkl = cPickle.dumps(fn)
-            #print len(pkl)
+            import cPickle; pkl = cPickle.dumps(fn)
+
+            end = time.time()
+            pprint('Compilation time: {0:.2f}'.format(end-start))
+            pprint('Compilation size: {0:.2f}'.format(float(len(pkl))/(1024*1024)))
         else:
             fn = None
         if parallel.nProcessors > 1:
