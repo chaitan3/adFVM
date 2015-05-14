@@ -153,9 +153,7 @@ class CellField(Field):
         # CellField does not contain processor patch data, but the size is still full = nCells in original code
         if ghost:
             # can be not filled
-            size = (mesh.nCells, ) + dimensions
-            self.field = ad.bcalloc(config.precision(1.), size)
-            self.field.tag.test_value = np.zeros((mesh.origMesh.nCells,) + dimensions, config.precision)
+            self.resetField()
 
         self.BC = {}
         for patchID in self.mesh.origPatches:
@@ -189,7 +187,15 @@ class CellField(Field):
         # processor boundary condition completed by copying the extra data in internalField, HACK
         self.field = ad.set_subtensor(self.field[self.mesh.nLocalCells:], internalField[self.mesh.nInternalCells:])
 
-    def setInternalField(self, internalField):
+    def resetField(self):
+        mesh = self.mesh
+        size = (mesh.nCells, ) + self.dimensions
+        self.field = ad.bcalloc(config.precision(1.), size)
+        #self.field.tag.test_value = np.zeros((mesh.origMesh.nCells,) + self.dimensions, config.precision)
+
+    def setInternalField(self, internalField, reset=False):
+        if reset:
+            self.resetField()
         # boundary conditions complete cell field after setting internal field
         self.field = ad.set_subtensor(self.field[:self.mesh.nInternalCells], internalField[:self.mesh.nInternalCells])
         self.updateGhostCells()

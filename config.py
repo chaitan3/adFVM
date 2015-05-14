@@ -24,7 +24,7 @@ os.environ['THEANO_FLAGS'] += ',reoptimize_unpickled_function=False'
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
 os.environ['THEANO_FLAGS'] += ',exception_verbosity=high'
-#os.environ['THEANO_FLAGS'] += ',profile=True'
+os.environ['THEANO_FLAGS'] += ',profile=True'
 #os.environ['THEANO_FLAGS'] += ',profile_memory=True'
 # openmp
 #os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'
@@ -45,8 +45,8 @@ def bcalloc(value, shape):
 ad.bcalloc = bcalloc
 # debugging/compiling
 #compile_mode = 'FAST_COMPILE'
-#compile_mode = 'FAST_RUN'
-compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
+compile_mode = 'FAST_RUN'
+#compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
 #T.config.compute_test_value = 'raise'
 def inspect_inputs(i, node, fn):
     print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])
