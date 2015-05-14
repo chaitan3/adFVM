@@ -29,7 +29,7 @@ class Mesh(object):
         for attr in Mesh.constants:
             setattr(self, attr, 0)
         for attr in Mesh.fields:
-            setattr(self, attr, np.array([]))
+            setattr(self, attr, np.array([[]]))
 
         #self.localRemoteCells = None
         #self.localRemoteFaces = None
@@ -89,7 +89,7 @@ class Mesh(object):
         self.paddedMesh = cls.createPaddedMesh(self)
         # theano shared variables
         self.origMesh = cls.copy(self, fields=True)
-        self.makeShared()
+        self.makeTensor()
 
         end = time.time()
         pprint('Time for reading mesh:', end-start)
@@ -246,7 +246,7 @@ class Mesh(object):
 
                 internalCursor += len(internal)
             sumOp = (correction.tocsr())*sumOp
-        mesh.repeat = T.shared(np.array(repeat, dtype=np.int32).T)
+        #mesh.repeat = T.shared(np.array(repeat, dtype=np.int32).T)
 
         return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
 
@@ -489,7 +489,7 @@ class Mesh(object):
             #14: send rest
             remoteExchange('areas', self.areas[mesh.localRemoteFaces['internal'][patchID]], mesh.remoteFaces['internal'][patchID], 'internal')
             remoteExchange('areas', self.areas[mesh.localRemoteFaces['boundary'][patchID]], mesh.remoteFaces['boundary'][patchID], 'boundary')
-            # WHY THE FUCK IS normals F_CONTIGUOUS
+            # WHY IS normals F_CONTIGUOUS
             remoteExchange('normals', localNormals['internal'][patchID], mesh.remoteFaces['internal'][patchID], 'internal')
             remoteExchange('normals', localNormals['boundary'][patchID], mesh.remoteFaces['boundary'][patchID], 'boundary')
             remoteExchange('weights', localWeights['internal'][patchID], mesh.remoteFaces['internal'][patchID], 'internal')
@@ -584,26 +584,69 @@ class Mesh(object):
             internalCursor += nInternalCells
 
         mesh.origMesh = cls.copy(mesh, fields=True)
-        mesh.makeShared()
+        mesh.makeTensor()
 
         return mesh
     
-    def makeShared(self):
+    def makeTensor(self):
+        logger.info('making tensor variables')
         for attr in Mesh.constants:
-            setattr(self, attr, T.shared(getattr(self, attr)))
+            setattr(self, attr, ad.iscalar())
         for attr in Mesh.fields:
             value = getattr(self, attr) 
             if attr == 'boundary': continue
-            if value.dtype == np.int32:
-                value = value.astype(np.int64)
-            if value.shape[1:] == (1,):
-                setattr(self, attr, T.shared(value, broadcastable=config.broadcastPattern))
+            if attr in ['owner', 'neighbour']:
+                setattr(self, attr, ad.ivector())
             else:
-                setattr(self, attr, T.shared(value))
-        for patchID in self.boundary:
-            patch = self.boundary[patchID]
-            patch['startFace'] = T.shared(patch['startFace'])
-            patch['nFaces'] = T.shared(patch['nFaces'])
+                if value.shape[1] == 1:
+                    setattr(self, attr, ad.bcmatrix())
+                else:
+                    setattr(self, attr, ad.matrix())
+        if type(self.boundary) == type({}):
+            for patchID in self.boundary:
+                patch = self.boundary[patchID]
+                patch['startFace'] = ad.iscalar()
+                patch['nFaces'] = ad.iscalar()
+
+    def function(self, inputs, outputs):
+        return MeshFunction(inputs, outputs, self)
+
+class MeshFunction:
+    def getInputs(self, inputs, mesh, paddedMesh):
+        for attr in self.inputs:
+            if attr == 'boundary':
+                for patchID in self.origPatches:
+                    patch = getattr(mesh, attr)[patchID]
+                    inputs.append(patch['startFace'])
+                    inputs.append(patch['nFaces'])
+            else:
+                inputs.append(getattr(mesh, attr))
+                if parallel.nProcessors > 1:
+                    inputs.append(getattr(paddedMesh, attr))
+
+    def __init__(self, inputs, outputs, mesh):
+        logger.info('compiling function')
+        self.mesh = mesh.origMesh
+        self.paddedMesh = mesh.paddedMesh.origMesh
+        self.origPatches = mesh.origPatches
+        self.inputs = Mesh.fields + Mesh.constants
+        self.getInputs(inputs, mesh, mesh.paddedMesh)
+        if parallel.rank == 0:
+            fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
+            #T.printing.pydotprint(fn, outfile='graph.png')
+            import cPickle
+            pkl = cPickle.dumps(fn)
+        else:
+            fn = None
+        if parallel.nProcessors > 1:
+            fn = parallel.mpi.bcast(fn, root=0)
+        self.fn = fn
+
+    def __call__(self, *inputs):
+        logger.info('running function')
+        inputs = list(inputs)
+        self.getInputs(inputs, self.mesh, self.paddedMesh)
+        return self.fn(*inputs)
  
 def removeCruft(content, keepHeader=False):
     # remove comments and newlines

@@ -10,16 +10,20 @@ precision = np.float64
 
 # theano
 import os
+import sys; sys.setrecursionlimit(100000)
 project = 'adFVM'
 dtype = str(np.zeros(1, precision).dtype)
 home = '~'
 #home = '/lustre/atlas/proj-shared/tur103'
-os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
+#os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
+os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}'.format(project, device, dtype)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
+os.environ['THEANO_FLAGS'] += ',reoptimize_unpickled_function=False'
 # profiling, gc, cleanup
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
+os.environ['THEANO_FLAGS'] += ',exception_verbosity=high'
 #os.environ['THEANO_FLAGS'] += ',profile=True'
 #os.environ['THEANO_FLAGS'] += ',profile_memory=True'
 # openmp
@@ -41,7 +45,8 @@ def bcalloc(value, shape):
 ad.bcalloc = bcalloc
 # debugging/compiling
 #compile_mode = 'FAST_COMPILE'
-compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
+compile_mode = 'FAST_RUN'
+#compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
 #T.config.compute_test_value = 'raise'
 def inspect_inputs(i, node, fn):
     print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])

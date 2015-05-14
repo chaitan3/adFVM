@@ -45,13 +45,13 @@ class Solver(object):
 
         stackedFields = ad.matrix()
         newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
-        self.forward = T.function([stackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn', mode=config.compile_mode)
+        self.forward = self.mesh.function([stackedFields], [newStackedFields, self.dtc, self.local, self.remote])
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
             #paddedGradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), paddedStackedFields)
             #self.gradient = T.function([paddedStackedFields, stackedAdjointFields], paddedGradient)
             gradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields)
-            self.gradient = T.function([stackedFields, stackedAdjointFields], gradient, mode=config.compile_mode)
+            self.gradient = self.mesh.function([stackedFields, stackedAdjointFields], gradient)
 
         end = time.time()
         pprint('Time for compilation:', end-start)
@@ -247,8 +247,6 @@ def SSPRK(equation, boundary, stackedFields, solver):
         fields.append(boundary(*internalFields))
         
     return solver.stackFields(fields[-1], ad)
-
-
 
 # DOES NOT WORK
 def implicit(equation, boundary, fields, garbage):

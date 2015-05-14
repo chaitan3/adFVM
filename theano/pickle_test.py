@@ -4,12 +4,21 @@ import theano
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
-c = theano.shared(rank + 2)
+comm.Barrier()
+print rank, 'overcome barrier'
+
 if rank == 0:
+    c = theano.shared(rank)
     a = theano.tensor.scalar()
     b = a*c
     f = theano.function([a], b)
-    comm.send(f, dest=1, tag=11)
-elif rank == 1:
-    f = comm.recv(source=0, tag=11)
-print f(rank)
+else:
+    f = None
+    c = None
+print rank, 'compiled function, starting bcast'
+c = comm.bcast(c, root=0)
+f = comm.bcast(f, root=0)
+c.set_value(rank)
+print rank, 'finished bcast'
+v = 3
+print rank, f(v)

@@ -45,7 +45,7 @@ def TVD_dual(phi, gradPhi):
 
     # internal, then local patches and finally remote
     update(0, mesh.nInternalFaces)
-    for patchID in phi.boundary:
+    for patchID in mesh.origPatches:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
         if phi.boundary[patchID]['type'] == 'coupled':
@@ -70,7 +70,7 @@ def upwind(phi, U):
         faceField[negativeFlux] = phi.field[mesh.neighbour[negativeFlux]]
 
     update(0, mesh.nInternalFaces)
-    for patchID in phi.boundary:
+    for patchID in mesh.origPatches:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
         if phi.boundary[patchID]['type'] == 'coupled':
