@@ -45,8 +45,8 @@ def bcalloc(value, shape):
 ad.bcalloc = bcalloc
 # debugging/compiling
 #compile_mode = 'FAST_COMPILE'
-compile_mode = 'FAST_RUN'
-#compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
+#compile_mode = 'FAST_RUN'
+compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
 #T.config.compute_test_value = 'raise'
 def inspect_inputs(i, node, fn):
     print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])

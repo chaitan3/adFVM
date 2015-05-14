@@ -158,11 +158,9 @@ class CellField(Field):
             self.field.tag.test_value = np.zeros((mesh.origMesh.nCells,) + dimensions, config.precision)
 
         self.BC = {}
-        for patchID in self.boundary:
+        for patchID in self.mesh.origPatches:
             # skip processor patches
             patchType = self.boundary[patchID]['type']
-            if patchType in config.processorPatches:
-                continue
             self.BC[patchID] = getattr(BCs, patchType)(self, patchID)
 
         if ghost:
@@ -202,9 +200,6 @@ class CellField(Field):
     def updateGhostCells(self):
         logger.info('updating ghost cells for {0}'.format(self.name))
         for patchID in self.BC:
-            #if self.boundary[patchID]['type'] in config.processorPatches:
-            #    self.BC[patchID].update(exchanger)
-            #else:
             self.BC[patchID].update()
     
 
@@ -225,9 +220,10 @@ class IOField(Field):
         if func is None:
             X = ad.matrix()
             X.tag.test_value = self.field
-            phi = CellField(self.name, X, self.dimensions, self.boundary, ghost=True)
-            Y = phi.field
-            func = self.mesh.function([X], Y)
+            # CellField for later use
+            self.phi = CellField(self.name, X, self.dimensions, self.boundary, ghost=True)
+            Y = self.phi.field
+            func = self.solver.function([X], Y)
 
         self.field = func(self.field)
         return func

@@ -20,6 +20,7 @@ class BoundaryCondition(object):
         self.internalIndices = self.mesh.owner[self.startFace:self.endFace]
         # used by field writer
         self.getValue = lambda: self.field[self.cellStartFace:self.cellEndFace]
+        self.inputs = []
         # used by processor patches
         #self.value = self.field[self.cellStartFace:self.cellEndFace]
 
@@ -88,7 +89,8 @@ class fixedValue(BoundaryCondition):
         # mesh values required outside theano
         #self.fixedValue = extractField(self.patch['value'], self.nFaces, self.phi.dimensions == (3,))
         fixedValue = extractField(self.patch['value'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions)
-        self.fixedValue = T.shared(fixedValue)
+        self.fixedValue = ad.matrix()
+        self.inputs.append((self.fixedValue, fixedValue))
 
     def update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
@@ -97,7 +99,9 @@ class fixedValue(BoundaryCondition):
 class turbulentInletVelocity(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        self.Umean = T.shared(extractField(self.patch['Umean'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions))
+        Umean = extractField(self.patch['Umean'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions)
+        self.Umean = ad.matrix()
+        self.inputs.append((self.Umean, Umean))
         self.lengthScale = self.patch['lengthScale']
         self.turbulentIntensity = self.patch['turbulentIntensity']
         #self.patch.pop('value', None)

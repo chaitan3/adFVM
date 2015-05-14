@@ -24,7 +24,7 @@ class RCF(Solver):
                              'Pr': 0.7, 
                              'CFL': 0.6,
                              'stepFactor': 1.2,
-                             'timeIntegrator': 'SSPRK', 
+                             'timeIntegrator': 'SSPRK',
                              'source': lambda x: [0, 0, 0]
                         })
 
@@ -54,6 +54,9 @@ class RCF(Solver):
         rhoE = rho*E
         rho.name, rhoU.name, rhoE.name = self.names
         return rho, rhoU, rhoE
+
+    def getBCFields(self):
+        return self.p, self.T, self.U
 
     def initFields(self, t):
         self.p = IOField.read('p', self.mesh, t)
@@ -166,10 +169,14 @@ class RCF(Solver):
         rhoUN = Field(self.names[1], rhoUI, self.dimensions[1])
         rhoEN = Field(self.names[2], rhoEI, self.dimensions[2])
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
-        U = CellField('U', UN.field, self.U.dimensions, self.U.boundary, ghost=True)
-        T = CellField('T', TN.field, self.T.dimensions, self.T.boundary, ghost=True)
-        p = CellField('p', pN.field, self.p.dimensions, self.p.boundary, ghost=True)
-        return self.conservative(U, T, p)
+        self.U.phi.setInternalField(UN.field)
+        self.T.phi.setInternalField(TN.field)
+        self.p.phi.setInternalField(pN.field)
+        return self.conservative(self.U, self.T, self.p)
+        #U = CellField('U', UN.field, self.U.dimensions, self.U.boundary, ghost=True)
+        #T = CellField('T', TN.field, self.T.dimensions, self.T.boundary, ghost=True)
+        #p = CellField('p', pN.field, self.p.dimensions, self.p.boundary, ghost=True)
+        #return self.conservative(U, T, p)
     
 if __name__ == "__main__":
     if len(sys.argv) > 2:

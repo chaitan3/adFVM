@@ -25,16 +25,17 @@ class Solver(object):
             setattr(self, key, fullConfig[key])
 
         self.mesh = Mesh.create(case)
-        self.timeIntegrator = globals()[self.timeIntegrator]
-        self.padField = PadFieldOp(self)
-        self.gradPadField = gradPadFieldOp(self)
         Field.setSolver(self)
+
+        self.timeIntegrator = globals()[self.timeIntegrator]
+        self.padField = PadFieldOp(self.mesh)
+        self.gradPadField = gradPadFieldOp(self.mesh)
 
     def compile(self):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         start = time.time()
 
-        self.dt = T.shared(config.precision(1.))
+        self.dt = ad.scalar()
 
         #paddedStackedFields = ad.matrix()
         #paddedStackedFields.tag.test_value = np.random.rand(self.mesh.paddedMesh.origMesh.nCells, 5).astype(config.precision)
@@ -45,14 +46,13 @@ class Solver(object):
 
         stackedFields = ad.matrix()
         newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
-        self.forward = self.mesh.function([stackedFields], [newStackedFields, self.dtc, self.local, self.remote])
+        self.forward = self.function([stackedFields, self.dt], [newStackedFields, self.dtc, self.local, self.remote])
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
             #paddedGradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), paddedStackedFields)
             #self.gradient = T.function([paddedStackedFields, stackedAdjointFields], paddedGradient)
             gradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields)
-            self.gradient = self.mesh.function([stackedFields, stackedAdjointFields], gradient)
-
+            self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], gradient)
         end = time.time()
         pprint('Time for compilation:', end-start)
         pprint()
@@ -88,9 +88,7 @@ class Solver(object):
         dts = dt
         timeIndex = 0
         if isinstance(dts, np.ndarray):
-            self.dt.set_value(config.precision(dts[timeIndex]))
-        else:
-            self.dt.set_value(config.precision(dts))
+            dt = dts[timeIndex]
         stackedFields = self.stackFields(fields, np)
         
         timeSteps = []
@@ -118,7 +116,7 @@ class Solver(object):
 
             pprint('Time step', timeIndex)
             #stackedFields, dtc = self.forward(stackedFields)
-            stackedFields, dtc, local, remote = self.forward(stackedFields)
+            stackedFields, dtc, local, remote = self.forward(stackedFields, dt)
             #print local.shape, local.dtype, local, np.abs(local).max(), np.abs(local).min()
             #print remote.shape, remote.dtype, remote, np.abs(remote).max(), np.abs(remote).min()
 
@@ -147,7 +145,6 @@ class Solver(object):
             pprint('objective: ', parallel.sum(result))
             
             result += objective(stackedFields)
-            dt = self.dt.get_value()
             timeSteps.append([t, dt])
             if mode == 'forward':
                 solutions.append(stackedFields)
@@ -162,15 +159,68 @@ class Solver(object):
             # compute dt for next time step
             dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
             if isinstance(dts, np.ndarray):
-                self.dt.set_value(config.precision(dts[timeIndex]))
-            else:
-                self.dt.set_value(config.precision(dt))
+                dt = dts[timeIndex]
 
         if mode == 'forward':
             return solutions
         if (timeIndex % writeInterval != 0) and (timeIndex >= writeInterval):
             self.writeFields(fields, t)
         return timeSteps, result
+
+    def function(self, inputs, outputs):
+        return SolverFunction(inputs, outputs, self)
+
+class SolverFunction(object):
+    def __init__(self, inputs, outputs, solver):
+        logger.info('compiling function')
+        self.symbolic = []
+        self.values = []
+        mesh = solver.mesh
+        self.populate_mesh(self.symbolic, mesh, mesh.paddedMesh, mesh.origPatches)
+        self.populate_mesh(self.values, mesh.origMesh, mesh.paddedMesh.origMesh, mesh.origPatches)
+        self.populate_BCs(self.symbolic, solver, 0)
+        self.populate_BCs(self.values, solver, 1)
+        self.generate(inputs, outputs)
+
+    def populate_mesh(self, inputs, mesh, paddedMesh, origPatches):
+        attrs = Mesh.fields + Mesh.constants
+        for attr in attrs:
+            if attr == 'boundary':
+                for patchID in origPatches:
+                    patch = getattr(mesh, attr)[patchID]
+                    inputs.append(patch['startFace'])
+                    inputs.append(patch['nFaces'])
+            else:
+                inputs.append(getattr(mesh, attr))
+                if parallel.nProcessors > 1:
+                    inputs.append(getattr(paddedMesh, attr))
+
+    def populate_BCs(self, inputs, solver, index):
+        fields = solver.getBCFields()
+        for phi in fields:
+            if hasattr(phi, 'phi'):
+                for patchID in phi.phi.BC:
+                    inputs.extend([value[index] for value in phi.phi.BC[patchID].inputs])
+
+    def generate(self, inputs, outputs):
+        inputs.extend(self.symbolic)
+        if parallel.rank == 0:
+            fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
+            #T.printing.pydotprint(fn, outfile='graph.png')
+            #import cPickle
+            #pkl = cPickle.dumps(fn)
+            #print len(pkl)
+        else:
+            fn = None
+        if parallel.nProcessors > 1:
+            fn = parallel.mpi.bcast(fn, root=0)
+        self.fn = fn
+
+    def __call__(self, *inputs):
+        logger.info('running function')
+        inputs = list(inputs)
+        inputs.extend(self.values)
+        return self.fn(*inputs)
 
 def euler(equation, boundary, stackedFields, solver):
     paddedStackedFields = solver.padField(stackedFields)
@@ -285,9 +335,9 @@ def implicit(equation, boundary, fields, garbage):
 class PadFieldOp(T.Op):
     __props__ = ()
 
-    def __init__(self, solver):
-        self.solver = solver
-        self.mesh = solver.mesh
+    def __init__(self, mesh):
+        #self.mesh = mesh
+        pass
 
     def make_node(self, x):
         assert hasattr(self, '_props')
@@ -297,7 +347,7 @@ class PadFieldOp(T.Op):
     def perform(self, node, inputs, output_storage):
         #assert inputs[0].flags['C_CONTIGUOUS'] == True
         #output_storage[0][0] = parallel.getRemoteCells(inputs[0], self.mesh)
-        output_storage[0][0] = parallel.getRemoteCells(np.ascontiguousarray(inputs[0]), self.mesh)
+        output_storage[0][0] = parallel.getRemoteCells(np.ascontiguousarray(inputs[0]), Field.mesh)
 
     def grad(self, inputs, output_grads):
         return [self.solver.gradPadField(output_grads[0])]
@@ -305,9 +355,9 @@ class PadFieldOp(T.Op):
 class gradPadFieldOp(T.Op):
     __props__ = ()
 
-    def __init__(self, solver):
-        self.solver = solver
-        self.mesh = solver.mesh
+    def __init__(self, mesh):
+        #self.mesh = mesh
+        pass
 
     def make_node(self, x):
         assert hasattr(self, '_props')
@@ -317,4 +367,4 @@ class gradPadFieldOp(T.Op):
     def perform(self, node, inputs, output_storage):
         #assert inputs[0].flags['C_CONTIGUOUS'] == True
         #output_storage[0][0] = parallel.getAdjointRemoteCells(inputs[0], self.mesh)
-        output_storage[0][0] = parallel.getAdjointRemoteCells(np.ascontiguousarray(inputs[0]), self.mesh)
+        output_storage[0][0] = parallel.getAdjointRemoteCells(np.ascontiguousarray(inputs[0]), Field.mesh)

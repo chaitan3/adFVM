@@ -23,6 +23,7 @@ class Mesh(object):
               'areas', 'volumes',
               'weights', 'deltas', 'normals',
               'cellCentres', 'faceCentres',
+              'sumOp',
               'boundary']
 
     def __init__(self):
@@ -59,8 +60,8 @@ class Mesh(object):
         self.points = self.read(meshDir + 'points', np.float64).astype(config.precision)
         self.owner = self.read(meshDir + 'owner', np.int32).ravel()
         self.neighbour = self.read(meshDir + 'neighbour', np.int32).ravel()
-        self.boundary, self.localPatches, self.remotePatches = self.readBoundary(meshDir + 'boundary')
-        self.origPatches = copy.copy(self.localPatches)
+        self.boundary, localPatches, self.remotePatches = self.readBoundary(meshDir + 'boundary')
+        self.origPatches = copy.copy(localPatches)
         self.origPatches.sort()
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
@@ -248,7 +249,8 @@ class Mesh(object):
             sumOp = (correction.tocsr())*sumOp
         #mesh.repeat = T.shared(np.array(repeat, dtype=np.int32).T)
 
-        return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
+        #return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
+        return sumOp
 
     def getDefaultBoundary(self):
         logger.info('generated default boundary')
@@ -594,60 +596,23 @@ class Mesh(object):
             setattr(self, attr, ad.iscalar())
         for attr in Mesh.fields:
             value = getattr(self, attr) 
-            if attr == 'boundary': continue
-            if attr in ['owner', 'neighbour']:
+            if attr == 'boundary': 
+                continue
+            elif attr in ['owner', 'neighbour']:
                 setattr(self, attr, ad.ivector())
+            elif attr == 'sumOp':
+                setattr(self, attr, adsparse.csr_matrix(dtype=config.dtype))
+            elif value.shape[1] == 1:
+                setattr(self, attr, ad.bcmatrix())
             else:
-                if value.shape[1] == 1:
-                    setattr(self, attr, ad.bcmatrix())
-                else:
-                    setattr(self, attr, ad.matrix())
+                setattr(self, attr, ad.matrix())
+
         if type(self.boundary) == type({}):
             for patchID in self.boundary:
                 patch = self.boundary[patchID]
                 patch['startFace'] = ad.iscalar()
                 patch['nFaces'] = ad.iscalar()
 
-    def function(self, inputs, outputs):
-        return MeshFunction(inputs, outputs, self)
-
-class MeshFunction:
-    def getInputs(self, inputs, mesh, paddedMesh):
-        for attr in self.inputs:
-            if attr == 'boundary':
-                for patchID in self.origPatches:
-                    patch = getattr(mesh, attr)[patchID]
-                    inputs.append(patch['startFace'])
-                    inputs.append(patch['nFaces'])
-            else:
-                inputs.append(getattr(mesh, attr))
-                if parallel.nProcessors > 1:
-                    inputs.append(getattr(paddedMesh, attr))
-
-    def __init__(self, inputs, outputs, mesh):
-        logger.info('compiling function')
-        self.mesh = mesh.origMesh
-        self.paddedMesh = mesh.paddedMesh.origMesh
-        self.origPatches = mesh.origPatches
-        self.inputs = Mesh.fields + Mesh.constants
-        self.getInputs(inputs, mesh, mesh.paddedMesh)
-        if parallel.rank == 0:
-            fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
-            #T.printing.pydotprint(fn, outfile='graph.png')
-            import cPickle
-            pkl = cPickle.dumps(fn)
-        else:
-            fn = None
-        if parallel.nProcessors > 1:
-            fn = parallel.mpi.bcast(fn, root=0)
-        self.fn = fn
-
-    def __call__(self, *inputs):
-        logger.info('running function')
-        inputs = list(inputs)
-        self.getInputs(inputs, self.mesh, self.paddedMesh)
-        return self.fn(*inputs)
- 
 def removeCruft(content, keepHeader=False):
     # remove comments and newlines
     content = re.sub(re.compile('/\*.*\*/',re.DOTALL ) , '' , content)
