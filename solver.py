@@ -220,8 +220,8 @@ class SolverFunction(object):
                 pprint('Saving pickle file', pklFile)
                 f = open(pklFile, 'w').write(pkl)
             end = time.time()
-            pprint('Compilation time: {0:.2f}'.format(end-start))
             pprint('Module size: {0:.2f}'.format(float(len(pkl))/(1024*1024)))
+            pprint('Compilation time: {0:.2f}'.format(end-start))
         else:
             pkl = None
 
