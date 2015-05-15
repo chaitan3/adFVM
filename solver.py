@@ -47,14 +47,14 @@ class Solver(object):
 
         stackedFields = ad.matrix()
         newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
-        self.forward = self.function([stackedFields, self.dt], [newStackedFields, self.dtc, self.local, self.remote])
+        self.forward = self.function([stackedFields, self.dt], [newStackedFields, self.dtc, self.local, self.remote], 'forward')
         pprint()
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
             #paddedGradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), paddedStackedFields)
             #self.gradient = T.function([paddedStackedFields, stackedAdjointFields], paddedGradient)
             gradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields)
-            self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], gradient)
+            self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], gradient, 'gradient')
 
     def stackFields(self, fields, mod): 
         return mod.concatenate([phi.field for phi in fields], axis=1)
@@ -166,12 +166,12 @@ class Solver(object):
             self.writeFields(fields, t)
         return timeSteps, result
 
-    def function(self, inputs, outputs):
-        return SolverFunction(inputs, outputs, self)
+    def function(self, inputs, outputs, name):
+        return SolverFunction(inputs, outputs, self, name)
 
 class SolverFunction(object):
     counter = 0
-    def __init__(self, inputs, outputs, solver):
+    def __init__(self, inputs, outputs, solver, name):
         logger.info('compiling function')
         self.symbolic = []
         self.values = []
@@ -180,7 +180,7 @@ class SolverFunction(object):
         self.populate_mesh(self.values, mesh.origMesh, mesh.paddedMesh.origMesh, mesh.origPatches)
         self.populate_BCs(self.symbolic, solver, 0)
         self.populate_BCs(self.values, solver, 1)
-        self.generate(inputs, outputs, solver.mesh.case)
+        self.generate(inputs, outputs, solver.mesh.case, name)
 
     def populate_mesh(self, inputs, mesh, paddedMesh, origPatches):
         attrs = Mesh.fields + Mesh.constants
@@ -202,9 +202,9 @@ class SolverFunction(object):
                 for patchID in phi.phi.BC:
                     inputs.extend([value[index] for value in phi.phi.BC[patchID].inputs])
 
-    def generate(self, inputs, outputs, caseDir):
+    def generate(self, inputs, outputs, caseDir, name):
         SolverFunction.counter += 1
-        pklFile = caseDir + 'func_{0}.pkl'.format(SolverFunction.counter)
+        pklFile = caseDir + 'func_{0}.pkl'.format(name)
         inputs.extend(self.symbolic)
 
         fn = None

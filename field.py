@@ -230,7 +230,7 @@ class IOField(Field):
             self.phi = CellField(self.name, X, self.dimensions, self.boundary, ghost=True)
             Y = self.phi.field
             pprint('Compiling field', self.name)
-            func = self.solver.function([X], Y)
+            func = self.solver.function([X], Y, self.name)
 
         self.field = func(self.field)
         return func
