@@ -19,7 +19,9 @@ home = '~'
 os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}'.format(project, device, dtype)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
+# pickling
 os.environ['THEANO_FLAGS'] += ',reoptimize_unpickled_function=False'
+allowUnpicklingFunction = True
 # profiling, gc, cleanup
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'

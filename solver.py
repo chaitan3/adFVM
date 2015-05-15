@@ -209,7 +209,7 @@ class SolverFunction(object):
 
         if parallel.rank == 0:
             start = time.time()
-            if os.path.exists(pklFile):
+            if os.path.exists(pklFile) and config.allowUnpicklingFunction:
                 pkl = open(pklFile).read()
                 fn = pickle.loads(pkl)
                 pprint('Loading pickled file', pklFile)
