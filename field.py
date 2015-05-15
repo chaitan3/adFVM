@@ -225,7 +225,7 @@ class IOField(Field):
         logger.debug('completing field {0}'.format(self.name))
         if func is None:
             X = ad.matrix()
-            X.tag.test_value = self.field
+            #X.tag.test_value = self.field
             # CellField for later use
             self.phi = CellField(self.name, X, self.dimensions, self.boundary, ghost=True)
             Y = self.phi.field

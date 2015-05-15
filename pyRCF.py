@@ -186,7 +186,7 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    #solver = RCF(case, CFL=0.5)
-    #solver.run(startTime=time, dt=1e-9, nSteps=60000, writeInterval=1000)
-    solver = RCF(case, CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
-    solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=1000)
+    solver = RCF(case, CFL=0.5)
+    solver.run(startTime=time, dt=1e-9, nSteps=60000, writeInterval=1000)
+    #solver = RCF(case, CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
+    #solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=1000)
