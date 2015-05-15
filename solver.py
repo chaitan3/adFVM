@@ -207,32 +207,37 @@ class SolverFunction(object):
         pklFile = caseDir + 'func_{0}.pkl'.format(SolverFunction.counter)
         inputs.extend(self.symbolic)
 
+        fn = None
         if parallel.rank == 0:
             start = time.time()
             if os.path.exists(pklFile) and config.allowUnpicklingFunction:
-                pkl = open(pklFile).read()
-                fn = pickle.loads(pkl)
                 pprint('Loading pickled file', pklFile)
+                pkl = open(pklFile).read()
             else:
                 fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
                 #T.printing.pydotprint(fn, outfile='graph.png')
                 pkl = pickle.dumps(fn)
-                f = open(pklFile, 'w')
-                f.write(pkl)
-                f.close()
                 pprint('Saving pickle file', pklFile)
+                f = open(pklFile, 'w').write(pkl)
             end = time.time()
             pprint('Compilation time: {0:.2f}'.format(end-start))
-            pprint('Compilation size: {0:.2f}'.format(float(len(pkl))/(1024*1024)))
+            pprint('Module size: {0:.2f}'.format(float(len(pkl))/(1024*1024)))
         else:
-            fn = None
+            pkl = None
 
         if parallel.nProcessors > 1:
             start = time.time()
-            fn = parallel.mpi.bcast(fn, root=0)
+            pkl = parallel.mpi.bcast(pkl, root=0)
             parallel.mpi.Barrier()
             end = time.time()
             pprint('Transfer time: {0:.2f}'.format(end-start))
+
+        start = time.time()
+        if fn is None:
+            fn = pickle.loads(pkl)
+        parallel.mpi.Barrier()
+        end = time.time()
+        pprint('Loading time: {0:.2f}'.format(end-start))
 
         self.fn = fn
 

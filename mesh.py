@@ -94,8 +94,8 @@ class Mesh(object):
 
         end = time.time()
 
-        pprint('nCells: ', parallel.sum(self.origMesh.nInternalCells))
-        pprint('nFaces: ', parallel.sum(self.origMesh.nFaces))
+        pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
+        pprint('nFaces:', parallel.sum(self.origMesh.nFaces))
         pprint('Running on {0} processors'.format(parallel.nProcessors))
         pprint('Time for reading mesh:', end-start)
         pprint()

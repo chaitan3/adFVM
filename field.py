@@ -229,6 +229,7 @@ class IOField(Field):
             # CellField for later use
             self.phi = CellField(self.name, X, self.dimensions, self.boundary, ghost=True)
             Y = self.phi.field
+            pprint('Compiling field', self.name)
             func = self.solver.function([X], Y)
 
         self.field = func(self.field)
