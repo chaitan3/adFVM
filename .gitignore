@@ -3,6 +3,7 @@
 *.output
 *.avi
 *.txt
+*.pkl
 
 *.o
 *.out
