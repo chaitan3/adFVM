@@ -23,8 +23,8 @@ os.environ['THEANO_FLAGS'] += ',reoptimize_unpickled_function=False'
 # profiling, gc, cleanup
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
-os.environ['THEANO_FLAGS'] += ',exception_verbosity=high'
-os.environ['THEANO_FLAGS'] += ',profile=True'
+#os.environ['THEANO_FLAGS'] += ',exception_verbosity=high'
+#os.environ['THEANO_FLAGS'] += ',profile=True'
 #os.environ['THEANO_FLAGS'] += ',profile_memory=True'
 # openmp
 #os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'

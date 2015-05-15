@@ -1,5 +1,7 @@
 import numpy as np
 import time
+import cPickle as pickle
+import os
 
 import config, parallel
 from config import ad, T
@@ -168,6 +170,7 @@ class Solver(object):
         return SolverFunction(inputs, outputs, self)
 
 class SolverFunction(object):
+    counter = 0
     def __init__(self, inputs, outputs, solver):
         logger.info('compiling function')
         self.symbolic = []
@@ -177,7 +180,7 @@ class SolverFunction(object):
         self.populate_mesh(self.values, mesh.origMesh, mesh.paddedMesh.origMesh, mesh.origPatches)
         self.populate_BCs(self.symbolic, solver, 0)
         self.populate_BCs(self.values, solver, 1)
-        self.generate(inputs, outputs)
+        self.generate(inputs, outputs, solver.mesh.case)
 
     def populate_mesh(self, inputs, mesh, paddedMesh, origPatches):
         attrs = Mesh.fields + Mesh.constants
@@ -199,21 +202,38 @@ class SolverFunction(object):
                 for patchID in phi.phi.BC:
                     inputs.extend([value[index] for value in phi.phi.BC[patchID].inputs])
 
-    def generate(self, inputs, outputs):
+    def generate(self, inputs, outputs, caseDir):
+        SolverFunction.counter += 1
+        pklFile = caseDir + 'func_{0}.pkl'.format(SolverFunction.counter)
         inputs.extend(self.symbolic)
+
         if parallel.rank == 0:
             start = time.time()
-            fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
-            #T.printing.pydotprint(fn, outfile='graph.png')
-            import cPickle; pkl = cPickle.dumps(fn)
-
+            if os.path.exists(pklFile):
+                pkl = open(pklFile).read()
+                fn = pickle.loads(pkl)
+                pprint('Loading pickled file', pklFile)
+            else:
+                fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
+                #T.printing.pydotprint(fn, outfile='graph.png')
+                pkl = pickle.dumps(fn)
+                f = open(pklFile, 'w')
+                f.write(pkl)
+                f.close()
+                pprint('Saving pickle file', pklFile)
             end = time.time()
             pprint('Compilation time: {0:.2f}'.format(end-start))
             pprint('Compilation size: {0:.2f}'.format(float(len(pkl))/(1024*1024)))
         else:
             fn = None
+
         if parallel.nProcessors > 1:
+            start = time.time()
             fn = parallel.mpi.bcast(fn, root=0)
+            parallel.mpi.Barrier()
+            end = time.time()
+            pprint('Transfer time: {0:.2f}'.format(end-start))
+
         self.fn = fn
 
     def __call__(self, *inputs):
