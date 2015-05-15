@@ -402,8 +402,8 @@ class Mesh(object):
             extraRemoteCells = extraGhostCells[extraIndex]
             # rearrange extraGhostCells 
             extraGhostCells = np.concatenate((extraGhostCells[np.invert(extraIndex)], extraRemoteCells))
-            if len(extraRemoteCells) > 0:
-                print 'Extra remote ghost cells:', patchID, len(extraRemoteCells)
+            #if len(extraRemoteCells) > 0:
+            #    print 'Extra remote ghost cells:', patchID, len(extraRemoteCells)
 
             boundaryIndex = np.in1d(neighbour, extraGhostCells)
             # swap extra boundary faces whose owner is wrong
