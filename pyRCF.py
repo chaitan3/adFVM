@@ -92,7 +92,6 @@ class RCF(Solver):
         logger.info('computing RHS/LHS')
         mesh = self.mesh
         paddedMesh = mesh.paddedMesh
-        gamma = self.gamma
 
         # phi is in paddedMesh form, needs to be copied to regular
         # phi from phiPaddedMesh
@@ -131,13 +130,11 @@ class RCF(Solver):
         rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
         rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
 
-        rhoFlux, rhoUFlux, rhoEFlux, aF, UnF = self.riemannSolver(mesh, gamma, \
+        rhoFlux, rhoUFlux, rhoEFlux, aF, UnF = self.riemannSolver(mesh, self.gamma, \
                 pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF)
 
                 # TODO: change reconstruction of gradient on face
-        gradUT = gradU.transpose()
-        gradUTF = central(gradUT, mesh)
 
         # viscous part
         #pF = 0.5*(pLF + pRF)
@@ -145,7 +142,9 @@ class RCF(Solver):
         TF = 0.5*(TLF + TRF)
         mu = self.mu(TF)
         kappa = self.kappa(mu, TF)
+        gradUTF = central(gradU.transpose(), mesh)
         sigmaF = (snGrad(U) + gradUTF.dotN() - (2./3)*mesh.Normals*gradUTF.trace())*mu
+        sigmadotUF = sigmaF.dot(UF)
         # TODO: check laplacian and viscous terms
 
         # source terms
@@ -158,7 +157,7 @@ class RCF(Solver):
         return [div(rhoFlux) - source[0],
                 #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
                 div(rhoUFlux) - div(sigmaF) - source[1],
-                div(rhoEFlux) - (laplacian(T, kappa) + div(sigmaF.dot(UF))) - source[2]]
+                div(rhoEFlux) - (laplacian(T, kappa) + div(sigmadotUF) - source[2]]
 
     def boundary(self, rhoI, rhoUI, rhoEI):
         logger.info('correcting boundary')

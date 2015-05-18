@@ -4,7 +4,7 @@ from field import Field
 
 def scalarDissipation(mesh, gamma, pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF):
-    # no TVD_dual for c in parallel
+    # not gonna WORK
     cP = (gamma*pP/rhoP).sqrt
     c = CellField.getOrigField(cP)
     gradC = grad(central(cP, paddedMesh), ghost=True)
