@@ -118,6 +118,8 @@ class Solver(object):
             stackedFields, dtc, local, remote = self.forward(stackedFields, dt)
             #print local.shape, local.dtype, local, np.abs(local).max(), np.abs(local).min()
             #print remote.shape, remote.dtype, remote, np.abs(remote).max(), np.abs(remote).min()
+            print local
+            print remote
 
             #lStart = 0
             #rStart = 0

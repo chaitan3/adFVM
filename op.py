@@ -8,15 +8,22 @@ from field import Field, CellField
 
 logger = config.Logger(__name__)
 
-def internal_sum(phi, mesh):
+def internal_sum(phi, mesh, absolute=False):
     if config.device == "cpu":
-        x = (adsparse.basic.dot(mesh.sumOp, (phi.field * mesh.areas)))/mesh.volumes
+        if not absolute:
+            sumOp = mesh.sumOp
+        else:
+            sumOp = adsparse.basic.sp_ones_like(mesh.sumOp)
+        x = (adsparse.basic.dot(sumOp, (phi.field * mesh.areas)))/mesh.volumes
     else:
         phiF = phi.field*mesh.areas
         dimensions = (np.product(phi.dimensions),)
         x = ad.bcalloc(config.precision(0.), (mesh.nInternalCells+1,) + dimensions)
         x = ad.inc_subtensor(x[mesh.owner], phiF)
-        x = ad.inc_subtensor(x[mesh.neighbour[:mesh.nInternalFaces]], -phiF[:mesh.nInternalFaces])
+        if not absolute:
+            x = ad.inc_subtensor(x[mesh.neighbour[:mesh.nInternalFaces]], -phiF[:mesh.nInternalFaces])
+        else:
+            x = ad.inc_subtensor(x[mesh.neighbour[:mesh.nInternalFaces]], phiF[:mesh.nInternalFaces])
         x = ad.set_subtensor(x[mesh.repeat[0]], x[mesh.repeat].sum(axis=0))
         x = x[:-1]/mesh.volumes
 
@@ -85,6 +92,7 @@ def laplacian(phi, DT):
 
 def ddt(phi, dt):
     logger.info('ddt of {0}'.format(phi.name))
+    raise Exception("Deprecated")
     #return Field('ddt' + phi.name, (phi.getInternalField()-phi.getInternalField())/dt, phi.dimensions)
     return Field('ddt' + phi.name, phi.getInternalField()*0, phi.dimensions)
     #return Field('ddt' + phi.name, (phi.getInternalField()-phi.old.getInternalField())/dt, phi.dimensions)
