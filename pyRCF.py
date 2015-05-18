@@ -131,7 +131,7 @@ class RCF(Solver):
         rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
         rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
 
-        rhoFlux, rhoUFlux, rhoEFlux, aF, UnF = self.riemannSolver( \
+        rhoFlux, rhoUFlux, rhoEFlux, aF, UnF = self.riemannSolver(mesh, gamma, \
                 pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF)
 

@@ -1,5 +1,8 @@
 
-def scalarDissipation(pLF, pRF, TLF, TRF, ULF, URF, \
+from config import ad
+from field import Field
+
+def scalarDissipation(mesh, gamma, pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF):
     # no TVD_dual for c in parallel
     cP = (gamma*pP/rhoP).sqrt
@@ -21,7 +24,7 @@ def scalarDissipation(pLF, pRF, TLF, TRF, ULF, URF, \
     return rhoFlux, rhoUFlux, rhoEFlux, aF, UnF
 
 
-def eulerRoe(pLF, pRF, TLF, TRF, ULF, URF, \
+def eulerRoe(mesh, gamma, pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF):
 
     rhoUnLF, rhoUnRF = rhoLF*ULF.dotN(), rhoRF*URF.dotN()
@@ -72,7 +75,7 @@ def eulerRoe(pLF, pRF, TLF, TRF, ULF, URF, \
     return rhoFlux, rhoUFlux, rhoEFlux, aF, UnF
 
 
-def eulerHLLC(pLF, pRF, TLF, TRF, ULF, URF, \
+def eulerHLLC(mesh, gamma, pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF):
 
     UnLF, UnRF = ULF.dotN(), URF.dotN()

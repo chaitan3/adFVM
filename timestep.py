@@ -1,3 +1,7 @@
+import numpy as np
+
+from config import ad
+from field import CellField
 
 def euler(equation, boundary, stackedFields, solver):
     paddedStackedFields = solver.padField(stackedFields)
