@@ -112,34 +112,35 @@ class turbulentInletVelocity(BoundaryCondition):
         #self.value[:] = self.fixedValue
         self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.Umean)
 
-class totalPressure(BoundaryCondition):
-    def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
-        self.p0 = extractField(self.patch['p0'], self.nFaces, (1,))
-        self.gamma = self.patch['gamma']
-        self.patch.pop('value', None)
-        self.patch['value'] = 'uniform (0 0 0)'
-
-    def update(self):
-        logger.debug('totalPressure BC for {0}'.format(self.patchID))
-        #self.value[:] = self.fixedValue
-        T = self.solver.T.field[self.internalIndices]
-        U = self.solver.U.field[self.internalIndices]
-        R = solver.R
-        M = 0.0289
-        c = (self.gamma*R*T/M)**0.5
-        Ma = utils.norm(U, axis=1)/c
-        p = p0/(1+(self.gamma-1)*0.5*Ma**2)**(self.gamma/(self.gamma-1))
-        self.field[self.cellStartFace:self.cellEndFace] = p
-
-class pressureInletOutletVelocity(BoundaryCondition):
-    def update(self):
-        logger.debug('pressureInletOutlletVelocity BC for {0}'.format(self.patchID))
-        phi = self.solver.flux.field[self.startFace, self.endFace]
-        n = self.mesh.normals[self.startFace, self.endFace]
-        self.field[self.cellStartFace:self.cellEndFace] = phi*n
+#class totalPressure(BoundaryCondition):
+#    def __init__(self, phi, patchID):
+#        super(self.__class__, self).__init__(phi, patchID)
+#        self.p0 = extractField(self.patch['p0'], self.nFaces, (1,))
+#        self.gamma = self.patch['gamma']
+#        self.patch.pop('value', None)
+#        self.patch['value'] = 'uniform (0 0 0)'
+#
+#    def update(self):
+#        logger.debug('totalPressure BC for {0}'.format(self.patchID))
+#        #self.value[:] = self.fixedValue
+#        T = self.solver.T.field[self.internalIndices]
+#        U = self.solver.U.field[self.internalIndices]
+#        R = solver.R
+#        M = 0.0289
+#        c = (self.gamma*R*T/M)**0.5
+#        Ma = utils.norm(U, axis=1)/c
+#        p = p0/(1+(self.gamma-1)*0.5*Ma**2)**(self.gamma/(self.gamma-1))
+#        self.field[self.cellStartFace:self.cellEndFace] = p
+#
+#class pressureInletOutletVelocity(BoundaryCondition):
+#    def update(self):
+#        logger.debug('pressureInletOutlletVelocity BC for {0}'.format(self.patchID))
+#        phi = self.solver.flux.field[self.startFace, self.endFace]
+#        n = self.mesh.normals[self.startFace, self.endFace]
+#        self.field[self.cellStartFace:self.cellEndFace] = phi*n
 
 slip = symmetryPlane
+
 empty = zeroGradient
 inletOutlet = zeroGradient
     

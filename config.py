@@ -10,7 +10,7 @@ precision = np.float64
 
 # theano
 import os
-import sys; sys.setrecursionlimit(100000)
+#import sys; sys.setrecursionlimit(100000)
 project = 'adFVM'
 dtype = str(np.zeros(1, precision).dtype)
 home = '~'
@@ -21,7 +21,7 @@ os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
 # pickling
 os.environ['THEANO_FLAGS'] += ',reoptimize_unpickled_function=False'
-allowUnpicklingFunction = False
+allowUnpicklingFunction = True
 # profiling, gc, cleanup
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
@@ -62,7 +62,7 @@ def norm(a, axis, **kwargs):
         #return np.linalg.norm(a, axis=axis, keepdims=True)
         return np.linalg.norm(a, axis=axis).reshape((-1,1))
     except:
-        return (np.einsum('ij,ij->i', a, a)**0.5).reshape((-1,1))
+        return np.sqrt(np.einsum('ij,ij->i', a, a)).reshape((-1,1))
 
 # LOGGING
 

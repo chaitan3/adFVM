@@ -48,14 +48,16 @@ class Solver(object):
 
         stackedFields = ad.matrix()
         newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
-        self.forward = self.function([stackedFields, self.dt], [newStackedFields, self.dtc, self.local, self.remote], 'forward')
+        self.forward = self.function([stackedFields, self.dt], \
+                       [newStackedFields, self.dtc, self.local, self.remote], 'forward')
         pprint()
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
             #paddedGradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), paddedStackedFields)
             #self.gradient = T.function([paddedStackedFields, stackedAdjointFields], paddedGradient)
             gradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields)
-            self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], gradient, 'gradient')
+            self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], \
+                            gradient, 'gradient')
 
     def stackFields(self, fields, mod): 
         return mod.concatenate([phi.field for phi in fields], axis=1)
