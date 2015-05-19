@@ -154,10 +154,10 @@ class RCF(Solver):
         aF = UnF.abs() + aF
         self.dtc = 2*self.CFL/internal_sum(aF, mesh, absolute=True)
         
-        return [div(rhoFlux) - source[0],
+        return [div(rhoFlux) - source[0], \
                 #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
-                div(rhoUFlux) - div(sigmaF) - source[1],
-                div(rhoEFlux) - (laplacian(T, kappa) + div(sigmadotUF) - source[2]]
+                div(rhoUFlux) - div(sigmaF) - source[1], \
+                div(rhoEFlux) - laplacian(T, kappa) + div(sigmadotUF) - source[2]]
 
     def boundary(self, rhoI, rhoUI, rhoEI):
         logger.info('correcting boundary')
@@ -178,7 +178,7 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    #solver = RCF(case, CFL=0.5)
-    #solver.run(startTime=time, dt=1e-9, nSteps=60000, writeInterval=200)
-    solver = RCF(case, CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
-    solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=200)
+    solver = RCF(case, CFL=0.5)
+    solver.run(startTime=time, dt=1e-9, nSteps=20000, writeInterval=500)
+    #solver = RCF(case, CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
+    #solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=200)
