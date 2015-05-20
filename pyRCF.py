@@ -10,7 +10,7 @@ from parallel import pprint
 from field import Field, CellField, IOField
 from op import  div, snGrad, grad, laplacian, internal_sum
 from solver import Solver
-from interp import central, TVD_dual, TVD2_dual
+from interp import central, TVD_dual
 import riemann
 
 logger = config.Logger(__name__)
@@ -126,9 +126,9 @@ class RCF(Solver):
         UB.grad, TB.grad, pB.grad = gradU, gradT, gradp
 
         # face reconstruction
-        ULF, URF = TVD2_dual(U, gradU)
-        TLF, TRF = TVD2_dual(T, gradT)
-        pLF, pRF = TVD2_dual(p, gradp)
+        ULF, URF = TVD_dual(U, gradU)
+        TLF, TRF = TVD_dual(T, gradT)
+        pLF, pRF = TVD_dual(p, gradp)
         rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
         rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
 
