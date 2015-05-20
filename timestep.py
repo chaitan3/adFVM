@@ -3,11 +3,14 @@ import numpy as np
 from config import ad
 from field import CellField
 
+createFields = lambda internalFields, solver : [Field(solver.names[index], phi, solver.dimensions[index]) for index, phi in enumerate(internalFields)]
+
 def euler(equation, boundary, stackedFields, solver):
     paddedStackedFields = solver.padField(stackedFields)
     paddedFields = solver.unstackFields(paddedStackedFields, CellField)
     LHS = equation(*paddedFields)
     internalFields = [(paddedFields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(paddedFields))]
+    internalFields = createFields(internalFields, solver)
     newFields = boundary(*internalFields)
     return solver.stackFields(newFields, ad)
 
@@ -17,6 +20,7 @@ def RK2(equation, boundary, stackedFields, solver):
     paddedFields0 = solver.unstackFields(paddedStackedFields0, CellField)
     LHS = equation(*paddedFields0)
     internalFields = [(paddedFields0[index].getInternalField() - LHS[index].field*solver.dt/2) for index in range(0, len(paddedFields0))]
+    internalFields = createFields(internalFields, solver)
     fields1 = boundary(*internalFields)
 
     paddedStackedFields1 = solver.padField(solver.stackFields(fields1, ad))
@@ -24,6 +28,7 @@ def RK2(equation, boundary, stackedFields, solver):
     LHS = equation(*paddedFields1)
     internalFields = [(paddedFields0[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(paddedFields0))]
 
+    internalFields = createFields(internalFields, solver)
     newFields = boundary(*internalFields)
     return solver.stackFields(newFields, ad)
 
@@ -35,6 +40,7 @@ def RK4(equation, boundary, stackedFields, solver):
         for termIndex in range(0, len(a)):
             for index in range(0, len(fields)):
                 internalFields[index] -= a[termIndex]*LHS[termIndex][index].field*solver.dt
+        internalFields = createFields(internalFields, solver)
         return boundary(*internalFields)
 
     def f(a, *LHS):
@@ -75,6 +81,7 @@ def SSPRK(equation, boundary, stackedFields, solver):
         for j in range(0, i+1):
             for index in range(0, nFields):
                 internalFields[index] += alpha[i,j]*fields[j][index].getInternalField()-beta[i,j]*LHS[j][index].field*solver.dt
+        internalFields = createFields(internalFields, solver)
         fields.append(boundary(*internalFields))
         
     return solver.stackFields(fields[-1], ad)

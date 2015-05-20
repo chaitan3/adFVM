@@ -64,26 +64,24 @@ class RCF(Solver):
         return rho
 
     def getBCFields(self):
-        return self.p, self.T, self.U
+        return self.U.phi, self.T.phi, self.p.phi
 
     def initFields(self, t):
+        # IO Fields, with phi attribute as a CellField
+        self.U = IOField.read('U', self.mesh, t)
         self.p = IOField.read('p', self.mesh, t)
         self.T = IOField.read('T', self.mesh, t)
-        self.U = IOField.read('U', self.mesh, t)
         if not hasattr(self, "pfunc"):
-            self.pfunc = self.Tfunc = self.Ufunc = None
-        self.pfunc = self.p.complete(self.pfunc)
-        self.Tfunc = self.T.complete(self.Tfunc)
+            self.Ufunc = self.Tfunc = self.Tfunc = None
         self.Ufunc = self.U.complete(self.Ufunc)
+        self.Tfunc = self.T.complete(self.Tfunc)
+        self.pfunc = self.p.complete(self.pfunc)
         return self.conservative(self.U, self.T, self.p)
     
     def writeFields(self, fields, t):
         for phi in fields:
             phi.write(t)
-        U, T, p = self.primitive(*fields)
-        self.U.field = U.field
-        self.T.field = T.field
-        self.p.field = p.field
+        self.U.field, self.T.field, self.p.field = self.primitive(*fields)
         self.U.write(t)
         self.T.write(t)
         self.p.write(t)
@@ -134,8 +132,6 @@ class RCF(Solver):
                 pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF)
 
-                # TODO: change reconstruction of gradient on face
-
         # viscous part
         #pF = 0.5*(pLF + pRF)
         UF = 0.5*(ULF + URF)
@@ -145,7 +141,6 @@ class RCF(Solver):
         gradUTF = central(gradU.transpose(), mesh)
         sigmaF = (snGrad(U) + gradUTF.dotN() - (2./3)*mesh.Normals*gradUTF.trace())*mu
         sigmadotUF = sigmaF.dot(UF)
-        # TODO: check laplacian and viscous terms
 
         # source terms
         source = self.source(self)
@@ -161,14 +156,12 @@ class RCF(Solver):
 
     def boundary(self, rhoI, rhoUI, rhoEI):
         logger.info('correcting boundary')
-        rhoN = Field(self.names[0], rhoI, self.dimensions[0])
-        rhoUN = Field(self.names[1], rhoUI, self.dimensions[1])
-        rhoEN = Field(self.names[2], rhoEI, self.dimensions[2])
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
-        self.U.phi.setInternalField(UN.field, reset=True)
-        self.T.phi.setInternalField(TN.field, reset=True)
-        self.p.phi.setInternalField(pN.field, reset=True)
-        return self.conservative(self.U.phi, self.T.phi, self.p.phi)
+        U, T, p = self.getBCFields()
+        U.setInternalField(UN.field, reset=True)
+        T.setInternalField(TN.field, reset=True)
+        p.setInternalField(pN.field, reset=True)
+        return self.conservative(U, T, p)
     
 if __name__ == "__main__":
     if len(sys.argv) > 2:

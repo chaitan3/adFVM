@@ -204,8 +204,8 @@ class SolverFunction(object):
         fields = solver.getBCFields()
         for phi in fields:
             if hasattr(phi, 'phi'):
-                for patchID in phi.phi.BC:
-                    inputs.extend([value[index] for value in phi.phi.BC[patchID].inputs])
+                for patchID in phi.BC:
+                    inputs.extend([value[index] for value in phi.BC[patchID].inputs])
 
     def generate(self, inputs, outputs, caseDir, name):
         SolverFunction.counter += 1
