@@ -21,8 +21,6 @@ class BoundaryCondition(object):
         # used by field writer
         self.getValue = lambda: self.field[self.cellStartFace:self.cellEndFace]
         self.inputs = []
-        # used by processor patches
-        #self.value = self.field[self.cellStartFace:self.cellEndFace]
 
 class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):

@@ -38,14 +38,6 @@ class Solver(object):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
 
         self.dt = ad.scalar()
-
-        #paddedStackedFields = ad.matrix()
-        #paddedStackedFields.tag.test_value = np.random.rand(self.mesh.paddedMesh.origMesh.nCells, 5).astype(config.precision)
-        #fields = self.unstackFields(paddedStackedFields, CellField)
-        #fields = self.timeIntegrator(self.equation, self.boundary, fields, self)
-        #newStackedFields = self.stackFields(fields, ad)
-        #self.forward = T.function([paddedStackedFields], [newStackedFields, self.dtc, self.local, self.remote], on_unused_input='warn')#, mode=T.compile.MonitorMode(pre_func=config.inspect_inputs, post_func=config.inspect_outputs))
-
         stackedFields = ad.matrix()
         newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
         self.forward = self.function([stackedFields, self.dt], \
@@ -53,8 +45,6 @@ class Solver(object):
         pprint()
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
-            #paddedGradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), paddedStackedFields)
-            #self.gradient = T.function([paddedStackedFields, stackedAdjointFields], paddedGradient)
             gradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields)
             self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], \
                             gradient, 'gradient')
@@ -112,32 +102,11 @@ class Solver(object):
             for index in range(0, len(fields)):
                 fields[index].info()
 
-            # mpi stuff, bloat stackedFields
-            #TESTING
-            #stackedFields = parallel.getRemoteCells(stackedFields, mesh)  
-
             pprint('Time step', timeIndex)
             #stackedFields, dtc = self.forward(stackedFields)
             stackedFields, dtc, local, remote = self.forward(stackedFields, dt)
             #print local.shape, local.dtype, local, np.abs(local).max(), np.abs(local).min()
             #print remote.shape, remote.dtype, remote, np.abs(remote).max(), np.abs(remote).min()
-            #print local
-            #print remote
-
-            #lStart = 0
-            #rStart = 0
-            #print parallel.rank, mesh.remotePatches
-            #for patchID in mesh.remotePatches:
-            #    n = mesh.boundary[patchID]['nFaces']
-            #    #n = len(mesh.paddedMesh.localRemoteFaces[self.loc][patchID])
-            #    np.savetxt('local_' + patchID, local[lStart:lStart+n])
-            #    #print 'local', patchID, local[lStart:lStart+n], local.shape
-            #    lStart += n
-            #    #n = mesh.paddedMesh.remoteFaces[self.loc][patchID]
-            #    np.savetxt('remote_' + patchID, remote[rStart:rStart+n])
-            #    #print 'remote', patchID, remote[rStart:rStart+n], remote.shape
-            #    rStart += n
-
 
             fields = self.unstackFields(stackedFields, IOField)
             # TODO: fix unstacking F_CONTIGUOUS
@@ -257,7 +226,6 @@ class PadFieldOp(T.Op):
     __props__ = ()
 
     def __init__(self, mesh):
-        #self.mesh = mesh
         pass
 
     def make_node(self, x):
@@ -266,8 +234,6 @@ class PadFieldOp(T.Op):
         return T.Apply(self, [x], [x.type()])
 
     def perform(self, node, inputs, output_storage):
-        #assert inputs[0].flags['C_CONTIGUOUS'] == True
-        #output_storage[0][0] = parallel.getRemoteCells(inputs[0], self.mesh)
         output_storage[0][0] = parallel.getRemoteCells(np.ascontiguousarray(inputs[0]), Field.mesh)
 
     def grad(self, inputs, output_grads):
@@ -277,7 +243,6 @@ class gradPadFieldOp(T.Op):
     __props__ = ()
 
     def __init__(self, mesh):
-        #self.mesh = mesh
         pass
 
     def make_node(self, x):
@@ -286,6 +251,4 @@ class gradPadFieldOp(T.Op):
         return T.Apply(self, [x], [x.type()])
 
     def perform(self, node, inputs, output_storage):
-        #assert inputs[0].flags['C_CONTIGUOUS'] == True
-        #output_storage[0][0] = parallel.getAdjointRemoteCells(inputs[0], self.mesh)
         output_storage[0][0] = parallel.getAdjointRemoteCells(np.ascontiguousarray(inputs[0]), Field.mesh)

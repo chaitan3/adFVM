@@ -111,9 +111,9 @@ class RCF(Solver):
         #gradRhoE = grad(central(rhoEP, paddedMesh), ghost=True)
 
         ## face reconstruction
-        #rhoLF, rhoRF = TVD2_dual(rho, gradRho)
-        #rhoULF, rhoURF = TVD2_dual(rhoU, gradRhoU)
-        #rhoELF, rhoERF = TVD2_dual(rhoE, gradRhoE)
+        #rhoLF, rhoRF = TVD_dual(rho, gradRho)
+        #rhoULF, rhoURF = TVD_dual(rhoU, gradRhoU)
+        #rhoELF, rhoERF = TVD_dual(rhoE, gradRhoE)
         #ULF, TLF, pLF = self.primitive(rhoLF, rhoULF, rhoELF)
         #URF, TRF, pRF = self.primitive(rhoRF, rhoURF, rhoERF)
 
@@ -178,4 +178,4 @@ if __name__ == "__main__":
     #solver = RCF(case, CFL=0.5)
     #solver.run(startTime=time, dt=1e-9, nSteps=20000, writeInterval=500)
     solver = RCF(case, CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
-    solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=200)
+    solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=20)
