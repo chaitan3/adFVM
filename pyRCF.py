@@ -81,7 +81,8 @@ class RCF(Solver):
     def writeFields(self, fields, t):
         for phi in fields:
             phi.write(t)
-        self.U.field, self.T.field, self.p.field = self.primitive(*fields)
+        U, T, p = self.primitive(*fields)
+        self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
         self.U.write(t)
         self.T.write(t)
         self.p.write(t)
@@ -136,13 +137,13 @@ class RCF(Solver):
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF)
 
         # viscous part
-        #pF = 0.5*(pLF + pRF)
-        UF = 0.5*(ULF + URF)
         TF = 0.5*(TLF + TRF)
         mu = self.mu(TF)
         kappa = self.kappa(mu, TF)
+        
         gradUTF = central(gradU.transpose(), mesh)
         sigmaF = (snGrad(U) + gradUTF.dotN() - (2./3)*mesh.Normals*gradUTF.trace())*mu
+        UF = 0.5*(ULF + URF)
         sigmadotUF = sigmaF.dot(UF)
 
         # source terms
