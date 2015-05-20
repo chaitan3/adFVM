@@ -8,7 +8,7 @@ from config import ad
 from parallel import pprint
 
 from field import Field, CellField, IOField
-from op import  div, snGrad, grad, ddt, laplacian, internal_sum
+from op import  div, snGrad, grad, laplacian, internal_sum
 from solver import Solver
 from interp import central, TVD_dual, TVD2_dual
 import riemann
@@ -69,10 +69,10 @@ class RCF(Solver):
     def initFields(self, t):
         # IO Fields, with phi attribute as a CellField
         self.U = IOField.read('U', self.mesh, t)
-        self.p = IOField.read('p', self.mesh, t)
         self.T = IOField.read('T', self.mesh, t)
+        self.p = IOField.read('p', self.mesh, t)
         if not hasattr(self, "pfunc"):
-            self.Ufunc = self.Tfunc = self.Tfunc = None
+            self.Ufunc = self.Tfunc = self.pfunc = None
         self.Ufunc = self.U.complete(self.Ufunc)
         self.Tfunc = self.T.complete(self.Tfunc)
         self.pfunc = self.p.complete(self.pfunc)
@@ -117,14 +117,17 @@ class RCF(Solver):
         #URF, TRF, pRF = self.primitive(rhoRF, rhoURF, rhoERF)
 
         # gradient evaluated using gauss integration rule
-        gradp = grad(central(pP, paddedMesh), ghost=True)
-        gradT = grad(central(TP, paddedMesh), ghost=True)
         gradU = grad(central(UP, paddedMesh), ghost=True)
+        gradT = grad(central(TP, paddedMesh), ghost=True)
+        gradp = grad(central(pP, paddedMesh), ghost=True)
+        # for zeroGradient boundary
+        UB, TB, pB = self.getBCFields()
+        UB.grad, TB.grad, pB.grad = gradU, gradT, gradp
 
         # face reconstruction
-        pLF, pRF = TVD2_dual(p, gradp)
-        TLF, TRF = TVD2_dual(T, gradT)
         ULF, URF = TVD2_dual(U, gradU)
+        TLF, TRF = TVD2_dual(T, gradT)
+        pLF, pRF = TVD2_dual(p, gradp)
         rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
         rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
 
@@ -154,7 +157,7 @@ class RCF(Solver):
                 div(rhoUFlux) - div(sigmaF) - source[1], \
                 div(rhoEFlux) - laplacian(T, kappa) + div(sigmadotUF) - source[2]]
 
-    def boundary(self, rhoI, rhoUI, rhoEI):
+    def boundary(self, rhoN, rhoUN, rhoEN):
         logger.info('correcting boundary')
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
         U, T, p = self.getBCFields()
@@ -171,7 +174,7 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = RCF(case, CFL=0.5)
-    solver.run(startTime=time, dt=1e-9, nSteps=20000, writeInterval=500)
-    #solver = RCF(case, CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
-    #solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=200)
+    #solver = RCF(case, CFL=0.5)
+    #solver.run(startTime=time, dt=1e-9, nSteps=20000, writeInterval=500)
+    solver = RCF(case, CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
+    solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=200)

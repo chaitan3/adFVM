@@ -158,6 +158,7 @@ class CellField(Field):
             # can be not filled
             self.resetField()
 
+        # why initialize the boundary for ghost=False cases
         self.BC = {}
         for patchID in self.mesh.origPatches:
             # skip processor patches
@@ -222,7 +223,7 @@ class IOField(Field):
         else:
             self.boundary = boundary
         self.func = None
-
+        self.phi = None
 
     def complete(self, func=None):
         logger.debug('completing field {0}'.format(self.name))

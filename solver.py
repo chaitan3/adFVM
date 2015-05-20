@@ -121,8 +121,8 @@ class Solver(object):
             stackedFields, dtc, local, remote = self.forward(stackedFields, dt)
             #print local.shape, local.dtype, local, np.abs(local).max(), np.abs(local).min()
             #print remote.shape, remote.dtype, remote, np.abs(remote).max(), np.abs(remote).min()
-            print local
-            print remote
+            #print local
+            #print remote
 
             #lStart = 0
             #rStart = 0
@@ -203,7 +203,7 @@ class SolverFunction(object):
     def populate_BCs(self, inputs, solver, index):
         fields = solver.getBCFields()
         for phi in fields:
-            if hasattr(phi, 'phi'):
+            if hasattr(phi, 'BC'):
                 for patchID in phi.BC:
                     inputs.extend([value[index] for value in phi.BC[patchID].inputs])
 
