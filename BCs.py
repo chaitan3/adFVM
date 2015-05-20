@@ -55,7 +55,7 @@ class zeroGradient(BoundaryCondition):
         if hasattr(self.phi, 'grad'):
             # second order correction
             grad = self.phi.grad.field[self.internalIndices]
-            R = self.mesh.faceCentres[self.cellStartFace:self.cellEndFace] - self.mesh.cellCentres[self.internalIndices]
+            R = self.mesh.faceCentres[self.startFace:self.endFace] - self.mesh.cellCentres[self.internalIndices]
             if self.phi.dimensions == (3,):
                 R = R[:,np.newaxis,:]
             secondOrder = 0.5*ad.sum(grad*R, axis=-1)
