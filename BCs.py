@@ -22,16 +22,19 @@ class BoundaryCondition(object):
         self.getValue = lambda: self.field[self.cellStartFace:self.cellEndFace]
         self.inputs = []
 
+    def update(self):
+        pass
+
 class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         if 'value' in self.patch:
-            self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], extractField(self.patch['value'], self.nFaces, self.field.shape[1:]))
+            fixedValue = extractField(self.patch['value'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions)
+            self.fixedValue = ad.matrix()
+            self.inputs.append((self.fixedValue, fixedValue))
+            self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.fixedValue)
         else:
             self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], 0)
-
-    def update(self):
-        pass
 
 class cyclic(BoundaryCondition):
     def __init__(self, phi, patchID):
@@ -100,6 +103,42 @@ class turbulentInletVelocity(BoundaryCondition):
         #self.value[:] = self.fixedValue
         self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.Umean)
 
+#class SingletonBoundaryCondition(type):
+#    _instances = {}
+#    def __call__(cls, phi, patchID
+#        key = (cls, patchID)
+#        if key not in cls._instances:
+#            cls._instances[key] = super(SingletonBoundaryCondition, cls).__call__(phi, patchID)
+#        return cls._instances[key]
+
+class CharactericBoundaryCondition(BoundaryCondition):
+    #__metaclass__ = SingletonBoundaryCondition
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        self.mesh.boundary[patchID] = 'characteristic'
+        self.U, self.T, self.p = self.solver.getBCFields()
+
+    #def update(self):
+    #    if self.phi.name == 'U':
+    #        self.updateAllFields()
+
+class CBC_UPT(CharactericBoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
+        U0 = extractField(self.patch['U0'], nFaces, self.U.dimensions)
+        T0 = extractField(self.patch['T0'], nFaces, self.T.dimensions)
+        p0 = extractField(self.patch['p0'], nFaces, self.p.dimensions)
+        self.U0 = ad.matrix()
+        self.T0 = ad.matrix()
+        self.p0 = ad.matrix()
+        self.inputs.extend([(self.U0, U0), (self.T0, T0), (self.p0, p0)])
+
+    def update(self):
+        self.U.field = ad.set_subtensor(self.U.field[self.cellStartFace:self.cellEndFace], self.U0)
+        self.T.field = ad.set_subtensor(self.T.field[self.cellStartFace:self.cellEndFace], self.T0)
+        self.p.field = ad.set_subtensor(self.p.field[self.cellStartFace:self.cellEndFace], self.p0)
+
 slip = symmetryPlane
 empty = zeroGradient
 inletOutlet = zeroGradient
@@ -107,7 +146,7 @@ inletOutlet = zeroGradient
 #class totalPressure(BoundaryCondition):
 #    def __init__(self, phi, patchID):
 #        super(self.__class__, self).__init__(phi, patchID)
-#        self.p0 = extractField(self.patch['p0'], self.nFaces, (1,))
+#        self.p0 = extractFeld(self.patch['p0'], self.nFaces, (1,))
 #        self.gamma = self.patch['gamma']
 #        self.patch.pop('value', None)
 #        self.patch['value'] = 'uniform (0 0 0)'

@@ -105,4 +105,3 @@ processorPatches = ['processor', 'processorCyclic']
 coupledPatches = ['cyclic', 'processor', 'processorCyclic']
 valuePatches = ['processor', 'processorCyclic', 'calculated']
 defaultPatches = ['cyclic', 'symmetryPlane', 'empty', 'processor', 'processorCyclic']
-
