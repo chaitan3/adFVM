@@ -60,7 +60,7 @@ logger = config.Logger(__name__)
 def TVD_dual(phi, gradPhi):
     from op import grad
     assert len(phi.dimensions) == 1
-    logger.info('TVD2 {0}'.format(phi.name))
+    logger.info('TVD {0}'.format(phi.name))
     mesh = phi.mesh
 
     # every face gets filled
@@ -73,7 +73,6 @@ def TVD_dual(phi, gradPhi):
         neighbour = mesh.neighbour[start:end]
         faceCentres = mesh.faceCentres[start:end]
         deltas = mesh.deltas[start:end]
-        index = 0
         if index == 0:
             C, D = [owner, neighbour]
         else:
@@ -102,8 +101,8 @@ def TVD_dual(phi, gradPhi):
     for patchID in mesh.origPatches:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        patchType = phi.boundary[patchID]['type']
-        if patchType == 'coupled':
+        patchType = mesh.boundary[patchID]['type']
+        if patchType == 'cyclic':
             update(startFace, endFace, 0)
             update(startFace, endFace, 1)
         elif patchType == 'characteristic':
@@ -115,6 +114,8 @@ def TVD_dual(phi, gradPhi):
     nRemoteFaces = mesh.nFaces-(mesh.nCells-mesh.nLocalCells)
     update(nRemoteFaces, mesh.nFaces, 0, False)
     update(nRemoteFaces, mesh.nFaces, 1, False)
+    #phi.solver.local = faceFields[0]
+    #phi.solver.remote = faceFields[1]
 
     return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
 
@@ -135,7 +136,7 @@ def upwind(phi, U):
     for patchID in mesh.origPatches:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        if phi.boundary[patchID]['type'] == 'coupled':
+        if phi.boundary[patchID]['type'] == 'cyclic':
             update(startFace, endFace)
         else:
             faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]

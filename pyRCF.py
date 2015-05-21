@@ -46,6 +46,7 @@ class RCF(Solver):
         e = E - 0.5*U.magSqr()
         p = (self.gamma-1)*rho*e
         T = e*(1./self.Cv)
+        U.name, T.name, p.name = 'U', 'T', 'p'
         return U, T, p
 
     def conservative(self, U, T, p):
@@ -71,11 +72,13 @@ class RCF(Solver):
         self.U = IOField.read('U', self.mesh, t)
         self.T = IOField.read('T', self.mesh, t)
         self.p = IOField.read('p', self.mesh, t)
-        if not hasattr(self, "pfunc"):
-            self.Ufunc = self.Tfunc = self.pfunc = None
-        self.Ufunc = self.U.complete(self.Ufunc)
-        self.Tfunc = self.T.complete(self.Tfunc)
-        self.pfunc = self.p.complete(self.pfunc)
+        UI = self.U.complete()
+        TI = self.T.complete()
+        pI = self.p.complete()
+        UN, TN, pN = self.U.phi.field, self.T.phi.field, self.p.phi.field 
+        if not hasattr(self, 'initFunc'):
+            self.initFunc = self.function([UI, TI, pI], [UN, TN, pN], 'init')
+        self.U.field, self.T.field, self.p.field = self.initFunc(self.U.field, self.T.field, self.p.field)
         return self.conservative(self.U, self.T, self.p)
     
     def writeFields(self, fields, t):
@@ -177,5 +180,5 @@ if __name__ == "__main__":
 
     #solver = RCF(case, CFL=0.5)
     #solver.run(startTime=time, dt=1e-9, nSteps=20000, writeInterval=500)
-    solver = RCF(case, CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
-    solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=20)
+    solver = RCF(case, timeIntegrator='SSPRK', CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
+    solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=100)

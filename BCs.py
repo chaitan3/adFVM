@@ -18,6 +18,7 @@ class BoundaryCondition(object):
         self.cellStartFace = self.mesh.nInternalCells + self.startFace - self.mesh.nInternalFaces
         self.cellEndFace = self.mesh.nInternalCells + self.endFace - self.mesh.nInternalFaces
         self.internalIndices = self.mesh.owner[self.startFace:self.endFace]
+        self.normals = self.mesh.normals[self.startFace:self.endFace]
         # used by field writer
         self.getValue = lambda: self.field[self.cellStartFace:self.cellEndFace]
         self.inputs = []
@@ -71,7 +72,7 @@ class symmetryPlane(zeroGradient):
         super(self.__class__, self).update()
         # if vector
         if self.phi.dimensions == (3,):
-            v = -self.mesh.normals[self.startFace:self.endFace]
+            v = -self.normals
             self.phi.field = ad.inc_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], -ad.sum(self.phi.field[self.cellStartFace:self.cellEndFace]*v, axis=1, keepdims=True)*v)
 
 class fixedValue(BoundaryCondition):
@@ -103,32 +104,21 @@ class turbulentInletVelocity(BoundaryCondition):
         #self.value[:] = self.fixedValue
         self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.Umean)
 
-#class SingletonBoundaryCondition(type):
-#    _instances = {}
-#    def __call__(cls, phi, patchID
-#        key = (cls, patchID)
-#        if key not in cls._instances:
-#            cls._instances[key] = super(SingletonBoundaryCondition, cls).__call__(phi, patchID)
-#        return cls._instances[key]
-
-class CharactericBoundaryCondition(BoundaryCondition):
-    #__metaclass__ = SingletonBoundaryCondition
+class CharacteristicBoundaryCondition(BoundaryCondition):
     def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
-        self.mesh.boundary[patchID] = 'characteristic'
-        self.U, self.T, self.p = self.solver.getBCFields()
+        super(CharacteristicBoundaryCondition, self).__init__(phi, patchID)
+        self.mesh.boundary[patchID]['type'] = 'characteristic'
+        # CBCs always defined on p
+        self.U, self.T, _ = self.solver.getBCFields()
+        self.p = self.phi
 
-    #def update(self):
-    #    if self.phi.name == 'U':
-    #        self.updateAllFields()
-
-class CBC_UPT(CharactericBoundaryCondition):
+class CBC_UPT(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
-        U0 = extractField(self.patch['U0'], nFaces, self.U.dimensions)
-        T0 = extractField(self.patch['T0'], nFaces, self.T.dimensions)
-        p0 = extractField(self.patch['p0'], nFaces, self.p.dimensions)
+        U0 = extractField(self.patch['U0'], nFaces, (3,))
+        T0 = extractField(self.patch['T0'], nFaces, (1,))
+        p0 = extractField(self.patch['p0'], nFaces, (1,))
         self.U0 = ad.matrix()
         self.T0 = ad.matrix()
         self.p0 = ad.matrix()
@@ -138,6 +128,29 @@ class CBC_UPT(CharactericBoundaryCondition):
         self.U.field = ad.set_subtensor(self.U.field[self.cellStartFace:self.cellEndFace], self.U0)
         self.T.field = ad.set_subtensor(self.T.field[self.cellStartFace:self.cellEndFace], self.T0)
         self.p.field = ad.set_subtensor(self.p.field[self.cellStartFace:self.cellEndFace], self.p0)
+
+# implement support for characteristic time travel
+class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
+        Tt = extractField(self.patch['Tt'], nFaces, (1,))
+        pt = extractField(self.patch['pt'], nFaces, (1,))
+        self.Tt = ad.matrix()
+        self.pt = ad.matrix()
+        self.inputs.extend([(self.Tt, Tt), (self.pt, pt)])
+        self.Cp = self.solver.Cp
+        self.gamma = self.solver.gamma
+
+    def update(self):
+        Un = ad.sum(self.U.field[self.internalIndices]*self.normals, axis=-1).reshape((self.nFaces, 1))
+        U = Un*self.normals
+        T = self.Tt - 0.5*Un*Un/self.Cp
+        p = self.pt * (T/self.Tt)**(self.gamma/(self.gamma-1))
+        
+        self.U.field = ad.set_subtensor(self.U.field[self.cellStartFace:self.cellEndFace], U)
+        self.T.field = ad.set_subtensor(self.T.field[self.cellStartFace:self.cellEndFace], T)
+        self.p.field = ad.set_subtensor(self.p.field[self.cellStartFace:self.cellEndFace], p)
 
 slip = symmetryPlane
 empty = zeroGradient

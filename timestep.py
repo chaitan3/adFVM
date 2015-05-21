@@ -60,7 +60,6 @@ def RK4(equation, boundary, stackedFields, solver):
 
     return solver.stackFields(newFields, ad)
 
-# classical
 def SSPRK(equation, boundary, stackedFields, solver):
     # 2nd order
     #alpha = np.array([[1.,0],[1./2,1./2]])

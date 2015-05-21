@@ -225,19 +225,13 @@ class IOField(Field):
         self.func = None
         self.phi = None
 
-    def complete(self, func=None):
+    def complete(self):
         logger.debug('completing field {0}'.format(self.name))
-        if func is None:
-            X = ad.matrix()
-            #X.tag.test_value = self.field
-            # CellField for later use
-            self.phi = CellField(self.name, X, self.dimensions, self.boundary, ghost=True)
-            Y = self.phi.field
-            pprint('Compiling field', self.name)
-            func = self.solver.function([X], Y, self.name)
-
-        self.field = func(self.field)
-        return func
+        internalField = ad.matrix()
+        #X.tag.test_value = self.field
+        # CellField for later use
+        self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, ghost=True)
+        return internalField
 
     def getInternalField(self):
         return self.field[:self.mesh.origMesh.nInternalCells]
