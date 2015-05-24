@@ -25,7 +25,7 @@ class RCF(Solver):
                              'Pr': 0.7, 
                              'CFL': 0.6,
                              'stepFactor': 1.2,
-                             'timeIntegrator': 'SSPRK',
+                             'timeIntegrator': 'SSPRK', 'nStages': 3,
                              'riemannSolver': 'eulerRoe',
                              'source': lambda x: [0, 0, 0]
                         })
@@ -153,6 +153,7 @@ class RCF(Solver):
         source = self.source(self)
 
         # CFL based time step
+        self.aF = aF
         aF = UnF.abs() + aF
         self.dtc = 2*self.CFL/internal_sum(aF, mesh, absolute=True)
         

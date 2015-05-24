@@ -6,6 +6,7 @@ from field import Field, CellField
 createFields = lambda internalFields, solver : [Field(solver.names[index], phi, solver.dimensions[index]) for index, phi in enumerate(internalFields)]
 
 def euler(equation, boundary, stackedFields, solver):
+    solver.stage = 1
     paddedStackedFields = solver.padField(stackedFields)
     paddedFields = solver.unstackFields(paddedStackedFields, CellField)
     LHS = equation(*paddedFields)
@@ -16,6 +17,7 @@ def euler(equation, boundary, stackedFields, solver):
 
 # classical
 def RK2(equation, boundary, stackedFields, solver):
+    solver.stage = 1
     paddedStackedFields0 = solver.padField(stackedFields)
     paddedFields0 = solver.unstackFields(paddedStackedFields0, CellField)
     LHS = equation(*paddedFields0)
@@ -23,6 +25,7 @@ def RK2(equation, boundary, stackedFields, solver):
     internalFields = createFields(internalFields, solver)
     fields1 = boundary(*internalFields)
 
+    solver.stage = 2
     paddedStackedFields1 = solver.padField(solver.stackFields(fields1, ad))
     paddedFields1 = solver.unstackFields(paddedStackedFields1, CellField)
     LHS = equation(*paddedFields1)
@@ -52,9 +55,13 @@ def RK4(equation, boundary, stackedFields, solver):
         paddedFields = solver.unstackFields(paddedStackedFields, CellField)
         return equation(*paddedFields)
 
+    solver.stage = 1
     k1 = f([0.])
+    solver.stage = 2
     k2 = f([0.5], k1)
+    solver.stage = 3
     k3 = f([0.5], k2)
+    solver.stage = 4
     k4 = f([1.], k3)
     newFields = NewFields([1./6, 1./3, 1./3, 1./6], [k1, k2, k3, k4])
 
@@ -73,6 +80,7 @@ def SSPRK(equation, boundary, stackedFields, solver):
     fields.append(solver.unstackFields(stackedFields, CellField))
     nFields = len(fields[0])
     for i in range(0, nStages):
+        solver.stage += 1
         paddedStackedFields = solver.padField(solver.stackFields(fields[i], ad))
         paddedFields = solver.unstackFields(paddedStackedFields, CellField)
         LHS.append(equation(*paddedFields))

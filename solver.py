@@ -15,7 +15,7 @@ logger = config.Logger(__name__)
 
 class Solver(object):
     defaultConfig = {
-                        'timeIntegrator': 'euler',
+                        'timeIntegrator': 'euler', 'nStages': 1,
                         'source': None,
                         'adjoint': False
                     }
@@ -31,6 +31,7 @@ class Solver(object):
         Field.setSolver(self)
 
         self.timeIntegrator = getattr(timestep, self.timeIntegrator)
+        self.stage = 0
         self.padField = PadFieldOp(self.mesh)
         self.gradPadField = gradPadFieldOp(self.mesh)
 

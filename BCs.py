@@ -152,6 +152,34 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
         self.T.field = ad.set_subtensor(self.T.field[self.cellStartFace:self.cellEndFace], T)
         self.p.field = ad.set_subtensor(self.p.field[self.cellStartFace:self.cellEndFace], p)
 
+class NSCBC_OUTLET_P(CharacteristicBoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        self.Ma = self.patch['Ma']
+        self.L = self.patch['L']
+        pt = extractField(self.patch['pt'], nFaces, (1,))
+        self.pt = ad.matrix()
+        self.inputs.extend([(self.pt, pt)])
+        self.gamma = self.solver.gamma
+
+        self.UBC = zeroGradient(self.U, patchID)
+        self.TBC = zeroGradient(self.T, patchID)
+
+    def update(self):
+        self.UBC.update()
+        self.TBC.update()
+        if solver.stage == 1:
+            self.p0 = self.phi.field[self.cellStartFace:self.cellEndFace]
+            self.c = self.aF[self.startFace:self.endFace]
+            self.Un0 = ad.sum(self.U.field[self.internalIndices]*self.normals, axis=-1).reshape((self.nFaces, 1))
+        elif solver.stage == solver.nStages:
+            Un = ad.sum(self.U.field[self.internalIndices]*self.normals, axis=-1).reshape((self.nFaces, 1))
+            rho = self.gamma*p0/(c*c)
+            dt = self.solver.dt
+            p += rho*self.c*(Un-self.Un0)
+            p += dt*(-0.25*self.c*(1-self.Ma**2)*(self.p0-self.pt)/self.L)
+            self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], p)
+
 slip = symmetryPlane
 empty = zeroGradient
 inletOutlet = zeroGradient
