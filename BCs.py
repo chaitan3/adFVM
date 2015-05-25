@@ -5,6 +5,13 @@ from config import ad, T
 from mesh import extractField
 logger = config.Logger(__name__)
 
+def dot(v, w, dims=1):
+    if dims == 1:
+        return ad.sum(v*w, axis=1, keepdims=True)
+    else:
+        w = w[:,np.newaxis,:]
+        return ad.sum(v*w, axis=-1)
+
 class BoundaryCondition(object):
     def __init__(self, phi, patchID):
         self.patchID = patchID
@@ -23,6 +30,13 @@ class BoundaryCondition(object):
         self.getValue = lambda: self.field[self.cellStartFace:self.cellEndFace]
         self.inputs = []
 
+    def createInput(key, dimensions)
+        nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
+        value = extractField(self.patch[key], nFaces, dimensions)
+        symbolic = ad.matrix()
+        self.inputs.append((symbolic, value))
+        return symbolic
+
     def update(self):
         pass
 
@@ -30,9 +44,7 @@ class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         if 'value' in self.patch:
-            fixedValue = extractField(self.patch['value'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions)
-            self.fixedValue = ad.matrix()
-            self.inputs.append((self.fixedValue, fixedValue))
+            self.fixedValue = self.createInput('value', self.phi.dimensions)
             self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.fixedValue)
         else:
             self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], 0)
@@ -58,12 +70,7 @@ class zeroGradient(BoundaryCondition):
             # second order correction
             grad = self.phi.grad.field[self.internalIndices]
             R = self.mesh.faceCentres[self.startFace:self.endFace] - self.mesh.cellCentres[self.internalIndices]
-            if self.phi.dimensions == (3,):
-                R = R[:,np.newaxis,:]
-            secondOrder = 0.5*ad.sum(grad*R, axis=-1)
-            if self.phi.dimensions == (1,):
-                secondOrder = secondOrder.reshape(boundaryValue.shape)
-            boundaryValue += secondOrder
+            boundaryValue += 0.5*dot(grad, R, self.phi.dimensions[0])
         self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], boundaryValue)
 
 class symmetryPlane(zeroGradient):
@@ -73,36 +80,18 @@ class symmetryPlane(zeroGradient):
         # if vector
         if self.phi.dimensions == (3,):
             v = -self.normals
-            self.phi.field = ad.inc_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], -ad.sum(self.phi.field[self.cellStartFace:self.cellEndFace]*v, axis=1, keepdims=True)*v)
+            self.phi.field = ad.inc_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], -dot(self.phi.field[self.cellStartFace:self.cellEndFace], v)*v)
 
 class fixedValue(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         # mesh values required outside theano
         #self.fixedValue = extractField(self.patch['value'], self.nFaces, self.phi.dimensions == (3,))
-        fixedValue = extractField(self.patch['value'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions)
-        self.fixedValue = ad.matrix()
-        self.inputs.append((self.fixedValue, fixedValue))
+        self.fixedValue = self.createInput('value', self.phi.dimensions)
 
     def update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
         self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.fixedValue)
-
-class turbulentInletVelocity(BoundaryCondition):
-    def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
-        Umean = extractField(self.patch['Umean'], self.mesh.origMesh.boundary[patchID]['nFaces'], self.phi.dimensions)
-        self.Umean = ad.matrix()
-        self.inputs.append((self.Umean, Umean))
-        self.lengthScale = self.patch['lengthScale']
-        self.turbulentIntensity = self.patch['turbulentIntensity']
-        #self.patch.pop('value', None)
-        #self.patch['value'] = 'uniform (0 0 0)'
-
-    def update(self):
-        logger.debug('turbulentInletVelocity BC for {0}'.format(self.patchID))
-        #self.value[:] = self.fixedValue
-        self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.Umean)
 
 class CharacteristicBoundaryCondition(BoundaryCondition):
     def __init__(self, phi, patchID):
@@ -115,14 +104,9 @@ class CharacteristicBoundaryCondition(BoundaryCondition):
 class CBC_UPT(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
-        U0 = extractField(self.patch['U0'], nFaces, (3,))
-        T0 = extractField(self.patch['T0'], nFaces, (1,))
-        p0 = extractField(self.patch['p0'], nFaces, (1,))
-        self.U0 = ad.matrix()
-        self.T0 = ad.matrix()
-        self.p0 = ad.matrix()
-        self.inputs.extend([(self.U0, U0), (self.T0, T0), (self.p0, p0)])
+        self.U0 = self.createInput('U0', (3,))
+        self.T0 = self.createInput('T0', (1,))
+        self.p0 = self.createInput('p0', (1,))
 
     def update(self):
         self.U.field = ad.set_subtensor(self.U.field[self.cellStartFace:self.cellEndFace], self.U0)
@@ -133,17 +117,13 @@ class CBC_UPT(CharacteristicBoundaryCondition):
 class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
-        Tt = extractField(self.patch['Tt'], nFaces, (1,))
-        pt = extractField(self.patch['pt'], nFaces, (1,))
-        self.Tt = ad.matrix()
-        self.pt = ad.matrix()
-        self.inputs.extend([(self.Tt, Tt), (self.pt, pt)])
+        self.Tt = self.createInput('Tt', (1,))
+        self.pt = self.createInput('pt', (1,))
         self.Cp = self.solver.Cp
         self.gamma = self.solver.gamma
 
     def update(self):
-        Un = ad.sum(self.U.field[self.internalIndices]*self.normals, axis=-1).reshape((self.nFaces, 1))
+        Un = dot(self.U.field[self.internalIndices], self.normals)
         U = Un*self.normals
         T = self.Tt - 0.5*Un*Un/self.Cp
         p = self.pt * (T/self.Tt)**(self.gamma/(self.gamma-1))
@@ -158,9 +138,7 @@ class NSCBC_OUTLET_P(CharacteristicBoundaryCondition):
         nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
         self.Ma = float(self.patch['Ma'])
         self.L = float(self.patch['L'])
-        pt = extractField(self.patch['pt'], nFaces, (1,))
-        self.pt = ad.matrix()
-        self.inputs.extend([(self.pt, pt)])
+        self.pt = self.createInput('pt', (1,))
         self.gamma = self.solver.gamma
 
         self.UBC = zeroGradient(self.U, patchID)
@@ -173,15 +151,27 @@ class NSCBC_OUTLET_P(CharacteristicBoundaryCondition):
         if self.solver.stage == 1:
             self.p0 = self.phi.field[self.cellStartFace:self.cellEndFace]
             self.c = self.solver.aF.field[self.startFace:self.endFace]
-            self.Un0 = ad.sum(self.U.field[self.internalIndices]*self.normals, axis=-1).reshape((self.nFaces, 1))
+            self.Un0 = dot(self.U.field[self.internalIndices], self.normals)
         elif self.solver.stage == self.solver.nStages:
-            Un = ad.sum(self.U.field[self.internalIndices]*self.normals, axis=-1).reshape((self.nFaces, 1))
+            Un = dot(self.U.field[self.internalIndices], self.normals)
             rho = self.gamma*self.p0/(self.c*self.c)
             dt = self.solver.dt
             p = self.p0
             p = p + rho*self.c*(Un-self.Un0)
             p = p + dt*(-0.25*self.c*(1-self.Ma**2)*(self.p0-self.pt)/self.L)
             self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], p)
+
+class TURB_INFLOW(BoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
+        self.Umean = self.createInput('Umean', (3,))
+        self.Tmean = self.createInput('Tmean', (1,))
+        self.pmean = self.createInput('pmean', (1,))
+        self.lengthScale = float(self.patch['lengthScale'])
+        self.turbulentIntensity = float(self.patch['turbulentIntensity'])
+
+    def update(self):
 
 slip = symmetryPlane
 empty = zeroGradient
