@@ -30,8 +30,8 @@ class BoundaryCondition(object):
         self.getValue = lambda: self.field[self.cellStartFace:self.cellEndFace]
         self.inputs = []
 
-    def createInput(key, dimensions)
-        nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
+    def createInput(self, key, dimensions):
+        nFaces = self.mesh.origMesh.boundary[self.patchID]['nFaces']
         value = extractField(self.patch[key], nFaces, dimensions)
         symbolic = ad.matrix()
         self.inputs.append((symbolic, value))
@@ -172,10 +172,26 @@ class TURB_INFLOW(BoundaryCondition):
         self.turbulentIntensity = float(self.patch['turbulentIntensity'])
 
     def update(self):
+        pass
 
 slip = symmetryPlane
 empty = zeroGradient
 inletOutlet = zeroGradient
+
+
+class turbulentInletVelocity(BoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        self.Umean = self.createInput('Umean', (3,))
+        self.lengthScale = self.patch['lengthScale']
+        self.turbulentIntensity = self.patch['turbulentIntensity']
+        #self.patch.pop('value', None)
+        #self.patch['value'] = 'uniform (0 0 0)'
+
+    def update(self):
+        logger.debug('turbulentInletVelocity BC for {0}'.format(self.patchID))
+        #self.value[:] = self.fixedValue
+        self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.Umean)
     
 #class totalPressure(BoundaryCondition):
 #    def __init__(self, phi, patchID):
