@@ -21,7 +21,7 @@ os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
 # pickling
 os.environ['THEANO_FLAGS'] += ',reoptimize_unpickled_function=False'
-allowUnpicklingFunction = False
+allowUnpicklingFunction = True
 # profiling, gc, cleanup
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
