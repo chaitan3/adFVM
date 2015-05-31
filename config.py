@@ -13,8 +13,9 @@ import os
 import sys; sys.setrecursionlimit(10000)
 project = 'adFVM'
 dtype = str(np.zeros(1, precision).dtype)
-home = '~'
+home, temp = os.path.expanduser('~'), '/tmp'
 #home = '/lustre/atlas/proj-shared/tur103'
+home = parallel.copyToTemp(home, temp)
 #os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
 os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}'.format(project, device, dtype)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype

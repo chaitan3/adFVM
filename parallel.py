@@ -1,6 +1,8 @@
 from __future__ import print_function
 from mpi4py import MPI
 import numpy as np
+import subprocess
+import time
 
 mpi = MPI.COMM_WORLD
 nProcessors = mpi.Get_size()
@@ -12,6 +14,19 @@ if nProcessors > 1:
 def pprint(*args, **kwargs):
     if rank == 0:
         print(*args, **kwargs)
+
+def copyToTemp(home, temp):
+    if len(temp) == 0:
+        return home
+    start = time.time()
+    if rank == 0:
+        subprocess.call(['df'])
+        dest = temp + '/.theano'
+        subprocess.call(['rm', '-rf', dest])
+        subprocess.call(['cp', '-r', home + '/.theano', dest])
+    end = time.time()
+    pprint('Time to copy: ', end-start)
+    return temp
 
 def max(data):
     maxData = np.max(data)
