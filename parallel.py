@@ -6,7 +6,7 @@ import time
 
 mpi = MPI.COMM_WORLD
 nProcessors = mpi.Get_size()
-print(MPI.Get_processor_name())
+name = MPI.Get_processor_name()
 rank = mpi.Get_rank()
 processorDirectory = '/'
 if nProcessors > 1:
@@ -25,6 +25,7 @@ def copyToTemp(home):
         dest = temp + '/.theano'
         subprocess.call(['rm', '-rf', dest])
         subprocess.call(['cp', '-r', home + '/.theano', dest])
+    mpi.Barrier()
     end = time.time()
     pprint('Time to copy: ', end-start)
     return temp
