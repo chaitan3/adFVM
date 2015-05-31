@@ -179,7 +179,7 @@ class SolverFunction(object):
 
     def generate(self, inputs, outputs, caseDir, name):
         SolverFunction.counter += 1
-        pklFile = caseDir + 'func_{0}.pkl'.format(name)
+        pklFile = caseDir + '{0}_func_{1}.pkl'.format(config.device, name)
         inputs.extend(self.symbolic)
 
         fn = None

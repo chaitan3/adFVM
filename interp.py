@@ -114,8 +114,6 @@ def TVD_dual(phi, gradPhi):
     nRemoteFaces = mesh.nFaces-(mesh.nCells-mesh.nLocalCells)
     update(nRemoteFaces, mesh.nFaces, 0, False)
     update(nRemoteFaces, mesh.nFaces, 1, False)
-    #phi.solver.local = faceFields[0]
-    #phi.solver.remote = faceFields[1]
 
     return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
 
