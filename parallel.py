@@ -6,21 +6,22 @@ import time
 
 mpi = MPI.COMM_WORLD
 nProcessors = mpi.Get_size()
+print(MPI.Get_processor_name())
 rank = mpi.Get_rank()
 processorDirectory = '/'
 if nProcessors > 1:
     processorDirectory = '/processor{0}/'.format(rank)
 
+temp = '/tmp'
+coresPerNode = 16
+
 def pprint(*args, **kwargs):
     if rank == 0:
         print(*args, **kwargs)
 
-def copyToTemp(home, temp):
-    if len(temp) == 0:
-        return home
+def copyToTemp(home):
     start = time.time()
-    if rank == 0:
-        subprocess.call(['df'])
+    if rank % coresPerNode == 0:
         dest = temp + '/.theano'
         subprocess.call(['rm', '-rf', dest])
         subprocess.call(['cp', '-r', home + '/.theano', dest])
