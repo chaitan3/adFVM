@@ -4,8 +4,8 @@ import parallel
 
 # compute type
 device = 'cpu'
-#device = 'gpu0'
 precision = np.float64
+#device = 'gpu0'
 #precision = np.float32
 
 # theano
@@ -15,6 +15,7 @@ project = 'adFVM'
 dtype = str(np.zeros(1, precision).dtype)
 home= os.path.expanduser('~')
 #home = '/lustre/atlas/proj-shared/tur103'
+#assert np.__version__ == '1.7.1'
 # whether to copy theano dir to temp
 #home = parallel.copyToTemp(home)
 #os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
