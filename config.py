@@ -10,7 +10,7 @@ precision = np.float64
 
 # theano
 import os
-import sys; sys.setrecursionlimit(10000)
+import sys; sys.setrecursionlimit(100000)
 project = 'adFVM'
 dtype = str(np.zeros(1, precision).dtype)
 home= os.path.expanduser('~')
@@ -24,7 +24,7 @@ os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
 # pickling
 os.environ['THEANO_FLAGS'] += ',reoptimize_unpickled_function=False'
-allowUnpicklingFunction = True
+allowUnpicklingFunction = False
 # profiling, gc, cleanup
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'

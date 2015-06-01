@@ -23,7 +23,7 @@ class RCF(Solver):
                              'gamma': 1.4, 
                              'mu': lambda T:  1.4792e-06*T**1.5/(T+116.), 
                              'Pr': 0.7, 
-                             'CFL': 0.6,
+                             'CFL': 1.2,
                              'stepFactor': 1.2,
                              'timeIntegrator': 'SSPRK', 'nStages': 3,
                              'riemannSolver': 'eulerRoe',
@@ -143,9 +143,16 @@ class RCF(Solver):
         TF = 0.5*(TLF + TRF)
         mu = self.mu(TF)
         kappa = self.kappa(mu, TF)
+        #qF = snGrad(T)*kappa
+        gradTF = central(gradT, mesh)
+        gradTCF = gradTF + snGrad(T)*mesh.Normals - (gradTF.dotN())*mesh.Normals
+        qF = gradTCF.dotN()
         
-        gradUTF = central(gradU.transpose(), mesh)
-        sigmaF = (snGrad(U) + gradUTF.dotN() - (2./3)*mesh.Normals*gradUTF.trace())*mu
+        #gradUTF = central(gradU.transpose(), mesh)
+        #sigmaF = (snGrad(U) + gradUTF.dotN() - (2./3)*mesh.Normals*gradUTF.trace())*mu
+        gradUF = central(gradU, mesh)
+        gradUCF = gradUF + snGrad(U).outer(mesh.Normals) - (gradUF.dotN()).outer(mesh.Normals)
+        sigmaF = mu*((gradUCF + gradUCF.transpose()).dotN() - (2./3)*gradUCF.trace()*mesh.Normals)
         UF = 0.5*(ULF + URF)
         sigmadotUF = sigmaF.dot(UF)
 
@@ -159,8 +166,8 @@ class RCF(Solver):
         
         return [div(rhoFlux) - source[0], \
                 #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
-                div(rhoUFlux) - div(sigmaF) - source[1], \
-                div(rhoEFlux) - laplacian(T, kappa) + div(sigmadotUF) - source[2]]
+                div(rhoUFlux - sigmaF) - source[1], \
+                div(rhoEFlux - qF - sigmadotUF) - source[2]]
 
     def boundary(self, rhoN, rhoUN, rhoEN):
         logger.info('correcting boundary')
@@ -179,7 +186,7 @@ if __name__ == "__main__":
         pprint('WTF')
         exit()
 
-    solver = RCF(case, timeIntegrator='euler', CFL=0.5)
+    solver = RCF(case, CFL=1.2)
     solver.run(startTime=time, dt=1e-9, nSteps=20000, writeInterval=500)
     #solver = RCF(case, timeIntegrator='SSPRK', CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
     #solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=100)

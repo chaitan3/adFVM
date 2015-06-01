@@ -78,14 +78,10 @@ def snGrad(phi):
     gradFdotn = (phi.field[mesh.neighbour]-phi.field[mesh.owner])/mesh.deltas
     return Field('snGrad({0})'.format(phi.name), gradFdotn, phi.dimensions)
 
-def laplacian(phi, DT):
+def laplacian(phi, gradPhi, DT):
     logger.info('laplacian of {0}'.format(phi.name))
     mesh = phi.mesh
-
-    # non orthogonal correction
-    #DTgradF = Field.zeros('grad' + phi.name, mesh, mesh.nCells, 3.)
-    #DTgradF.setInternalField(DT*grad(field))
-    #laplacian1 = div(interpolate(DTgradF), 1.)
+    raise Exception('not implemented')
 
     gradFdotn = snGrad(phi)
     laplacian2 = internal_sum(gradFdotn*DT, mesh)
