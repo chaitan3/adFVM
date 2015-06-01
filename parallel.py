@@ -11,13 +11,13 @@ rank = mpi.Get_rank()
 processorDirectory = '/'
 if nProcessors > 1:
     processorDirectory = '/processor{0}/'.format(rank)
-
 temp = '/tmp'
 coresPerNode = 16
 
 def pprint(*args, **kwargs):
     if rank == 0:
         print(*args, **kwargs)
+pprint('Running on {0} processors'.format(nProcessors))
 
 def copyToTemp(home):
     start = time.time()
@@ -27,7 +27,8 @@ def copyToTemp(home):
         subprocess.call(['cp', '-r', home + '/.theano', dest])
     mpi.Barrier()
     end = time.time()
-    pprint('Time to copy: ', end-start)
+    pprint('Time to copy to {0}: '.format(temp), end-start)
+    pprint()
     return temp
 
 def max(data):

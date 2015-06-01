@@ -187,6 +187,6 @@ if __name__ == "__main__":
         exit()
 
     solver = RCF(case, CFL=1.2)
-    solver.run(startTime=time, dt=1e-9, nSteps=20000, writeInterval=500)
+    solver.run(startTime=time, dt=1e-9, nSteps=60000, writeInterval=500)
     #solver = RCF(case, timeIntegrator='SSPRK', CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
     #solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=100)
