@@ -58,15 +58,18 @@ class Field(object):
     def magSqr(self):
         assert self.dimensions == (3,)
         if isinstance(self.field, np.ndarray):
-            return self.__class__('magSqr({0})'.format(self.name), np.sum(self.field**2, axis=1, keepdims=True), (1,))
+            return self.__class__('magSqr({0})'.format(self.name), np.sum(self.field*self.field, axis=1, keepdims=True), (1,))
         else:
-            return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field**2, axis=1, keepdims=True), (1,))
+            return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field*self.field, axis=1, keepdims=True), (1,))
 
     def mag(self):
         return self.magSqr().sqrt()
 
     def sqrt(self):
         return self.__class__('abs({0})'.format(self.name), ad.sqrt(self.field), self.dimensions)
+
+    def sqr(self):
+        return self.__class__('abs({0})'.format(self.name), self.field*self.field, self.dimensions)
 
     def abs(self):
         return self.__class__('abs({0})'.format(self.name), ad.abs_(self.field), self.dimensions)

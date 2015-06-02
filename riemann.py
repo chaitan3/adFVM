@@ -91,7 +91,7 @@ def eulerHLLC(mesh, gamma, pLF, pRF, TLF, TRF, ULF, URF, \
     # normal velocity for CFL
     UnF = UF.dotN()
 
-    PrhoF = (cLF**2+0.5*(gamma-1)*qLF + (cRF**2+0.5*(gamma-1)*qRF)*RrhoF)/divRhoF
+    PrhoF = (cLF.sqr()+0.5*(gamma-1)*qLF + (cRF.sqr()+0.5*(gamma-1)*qRF)*RrhoF)/divRhoF
     cF = (PrhoF-0.5*(gamma-1)*UF.magSqr()).sqrt()
     # speed of sound for CFL
     aF = cF

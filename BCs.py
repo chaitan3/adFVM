@@ -158,7 +158,7 @@ class NSCBC_OUTLET_P(CharacteristicBoundaryCondition):
             dt = self.solver.dt
             p = self.p0
             p = p + rho*self.c*(Un-self.Un0)
-            p = p + dt*(-0.25*self.c*(1-self.Ma**2)*(self.p0-self.pt)/self.L)
+            p = p + dt*(-0.25*self.c*(1-self.Ma*self.Ma)*(self.p0-self.pt)/self.L)
             self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], p)
 
 class TURB_INFLOW(BoundaryCondition):
