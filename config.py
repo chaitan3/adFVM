@@ -24,13 +24,15 @@ os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
 # pickling
 os.environ['THEANO_FLAGS'] += ',reoptimize_unpickled_function=False'
-allowUnpicklingFunction = False
+unpickleFunction = False
+pickleFunction = False
 # profiling, gc, cleanup
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
 #os.environ['THEANO_FLAGS'] += ',exception_verbosity=high'
 os.environ['THEANO_FLAGS'] += ',profile=True'
-os.environ['THEANO_FLAGS'] += ',profile_memory=True'
+os.environ['THEANO_FLAGS'] += ',profile_optimizer=True'
+#os.environ['THEANO_FLAGS'] += ',profile_memory=True'
 # openmp
 #os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'
 # for voyager

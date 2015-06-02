@@ -185,17 +185,18 @@ class SolverFunction(object):
         fn = None
         if parallel.rank == 0:
             start = time.time()
-            if os.path.exists(pklFile) and config.allowUnpicklingFunction:
+            if os.path.exists(pklFile) and config.unpickleFunction:
                 pprint('Loading pickled file', pklFile)
                 pkl = open(pklFile).read()
             else:
                 fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
                 #T.printing.pydotprint(fn, outfile='graph.png')
-                pkl = pickle.dumps(fn)
-                pprint('Saving pickle file', pklFile)
-                f = open(pklFile, 'w').write(pkl)
+                if config.pickleFunction:
+                    pkl = pickle.dumps(fn)
+                    pprint('Saving pickle file', pklFile)
+                    f = open(pklFile, 'w').write(pkl)
+                    pprint('Module size: {0:.2f}'.format(float(len(pkl))/(1024*1024)))
             end = time.time()
-            pprint('Module size: {0:.2f}'.format(float(len(pkl))/(1024*1024)))
             pprint('Compilation time: {0:.2f}'.format(end-start))
         else:
             pkl = None
