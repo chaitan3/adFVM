@@ -1,16 +1,18 @@
 from __future__ import print_function
+import sys
+#sys.path = [p for p in sys.path if '1.9.2' not in p]
 import numpy as np
 import parallel
 
 # compute type
-device = 'cpu'
-precision = np.float64
-#device = 'gpu0'
-#precision = np.float32
+#device = 'cpu'
+#precision = np.float64
+device = 'cuda0'
+precision = np.float32
 
 # theano
 import os
-import sys; sys.setrecursionlimit(100000)
+sys.setrecursionlimit(100000)
 project = 'adFVM'
 dtype = str(np.zeros(1, precision).dtype)
 home= os.path.expanduser('~')
@@ -30,8 +32,8 @@ pickleFunction = False
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
 #os.environ['THEANO_FLAGS'] += ',exception_verbosity=high'
-os.environ['THEANO_FLAGS'] += ',profile=True'
-os.environ['THEANO_FLAGS'] += ',profile_optimizer=True'
+#os.environ['THEANO_FLAGS'] += ',profile=True'
+#os.environ['THEANO_FLAGS'] += ',profile_optimizer=True'
 #os.environ['THEANO_FLAGS'] += ',profile_memory=True'
 # openmp
 #os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'
