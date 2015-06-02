@@ -7,7 +7,7 @@ import parallel
 # compute type
 #device = 'cpu'
 #precision = np.float64
-device = 'cuda0'
+device = 'gpu0'
 precision = np.float32
 
 # theano
