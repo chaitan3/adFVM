@@ -1,7 +1,5 @@
 #!/usr/bin/python2
 from __future__ import print_function
-import numpy as np
-import time
 
 from mesh import Mesh
 from field import Field, CellField
@@ -13,6 +11,9 @@ from config import ad, Logger
 from parallel import pprint
 import config
 logger = Logger(__name__)
+
+import numpy as np
+import time
 
 case = 'tests/cyclic/'
 mesh = Mesh(case)

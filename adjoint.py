@@ -1,15 +1,16 @@
 #!/usr/bin/python2
 from __future__ import print_function
 
-import numpy as np
-import time
-import sys
 
 import config, parallel
 from parallel import pprint
 from field import IOField
-
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
+
+import numpy as np
+import time
+import sys
+
 primal.adjoint = True
 mesh = primal.mesh
 

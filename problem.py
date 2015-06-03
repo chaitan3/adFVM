@@ -1,8 +1,6 @@
 #!/usr/bin/python2
 from __future__ import print_function
 
-import numpy as np
-import sys
 
 import config, parallel
 from config import ad, T
@@ -10,6 +8,9 @@ from parallel import pprint
 from pyRCF import RCF
 from solver import euler as explicit
 from field import CellField, Field, IOField
+
+import numpy as np
+import sys
 
 #primal = RCF('cases/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
 #

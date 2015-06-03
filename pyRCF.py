@@ -1,7 +1,4 @@
 #!/usr/bin/python2
-import numpy as np
-import sys
-import time
 
 import config
 from config import ad
@@ -12,6 +9,10 @@ from op import  div, snGrad, grad, laplacian, internal_sum
 from solver import Solver
 from interp import central, TVD_dual
 import riemann
+
+import numpy as np
+import sys
+import time
 
 logger = config.Logger(__name__)
 
