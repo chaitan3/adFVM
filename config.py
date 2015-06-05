@@ -4,11 +4,25 @@ import sys
 import numpy as np
 import parallel
 
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--gpu', action='store_true', dest='use_gpu')
+parser.add_argument('--temp', action='store_true', dest='use_temp')
+parser.add_argument('--no_pickle', action='store_true')
+parser.add_argument('--no_unpickle', action='store_true')
+parser.add_argument('--profile', action='store_true')
+parser.add_argument('--profile_mem', action='store_true')
+parser.add_argument('--profile_opt', action='store_true')
+parser.add_argument('--python', action='store_true')
+user, args = parser.parse_known_args()
+
 # compute type
-device = 'cpu'
-precision = np.float64
-#device = 'gpu0'
-#precision = np.float32
+if not user.use_gpu:
+    device = 'cpu'
+    precision = np.float64
+else:
+    device = 'gpu0'
+    precision = np.float32
 
 # theano
 import os
@@ -18,23 +32,23 @@ dtype = str(np.zeros(1, precision).dtype)
 home= os.path.expanduser('~')
 #home = '/lustre/atlas/proj-shared/tur103'
 #assert np.__version__ == '1.7.1'
-# whether to copy theano dir to temp
-#home = parallel.copyToTemp(home)
+if user.use_temp:
+    home = parallel.copyToTemp(home)
 #os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
 os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}'.format(project, device, dtype)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
 # pickling
 os.environ['THEANO_FLAGS'] += ',reoptimize_unpickled_function=False'
-unpickleFunction = True
-pickleFunction = True
+unpickleFunction = not user.no_unpickle
+pickleFunction = not user.no_pickle
 # profiling, gc, cleanup
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
 #os.environ['THEANO_FLAGS'] += ',exception_verbosity=high'
-#os.environ['THEANO_FLAGS'] += ',profile=True'
-#os.environ['THEANO_FLAGS'] += ',profile_optimizer=True'
-#os.environ['THEANO_FLAGS'] += ',profile_memory=True'
+os.environ['THEANO_FLAGS'] += ',profile=' + str(user.profile)
+os.environ['THEANO_FLAGS'] += ',profile_optimizer=' + str(user.profile_opt)
+os.environ['THEANO_FLAGS'] += ',profile_memory=' + str(user.profile_mem)
 # openmp
 #os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'
 # for voyager
@@ -54,9 +68,10 @@ def bcalloc(value, shape):
     return X
 ad.bcalloc = bcalloc
 # debugging/compiling
-#compile_mode = 'FAST_COMPILE'
-compile_mode = 'FAST_RUN'
-#compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
+if not user.python:
+    compile_mode = 'FAST_RUN'
+else:
+    compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
 #T.config.compute_test_value = 'raise'
 def inspect_inputs(i, node, fn):
     print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])
@@ -64,7 +79,7 @@ def inspect_outputs(i, node, fn):
     print("output(s) value(s):", [output[0] for output in fn.outputs])
 
 # custom norm for numpy 1.7
-def norm(a, axis, **kwargs):
+def norm(a, axis, **kwuser):
     try:
         #return np.linalg.norm(a, axis=axis, keepdims=True)
         return np.linalg.norm(a, axis=axis).reshape((-1,1))

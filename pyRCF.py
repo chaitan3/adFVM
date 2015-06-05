@@ -180,14 +180,12 @@ class RCF(Solver):
         return self.conservative(U, T, p)
     
 if __name__ == "__main__":
-    if len(sys.argv) > 2:
-        case = sys.argv[1]
-        time = float(sys.argv[2])
-    else:
-        pprint('WTF')
-        exit()
-
-    solver = RCF(case, timeIntegrator='SSPRK', CFL=1.2)
-    solver.run(startTime=time, dt=1e-9, nSteps=60000, writeInterval=500)
-    #solver = RCF(case, timeIntegrator='SSPRK', CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
-    #solver.run(startTime=time, dt=1e-4, nSteps=60000, writeInterval=100)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('case')
+    parser.add_argument('time', type=float)
+    user = parser.parse_args(config.args)
+    solver = RCF(user.case, timeIntegrator='SSPRK', CFL=1.2)
+    solver.run(startTime=user.time, dt=1e-9, nSteps=60000, writeInterval=500)
+    #solver = RCF(user.case, timeIntegrator='SSPRK', CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
+    #solver.run(startTime=user.time, dt=1e-4, nSteps=60000, writeInterval=100)
