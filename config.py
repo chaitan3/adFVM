@@ -1,6 +1,11 @@
 from __future__ import print_function
 import sys
-#sys.path = [p for p in sys.path if '1.9.2' not in p]
+sys.setrecursionlimit(100000)
+import os
+# titan/voyager fixes
+titan = 'lustre' in os.getcwd()
+if titan:
+    sys.path = [p for p in sys.path if '1.9.2' not in p]
 import numpy as np
 import parallel
 
@@ -14,6 +19,7 @@ parser.add_argument('--profile', action='store_true')
 parser.add_argument('--profile_mem', action='store_true')
 parser.add_argument('--profile_opt', action='store_true')
 parser.add_argument('--python', action='store_true')
+parser.add_argument('--voyager', action='store_true')
 user, args = parser.parse_known_args()
 
 # compute type
@@ -25,13 +31,13 @@ else:
     precision = np.float32
 
 # theano
-import os
-sys.setrecursionlimit(100000)
 project = 'adFVM'
 dtype = str(np.zeros(1, precision).dtype)
-home= os.path.expanduser('~')
-#home = '/lustre/atlas/proj-shared/tur103'
-#assert np.__version__ == '1.7.1'
+home = os.path.expanduser('~')
+# titan check
+if titan:
+    home = '/lustre/atlas/proj-shared/tur103'
+    assert np.__version__ == '1.7.1'
 if user.use_temp:
     home = parallel.copyToTemp(home)
 #os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
@@ -51,9 +57,9 @@ os.environ['THEANO_FLAGS'] += ',profile_optimizer=' + str(user.profile_opt)
 os.environ['THEANO_FLAGS'] += ',profile_memory=' + str(user.profile_mem)
 # openmp
 #os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'
-# for voyager
-#os.environ['THEANO_FLAGS'] += ',cxx='
-#os.environ['THEANO_FLAGS'] += ',gcc.cxxflags=-I/master-usr/include/python2.7/ -I/master-usr/include/ -L/usr/lib/python2.7/config-x86_64-linux-gnu/'
+if user.voyager:
+    os.environ['THEANO_FLAGS'] += ',cxx='
+    os.environ['THEANO_FLAGS'] += ',gcc.cxxflags=-I/master-usr/include/python2.7/ -I/master-usr/include/ -L/usr/lib/python2.7/config-x86_64-linux-gnu/'
 import theano as T
 import theano.tensor as ad
 import theano.sparse as adsparse

@@ -147,14 +147,18 @@ def writeResult(option, result):
 
 if __name__ == "__main__":
     mesh = primal.mesh.origMesh
-    option = sys.argv[1]
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('option')
+    user = parser.parse_args(config.args)
+
     timeStepFile = primal.mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval)
     
-    if option == 'orig':
+    if user.option == 'orig':
         perturb = None
         dts = dt
 
-    elif option == 'perturb':
+    elif user.option == 'perturb':
         writeInterval = config.LARGE
         if parallel.rank == 0:
             timeSteps = np.loadtxt(timeStepFile)
@@ -164,7 +168,7 @@ if __name__ == "__main__":
         parallel.mpi.Bcast(timeSteps, root=0)
         dts = timeSteps[:,1]
 
-    elif option == 'test':
+    elif user.option == 'test':
         primal.initFields(startTime)
         a = np.zeros((mesh.nCells, 5))
         perturb(a, startTime)
@@ -201,6 +205,6 @@ if __name__ == "__main__":
         exit()
 
     timeSteps, result = primal.run(startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction, perturb=perturb)
-    writeResult(option, result)
-    if option == 'orig' and parallel.rank == 0:
+    writeResult(user.option, result)
+    if user.option == 'orig' and parallel.rank == 0:
             np.savetxt(timeStepFile, timeSteps)

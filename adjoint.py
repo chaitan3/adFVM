@@ -23,9 +23,6 @@ else:
     timeSteps = np.zeros((nSteps + 1, 2))
 parallel.mpi.Bcast(timeSteps, root=0)
 
-if len(sys.argv) > 2:
-    firstCheckpoint = int(sys.argv[2])
-
 # provision for restaring adjoint
 if firstCheckpoint == 0:
     adjointFields = [IOField('{0}a'.format(name), np.zeros((mesh.origMesh.nInternalCells, dimensions[0]), config.precision), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
