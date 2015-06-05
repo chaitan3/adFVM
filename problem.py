@@ -1,128 +1,25 @@
 #!/usr/bin/python2
 from __future__ import print_function
 
-
 import config, parallel
-from config import ad, T
+from config import ad
 from parallel import pprint
-from pyRCF import RCF
 from field import CellField, Field, IOField
 
 import numpy as np
 import sys
+import os
 
-#primal = RCF('cases/convection/', {'R': 8.314, 'Cp': 1006., 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
-#
-#def objective(fields):
-#    rho, rhoU, rhoE = fields
-#    mesh = rho.mesh
-#    mid = np.array([0.75, 0.5, 0.5])
-#    indices = range(0, mesh.nInternalCells)
-#    G = np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1)*mesh.volumes[indices]
-#    return ad.sum(rho.field[indices]*G)/(nSteps + 1)
-#
-#def perturb(fields, eps=1E-2):
-#    rho, rhoU, rhoE = fields
-#    mesh = rho.mesh
-#    mid = np.array([0.5, 0.5, 0.5])
-#    indices = range(0, mesh.nInternalCells)
-#    G = eps*ad.array(np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
-#    rho.field[indices] += G
-
-primal = RCF('cases/forwardStep/', timeIntegrator='euler', CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
-
-def objective(fields, mesh):
-    rho, rhoU, rhoE = fields
-    patchID = 'obstacle'
-    startFace = mesh.boundary[patchID]['startFace']
-    endFace = startFace + mesh.boundary[patchID]['nFaces']
-    cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-    cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
-    areas = mesh.areas[startFace:endFace]
-    field = rhoE.field[cellStartFace:cellEndFace]
-    return ad.sum(field*areas)/(nSteps + 1)
-
-def perturb(stackedFields, mesh, t):
-    patchID = 'inlet'
-    startFace = mesh.boundary[patchID]['startFace']
-    endFace = startFace + mesh.boundary[patchID]['nFaces']
-    cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-    cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
-    stackedFields[cellStartFace:cellEndFace][:,1] += 0.1
-#
-#primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
-#def objective(fields):
-#    rho, rhoU, rhoE = fields
-#    mesh = rho.mesh
-#    patchID = 'cylinder'
-#    patch = mesh.boundary[patchID]
-#    nF = patch['nFaces']
-#    start, end = patch['startFace'], patch['startFace'] + nF
-#    areas = mesh.areas[start:end]
-#    nx = mesh.normals[start:end, 0].reshape((-1, 1))
-#    cellStartFace = mesh.nInternalCells + start - mesh.nInternalFaces
-#    cellEndFace = mesh.nInternalCells + end - mesh.nInternalFaces
-#    internalIndices = mesh.owner[start:end]
-#    start, end = cellStartFace, cellEndFace
-#    p = rhoE.field[start:end]*(primal.gamma-1)
-#    #deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1, keepdims=True)
-#    deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nF,1))
-#    T = rhoE/(rho*primal.Cv)
-#    #mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
-#    mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
-#    return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
-#
-#def perturb(stackedFields, t):
-#    mesh = primal.mesh.origMesh
-#    mid = np.array([-0.0032, 0.0, 0.])
-#    #G = 1e-6*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#    G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#    #rho
-#    if t == startTime:
-#        stackedFields[:mesh.nInternalCells, 0] += G
-#        stackedFields[:mesh.nInternalCells, 1] += G*100
-#        stackedFields[:mesh.nInternalCells, 4] += G*2e5
-
-#primal = RCF('/home/talnikar/foam/blade/les/')
-#primal = RCF('/master/home/talnikar/foam/blade/les/')
-#primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
-#def objective(fields):
-#    rho, rhoU, rhoE = fields
-#    solver = rhoE.solver
-#    mesh = rhoE.mesh
-#
-#    res = 0
-#    for patchID in ['suction', 'pressure']:
-#        patch = rhoE.BC[patchID]
-#        start, end = patch.startFace, patch.endFace
-#        cellStart, cellEnd = patch.cellStartFace, patch.cellEndFace
-#        areas = mesh.areas[start:end]
-#        U, T, p = solver.primitive(rho, rhoU, rhoE)
-#        
-#        Ti = T.field[mesh.owner[start:end]] 
-#        Tw = 300*Ti/Ti
-#        deltas = (mesh.cellCentres[cellStart:cellEnd]-mesh.cellCentres[patch.internalIndices]).norm(2, axis=1).reshape((end-start, 1))
-#        dtdn = (Tw-Ti)/deltas
-#        k = solver.Cp*solver.mu(Tw)/solver.Pr
-#        dT = 120
-#        res += ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1) + config.VSMALL)
-#    return res
-#
-#def perturb(stackedFields, t):
-#    mesh = primal.mesh.origMesh
-#    mid = np.array([-0.08, 0.014, 0.005])
-#    G = 1e-3*np.exp(-1e5*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#    #G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#    #rho
-#    if t == startTime:
-#        stackedFields[:mesh.nInternalCells, 0] += G
-#        stackedFields[:mesh.nInternalCells, 1] += G*100
-#        stackedFields[:mesh.nInternalCells, 4] += G*2e5
-
-nSteps = 10
-writeInterval = 2
-startTime = 0.0
-dt = 1e-9
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('caseFile')
+user, args = parser.parse_known_args(config.args)
+caseDir, caseFile = os.path.split(user.caseFile)
+sys.path.append(os.path.abspath(caseDir))
+caseFile = __import__(caseFile.split('.')[0])
+for attr in dir(caseFile):
+    if not attr.startswith('_'):
+        locals()[attr] = getattr(caseFile, attr)
 
 pprint('Compiling objective')
 stackedFields = ad.matrix()
@@ -147,12 +44,10 @@ def writeResult(option, result):
 
 if __name__ == "__main__":
     mesh = primal.mesh.origMesh
-    import argparse
+    timeStepFile = primal.mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval)
     parser = argparse.ArgumentParser()
     parser.add_argument('option')
-    user = parser.parse_args(config.args)
-
-    timeStepFile = primal.mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval)
+    user = parser.parse_args(args)
     
     if user.option == 'orig':
         perturb = None

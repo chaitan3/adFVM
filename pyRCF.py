@@ -184,8 +184,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('case')
     parser.add_argument('time', type=float)
+    parser.add_argument('-i', '--timeIntegrator', required=False, default=RCF.defaultConfig['timeIntregator'])
+    parser.add_argument('-l', '--CFL', required=False, default=RCF.defaultConfig['CFL'], type=float)
+    parser.add_argument('--Cp', required=False, default=RCF.defaultConfig['Cp'], type=float)
+    parser.add_argument('--riemann', required=False, default=RCF.defaultConfig['riemannSolver'])
+    parser.add_argument('-v', '--inviscid', action='store_true')
+    mu = RCF.defaultConfig['mu']
+
+    parser.add_argument('-n', '--nSteps', required=False, default=10000, type=int)
+    parser.add_argument('-w', '--writeInterval', required=False, default=500, type=int)
+    parser.add_argument('--dt', required=False, default=1e-9, type=float)
     user = parser.parse_args(config.args)
-    solver = RCF(user.case, timeIntegrator='SSPRK', CFL=1.2)
-    solver.run(startTime=user.time, dt=1e-9, nSteps=60000, writeInterval=500)
-    #solver = RCF(user.case, timeIntegrator='SSPRK', CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
-    #solver.run(startTime=user.time, dt=1e-4, nSteps=60000, writeInterval=100)
+    if user.inviscid:
+        mu = lambda T: config.VSMALL*T
+    solver = RCF(user.case, mu=mu, timeIntegrator=user.timeIntegrator, CFL=user.CFL)
+    solver.run(startTime=user.time, dt=user.dt, nSteps=user.nSteps, writeInterval=user.writeInterval)
