@@ -32,8 +32,8 @@ class Solver(object):
 
         self.timeIntegrator = getattr(timestep, self.timeIntegrator)
         self.stage = 0
-        self.padField = PadFieldOp(self.mesh)
-        self.gradPadField = gradPadFieldOp(self.mesh)
+        self.padField = PadFieldOp()
+        self.gradPadField = gradPadFieldOp()
 
     def compile(self):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
@@ -43,12 +43,12 @@ class Solver(object):
         newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
         self.forward = self.function([stackedFields, self.dt], \
                        [newStackedFields, self.dtc, self.local, self.remote], 'forward')
-        pprint()
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
             gradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields)
             self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], \
-                            gradient, 'gradient')
+                            gradient, 'adjoint')
+        pprint()
 
     def stackFields(self, fields, mod): 
         return mod.concatenate([phi.field for phi in fields], axis=1)
@@ -141,20 +141,21 @@ class Solver(object):
             self.writeFields(fields, t)
         return timeSteps, result
 
-    def function(self, inputs, outputs, name):
-        return SolverFunction(inputs, outputs, self, name)
+    def function(self, inputs, outputs, name, **kwargs):
+        return SolverFunction(inputs, outputs, self, name, **kwargs)
 
 class SolverFunction(object):
     counter = 0
-    def __init__(self, inputs, outputs, solver, name):
+    def __init__(self, inputs, outputs, solver, name, BCs=True):
         logger.info('compiling function')
         self.symbolic = []
         self.values = []
         mesh = solver.mesh
         self.populate_mesh(self.symbolic, mesh, mesh.paddedMesh, mesh.origPatches)
         self.populate_mesh(self.values, mesh.origMesh, mesh.paddedMesh.origMesh, mesh.origPatches)
-        self.populate_BCs(self.symbolic, solver, 0)
-        self.populate_BCs(self.values, solver, 1)
+        if BCs:
+            self.populate_BCs(self.symbolic, solver, 0)
+            self.populate_BCs(self.values, solver, 1)
         self.generate(inputs, outputs, solver.mesh.case, name)
 
     def populate_mesh(self, inputs, mesh, paddedMesh, origPatches):
@@ -227,9 +228,6 @@ class SolverFunction(object):
 class PadFieldOp(T.Op):
     __props__ = ()
 
-    def __init__(self, mesh):
-        pass
-
     def make_node(self, x):
         assert hasattr(self, '_props')
         x = ad.as_tensor_variable(x)
@@ -239,13 +237,10 @@ class PadFieldOp(T.Op):
         output_storage[0][0] = parallel.getRemoteCells(np.ascontiguousarray(inputs[0]), Field.mesh)
 
     def grad(self, inputs, output_grads):
-        return [self.solver.gradPadField(output_grads[0])]
+        return [Field.solver.gradPadField(output_grads[0])]
 
 class gradPadFieldOp(T.Op):
     __props__ = ()
-
-    def __init__(self, mesh):
-        pass
 
     def make_node(self, x):
         assert hasattr(self, '_props')

@@ -6,7 +6,6 @@ import config, parallel
 from config import ad, T
 from parallel import pprint
 from pyRCF import RCF
-from solver import euler as explicit
 from field import CellField, Field, IOField
 
 import numpy as np
@@ -30,26 +29,26 @@ import sys
 #    G = eps*ad.array(np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[indices], axis=1)**2).reshape(-1,1))
 #    rho.field[indices] += G
 
-#primal = RCF('cases/forwardStep/', {'R': 8.314, 'Cp': 2.5, 'gamma': 1.4, 'mu': 0., 'Pr': 0.7, 'CFL': 0.2})
-#
-#def objective(fields):
-#    rho, rhoU, rhoE = fields
-#    patch = 'obstacle'
-#    bc = rhoE.BC
-#    start, end = bc[patch].startFace, bc[patch].endFace
-#    areas = rhoE.mesh.areas[start:end]
-#    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
-#    field = rhoE.field[start:end]
-#    return ad.sum(field*areas)/(nSteps + 1)
-#
-#def perturb(fields):
-#    rho, rhoU, rhoE = fields
-#    patch = 'inlet'
-#    bc = rhoU.BC
-#    start, end = bc[patch].cellStartFace, bc[patch].cellEndFace
-#    rhoU.field[start:end][:,0] += 0.1
-#
-#
+primal = RCF('cases/forwardStep/', timeIntegrator='euler', CFL=0.7, Cp=2.5, mu=lambda T: config.VSMALL*T)
+
+def objective(fields, mesh):
+    rho, rhoU, rhoE = fields
+    patchID = 'obstacle'
+    startFace = mesh.boundary[patchID]['startFace']
+    endFace = startFace + mesh.boundary[patchID]['nFaces']
+    cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
+    cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+    areas = mesh.areas[startFace:endFace]
+    field = rhoE.field[cellStartFace:cellEndFace]
+    return ad.sum(field*areas)/(nSteps + 1)
+
+def perturb(stackedFields, mesh, t):
+    patchID = 'inlet'
+    startFace = mesh.boundary[patchID]['startFace']
+    endFace = startFace + mesh.boundary[patchID]['nFaces']
+    cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
+    cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+    stackedFields[cellStartFace:cellEndFace][:,1] += 0.1
 #
 #primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
 #def objective(fields):
@@ -85,55 +84,55 @@ import sys
 #        stackedFields[:mesh.nInternalCells, 4] += G*2e5
 
 #primal = RCF('/home/talnikar/foam/blade/les/')
-primal = RCF('/master/home/talnikar/foam/blade/les/')
+#primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
-def objective(fields):
-    rho, rhoU, rhoE = fields
-    solver = rhoE.solver
-    mesh = rhoE.mesh
+#def objective(fields):
+#    rho, rhoU, rhoE = fields
+#    solver = rhoE.solver
+#    mesh = rhoE.mesh
+#
+#    res = 0
+#    for patchID in ['suction', 'pressure']:
+#        patch = rhoE.BC[patchID]
+#        start, end = patch.startFace, patch.endFace
+#        cellStart, cellEnd = patch.cellStartFace, patch.cellEndFace
+#        areas = mesh.areas[start:end]
+#        U, T, p = solver.primitive(rho, rhoU, rhoE)
+#        
+#        Ti = T.field[mesh.owner[start:end]] 
+#        Tw = 300*Ti/Ti
+#        deltas = (mesh.cellCentres[cellStart:cellEnd]-mesh.cellCentres[patch.internalIndices]).norm(2, axis=1).reshape((end-start, 1))
+#        dtdn = (Tw-Ti)/deltas
+#        k = solver.Cp*solver.mu(Tw)/solver.Pr
+#        dT = 120
+#        res += ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1) + config.VSMALL)
+#    return res
+#
+#def perturb(stackedFields, t):
+#    mesh = primal.mesh.origMesh
+#    mid = np.array([-0.08, 0.014, 0.005])
+#    G = 1e-3*np.exp(-1e5*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+#    #G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+#    #rho
+#    if t == startTime:
+#        stackedFields[:mesh.nInternalCells, 0] += G
+#        stackedFields[:mesh.nInternalCells, 1] += G*100
+#        stackedFields[:mesh.nInternalCells, 4] += G*2e5
 
-    res = 0
-    for patchID in ['suction', 'pressure']:
-        patch = rhoE.BC[patchID]
-        start, end = patch.startFace, patch.endFace
-        cellStart, cellEnd = patch.cellStartFace, patch.cellEndFace
-        areas = mesh.areas[start:end]
-        U, T, p = solver.primitive(rho, rhoU, rhoE)
-        
-        Ti = T.field[mesh.owner[start:end]] 
-        Tw = 300*Ti/Ti
-        deltas = (mesh.cellCentres[cellStart:cellEnd]-mesh.cellCentres[patch.internalIndices]).norm(2, axis=1).reshape((end-start, 1))
-        dtdn = (Tw-Ti)/deltas
-        k = solver.Cp*solver.mu(Tw)/solver.Pr
-        dT = 120
-        res += ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1) + config.VSMALL)
-    return res
-
-def perturb(stackedFields, t):
-    mesh = primal.mesh.origMesh
-    mid = np.array([-0.08, 0.014, 0.005])
-    G = 1e-3*np.exp(-1e5*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    #G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    #rho
-    if t == startTime:
-        stackedFields[:mesh.nInternalCells, 0] += G
-        stackedFields[:mesh.nInternalCells, 1] += G*100
-        stackedFields[:mesh.nInternalCells, 4] += G*2e5
-
-nSteps = 20000
-writeInterval = 100
-startTime = 2.0
+nSteps = 10
+writeInterval = 2
+startTime = 0.0
 dt = 1e-9
 
 pprint('Compiling objective')
 stackedFields = ad.matrix()
-stackedFields.tag.test_value = np.random.rand(primal.mesh.origMesh.nCells, 5).astype(config.precision)
+#stackedFields.tag.test_value = np.random.rand(primal.mesh.origMesh.nCells, 5).astype(config.precision)
 fields = primal.unstackFields(stackedFields, CellField)
-objectiveValue = objective(fields)
-objectiveFunction = T.function([stackedFields], objectiveValue, mode=config.compile_Mode)
+objectiveValue = objective(fields, primal.mesh)
+objectiveFunction = primal.function([stackedFields], objectiveValue, 'objective', BCs=False)
 # objective is anyways going to be a sum over all processors
 # so no additional code req to handle parallel case
-objectiveGradient = T.function([stackedFields], ad.grad(objectiveValue, stackedFields), mode=config.compile_mode)
+objectiveGradient = primal.function([stackedFields], ad.grad(objectiveValue, stackedFields), 'objective_grad', BCs=False)
 
 def writeResult(option, result):
     resultFile = primal.mesh.case + '/objective.txt'
