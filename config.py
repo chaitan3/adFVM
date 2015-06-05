@@ -5,10 +5,10 @@ import numpy as np
 import parallel
 
 # compute type
-#device = 'cpu'
-#precision = np.float64
-device = 'gpu0'
-precision = np.float32
+device = 'cpu'
+precision = np.float64
+#device = 'gpu0'
+#precision = np.float32
 
 # theano
 import os
