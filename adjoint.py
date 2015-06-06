@@ -33,15 +33,16 @@ else:
 stackedAdjointFields = primal.stackFields(adjointFields, np)
 pprint('STARTING ADJOINT\n')
 
-def writeAdjointFields(writeTime):
-    global adjointFields
-    adjointFields = primal.unstackFields(stackedAdjointFields, IOField, names=[phi.name for phi in adjointFields])
-
-    for phi in adjointFields:
+def writeAdjointFields(stackedAdjointFields, writeTime):
+    fields = primal.unstackFields(stackedAdjointFields, IOField, names=[phi.name for phi in adjointFields])
+    start = time.time()
+    for phi in fields:
     # TODO: fix unstacking F_CONTIGUOUS
         phi.field = np.ascontiguousarray(phi.field)
         phi.info()
         phi.write(writeTime)
+    end = time.time()
+    pprint('Time for writing fields: {0}'.format(end-start))
     pprint()
 
 result = 0.
@@ -57,7 +58,7 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         t, dt = timeSteps[-1]
         lastSolution = solutions[-1]
         stackedAdjointFields  = np.ascontiguousarray(objectiveGradient(lastSolution))
-        writeAdjointFields(t)
+        writeAdjointFields(stackedAdjointFields, t)
 
     for step in range(0, writeInterval):
         start = time.time()
@@ -81,6 +82,6 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         pprint('Time for iteration: {0}'.format(end-start))
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
-    writeAdjointFields(t)
+    writeAdjointFields(stackedAdjointFields, t)
 
 writeResult('adjoint', result)
