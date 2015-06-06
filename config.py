@@ -1,7 +1,9 @@
 from __future__ import print_function
+import time
 import sys
-sys.setrecursionlimit(100000)
 import os
+runtime = time.time()
+sys.setrecursionlimit(100000)
 # titan/voyager fixes
 titan = 'lustre' in os.getcwd()
 if titan:

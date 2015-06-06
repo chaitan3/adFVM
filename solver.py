@@ -115,6 +115,7 @@ class Solver(object):
                 phi.field = np.ascontiguousarray(phi.field)
 
             end = time.time()
+            pprint('Time since beginning:', end-config.runtime)
             pprint('Time for iteration:', end-start)
             pprint('objective: ', parallel.sum(result))
             
