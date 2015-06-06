@@ -190,7 +190,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('case')
     parser.add_argument('time', type=float)
-    parser.add_argument('-i', '--timeIntegrator', required=False, default=RCF.defaultConfig['timeIntregator'])
+    parser.add_argument('-i', '--timeIntegrator', required=False, default=RCF.defaultConfig['timeIntegrator'])
     parser.add_argument('-l', '--CFL', required=False, default=RCF.defaultConfig['CFL'], type=float)
     parser.add_argument('--Cp', required=False, default=RCF.defaultConfig['Cp'], type=float)
     parser.add_argument('--riemann', required=False, default=RCF.defaultConfig['riemannSolver'])
