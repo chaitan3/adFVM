@@ -114,6 +114,7 @@ class Solver(object):
             for phi in fields:
                 phi.field = np.ascontiguousarray(phi.field)
 
+            parallel.mpi.Barrier()
             end = time.time()
             pprint('Time since beginning:', end-config.runtime)
             pprint('Time for iteration:', end-start)

@@ -74,6 +74,7 @@ class RCF(Solver):
         self.U = IOField.read('U', self.mesh, t)
         self.T = IOField.read('T', self.mesh, t)
         self.p = IOField.read('p', self.mesh, t)
+        parallel.mpi.Barrier()
         end = time.time()
         pprint('Time for reading fields: {0}'.format(end-start))
         UI = self.U.complete()
@@ -94,6 +95,7 @@ class RCF(Solver):
         self.U.write(t)
         self.T.write(t)
         self.p.write(t)
+        parallel.mpi.Barrier()
         end = time.time()
         pprint('Time for writing fields: {0}'.format(end-start))
            

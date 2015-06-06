@@ -93,10 +93,11 @@ class Mesh(object):
         self.origMesh = cls.copy(self, fields=True)
         self.makeTensor()
 
-        end = time.time()
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
         pprint('nFaces:', parallel.sum(self.origMesh.nFaces))
+        parallel.mpi.Barrier()
+        end = time.time()
         pprint('Time for reading mesh:', end-start)
         pprint()
 

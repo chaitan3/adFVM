@@ -41,6 +41,7 @@ def writeAdjointFields(stackedAdjointFields, writeTime):
         phi.field = np.ascontiguousarray(phi.field)
         phi.info()
         phi.write(writeTime)
+    parallel.mpi.Barrier()
     end = time.time()
     pprint('Time for writing fields: {0}'.format(end-start))
     pprint()
@@ -78,6 +79,7 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         perturb(perturbation, mesh.origMesh, t)
         result += np.sum(stackedAdjointFields * perturbation)
 
+        parallel.mpi.Barrier()
         end = time.time()
         pprint('Time for iteration: {0}'.format(end-start))
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
