@@ -85,6 +85,17 @@ def inspect_inputs(i, node, fn):
     print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])
 def inspect_outputs(i, node, fn):
     print("output(s) value(s):", [output[0] for output in fn.outputs])
+def detect_nan(i, node, fn):
+    for output in fn.outputs:
+        if (isinstance(output[0],np.ndarray)):
+            if (not isinstance(output[0], np.random.RandomState) and
+                np.isnan(output[0]).any()):
+                print('*** NaN detected ***')
+                print('Inputs : %s' % [(min(input[0]), max(input[0])) for input in fn.inputs])
+                print('Outputs: %s' % [(min(output[0]), max(output[0])) for output in fn.outputs])
+                raise Exception('NAN')
+compile_mode = T.compile.MonitorMode(post_func=detect_nan, optimizer='fast_run')
+T.config.traceback.limit = -1
 
 # LOGGING
 

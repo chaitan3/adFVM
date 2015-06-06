@@ -1,4 +1,4 @@
-
+import config
 from config import ad
 from field import Field
 
@@ -47,7 +47,7 @@ def eulerRoe(mesh, gamma, pLF, pRF, TLF, TRF, ULF, URF, \
     # normal velocity for CFL
     UnF = UF.dotN()
 
-    drhoF = rhoRF - rhoLF 
+    drhoF = rhoRF - rhoLF
     drhoUF = rhoRF*URF - rhoLF*ULF
     drhoEF = (hRF*rhoRF-pRF)-(hLF*rhoLF-pLF)
 
@@ -55,6 +55,7 @@ def eulerRoe(mesh, gamma, pLF, pRF, TLF, TRF, ULF, URF, \
 
     eps = 0.5*(rhoUnLF/rhoLF - rhoUnRF/rhoRF).abs()
     eps += 0.5*((gamma*pLF/rhoLF).sqrt() - (gamma*pRF/rhoRF).sqrt()).abs()
+    eps = eps.stabilise(config.SMALL)
 
     lam1 = Field.switch(ad.lt(lam1.field, 2.*eps.field), 0.25*lam1*lam1/eps + eps, lam1)
     lam2 = Field.switch(ad.lt(lam2.field, 2.*eps.field), 0.25*lam2*lam2/eps + eps, lam2)

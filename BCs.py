@@ -70,7 +70,7 @@ class zeroGradient(BoundaryCondition):
             # second order correction
             grad = self.phi.grad.field[self.internalIndices]
             R = self.mesh.faceCentres[self.startFace:self.endFace] - self.mesh.cellCentres[self.internalIndices]
-            boundaryValue += 0.5*dot(grad, R, self.phi.dimensions[0])
+            boundaryValue = boundaryValue + 0.5*dot(grad, R, self.phi.dimensions[0])
         self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], boundaryValue)
 
 class symmetryPlane(zeroGradient):

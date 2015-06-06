@@ -229,6 +229,9 @@ class SolverFunction(object):
 
 class PadFieldOp(T.Op):
     __props__ = ()
+    def __init__(self):
+        if parallel.nProcessors == 1:
+            self.view_map = {0: [0]}
 
     def make_node(self, x):
         assert hasattr(self, '_props')
@@ -243,6 +246,10 @@ class PadFieldOp(T.Op):
 
 class gradPadFieldOp(T.Op):
     __props__ = ()
+
+    def __init__(self):
+        if parallel.nProcessors == 1:
+            self.view_map = {0: [0]}
 
     def make_node(self, x):
         assert hasattr(self, '_props')

@@ -141,6 +141,10 @@ class RCF(Solver):
         ULF, URF = TVD_dual(U, gradU)
         TLF, TRF = TVD_dual(T, gradT)
         pLF, pRF = TVD_dual(p, gradp)
+        #ULF, URF = central(U, mesh), central(U, mesh)
+        #TLF, TRF = central(T, mesh), central(T, mesh)
+        #pLF, pRF = central(p, mesh), central(p, mesh)
+
         rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
         rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
 
@@ -155,7 +159,7 @@ class RCF(Solver):
         #qF = snGrad(T)*kappa
         gradTF = central(gradT, mesh)
         gradTCF = gradTF + snGrad(T)*mesh.Normals - (gradTF.dotN())*mesh.Normals
-        qF = gradTCF.dotN()
+        qF = kappa*gradTCF.dotN()
         
         #gradUTF = central(gradU.transpose(), mesh)
         #sigmaF = (snGrad(U) + gradUTF.dotN() - (2./3)*mesh.Normals*gradUTF.trace())*mu
@@ -205,5 +209,5 @@ if __name__ == "__main__":
     user = parser.parse_args(config.args)
     if user.inviscid:
         mu = lambda T: config.VSMALL*T
-    solver = RCF(user.case, mu=mu, timeIntegrator=user.timeIntegrator, CFL=user.CFL)
+    solver = RCF(user.case, mu=mu, timeIntegrator=user.timeIntegrator, CFL=user.CFL, Cp=user.Cp, riemannSolver=user.riemann)
     solver.run(startTime=user.time, dt=user.dt, nSteps=user.nSteps, writeInterval=user.writeInterval)
