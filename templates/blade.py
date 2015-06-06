@@ -23,9 +23,10 @@ def objective(fields, mesh):
         areas = mesh.areas[startFace:endFace]
         U, T, p = solver.primitive(rho, rhoU, rhoE)
         
-        Ti = T.field[mesh.owner[startFace:endFace]] 
+        internalIndices = mesh.owner[startFace:endFace]
+        Ti = T.field[internalIndices] 
         Tw = 300*Ti/Ti
-        deltas = (mesh.cellCentres[cellStartFace:cellEndFace]-mesh.cellCentres[patch.internalIndices]).norm(2, axis=1).reshape((nFaces, 1))
+        deltas = (mesh.cellCentres[cellStartFace:cellEndFace]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nFaces, 1))
         dtdn = (Tw-Ti)/deltas
         k = solver.Cp*solver.mu(Tw)/solver.Pr
         dT = 120
