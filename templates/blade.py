@@ -1,6 +1,7 @@
 from pyRCF import RCF 
 import config
 from config import ad
+from compat import norm
 import numpy as np
 
 primal = RCF('.')
@@ -32,8 +33,7 @@ def objective(fields, mesh):
 
 def perturb(stackedFields, mesh, t):
     mid = np.array([-0.08, 0.014, 0.005])
-    G = 1e-3*np.exp(-1e5*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    #G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 1e-3*np.exp(-1e5*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #rho
     if t == startTime:
         stackedFields[:mesh.nInternalCells, 0] += G

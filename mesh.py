@@ -6,6 +6,7 @@ import copy
 
 import config, parallel
 from config import ad, adsparse, T
+from compat import norm
 from parallel import pprint, Exchanger
 
 logger = config.Logger(__name__)
@@ -152,7 +153,7 @@ class Mesh(object):
         normals = np.cross(v1, v2)
         # change back to contiguous
         normals = np.ascontiguousarray(normals)
-        return normals / config.norm(normals, axis=1, keepdims=True)
+        return normals / norm(normals, axis=1, keepdims=True)
 
     def getCellFaces(self):
         logger.info('generated cell faces')
@@ -190,7 +191,7 @@ class Mesh(object):
             nextPoints = self.points[self.faces[:, (index % nFacePoints)+1]]
             centres = (points + nextPoints + faceCentres)/3
             normals = np.cross((nextPoints - points), (faceCentres - points))
-            areas = config.norm(normals, axis=1, keepdims=True)/2
+            areas = norm(normals, axis=1, keepdims=True)/2
             sumAreas += areas
             sumCentres += areas*centres
         faceCentres = sumCentres/sumAreas
@@ -200,7 +201,7 @@ class Mesh(object):
         logger.info('generated deltas')
         P = self.cellCentres[self.owner]
         N = self.cellCentres[self.neighbour]
-        return config.norm(P-N, axis=1, keepdims=True)
+        return norm(P-N, axis=1, keepdims=True)
 
     def getWeights(self):
         logger.info('generated face deltas')
@@ -576,7 +577,7 @@ class Mesh(object):
 
         mesh.areas = padFaceField('areas')
         mesh.normals = padFaceField('normals')
-        #print sum(config.norm(mesh.normals[remoteGhostStartFace:], axis=1)), nRemoteBoundaryFaces
+        #print sum(norm(mesh.normals[remoteGhostStartFace:], axis=1)), nRemoteBoundaryFaces
         mesh.weights = padFaceField('weights')
         mesh.sumOp = self.getSumOp(mesh, ghost=True)
 

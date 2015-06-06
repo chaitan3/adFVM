@@ -4,6 +4,8 @@ import numpy as np
 import subprocess
 import time
 
+from compat import add_at
+
 mpi = MPI.COMM_WORLD
 nProcessors = mpi.Get_size()
 name = MPI.Get_processor_name()
@@ -178,8 +180,8 @@ def getAdjointRemoteCells(paddedJacobian, mesh):
 
     exchanger.wait()
     for patchID in meshC.remotePatches:
-        np.add.at(jacobian, meshP.localRemoteCells['internal'][patchID], adjointRemoteCells['internal'][patchID])
-        np.add.at(jacobian, meshP.localRemoteCells['boundary'][patchID], adjointRemoteCells['boundary'][patchID])
+        add_at(jacobian, meshP.localRemoteCells['internal'][patchID], adjointRemoteCells['internal'][patchID])
+        add_at(jacobian, meshP.localRemoteCells['boundary'][patchID], adjointRemoteCells['boundary'][patchID])
 
     # code for second layer: transfer to remote jacobians again and add up
     exchanger = Exchanger()
@@ -195,7 +197,7 @@ def getAdjointRemoteCells(paddedJacobian, mesh):
 
     exchanger.wait()
     for patchID in meshC.remotePatches:
-        np.add.at(jacobian, meshP.localRemoteCells['internal'][patchID], adjointRemoteCells['extra'][patchID])
+        add_at(jacobian, meshP.localRemoteCells['internal'][patchID], adjointRemoteCells['extra'][patchID])
 
     # make processor cells zero again
     jacobian[origMesh.nLocalCells:] = 0.

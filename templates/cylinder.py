@@ -1,3 +1,8 @@
+from pyRCF import RCF 
+from config import ad
+from compat import norm
+import numpy as np
+
 primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
 def objective(fields):
     rho, rhoU, rhoE = fields
@@ -23,8 +28,7 @@ def objective(fields):
 def perturb(stackedFields, t):
     mesh = primal.mesh.origMesh
     mid = np.array([-0.0032, 0.0, 0.])
-    #G = 1e-6*np.exp(-1e7*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    G = 1e-4*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 1e-4*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #rho
     if t == startTime:
         stackedFields[:mesh.nInternalCells, 0] += G
