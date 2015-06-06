@@ -1,6 +1,9 @@
 # custom norm for numpy 1.7
 import numpy as np
-import cfuncs
+try:
+    import cfuncs
+except:
+    pass
 
 def norm(a, axis, **kwuser):
     try:

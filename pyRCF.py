@@ -1,6 +1,6 @@
 #!/usr/bin/python2
 
-import config
+import config, parallel
 from config import ad
 from parallel import pprint
 
