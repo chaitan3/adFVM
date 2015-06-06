@@ -1,8 +1,10 @@
 from pyRCF import RCF 
+import config
 from config import ad
 import numpy as np
 
-primal = RCF('/home/talnikar/foam/blade/les/')
+primal = RCF('.')
+#primal = RCF('/home/talnikar/foam/blade/les/')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 def objective(fields, mesh):
@@ -11,9 +13,11 @@ def objective(fields, mesh):
 
     res = 0
     for patchID in ['suction', 'pressure']:
-        patch = rhoE.BC[patchID]
-        start, end = patch.startFace, patch.endFace
-        cellStart, cellEnd = patch.cellStartFace, patch.cellEndFace
+        startFace = mesh.boundary[patchID]['startFace']
+        endFace = startFace + mesh.boundary[patchID]['nFaces']
+        cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
+        cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+
         areas = mesh.areas[start:end]
         U, T, p = solver.primitive(rho, rhoU, rhoE)
         

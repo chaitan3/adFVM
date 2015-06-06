@@ -70,9 +70,12 @@ class RCF(Solver):
 
     def initFields(self, t):
         # IO Fields, with phi attribute as a CellField
+        start = time.time()
         self.U = IOField.read('U', self.mesh, t)
         self.T = IOField.read('T', self.mesh, t)
         self.p = IOField.read('p', self.mesh, t)
+        end = time.time()
+        pprint('Time for reading: {0}'.format(end-start))
         UI = self.U.complete()
         TI = self.T.complete()
         pI = self.p.complete()
@@ -83,13 +86,16 @@ class RCF(Solver):
         return self.conservative(self.U, self.T, self.p)
     
     def writeFields(self, fields, t):
-        for phi in fields:
-            phi.write(t)
         U, T, p = self.primitive(*fields)
         self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
+        start = time.time()
+        for phi in fields:
+            phi.write(t)
         self.U.write(t)
         self.T.write(t)
         self.p.write(t)
+        end = time.time()
+        pprint('Time for reading: {0}'.format(end-start))
            
     def equation(self, rhoP, rhoUP, rhoEP, exit=False):
         logger.info('computing RHS/LHS')
