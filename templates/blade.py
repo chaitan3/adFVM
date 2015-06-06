@@ -15,16 +15,17 @@ def objective(fields, mesh):
     res = 0
     for patchID in ['suction', 'pressure']:
         startFace = mesh.boundary[patchID]['startFace']
-        endFace = startFace + mesh.boundary[patchID]['nFaces']
+        nFaces = mesh.boundary[patchID]['nFaces']
+        endFace = startFace + nFaces
         cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
         cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
 
-        areas = mesh.areas[start:end]
+        areas = mesh.areas[startFace:endFace]
         U, T, p = solver.primitive(rho, rhoU, rhoE)
         
-        Ti = T.field[mesh.owner[start:end]] 
+        Ti = T.field[mesh.owner[startFace:endFace]] 
         Tw = 300*Ti/Ti
-        deltas = (mesh.cellCentres[cellStart:cellEnd]-mesh.cellCentres[patch.internalIndices]).norm(2, axis=1).reshape((end-start, 1))
+        deltas = (mesh.cellCentres[cellStartFace:cellEndFace]-mesh.cellCentres[patch.internalIndices]).norm(2, axis=1).reshape((nFaces, 1))
         dtdn = (Tw-Ti)/deltas
         k = solver.Cp*solver.mu(Tw)/solver.Pr
         dT = 120
