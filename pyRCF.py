@@ -75,7 +75,7 @@ class RCF(Solver):
         self.T = IOField.read('T', self.mesh, t)
         self.p = IOField.read('p', self.mesh, t)
         end = time.time()
-        pprint('Time for reading: {0}'.format(end-start))
+        pprint('Time for reading fields: {0}'.format(end-start))
         UI = self.U.complete()
         TI = self.T.complete()
         pI = self.p.complete()
@@ -95,7 +95,7 @@ class RCF(Solver):
         self.T.write(t)
         self.p.write(t)
         end = time.time()
-        pprint('Time for reading: {0}'.format(end-start))
+        pprint('Time for writing fields: {0}'.format(end-start))
            
     def equation(self, rhoP, rhoUP, rhoEP, exit=False):
         logger.info('computing RHS/LHS')
