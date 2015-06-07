@@ -176,7 +176,7 @@ class RCF(Solver):
         self.aF = aF
         aF = UnF.abs() + aF
         self.dtc = 2*self.CFL/internal_sum(aF, mesh, absolute=True)
-        
+
         return [div(rhoFlux) - source[0], \
                 #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
                 div(rhoUFlux - sigmaF) - source[1], \

@@ -44,6 +44,8 @@ def TVD_dual(phi, gradPhi):
         weights = (F.dot(R)).field/(deltas*deltas)
         #weights = 0.5
         limiter = psi(r, r.abs()).field
+        #phi.solver.local = phiC
+        #phi.solver.remote = phiD
         faceFields[index] = ad.set_subtensor(faceFields[index][start:end], phiC + weights*limiter*phiDC)
     # internal, then local patches and finally remote
     update(0, mesh.nInternalFaces, 0)
@@ -59,8 +61,8 @@ def TVD_dual(phi, gradPhi):
             update(startFace, endFace, 0)
             faceFields[1] = ad.set_subtensor(faceFields[1][startFace:endFace], phi.field[mesh.neighbour[startFace:endFace]])
         else:
-            faceFields[0] = ad.set_subtensor(faceFields[0][startFace:endFace], phi.field[mesh.neighbour[startFace:endFace]])
-            faceFields[1] = faceFields[0]
+            for index in range(0, 2):
+                faceFields[index] = ad.set_subtensor(faceFields[index][startFace:endFace], phi.field[mesh.neighbour[startFace:endFace]])
     nRemoteFaces = mesh.nFaces-(mesh.nCells-mesh.nLocalCells)
     update(nRemoteFaces, mesh.nFaces, 0, False)
     update(nRemoteFaces, mesh.nFaces, 1, False)

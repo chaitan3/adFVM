@@ -94,7 +94,8 @@ def detect_nan(i, node, fn):
                 print('Inputs : %s' % [(min(input[0]), max(input[0])) for input in fn.inputs])
                 print('Outputs: %s' % [(min(output[0]), max(output[0])) for output in fn.outputs])
                 raise Exception('NAN')
-compile_mode = T.compile.MonitorMode(post_func=detect_nan, optimizer='fast_run')
+#compile_mode = T.compile.MonitorMode(post_func=detect_nan, optimizer='None')
+#compile_mode = T.compile.DebugMode(optimizer='None')
 T.config.traceback.limit = -1
 
 # LOGGING
