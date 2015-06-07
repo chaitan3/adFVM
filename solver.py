@@ -106,8 +106,8 @@ class Solver(object):
             pprint('Time step', timeIndex)
             #stackedFields, dtc = self.forward(stackedFields)
             stackedFields, dtc, local, remote = self.forward(stackedFields, dt)
-            print local.shape, local.dtype, np.abs(local).max(), np.abs(local).min(), (local).max(), (local).min(), np.isnan(local).any()
-            print remote.shape, remote.dtype, remote, np.abs(remote).max(), np.abs(remote).min(), (remote).max(), (remote).min(), np.isnan(remote).any()
+            #print local.shape, local.dtype, np.abs(local).max(), np.abs(local).min(), (local).max(), (local).min(), np.isnan(local).any()
+            #print remote.shape, remote.dtype, remote, np.abs(remote).max(), np.abs(remote).min(), (remote).max(), (remote).min(), np.isnan(remote).any()
 
             fields = self.unstackFields(stackedFields, IOField)
             # TODO: fix unstacking F_CONTIGUOUS
@@ -194,7 +194,7 @@ class SolverFunction(object):
             else:
                 fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
                 #T.printing.pydotprint(fn, outfile='graph.png')
-                if config.pickleFunction:
+                if config.pickleFunction or parallel.nProcessors > 1:
                     pkl = pickle.dumps(fn)
                     pprint('Saving pickle file', pklFile)
                     f = open(pklFile, 'w').write(pkl)

@@ -4,29 +4,27 @@ from config import ad
 from compat import norm
 import numpy as np
 
-primal = RCF('.')
-#primal = RCF('/home/talnikar/foam/blade/les/')
+#primal = RCF('.')
+primal = RCF('/home/talnikar/foam/blade/laminar/')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 def objective(fields, mesh):
     rho, rhoU, rhoE = fields
     solver = rhoE.solver
+    U, T, p = solver.primitive(rho, rhoU, rhoE)
 
     res = 0
     for patchID in ['suction', 'pressure']:
         startFace = mesh.boundary[patchID]['startFace']
         nFaces = mesh.boundary[patchID]['nFaces']
         endFace = startFace + nFaces
-        cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-        cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+        internalIndices = mesh.owner[startFace:endFace]
 
         areas = mesh.areas[startFace:endFace]
-        U, T, p = solver.primitive(rho, rhoU, rhoE)
-        
-        internalIndices = mesh.owner[startFace:endFace]
+        deltas = mesh.deltas[startFace:endFace]
+
         Ti = T.field[internalIndices] 
-        Tw = 300*Ti/Ti
-        deltas = (mesh.cellCentres[cellStartFace:cellEndFace]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nFaces, 1))
+        Tw = 300
         dtdn = (Tw-Ti)/deltas
         k = solver.Cp*solver.mu(Tw)/solver.Pr
         dT = 120
@@ -42,9 +40,9 @@ def perturb(stackedFields, mesh, t):
         stackedFields[:mesh.nInternalCells, 1] += G*100
         stackedFields[:mesh.nInternalCells, 4] += G*2e5
 
-nSteps = 10
-writeInterval = 2
-startTime = 0.0
-dt = 1e-9
+nSteps = 1000
+writeInterval = 50
+startTime = 1.0
+dt = 1e-8
 
 
