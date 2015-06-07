@@ -93,13 +93,13 @@ class Solver(object):
         if mode == 'forward':
             solutions = [stackedFields]
 
+        pprint('Time marching for', ' '.join(self.names))
 
         while t < endTime and timeIndex < nSteps:
             #import resource; print resource.getrusage(resource.RUSAGE_SELF)[2]*resource.getpagesize()/(1024*1024)
             #import guppy; print guppy.hpy().heap()
             start = time.time()
 
-            pprint('Time marching for', ' '.join(self.names))
             for index in range(0, len(fields)):
                 fields[index].info()
 

@@ -24,22 +24,22 @@ else:
 parallel.mpi.Bcast(timeSteps, root=0)
 
 # provision for restaring adjoint
+adjointNames = ['{0}a'.format(name) for name in primal.names]
 if firstCheckpoint == 0:
-    adjointFields = [IOField('{0}a'.format(name), np.zeros((mesh.origMesh.nInternalCells, dimensions[0]), config.precision), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(primal.names, primal.dimensions)]
+    adjointFields = [IOField(name, np.zeros((mesh.origMesh.nInternalCells, dimensions[0]), config.precision), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(adjointNames, primal.dimensions)]
 else:
-    adjointFields = [IOField.read('{0}a'.format(name), timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in primal.names]
+    adjointFields = [IOField.read(name, timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in adjointNames]
 
 # local adjoint fields
 stackedAdjointFields = primal.stackFields(adjointFields, np)
 pprint('STARTING ADJOINT\n')
 
 def writeAdjointFields(stackedAdjointFields, writeTime):
-    fields = primal.unstackFields(stackedAdjointFields, IOField, names=[phi.name for phi in adjointFields])
+    fields = primal.unstackFields(stackedAdjointFields, IOField, names=adjointNames)
     start = time.time()
     for phi in fields:
     # TODO: fix unstacking F_CONTIGUOUS
         phi.field = np.ascontiguousarray(phi.field)
-        phi.info()
         phi.write(writeTime)
     parallel.mpi.Barrier()
     end = time.time()
@@ -47,6 +47,8 @@ def writeAdjointFields(stackedAdjointFields, writeTime):
     pprint()
 
 result = 0.
+
+
 for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
     pprint('PRIMAL FORWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     primalIndex = nSteps - (checkpoint + 1)*writeInterval
@@ -55,6 +57,8 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
 
     pprint('ADJOINT BACKWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
     # if starting from 0, create the adjointField
+    pprint('Time marching for', ' '.join(adjointNames))
+
     if checkpoint == 0:
         t, dt = timeSteps[-1]
         lastSolution = solutions[-1]
@@ -63,6 +67,9 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
 
     for step in range(0, writeInterval):
         start = time.time()
+        fields = primal.unstackFields(stackedAdjointFields, IOField, names=[phi.name for phi in adjointFields])
+        for phi in fields:
+            phi.info()
 
         adjointIndex = writeInterval-1 - step
         t, dt = timeSteps[primalIndex + adjointIndex]
@@ -81,6 +88,7 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
 
         parallel.mpi.Barrier()
         end = time.time()
+        pprint('Time since beginning:', end-config.runtime)
         pprint('Time for iteration: {0}'.format(end-start))
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
