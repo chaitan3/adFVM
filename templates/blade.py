@@ -5,7 +5,7 @@ from compat import norm
 import numpy as np
 
 #primal = RCF('.')
-primal = RCF('/home/talnikar/foam/blade/laminar/')
+primal = RCF('/home/talnikar/foam/blade/les3/')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 def objective(fields, mesh):
@@ -27,8 +27,11 @@ def objective(fields, mesh):
         Tw = 300
         dtdn = (Tw-Ti)/deltas
         k = solver.Cp*solver.mu(Tw)/solver.Pr
-        dT = 120
-        res += ad.sum(k*dtdn*areas)/(dT*ad.sum(areas)*(nSteps + 1) + config.VSMALL)
+        hf = ad.sum(k*dtdn*areas)
+        #dT = 120
+        #A = ad.sum(areas)
+        #h = hf/((nSteps + 1)*dT*A)
+        res += hf
     return res
 
 def perturb(stackedFields, mesh, t):
@@ -40,7 +43,7 @@ def perturb(stackedFields, mesh, t):
         stackedFields[:mesh.nInternalCells, 1] += G*100
         stackedFields[:mesh.nInternalCells, 4] += G*2e5
 
-nSteps = 1000
+nSteps = 100
 writeInterval = 50
 startTime = 1.0
 dt = 1e-8
