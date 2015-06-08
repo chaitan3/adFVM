@@ -116,8 +116,8 @@ class Solver(object):
 
             parallel.mpi.Barrier()
             end = time.time()
-            pprint('Time since beginning:', end-config.runtime)
             pprint('Time for iteration:', end-start)
+            pprint('Time since beginning:', end-config.runtime)
             pprint('objective: ', parallel.sum(result))
             
             result += objective(stackedFields)
