@@ -88,7 +88,7 @@ class Solver(object):
         # objective is local
         if perturb is not None:
             perturb(stackedFields, t)
-        result = objective(stackedFields)
+        result = objective(stackedFields)/(nSteps + 1)
         # writing and returning local solutions
         if mode == 'forward':
             solutions = [stackedFields]
@@ -120,7 +120,7 @@ class Solver(object):
             pprint('Time since beginning:', end-config.runtime)
             pprint('objective: ', parallel.sum(result))
             
-            result += objective(stackedFields)
+            result += objective(stackedFields)/(nSteps + 1)
             timeSteps.append([t, dt])
             if mode == 'forward':
                 solutions.append(stackedFields)
