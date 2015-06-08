@@ -7,7 +7,7 @@ sys.setrecursionlimit(100000)
 # titan/voyager fixes
 titan = 'lustre' in os.getcwd()
 if titan:
-    sys.path = [p for p in sys.path if '1.9.2' not in p]
+    sys.path = [p for p in sys.path if 'egg' not in p]
 import numpy as np
 import parallel
 
@@ -39,7 +39,7 @@ home = os.path.expanduser('~')
 # titan check
 if titan:
     home = '/lustre/atlas/proj-shared/tur103'
-    assert np.__version__ == '1.7.1'
+    assert np.__version__ == '1.9.2'
 if user.use_temp:
     home = parallel.copyToTemp(home)
 #os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
