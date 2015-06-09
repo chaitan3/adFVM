@@ -8,6 +8,7 @@ import config, parallel
 from config import ad, adsparse, T
 from compat import norm
 from parallel import pprint, Exchanger
+from compat import printMemUsage
 
 logger = config.Logger(__name__)
 
@@ -100,6 +101,8 @@ class Mesh(object):
         end = time.time()
         pprint('Time for reading mesh:', end-start)
         pprint()
+
+        printMemUsage()
 
         return self
 
