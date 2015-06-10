@@ -14,14 +14,13 @@ processorDirectory = '/'
 if nProcessors > 1:
     processorDirectory = '/processor{0}/'.format(rank)
 temp = '/tmp'
-coresPerNode = 16
 
 def pprint(*args, **kwargs):
     if rank == 0:
         print(*args, **kwargs)
 pprint('Running on {0} processors'.format(nProcessors))
 
-def copyToTemp(home):
+def copyToTemp(home, coresPerNode):
     start = time.time()
     if rank % coresPerNode == 0:
         dest = temp + '/.theano'
