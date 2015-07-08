@@ -46,7 +46,7 @@ class TestField(unittest.TestCase):
 
         S = np.random.rand(self.meshO.nFaces, 1) 
         T = np.random.rand(self.meshO.nFaces, 1)
-        res = evaluate(R.field, [self.U, self.V], [S,T])
+        res = evaluate(R.field, [self.U, self.V], [S,T], self)
         ref = np.maximum(S, T)
         checkArray(self, res, ref)
 
@@ -61,7 +61,7 @@ class TestField(unittest.TestCase):
         S = np.random.rand(self.meshO.nFaces, 1)
         T = np.random.rand(self.meshO.nFaces, 1)
         P = S > T
-        res = evaluate(R.field, [C, self.U, self.V], [P,S,T])
+        res = evaluate(R.field, [C, self.U, self.V], [P,S,T], self)
         ref = np.maximum(S, T)
         checkArray(self, res, ref)
 
@@ -74,7 +74,7 @@ class TestField(unittest.TestCase):
         T[:,0] = self.X
         T[:,1] = -1
         T[:,2] = 2.
-        res = evaluate(R.field, self.U, T)
+        res = evaluate(R.field, self.U, T, self)
         ref = np.zeros_like(T)
         ref[:,0] = np.abs(self.X)
         ref[:,1] = 1.
@@ -90,7 +90,7 @@ class TestField(unittest.TestCase):
         T[:,0] = self.X
         T[:,1] = -1
         T[:,2] = 2.
-        res = evaluate(R.field, self.U, T)
+        res = evaluate(R.field, self.U, T, self)
         ref = np.zeros_like(T)
         ref[:,0] = np.sign(self.X)
         ref[:,1] = -1.
@@ -103,7 +103,7 @@ class TestField(unittest.TestCase):
         self.assertEqual(R.dimensions, (1,))
 
         T = np.random.rand(self.meshO.nFaces, 3)
-        res = evaluate(R.field, self.U, T)
+        res = evaluate(R.field, self.U, T, self)
         ref = T[:,[0]]
         checkArray(self, res, ref)
 
@@ -115,7 +115,7 @@ class TestField(unittest.TestCase):
         T = np.zeros((self.meshO.nInternalCells, 3))
         T[:, 0] = self.X
         T[:, 1] = self.Y
-        res = evaluate(R.field, self.U, T)
+        res = evaluate(R.field, self.U, T, self)
         ref = (self.X**2 + self.Y**2).reshape(-1,1)
         checkArray(self, res, ref)
 
@@ -128,7 +128,7 @@ class TestField(unittest.TestCase):
         T = np.zeros((self.meshO.nInternalCells, 3))
         S[:,0], S[:,1] = self.X, self.Y
         T[:,0], T[:,1] = self.Y, -self.X
-        res = evaluate(R.field, [self.U, self.V], [S, T])
+        res = evaluate(R.field, [self.U, self.V], [S, T], self)
         ref = np.zeros((self.meshO.nInternalCells, 1))
         checkArray(self, res, ref)
 
@@ -141,7 +141,7 @@ class TestField(unittest.TestCase):
         T = np.zeros((self.meshO.nInternalCells, 3))
         S[:,0], S[:,1], S[:,2] = self.X, self.Y, 0.5
         T[:,0], T[:,1], T[:,2] = self.Y, -self.X, 2.
-        res = evaluate(R.field, [self.U, self.V], [S, T])
+        res = evaluate(R.field, [self.U, self.V], [S, T], self)
         ref = np.zeros((self.meshO.nInternalCells, 3, 3))
         ref[:, 0, 0] = self.X*self.Y
         ref[:, 0, 1] = -self.X*self.X
@@ -166,7 +166,7 @@ class TestField(unittest.TestCase):
         S[:, 1, 1] = self.Y*self.Y
         S[:, 2, 2] = 1.
         T[:,0], T[:,1], T[:,2] = self.X*0.1, self.X*0.2, self.X*0.3
-        res = evaluate(R.field, [self.W, self.U], [S, T])
+        res = evaluate(R.field, [self.W, self.U], [S, T], self)
         ref = np.zeros((self.meshO.nInternalCells, 3))
         ref[:, 0] = (S[:, 0, 0]*0.1 + S[:, 0, 1]*0.2)*self.X
         ref[:, 1] = S[:, 1, 1]*0.2*self.X
@@ -183,7 +183,7 @@ class TestField(unittest.TestCase):
         S[:, 0, 1] = self.X*self.Y
         S[:, 1, 1] = self.Y*self.Y
         S[:, 2, 2] = 1.
-        res = evaluate(R.field, self.W, S)
+        res = evaluate(R.field, self.W, S, self)
         ref = np.zeros((self.meshO.nInternalCells, 3, 3))
         ref[:, 0, 0] = self.X*self.X
         ref[:, 1, 0] = self.X*self.Y
@@ -201,7 +201,7 @@ class TestField(unittest.TestCase):
         S[:, 0, 1] = self.X*self.Y
         S[:, 1, 1] = self.Y*self.Y
         S[:, 2, 2] = 1.
-        res = evaluate(R.field, self.W, S)
+        res = evaluate(R.field, self.W, S, self)
         ref = (self.X*self.X + self.Y*self.Y + 1.).reshape(-1,1)
         checkArray(self, res, ref)
 
@@ -214,7 +214,7 @@ class TestField(unittest.TestCase):
         T = np.zeros((self.meshO.nInternalCells, 3))
         S[:,0], S[:,1] = self.X, self.Y
         T[:,0], T[:,1] = self.Y, -self.X
-        res = evaluate(R.field, [self.U, self.V], [S, T])
+        res = evaluate(R.field, [self.U, self.V], [S, T], self)
         ref = np.zeros((self.meshO.nInternalCells, 3))
         ref[:,0] = self.X + self.Y
         ref[:,1] = self.Y - self.X
@@ -229,7 +229,7 @@ class TestField(unittest.TestCase):
         T = np.zeros((self.meshO.nInternalCells, 3))
         S[:,0], S[:,1] = self.X, self.Y
         T[:,0], T[:,1] = self.Y, -self.X
-        res = evaluate(R.field, [self.U, self.V], [S, T])
+        res = evaluate(R.field, [self.U, self.V], [S, T], self)
         ref = np.zeros((self.meshO.nInternalCells, 3))
         ref[:,0] = self.X * self.Y
         ref[:,1] = self.Y * -self.X
@@ -246,7 +246,7 @@ class TestField(unittest.TestCase):
         T = np.zeros((self.meshO.nInternalCells, 1))
         S[:,0], S[:,1] = self.X, self.Y
         T[:,0] = self.Y
-        res = evaluate(R.field, [self.U, V], [S, T])
+        res = evaluate(R.field, [self.U, V], [S, T], self)
         ref = np.zeros((self.meshO.nInternalCells, 3))
         ref[:,0] = self.X*self.Y
         ref[:,1] = self.Y*self.Y
@@ -261,7 +261,7 @@ class TestField(unittest.TestCase):
         T[:,0] = self.X
         T[:,1] = -1
         T[:,2] = 2.
-        res = evaluate(R.field, self.U, T)
+        res = evaluate(R.field, self.U, T, self)
         ref = np.zeros_like(T)
         ref[:,0] = np.abs(self.X)
         ref[:,1] = 1.

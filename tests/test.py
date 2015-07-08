@@ -2,14 +2,19 @@ import sys
 sys.path.append('../')
 import unittest
 import numpy as np
+import config
 from config import ad, T
+config.unpickleFunction = False
+config.pickleFunction = False
 
-def evaluate(output, inputs, value):
+from solver import SolverFunction
+
+def evaluate(output, inputs, value, self):
     if not isinstance(inputs, list):
         inputs = [inputs]
     if not isinstance(value, list):
         value = [value]
-    f = T.function(inputs, output)
+    f = SolverFunction(inputs, output, self, 'test', BCs=False)
     return f(*value)
 
 def checkArray(self, res, ref, maxThres=1e-7, sumThres=1e-4):
