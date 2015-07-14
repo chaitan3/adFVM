@@ -37,7 +37,7 @@ class TestInterp(unittest.TestCase):
         T[:,0] = self.X + self.Y
         T[:,1] = self.X * self.Y
 
-        res = evaluate(R.field, self.U, T)
+        res = evaluate(R.field, self.U, T, self)
         ref = np.zeros((self.meshO.nFaces, 3))
         ref[:,0] = (self.XF + self.YF)
         ref[:,1] = (self.XF * self.YF)

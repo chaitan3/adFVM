@@ -6,6 +6,7 @@ import os
 import config, parallel
 from config import ad, T
 from parallel import pprint
+from compat import printMemUsage
 
 from field import Field, CellField, IOField
 from mesh import Mesh
@@ -88,7 +89,7 @@ class Solver(object):
         # objective is local
         if perturb is not None:
             perturb(stackedFields, t)
-        result = objective(stackedFields)
+        result = objective(stackedFields)/(nSteps + 1)
         # writing and returning local solutions
         if mode == 'forward':
             solutions = [stackedFields]
@@ -96,8 +97,7 @@ class Solver(object):
         pprint('Time marching for', ' '.join(self.names))
 
         while t < endTime and timeIndex < nSteps:
-            #import resource; print resource.getrusage(resource.RUSAGE_SELF)[2]*resource.getpagesize()/(1024*1024)
-            #import guppy; print guppy.hpy().heap()
+            printMemUsage()
             start = time.time()
 
             for index in range(0, len(fields)):
@@ -120,7 +120,7 @@ class Solver(object):
             pprint('Time since beginning:', end-config.runtime)
             pprint('objective: ', parallel.sum(result))
             
-            result += objective(stackedFields)
+            result += objective(stackedFields)/(nSteps + 1)
             timeSteps.append([t, dt])
             if mode == 'forward':
                 solutions.append(stackedFields)
@@ -217,6 +217,7 @@ class SolverFunction(object):
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Loading time: {0:.2f}'.format(end-start))
+        printMemUsage()
 
         self.fn = fn
 

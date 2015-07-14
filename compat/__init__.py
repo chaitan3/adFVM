@@ -22,3 +22,5 @@ def add_at(a, indices, b):
         assert a.dtype == np.float64
         assert b.dtype == np.float64
         cfuncs.add_at(a, indices, b)
+
+from memory import printMemUsage

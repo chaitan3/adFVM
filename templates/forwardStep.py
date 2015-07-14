@@ -13,7 +13,7 @@ def objective(fields, mesh):
     cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
     areas = mesh.areas[startFace:endFace]
     field = rhoE.field[cellStartFace:cellEndFace]
-    return ad.sum(field*areas)/(nSteps + 1)
+    return ad.sum(field*areas)
 
 def perturb(stackedFields, mesh, t):
     patchID = 'inlet'

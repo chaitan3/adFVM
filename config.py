@@ -22,6 +22,7 @@ parser.add_argument('--profile_mem', action='store_true')
 parser.add_argument('--profile_opt', action='store_true')
 parser.add_argument('-s', '--python', action='store_true')
 parser.add_argument('--voyager', action='store_true')
+parser.add_argument('--coresPerNode', required=False, default=16, type=int)
 user, args = parser.parse_known_args()
 
 # compute type
@@ -41,7 +42,7 @@ if titan:
     home = '/lustre/atlas/proj-shared/tur103'
     assert np.__version__ == '1.9.2'
 if user.use_temp:
-    home = parallel.copyToTemp(home)
+    home = parallel.copyToTemp(home, user.coresPerNode)
 #os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
 os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}'.format(project, device, dtype)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
