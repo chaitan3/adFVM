@@ -2,8 +2,8 @@ from re import findall
 from numpy import *
 from matplotlib import pyplot as plt
 
-string = 'Time since beginning'
-#string = 'Time for iteration'
+string = 'Time for iteration'
+#string = 'Time for adjoint iteration'
 
 def parse_log(n):
     f = open(n)
