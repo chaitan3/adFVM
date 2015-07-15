@@ -1,4 +1,5 @@
-#!/usr/bin/python2
+#
+/usr/bin/python2
 from __future__ import print_function
 
 
@@ -88,7 +89,7 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
 
         parallel.mpi.Barrier()
         end = time.time()
-        pprint('Time for iteration: {0}'.format(end-start))
+        pprint('Time for adjoint iteration: {0}'.format(end-start))
         pprint('Time since beginning:', end-config.runtime)
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
