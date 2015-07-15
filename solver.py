@@ -17,7 +17,7 @@ logger = config.Logger(__name__)
 class Solver(object):
     defaultConfig = {
                         'timeIntegrator': 'euler', 'nStages': 1,
-                        'source': None,
+                        'sourceTerm': None,
                         'adjoint': False
                     }
 
@@ -47,11 +47,11 @@ class Solver(object):
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
             scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
-            gradient = ad.grad(scalarFields, stackedFields)
-            sourceGradient = ad.grad(scalarFields, self.sourceVariables)
+            gradientInputs = [stackedFields] + self.sourceVariables
+            gradients = ad.grad(scalarFields, gradientInputs)
             #meshGradient = ad.grad(scalarFields, mesh)
             self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], \
-                            [gradient, sourceGradient], 'adjoint')
+                            gradients, 'adjoint')
         pprint()
 
     def stackFields(self, fields, mod): 
@@ -162,8 +162,8 @@ class SolverFunction(object):
             self.populate_BCs(self.symbolic, solver, 0)
             self.populate_BCs(self.values, solver, 1)
         # source terms
-        self.symbolic.extend(self.sourceVariables)
-        self.values.extend([0 for variable in self.sourceVariables])
+        self.symbolic.extend(solver.sourceVariables)
+        self.values.extend(solver.sourceTerm(solver))
 
         self.generate(inputs, outputs, solver.mesh.case, name)
 

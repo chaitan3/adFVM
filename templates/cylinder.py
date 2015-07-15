@@ -1,12 +1,12 @@
 from pyRCF import RCF 
+from field import Field
 from config import ad
 from compat import norm
 import numpy as np
 
 primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
-def objective(fields):
+def objective(fields, mesh):
     rho, rhoU, rhoE = fields
-    mesh = rho.mesh
     patchID = 'cylinder'
     patch = mesh.boundary[patchID]
     nF = patch['nFaces']
@@ -29,12 +29,15 @@ def perturb():
     mesh = primal.mesh.origMesh
     mid = np.array([-0.0032, 0.0, 0.])
     G = 1e-4*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    rho = np.zeros(mesh.nCells, 1)
-    rhoU = np.zeros(mesh.nCells, 1)
-    rhoE = np.zeros(mesh.nCells, 1)
-    rho[:mesh.nInternalCells] += G
-    rhoU[:mesh.nInternalCells, 1] += G*100
-    rhoE[:mesh.nInternalCells, 4] += G*2e5
+    rho = G
+    rhoU = np.zeros((mesh.nInternalCells, 3))
+    rhoU[:, 0] += G.flatten()*100
+    rhoE = G*3e5
     return rho, rhoU, rhoE
+
+nSteps = 10
+writeInterval = 2
+startTime = 2.0
+dt = 1e-8
 
 

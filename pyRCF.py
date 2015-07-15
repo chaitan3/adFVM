@@ -28,7 +28,6 @@ class RCF(Solver):
                              'stepFactor': 1.2,
                              'timeIntegrator': 'SSPRK', 'nStages': 3,
                              'riemannSolver': 'eulerRoe',
-                             'source': lambda x: [0, 0, 0]
                         })
 
     def __init__(self, case, **userConfig):
@@ -40,7 +39,13 @@ class RCF(Solver):
 
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
-        self.sourceVariables = [ad.matrix() for name in self.names]
+        # source term stuff, separate func, bcmatrix cases?
+        self.sourceVariables = [ad.bcmatrix() for name in self.names]
+        self.sourceVariables[1] = ad.matrix()
+        if self.sourceTerm is None:
+            size = self.mesh.origMesh.nInternalCells
+            self.sourceTerm = lambda x: [np.zeros((size,) + dim) for dim in self.dimensions]
+        self.source = [Field('S' + name, variable, dim) for name, variable, dim in zip(self.names, self.sourceVariables, self.dimensions)]
 
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
@@ -175,12 +180,11 @@ class RCF(Solver):
         self.aF = aF
         aF = UnF.abs() + aF
         self.dtc = 2*self.CFL/internal_sum(aF, mesh, absolute=True)
-        source = [sum(term) for term in zip(self.source, self.sourceVariables)]
 
-        return [div(rhoFlux) - source[0], \
+        return [div(rhoFlux) - self.source[0], \
                 #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
-                div(rhoUFlux - sigmaF) - source[1], \
-                div(rhoEFlux - qF - sigmadotUF) - source[2]]
+                div(rhoUFlux - sigmaF) - self.source[1], \
+                div(rhoEFlux - qF - sigmadotUF) - self.source[2]]
 
     def boundary(self, rhoN, rhoUN, rhoEN):
         logger.info('correcting boundary')
