@@ -66,6 +66,7 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         writeAdjointFields(stackedAdjointFields, t)
 
     for step in range(0, writeInterval):
+        printMemUsage()
         start = time.time()
         fields = primal.unstackFields(stackedAdjointFields, IOField, names=[phi.name for phi in adjointFields])
         for phi in fields:
