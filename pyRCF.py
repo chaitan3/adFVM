@@ -36,9 +36,11 @@ class RCF(Solver):
 
         self.Cv = self.Cp/self.gamma
         self.kappa = lambda mu, T: mu*(self.Cp/self.Pr)
+        self.riemannSolver = getattr(riemann, self.riemannSolver)
+
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
-        self.riemannSolver = getattr(riemann, self.riemannSolver)
+        self.sourceVariables = [ad.matrix() for name in self.names]
 
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
@@ -169,13 +171,11 @@ class RCF(Solver):
         UF = 0.5*(ULF + URF)
         sigmadotUF = sigmaF.dot(UF)
 
-        # source terms
-        source = self.source(self)
-
         # CFL based time step
         self.aF = aF
         aF = UnF.abs() + aF
         self.dtc = 2*self.CFL/internal_sum(aF, mesh, absolute=True)
+        source = [sum(term) for term in zip(self.source, self.sourceVariables)]
 
         return [div(rhoFlux) - source[0], \
                 #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],

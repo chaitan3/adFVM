@@ -79,13 +79,13 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         ## adjoint time stepping
         #paddedJacobian = np.ascontiguousarray(primal.gradient(paddedPreviousSolution, stackedAdjointFields))
         #jacobian = parallel.getAdjointRemoteCells(paddedJacobian, mesh)
-        jacobian = np.ascontiguousarray(primal.gradient(previousSolution, stackedAdjointFields, dt))
+        gradient, sourceGradient = primal.gradient(previousSolution, stackedAdjointFields, dt)
 
-        stackedAdjointFields = jacobian + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
+        stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
         # compute sensitivity using adjoint solution
-        perturbation = np.zeros_like(stackedAdjointFields)
-        perturb(perturbation, mesh.origMesh, t)
-        result += np.sum(stackedAdjointFields * perturbation)
+        perturbations = perturb()
+        for derivative, perturbation in zip(sourceGradient, perturbations):
+            result += np.sum(np.ascontiguousarray(derivative) * perturbation)
 
         parallel.mpi.Barrier()
         end = time.time()

@@ -25,14 +25,16 @@ def objective(fields):
     mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
     return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
 
-def perturb(stackedFields, t):
+def perturb():
     mesh = primal.mesh.origMesh
     mid = np.array([-0.0032, 0.0, 0.])
     G = 1e-4*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    #rho
-    if t == startTime:
-        stackedFields[:mesh.nInternalCells, 0] += G
-        stackedFields[:mesh.nInternalCells, 1] += G*100
-        stackedFields[:mesh.nInternalCells, 4] += G*2e5
+    rho = np.zeros(mesh.nCells, 1)
+    rhoU = np.zeros(mesh.nCells, 1)
+    rhoE = np.zeros(mesh.nCells, 1)
+    rho[:mesh.nInternalCells] += G
+    rhoU[:mesh.nInternalCells, 1] += G*100
+    rhoE[:mesh.nInternalCells, 4] += G*2e5
+    return rho, rhoU, rhoE
 
 

@@ -46,9 +46,12 @@ class Solver(object):
                        [newStackedFields, self.dtc, self.local, self.remote], 'forward')
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
-            gradient = ad.grad(ad.sum(newStackedFields*stackedAdjointFields), stackedFields)
+            scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
+            gradient = ad.grad(scalarFields, stackedFields)
+            sourceGradient = ad.grad(scalarFields, self.sourceVariables)
+            #meshGradient = ad.grad(scalarFields, mesh)
             self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], \
-                            gradient, 'adjoint')
+                            [gradient, sourceGradient], 'adjoint')
         pprint()
 
     def stackFields(self, fields, mod): 
@@ -158,6 +161,10 @@ class SolverFunction(object):
         if BCs:
             self.populate_BCs(self.symbolic, solver, 0)
             self.populate_BCs(self.values, solver, 1)
+        # source terms
+        self.symbolic.extend(self.sourceVariables)
+        self.values.extend([0 for variable in self.sourceVariables])
+
         self.generate(inputs, outputs, solver.mesh.case, name)
 
     def populate_mesh(self, inputs, mesh, paddedMesh, origPatches):
