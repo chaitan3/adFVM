@@ -12,11 +12,15 @@ def objective(fields, mesh):
     G = ad.exp(-100*ad.sum((mid-mesh.cellCentres[:mesh.nInternalCells])**2, axis=1)).reshape((-1,1))*mesh.volumes[:mesh.nInternalCells]
     return ad.sum(rho.field[:mesh.nInternalCells]*G)
 
-def perturb(stackedFields, mesh, t):
+def perturb():
+    eps = 1e-3
+    mesh = primal.mesh.origMesh
     mid = np.array([0.5, 0.5, 0.5])
-    if t == startTime:
-        G = eps*ad.array(np.exp(-100*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2).reshape(-1,1))
-        rho.field[:mesh.nInternalCells] += G
+    G = 1e-4*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    rho = G
+    rhoU = np.zeros((mesh.nInternalCells, 3))
+    rhoE = G*0
+    return rho, rhoU, rhoE
 
 nSteps = 1000
 writeInterval = 100
