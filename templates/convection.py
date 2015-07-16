@@ -12,9 +12,8 @@ def objective(fields, mesh):
     G = ad.exp(-100*ad.sum((mid-mesh.cellCentres[:mesh.nInternalCells])**2, axis=1)).reshape((-1,1))*mesh.volumes[:mesh.nInternalCells]
     return ad.sum(rho.field[:mesh.nInternalCells]*G)
 
-def perturb():
+def perturb(mesh):
     eps = 1e-3
-    mesh = primal.mesh.origMesh
     mid = np.array([0.5, 0.5, 0.5])
     G = 1e-4*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     rho = G
@@ -26,5 +25,3 @@ nSteps = 1000
 writeInterval = 100
 startTime = 0.0
 dt = 1e-8
-
-

@@ -25,8 +25,7 @@ def objective(fields, mesh):
     mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
     return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
 
-def perturb():
-    mesh = primal.mesh.origMesh
+def perturb(mesh):
     mid = np.array([-0.0032, 0.0, 0.])
     G = 1e-4*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     rho = G

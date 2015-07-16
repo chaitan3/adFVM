@@ -18,6 +18,7 @@ class Solver(object):
     defaultConfig = {
                         'timeIntegrator': 'euler', 'nStages': 1,
                         'sourceTerm': None,
+                        'objective': lambda x: 0,
                         'adjoint': False
                     }
 
@@ -70,7 +71,7 @@ class Solver(object):
 
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, 
-            mode='simulation', objective=lambda x: 0, perturb=None):
+            mode='simulation'):
 
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
@@ -90,9 +91,7 @@ class Solver(object):
         
         timeSteps = []
         # objective is local
-        if perturb is not None:
-            perturb(stackedFields, t)
-        result = objective(stackedFields)/(nSteps + 1)
+        result = self.objective(stackedFields)/(nSteps + 1)
         # writing and returning local solutions
         if mode == 'forward':
             solutions = [stackedFields]
@@ -123,7 +122,7 @@ class Solver(object):
             pprint('Time since beginning:', end-config.runtime)
             pprint('objective: ', parallel.sum(result))
             
-            result += objective(stackedFields)/(nSteps + 1)
+            result += self.objective(stackedFields)/(nSteps + 1)
             timeSteps.append([t, dt])
             if mode == 'forward':
                 solutions.append(stackedFields)
@@ -163,7 +162,7 @@ class SolverFunction(object):
             self.populate_BCs(self.values, solver, 1)
         # source terms
         self.symbolic.extend(solver.sourceVariables)
-        self.values.extend(solver.sourceTerm(solver))
+        self.values.extend(solver.sourceTerm(mesh.origMesh))
 
         self.generate(inputs, outputs, solver.mesh.case, name)
 

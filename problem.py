@@ -19,6 +19,7 @@ sys.path.append(os.path.abspath(caseDir))
 caseFile = __import__(caseFile.split('.')[0])
 for attr in dir(caseFile):
     if not attr.startswith('_'):
+        # defines primal, objective and perturb
         locals()[attr] = getattr(caseFile, attr)
 
 pprint('Compiling objective')
@@ -30,6 +31,7 @@ objectiveFunction = primal.function([stackedFields], objectiveValue, 'objective'
 # objective is anyways going to be a sum over all processors
 # so no additional code req to handle parallel case
 objectiveGradient = primal.function([stackedFields], ad.grad(objectiveValue, stackedFields), 'objective_grad', BCs=False)
+primal.objective = objectiveFunction
 
 def writeResult(option, result):
     resultFile = primal.mesh.case + '/objective.txt'
@@ -50,10 +52,10 @@ if __name__ == "__main__":
     user = parser.parse_args(args)
     
     if user.option == 'orig':
-        perturb = None
         dts = dt
 
     elif user.option == 'perturb':
+        primal.sourceTerm = perturb
         writeInterval = config.LARGE
         if parallel.rank == 0:
             timeSteps = np.loadtxt(timeStepFile)
@@ -99,7 +101,7 @@ if __name__ == "__main__":
         print('WTF')
         exit()
 
-    timeSteps, result = primal.run(startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction, perturb=perturb)
+    timeSteps, result = primal.run(startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval)
     writeResult(user.option, result)
     if user.option == 'orig' and parallel.rank == 0:
             np.savetxt(timeStepFile, timeSteps)

@@ -86,9 +86,9 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
 
         stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
         # compute sensitivity using adjoint solution
-        perturbations = perturb()
-        for derivative, perturbation in zip(sourceGradient, perturbations):
-            result += np.sum(np.ascontiguousarray(derivative) * perturbation)
+        perturbations = perturb(mesh.origMesh)
+        for derivative, delphi in zip(sourceGradient, perturbations):
+            result += np.sum(np.ascontiguousarray(derivative) * delphi)
 
         parallel.mpi.Barrier()
         end = time.time()
