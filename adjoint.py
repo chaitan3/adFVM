@@ -6,6 +6,7 @@ import config, parallel
 from parallel import pprint
 from field import IOField
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
+from compat import printMemUsage
 
 import numpy as np
 import time

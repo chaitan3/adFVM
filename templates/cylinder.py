@@ -35,9 +35,9 @@ def perturb():
     rhoE = G*3e5
     return rho, rhoU, rhoE
 
-nSteps = 10
-writeInterval = 2
+nSteps = 20000
+writeInterval = 100
 startTime = 2.0
-dt = 1e-8
+dt = 1e-9
 
 
