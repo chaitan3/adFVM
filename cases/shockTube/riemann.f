@@ -16,12 +16,12 @@ c..declare
 
 c..define initial conditions
 c..state at left of discontinuity
-         rhol = 0.993571
+         rhol = 1.0
          pl   = 100000.0
          ul   = 0.
 
 c..state at right of discontinuity
-         rhor = 0.124196
+         rhor = 0.125
          pr   = 10000.0
          ur   = 0.
 
@@ -37,7 +37,7 @@ c..location of discontinuity at t = 0
          xi = 0.0
 
 c..time at which solution is desired
-         t = 0.006
+         t = 0.006341272
 
 c..number of points in solution
          npts = 500
