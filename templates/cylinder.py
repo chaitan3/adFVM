@@ -4,7 +4,7 @@ from config import ad
 from compat import norm
 import numpy as np
 
-primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-4, (1,)))
 def objective(fields, mesh):
     rho, rhoU, rhoE = fields
     patchID = 'cylinder'
@@ -23,11 +23,11 @@ def objective(fields, mesh):
     T = rhoE/(rho*primal.Cv)
     #mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
     mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
-    return ad.sum((p*nx-mungUx)*areas)/(nSteps + 1)
+    return ad.sum((p*nx-mungUx)*areas)
 
 def perturb(mesh):
     mid = np.array([-0.0032, 0.0, 0.])
-    G = 1e-4*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 1*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     rho = G
     rhoU = np.zeros((mesh.nInternalCells, 3))
     rhoU[:, 0] += G.flatten()*100

@@ -34,14 +34,15 @@ def objective(fields, mesh):
         res += hf
     return res
 
-def perturb(stackedFields, mesh, t):
+def perturb(mesh):
     mid = np.array([-0.08, 0.014, 0.005])
     G = 1e-3*np.exp(-1e5*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #rho
-    if t == startTime:
-        stackedFields[:mesh.nInternalCells, 0] += G
-        stackedFields[:mesh.nInternalCells, 1] += G*100
-        stackedFields[:mesh.nInternalCells, 4] += G*2e5
+    rho = G
+    rhoU = np.zeros((mesh.nInternalCells, 3))
+    rhoU[:, 0] = G.flatten()*100
+    rhoE = G*2e5
+    return rho, rhoU, rhoE
 
 nSteps = 100
 writeInterval = 50
