@@ -58,7 +58,7 @@ class Solver(object):
     def stackFields(self, fields, mod): 
         return mod.concatenate([phi.field for phi in fields], axis=1)
 
-    def unstackFields(self, stackedFields, mod, names=None):
+    def unstackFields(self, stackedFields, mod, names=None, **kwargs):
         if names is None:
             names = self.names
         fields = []
@@ -66,7 +66,7 @@ class Solver(object):
         nDimensions = zip(nDimensions[:-1], nDimensions[1:])
         for name, dim, dimRange in zip(names, self.dimensions, nDimensions):
             phi = stackedFields[:, range(*dimRange)]
-            fields.append(mod(name, phi, dim))
+            fields.append(mod(name, phi, dim, **kwargs))
         return fields
 
 

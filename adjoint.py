@@ -15,7 +15,15 @@ import sys
 primal.adjoint = True
 mesh = primal.mesh
 
-firstCheckpoint = 0
+statusFile = mesh.case + 'status.txt'
+try:
+    with open(statusFile, 'r') as status:
+        firstCheckpoint, result = status.readlines()
+    firstCheckpoint = int(firstCheckpoint)
+    result = float(result)
+except:
+    firstCheckpoint = 0
+    result = 0.
 if parallel.rank == 0:
     timeStepFile = mesh.case + '{0}.{1}.txt'.format(nSteps, writeInterval)
     timeSteps = np.loadtxt(timeStepFile, ndmin=2)
@@ -36,7 +44,7 @@ stackedAdjointFields = primal.stackFields(adjointFields, np)
 pprint('STARTING ADJOINT\n')
 
 def writeAdjointFields(stackedAdjointFields, writeTime):
-    fields = primal.unstackFields(stackedAdjointFields, IOField, names=adjointNames)
+    fields = primal.unstackFields(stackedAdjointFields, IOField, names=adjointNames, boundary=mesh.calculatedBoundary)
     start = time.time()
     for phi in fields:
     # TODO: fix unstacking F_CONTIGUOUS
@@ -47,7 +55,6 @@ def writeAdjointFields(stackedAdjointFields, writeTime):
     pprint('Time for writing fields: {0}'.format(end-start))
     pprint()
 
-result = 0.
 
 
 for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
@@ -69,7 +76,7 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
     for step in range(0, writeInterval):
         printMemUsage()
         start = time.time()
-        fields = primal.unstackFields(stackedAdjointFields, IOField, names=[phi.name for phi in adjointFields])
+        fields = primal.unstackFields(stackedAdjointFields, IOField, names=adjointNames, boundary=mesh.calculatedBoundary)
         for phi in fields:
             phi.info()
 
@@ -97,5 +104,7 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
     writeAdjointFields(stackedAdjointFields, t)
+    with open(statusFile, 'w') as status:
+        status.write('{0}\n{1}\n'.format(checkpoint + 1, result))
 
 writeResult('adjoint', result)
