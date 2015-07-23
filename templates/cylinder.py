@@ -27,7 +27,7 @@ def objective(fields, mesh):
 
 def perturb(mesh):
     mid = np.array([-0.0032, 0.0, 0.])
-    G = 1*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 100*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     rho = G
     rhoU = np.zeros((mesh.nInternalCells, 3))
     rhoU[:, 0] += G.flatten()*100

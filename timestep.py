@@ -2,6 +2,7 @@ import numpy as np
 
 from config import ad
 from field import Field, CellField
+import config
 
 createFields = lambda internalFields, solver : [Field(solver.names[index], phi, solver.dimensions[index]) for index, phi in enumerate(internalFields)]
 
@@ -72,8 +73,8 @@ def SSPRK(equation, boundary, stackedFields, solver):
     #alpha = np.array([[1.,0],[1./2,1./2]])
     #beta = np.array([[1,0],[0,1./2]])
     # 3rd order
-    alpha = np.array([[1,0,0],[3./4,1./4, 0],[1./3,0,2./3]])
-    beta = np.array([[1,0,0],[0,1./4,0],[0,0,2./3]])
+    alpha = np.array([[1,0,0],[3./4,1./4, 0],[1./3,0,2./3]], config.precision)
+    beta = np.array([[1,0,0],[0,1./4,0],[0,0,2./3]], config.precision)
     nStages = alpha.shape[0]
     LHS = []
     fields = []

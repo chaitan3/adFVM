@@ -44,15 +44,16 @@ if titan:
 if user.use_temp:
     home = parallel.copyToTemp(home, user.coresPerNode)
 #os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
-os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}'.format(project, device, dtype)
+os.environ['THEANO_FLAGS'] = 'lib.cnmem=0.45,compiledir='+home+'/.theano/{0}-{1}-{2}'.format(project, device, dtype)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
 # pickling
 os.environ['THEANO_FLAGS'] += ',reoptimize_unpickled_function=False'
 unpickleFunction = not user.no_unpickle
 pickleFunction = not user.no_pickle
-# profiling, gc, cleanup
+# debugging/profiling
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
+#os.environ['THEANO_FLAGS'] += ',warn_float64=raise'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
 #os.environ['THEANO_FLAGS'] += ',exception_verbosity=high'
 os.environ['THEANO_FLAGS'] += ',profile=' + str(user.profile)

@@ -44,7 +44,7 @@ class RCF(Solver):
         self.sourceVariables[1] = ad.matrix()
         if self.sourceTerm is None:
             size = self.mesh.origMesh.nInternalCells
-            self.sourceTerm = lambda x: [np.zeros((size,) + dim) for dim in self.dimensions]
+            self.sourceTerm = lambda x: [np.zeros((size,) + dim, config.precision) for dim in self.dimensions]
         self.source = [Field('S' + name, variable, dim) for name, variable, dim in zip(self.names, self.sourceVariables, self.dimensions)]
 
     def primitive(self, rho, rhoU, rhoE):
