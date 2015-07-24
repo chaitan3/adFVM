@@ -42,7 +42,10 @@ else:
 
 # local adjoint fields
 stackedAdjointFields = primal.stackFields(adjointFields, np)
-pprint('STARTING ADJOINT\n')
+pprint('\nSTARTING ADJOINT')
+pprint('Number of steps:', nSteps)
+pprint('Write interval:', writeInterval)
+pprint()
 
 def writeAdjointFields(stackedAdjointFields, writeTime):
     fields = primal.unstackFields(stackedAdjointFields, IOField, names=adjointNames, boundary=mesh.calculatedBoundary)
@@ -63,13 +66,14 @@ def viscosity(solution):
     vorticity = curl(U)
     return 1e-9*vorticity.mag()
 
-for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
-    pprint('PRIMAL FORWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
+totalCheckpoints = nSteps/writeInterval
+for checkpoint in range(firstCheckpoint, totalCheckpoints):
+    pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
     primalIndex = nSteps - (checkpoint + 1)*writeInterval
     t, dt = timeSteps[primalIndex]
     solutions = primal.run(startTime=t, dt=dt, nSteps=writeInterval, mode='forward')
 
-    pprint('ADJOINT BACKWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
+    pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
     # if starting from 0, create the adjointField
     pprint('Time marching for', ' '.join(adjointNames))
 
