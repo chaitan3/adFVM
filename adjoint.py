@@ -5,6 +5,7 @@ from __future__ import print_function
 import config, parallel
 from parallel import pprint
 from field import IOField
+from op import laplacian, curl
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
 from compat import printMemUsage
 
@@ -37,7 +38,7 @@ adjointNames = ['{0}a'.format(name) for name in primal.names]
 if firstCheckpoint == 0:
     adjointFields = [IOField(name, np.zeros((mesh.origMesh.nInternalCells, dimensions[0]), config.precision), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(adjointNames, primal.dimensions)]
 else:
-    adjointFields = [IOField.read(name, timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in adjointNames]
+    adjointFields = [IOField.read(name, mesh, timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in adjointNames]
 
 # local adjoint fields
 stackedAdjointFields = primal.stackFields(adjointFields, np)
@@ -55,7 +56,12 @@ def writeAdjointFields(stackedAdjointFields, writeTime):
     pprint('Time for writing fields: {0}'.format(end-start))
     pprint()
 
-
+def viscosity(solution):
+    rho = solution[:,0]
+    rhoU = solution[:,1:4]
+    U = Field('U', rhoU/rho, (3,))
+    vorticity = curl(U)
+    return 1e-9*vorticity.mag()
 
 for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
     pprint('PRIMAL FORWARD RUN {0}: {1} Steps\n'.format(checkpoint, writeInterval))
@@ -92,6 +98,11 @@ for checkpoint in range(firstCheckpoint, nSteps/writeInterval):
         sourceGradient = gradients[1:]
 
         stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
+        # adjont field smoothing,
+        tmpField = Field('a', stackedAdjointFields, (5,))
+        weight = viscosity(previousSolution)
+        stackedAdjointFields += laplacian(tmpField, weight).field
+
         # compute sensitivity using adjoint solution
         perturbations = perturb(mesh.origMesh)
         for derivative, delphi in zip(sourceGradient, perturbations):

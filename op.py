@@ -78,13 +78,18 @@ def snGrad(phi):
     gradFdotn = (phi.field[mesh.neighbour]-phi.field[mesh.owner])/mesh.deltas
     return Field('snGrad({0})'.format(phi.name), gradFdotn, phi.dimensions)
 
-def laplacian(phi, gradPhi, DT):
+def laplacian(phi, DT):
     logger.info('laplacian of {0}'.format(phi.name))
     mesh = phi.mesh
-    raise Exception('not implemented')
-
     gradFdotn = snGrad(phi)
     laplacian2 = internal_sum(gradFdotn*DT, mesh)
+    return Field('laplacian({0})'.format(phi.name), laplacian2, phi.dimensions)
+
+def curl(phi):
+    assert phi.dimensions == (3,)
+    logger.info('vorticity of {0}'.format(phi.name))
+    mesh = phi.mesh
+    vort = mesh.Normals.cross(phi)
     return Field('laplacian({0})'.format(phi.name), laplacian2, phi.dimensions)
 
 def ddt(phi, dt):
