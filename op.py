@@ -85,12 +85,15 @@ def laplacian(phi, DT):
     laplacian2 = internal_sum(gradFdotn*DT, mesh)
     return Field('laplacian({0})'.format(phi.name), laplacian2, phi.dimensions)
 
+# only defined for ndarray
 def curl(phi):
     assert phi.dimensions == (3,)
+    assert isinstance(phi.field, np.ndarray)
     logger.info('vorticity of {0}'.format(phi.name))
     mesh = phi.mesh
-    vort = mesh.Normals.cross(phi)
-    return Field('laplacian({0})'.format(phi.name), laplacian2, phi.dimensions)
+    vort = Field('N', mesh.origMesh.normals, (3,)).cross(phi)
+    vort.name = 'curl({0})'.format(phi.name)
+    return vort
 
 def ddt(phi, dt):
     logger.info('ddt of {0}'.format(phi.name))

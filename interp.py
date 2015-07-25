@@ -94,6 +94,7 @@ def upwind(phi, U):
 
     return Field('{0}F'.format(phi.name), faceField, phi.dimensions)
 
+# dual defined for np and ad
 def central(phi, mesh):
     logger.info('interpolating {0}'.format(phi.name))
     factor = mesh.weights
@@ -103,5 +104,6 @@ def central(phi, mesh):
     faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1.-factor), phi.dimensions)
     #faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner] + phi.field[mesh.neighbour], phi.dimensions)
     # retain pattern broadcasting
-    faceField.field = ad.patternbroadcast(faceField.field, phi.field.broadcastable)
+    if hasattr(mesh, 'origMesh'):
+        faceField.field = ad.patternbroadcast(faceField.field, phi.field.broadcastable)
     return faceField

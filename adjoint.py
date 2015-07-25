@@ -3,9 +3,11 @@ from __future__ import print_function
 
 
 import config, parallel
+from config import ad
 from parallel import pprint
-from field import IOField
+from field import IOField, Field
 from op import laplacian, curl
+from interp import central
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
 from compat import printMemUsage
 
@@ -60,11 +62,11 @@ def writeAdjointFields(stackedAdjointFields, writeTime):
     pprint()
 
 def viscosity(solution):
-    rho = solution[:,0]
+    rho = solution[:,0].reshape((-1, 1))
     rhoU = solution[:,1:4]
     U = Field('U', rhoU/rho, (3,))
-    vorticity = curl(U)
-    return 1e-9*vorticity.mag()
+    vorticity = curl(central(U, mesh.origMesh))
+    return 1e-9*vorticity.magSqr()
 
 totalCheckpoints = nSteps/writeInterval
 for checkpoint in range(firstCheckpoint, totalCheckpoints):
@@ -103,9 +105,13 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
 
         stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
         # adjont field smoothing,
-        tmpField = Field('a', stackedAdjointFields, (5,))
-        weight = viscosity(previousSolution)
-        stackedAdjointFields += laplacian(tmpField, weight).field
+        adjoint = Field('a', ad.matrix(), (5,))
+        weight = Field('w', ad.bcmatrix(), (1,))
+        smoother = laplacian(adjoint, weight)
+        smooth = primal.function([adjoint.field, weight.field], smoother.field, 'smoother')
+        # define function maybe
+        weight = viscosity(previousSolution).field
+        stackedAdjointFields[:mesh.origMesh.nInternalCells] += smooth(stackedAdjointFields, weight)
 
         # compute sensitivity using adjoint solution
         perturbations = perturb(mesh.origMesh)
