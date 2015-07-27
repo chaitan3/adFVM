@@ -22,6 +22,7 @@ statusFile = mesh.case + 'status.txt'
 try:
     with open(statusFile, 'r') as status:
         firstCheckpoint, result = status.readlines()
+    pprint('Read status file, checkpoint =', firstCheckpoint)
     firstCheckpoint = int(firstCheckpoint)
     result = float(result)
 except:
