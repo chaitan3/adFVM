@@ -101,12 +101,8 @@ class Field(object):
     def cross(self, phi):
         assert self.dimensions == (3,)
         assert phi.dimensions == (3,)
-        u1, u2, u3 = self.field[:,0], self.field[:,1] ,self.field[:,2]
-        v1, v2, v3 = phi.field[:,0], phi.field[:,1] ,phi.field[:,2]
-        product = self.field*0
-        product[:, 0] = u2*v3 - u3*v2
-        product[:, 1] = u3*v1 - u1*v3
-        product[:, 2] = u1*v2 - u2*v1
+        assert isinstance(self.field, np.ndarray)
+        product = np.cross(self.field, phi.field) 
         return self.__class__('cross({0},{1})'.format(self.name, phi.name), product, phi.dimensions)
 
     # represents self * phi
