@@ -5,7 +5,7 @@ from compat import norm
 import numpy as np
 
 #primal = RCF('.')
-primal = RCF('/home/talnikar/foam/blade/les3/')
+primal = RCF('/home/talnikar/foam/blade/laminar-lowRe/')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 def objective(fields, mesh):
@@ -36,7 +36,7 @@ def objective(fields, mesh):
 
 def perturb(mesh):
     mid = np.array([-0.08, 0.014, 0.005])
-    G = 1e-3*np.exp(-1e5*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 10*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #rho
     rho = G
     rhoU = np.zeros((mesh.nInternalCells, 3))
@@ -44,9 +44,9 @@ def perturb(mesh):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 100
-writeInterval = 50
-startTime = 1.0
+nSteps = 5000
+writeInterval = 100
+startTime = 3.0
 dt = 1e-8
 
 
