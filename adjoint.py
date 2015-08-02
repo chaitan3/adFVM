@@ -69,6 +69,12 @@ def viscosity(solution):
     vorticity = curl(central(U, mesh.origMesh))
     return 1e-9*vorticity.magSqr()
 
+# adjont field smoothing,
+adjoint = Field('a', ad.matrix(), (5,))
+weight = Field('w', ad.bcmatrix(), (1,))
+smoother = laplacian(adjoint, weight)
+smooth = primal.function([adjoint.field, weight.field], smoother.field, 'smoother', BCs=False)
+
 totalCheckpoints = nSteps/writeInterval
 for checkpoint in range(firstCheckpoint, totalCheckpoints):
     pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
@@ -105,14 +111,10 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         sourceGradient = gradients[1:]
 
         stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
-        # adjont field smoothing,
-        adjoint = Field('a', ad.matrix(), (5,))
-        weight = Field('w', ad.bcmatrix(), (1,))
-        smoother = laplacian(adjoint, weight)
-        smooth = primal.function([adjoint.field, weight.field], smoother.field, 'smoother')
         # define function maybe
-        weight = viscosity(previousSolution).field
-        stackedAdjointFields[:mesh.origMesh.nInternalCells] += smooth(stackedAdjointFields, weight)
+        #pprint('Smoothing adjoint field')
+        #weight = viscosity(previousSolution).field
+        #stackedAdjointFields[:mesh.origMesh.nInternalCells] += smooth(stackedAdjointFields, weight)
 
         # compute sensitivity using adjoint solution
         perturbations = perturb(mesh.origMesh)
