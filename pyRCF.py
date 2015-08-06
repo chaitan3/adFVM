@@ -19,7 +19,7 @@ logger = config.Logger(__name__)
 class RCF(Solver):
     defaultConfig = Solver.defaultConfig.copy()
     defaultConfig.update({
-                             'R': 8.314, 
+                             #specific
                              'Cp': 1004.5, 
                              'gamma': 1.4, 
                              'mu': lambda T:  1.4792e-06*T**1.5/(T+116.), 
@@ -34,6 +34,7 @@ class RCF(Solver):
         super(RCF, self).__init__(case, **userConfig)
 
         self.Cv = self.Cp/self.gamma
+        self.R = self.Cp - self.Cv
         self.kappa = lambda mu, T: mu*(self.Cp/self.Pr)
         self.riemannSolver = getattr(riemann, self.riemannSolver)
 
