@@ -42,8 +42,8 @@ def div(phi, U=None, ghost=False):
         assert phi.dimensions == (1,)
         divField = internal_sum((phi*U).dotN(), mesh)
     if ghost:
-        raise Exception('not tested')
-        return CellField('div({0})'.format(phi.name), divField, phi.dimensions, internal=True)
+        logger.warning('processor values not copied')
+        return CellField('div({0})'.format(phi.name), divField, phi.dimensions, ghost=True)
     else:
         return Field('div({0})'.format(phi.name), divField, phi.dimensions)
 

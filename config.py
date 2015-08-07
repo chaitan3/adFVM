@@ -103,7 +103,7 @@ def detect_nan(i, node, fn):
 
 import logging
 # normal
-#logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.WARNING)
 # debug
 #logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.INFO)
 #logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.DEBUG)

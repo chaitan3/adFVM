@@ -35,7 +35,7 @@ def createComputer():
     gradU = grad(central(UP, paddedMesh), ghost=True)
     ULF, URF = TVD_dual(U, gradU)
     UF = 0.5*(ULF + URF)
-    divU = div(UF.dotN()).field
+    divU = div(UF.dotN(), ghost=True).field
 
     #speed of sound
     cP = (solver.gamma*TP*solver.R).sqrt()
