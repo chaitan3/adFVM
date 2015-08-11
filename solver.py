@@ -30,6 +30,8 @@ class Solver(object):
             setattr(self, key, fullConfig[key])
 
         self.mesh = Mesh.create(case)
+        self.resultFile = self.mesh.case + 'objective.txt'
+        self.statusFile = self.mesh.case + 'status.txt'
         Field.setSolver(self)
 
         self.timeIntegrator = getattr(timestep, self.timeIntegrator)
@@ -127,17 +129,22 @@ class Solver(object):
             if mode == 'forward':
                 solutions.append(stackedFields)
 
+            pprint('Simulation Time:', t, 'Time step:', dt)
             t = round(t+dt, 9)
             timeIndex += 1
-            pprint('Simulation Time:', t, 'Time step:', dt)
-            if timeIndex % writeInterval == 0:
-                self.writeFields(fields, t)
-            pprint()
-
             # compute dt for next time step
             dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
             if isinstance(dts, np.ndarray):
                 dt = dts[timeIndex]
+
+            if (timeIndex % writeInterval == 0) and (mode != 'forward'):
+                self.writeFields(fields, t)
+                with open(self.statusFile, 'w') as status:
+                    status.write('{0}\n{1}\n{2}\n{3}\n'.format(timeIndex, t, dt, result))
+                if mode == 'orig' and parallel.rank == 0:
+                    np.savetxt(self.timeStepFile, timeSteps)
+            pprint()
+
 
         if mode == 'forward':
             return solutions

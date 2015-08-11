@@ -19,7 +19,7 @@ sys.path.append(os.path.abspath(caseDir))
 caseFile = __import__(caseFile.split('.')[0])
 for attr in dir(caseFile):
     if not attr.startswith('_'):
-        # defines primal, objective and perturb
+        # defines primal, objective and perturb, nSteps, writeInterval, startTime, dt
         locals()[attr] = getattr(caseFile, attr)
 
 pprint('Compiling objective')
@@ -32,38 +32,60 @@ objectiveFunction = primal.function([stackedFields], objectiveValue, 'objective'
 # so no additional code req to handle parallel case
 objectiveGradient = primal.function([stackedFields], ad.grad(objectiveValue, stackedFields), 'objective_grad', BCs=False)
 primal.objective = objectiveFunction
+primal.timeStepFile = primal.mesh.case + '{0}.{1}.txt'.format(nSteps, writeInterval)
+pprint('')
 
 def writeResult(option, result):
-    resultFile = primal.mesh.case + '/objective.txt'
     globalResult = parallel.sum(result)
+    resultFile = primal.resultFile
     if parallel.rank == 0:
         if option == 'perturb':
             previousResult = float(open(resultFile).readline().split(' ')[1])
             globalResult -= previousResult
-        f = open(resultFile, 'a')
-        f.write('{0} {1}\n'.format(option, globalResult))
-        f.close()
+        with open(resultFile, 'a') as handle:
+            handle.write('{0} {1}\n'.format(option, globalResult))
 
 if __name__ == "__main__":
     mesh = primal.mesh.origMesh
-    timeStepFile = primal.mesh.case + '/{0}.{1}.txt'.format(nSteps, writeInterval)
+    timeStepFile = primal.timeStepFile
+    statusFile = primal.statusFile
+
     parser = argparse.ArgumentParser()
     parser.add_argument('option')
     user = parser.parse_args(args)
+
+    try:
+        with open(statusFile, 'r') as status:
+            startIndex, startTime, dt, initResult = status.readlines()
+        pprint('Read status file, index =', startIndex)
+        startTime = float(startTime)
+        dt = float(dt)
+        startIndex = int(startIndex)
+        initResult = float(initResult)
+    except:
+        startIndex = 0
+        initResult = 0.
     
     if user.option == 'orig':
         dts = dt
+        if parallel.rank == 0:
+            try:
+                initTimeSteps = np.loadtxt(timeStepFile)
+            except:
+                initTimeSteps = None
 
     elif user.option == 'perturb':
-        primal.sourceTerm = perturb
-        writeInterval = config.LARGE
+        pprint('Perturbing fields')
         if parallel.rank == 0:
             timeSteps = np.loadtxt(timeStepFile)
             timeSteps = np.concatenate((timeSteps, np.array([[0, 0]])))
         else:
             timeSteps = np.zeros((nSteps+1, 2))
         parallel.mpi.Bcast(timeSteps, root=0)
-        dts = timeSteps[:,1]
+        dts = timeSteps[startIndex:,1]
+
+        writeInterval = config.LARGE
+        primal.sourceTerm = perturb
 
     elif user.option == 'test':
         primal.initFields(startTime)
@@ -101,7 +123,14 @@ if __name__ == "__main__":
         print('WTF')
         exit()
 
-    timeSteps, result = primal.run(startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval)
+    nSteps -= startIndex
+    timeSteps, result = primal.run(startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option)
+
+    result += initResult 
     writeResult(user.option, result)
-    if user.option == 'orig' and parallel.rank == 0:
+    if parallel.rank == 0:
+        os.remove(statusFile)
+        if user.option == 'orig':
+            if initTimeSteps is not None:
+                timeSteps = np.concatenate((initTimeSteps, timeSteps))
             np.savetxt(timeStepFile, timeSteps)

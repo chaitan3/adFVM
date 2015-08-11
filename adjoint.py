@@ -17,8 +17,7 @@ import sys
 
 primal.adjoint = True
 mesh = primal.mesh
-
-statusFile = mesh.case + 'status.txt'
+statusFile = primal.statusFile
 try:
     with open(statusFile, 'r') as status:
         firstCheckpoint, result = status.readlines()
@@ -29,8 +28,7 @@ except:
     firstCheckpoint = 0
     result = 0.
 if parallel.rank == 0:
-    timeStepFile = mesh.case + '{0}.{1}.txt'.format(nSteps, writeInterval)
-    timeSteps = np.loadtxt(timeStepFile, ndmin=2)
+    timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
     timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(9), 0]])))
 else:
     timeSteps = np.zeros((nSteps + 1, 2))
