@@ -58,7 +58,7 @@ for index, time in enumerate(user.time):
     # non theano outputs
     # 
     rhoa = IOField.read('rhoa', mesh, time)
-    rhoaByV = rhoa.field*0
+    rhoaByV = p.field*0
     rhoaByV = rhoa.field[:mesh.origMesh.nInternalCells]/mesh.origMesh.volumes
     rhoaByV = IOField('rhoaByV', rhoaByV, (1,))
     rhoaByV.write(time)
