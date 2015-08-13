@@ -51,8 +51,16 @@ for index, time in enumerate(user.time):
     if index == 0:
         computer = createComputer()
     outputs = computer(SF)
-
     for field, name, dim in zip(outputs, names, dimensions):
         IO = IOField(name, field, dim)
         IO.write(time)
+
+    # non theano outputs
+    # 
+    rhoa = IOField.read('rhoa', mesh, time)
+    rhoaByV = rhoa.field*0
+    rhoaByV = rhoa.field[:mesh.origMesh.nInternalCells]/mesh.origMesh.volumes
+    rhoaByV = IOField('rhoaByV', rhoaByV, (1,))
+    rhoaByV.write(time)
+
     pprint()
