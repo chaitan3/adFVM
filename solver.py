@@ -72,7 +72,8 @@ class Solver(object):
         return fields
 
 
-    def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, startIndex=0, initTimeSteps=np.empty((0,2)), result=0.,
+    def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
+            startIndex=0, initTimeSteps=np.empty((0,2)), result=0., \
             mode='simulation'):
 
         logger.info('running solver for {0}'.format(nSteps))
