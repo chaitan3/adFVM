@@ -66,6 +66,7 @@ if __name__ == "__main__":
         startIndex = 0
         initResult = 0.
     
+    initTimeSteps = None
     if user.option == 'orig':
         dts = dt
         if parallel.rank == 0:
