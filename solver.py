@@ -72,7 +72,7 @@ class Solver(object):
         return fields
 
 
-    def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, startIndex=0,
+    def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, startIndex=0, initTimeSteps=np.empty((0,2)), result=0.
             mode='simulation'):
 
         logger.info('running solver for {0}'.format(nSteps))
@@ -86,14 +86,14 @@ class Solver(object):
 
         t = startTime
         dts = dt
-        timeIndex = 0
+        timeIndex = startIndex
         if isinstance(dts, np.ndarray):
             dt = dts[timeIndex]
         stackedFields = self.stackFields(fields, np)
         
         timeSteps = []
         # objective is local
-        result = self.objective(stackedFields)/(nSteps + 1)
+        result += self.objective(stackedFields)
         # writing and returning local solutions
         if mode == 'forward':
             solutions = [stackedFields]
@@ -122,9 +122,9 @@ class Solver(object):
             end = time.time()
             pprint('Time for iteration:', end-start)
             pprint('Time since beginning:', end-config.runtime)
-            pprint('objective: ', parallel.sum(result))
+            pprint('cumulative objective: ', parallel.sum(result))
             
-            result += self.objective(stackedFields)/(nSteps + 1)
+            result += self.objective(stackedFields)
             timeSteps.append([t, dt])
             if mode == 'forward':
                 solutions.append(stackedFields)
@@ -141,9 +141,9 @@ class Solver(object):
                 self.writeFields(fields, t)
                 with open(self.statusFile, 'w') as status:
                     status.write('{0}\n{1}\n{2}\n{3}\n' \
-                                .format(startIndex + timeIndex, t, dt, result))
+                                .format(timeIndex, t, dt, result))
                 if mode == 'orig' and parallel.rank == 0:
-                    np.savetxt(self.timeStepFile, timeSteps)
+                    np.savetxt(self.timeStepFile, np.concatenate((initTimeSteps, timeSteps)))
             pprint()
 
 
@@ -151,7 +151,7 @@ class Solver(object):
             return solutions
         if (timeIndex % writeInterval != 0) and (timeIndex >= writeInterval):
             self.writeFields(fields, t)
-        return timeSteps, result
+        return result
 
     def function(self, inputs, outputs, name, **kwargs):
         return SolverFunction(inputs, outputs, self, name, **kwargs)
