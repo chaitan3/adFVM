@@ -127,9 +127,9 @@ if __name__ == "__main__":
     timeSteps, result = primal.run(startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex)
 
     result += initResult 
+    os.remove(statusFile)
     writeResult(user.option, result)
     if parallel.rank == 0:
-        os.remove(statusFile)
         if user.option == 'orig':
             if initTimeSteps is not None:
                 timeSteps = np.concatenate((initTimeSteps, timeSteps))
