@@ -72,7 +72,7 @@ class Solver(object):
         return fields
 
 
-    def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, 
+    def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, startIndex=0,
             mode='simulation'):
 
         logger.info('running solver for {0}'.format(nSteps))
@@ -140,7 +140,8 @@ class Solver(object):
             if (timeIndex % writeInterval == 0) and (mode != 'forward'):
                 self.writeFields(fields, t)
                 with open(self.statusFile, 'w') as status:
-                    status.write('{0}\n{1}\n{2}\n{3}\n'.format(timeIndex, t, dt, result))
+                    status.write('{0}\n{1}\n{2}\n{3}\n' \
+                                .format(startIndex + timeIndex, t, dt, result))
                 if mode == 'orig' and parallel.rank == 0:
                     np.savetxt(self.timeStepFile, timeSteps)
             pprint()

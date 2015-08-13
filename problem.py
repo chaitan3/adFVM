@@ -124,7 +124,7 @@ if __name__ == "__main__":
         exit()
 
     nSteps -= startIndex
-    timeSteps, result = primal.run(startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option)
+    timeSteps, result = primal.run(startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex)
 
     result += initResult 
     writeResult(user.option, result)
