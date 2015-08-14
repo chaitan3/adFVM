@@ -59,7 +59,8 @@ for index, time in enumerate(user.time):
     # 
     rhoa = IOField.read('rhoa', mesh, time)
     rhoaByV = p.field*0
-    rhoaByV = rhoa.field[:mesh.origMesh.nInternalCells]/mesh.origMesh.volumes
+    nInternalCells = mesh.origMesh.nInternalCells
+    rhoaByV[:nInternalCells] = rhoa.field[:nInternalCells]/mesh.origMesh.volumes
     rhoaByV = IOField('rhoaByV', rhoaByV, (1,))
     rhoaByV.write(time)
 
