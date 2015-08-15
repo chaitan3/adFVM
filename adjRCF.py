@@ -1,7 +1,7 @@
 import numpy as np
 
 from field import CellField
-from op import div
+from op import div, laplacian
 
 #BCs
 
@@ -21,7 +21,12 @@ def gradient(stackedFields, stackedAdjointFields):
     bF = cF/sg
     aF = cF*sg/sg1
     divU = div(UnF)
+
     #define grada, gradp, gradrho
+
+    #define muF, alphaF
+
+    #define F for syma's
     
     symaFlux = UnF*symaF + bF*symUnF
     symUaFlux = bF*symaF*mesh.Normals + UnF*symUF + aF*symEaF*mesh.Normals
@@ -32,12 +37,15 @@ def gradient(stackedFields, stackedAdjointFields):
     symUaSource = gradU.dot(symUa) + 0.5*(a/p)*gradp*symEa
     symEaSource = (2/g1)*grada.dot(symUa) + 0.5*g1*divU*symEa
 
-    #viscous
+    #viscous, check div?
+    divSymUaF = central(div(symUa), mesh)
+    symUaVisc = laplacian(symUa, muF) + grad((muF/3)*divSymUaF)
+    symEaVisc = laplacian(symEa, alphaF)
     
     #time step
     dsyma = dt*(div(symaFlux) + symaSource)
-    dsymUa = dt*(div(symUaFlux) + symUaSource)
-    dsymEa = dt*(div(symEaFlux) + symEaSource)
+    dsymUa = dt*(div(symUaFlux) + symUaSource + symUaVisc)
+    dsymEa = dt*(div(symEaFlux) + symEaSource + symEaVisc)
     dprima = c/(sg*rho)*(dsyma - (1./sg1)*dsymEa)
     dprimUa = dsymUa
     dprimEa = (sg/sg1)*dsymEa/(rho*c)
