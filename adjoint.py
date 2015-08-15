@@ -15,7 +15,9 @@ import numpy as np
 import time
 import sys
 
-primal.adjoint = True
+#primal.adjoint = True
+from adjRCF import AdjRCF
+adjoint = AdjRCF(primal)
 mesh = primal.mesh
 statusFile = primal.statusFile
 try:
@@ -68,10 +70,10 @@ def viscosity(solution):
     return 1e-9*vorticity.magSqr()
 
 # adjont field smoothing,
-adjoint = Field('a', ad.matrix(), (5,))
+adjointField = Field('a', ad.matrix(), (5,))
 weight = Field('w', ad.bcmatrix(), (1,))
-smoother = laplacian(adjoint, weight)
-smooth = primal.function([adjoint.field, weight.field], smoother.field, 'smoother', BCs=False)
+smoother = laplacian(adjointField, weight)
+smooth = primal.function([adjointField.field, weight.field], smoother.field, 'smoother', BCs=False)
 
 totalCheckpoints = nSteps/writeInterval
 for checkpoint in range(firstCheckpoint, totalCheckpoints):
@@ -104,20 +106,21 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         ## adjoint time stepping
         #paddedJacobian = np.ascontiguousarray(primal.gradient(paddedPreviousSolution, stackedAdjointFields))
         #jacobian = parallel.getAdjointRemoteCells(paddedJacobian, mesh)
-        gradients = primal.gradient(previousSolution, stackedAdjointFields, dt)
-        gradient = gradients[0]
-        sourceGradient = gradients[1:]
+        #gradients = primal.gradient(previousSolution, stackedAdjointFields, dt)
+        #gradient = gradients[0]
+        #sourceGradient = gradients[1:]
 
-        stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
+        #stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
+        stackedAdjointFields = adjoint.gradient(stackedFields, stackedAdjointFields, dt)
         # define function maybe
         #pprint('Smoothing adjoint field')
         #weight = viscosity(previousSolution).field
         #stackedAdjointFields[:mesh.origMesh.nInternalCells] += smooth(stackedAdjointFields, weight)
 
         # compute sensitivity using adjoint solution
-        perturbations = perturb(mesh.origMesh)
-        for derivative, delphi in zip(sourceGradient, perturbations):
-            result += np.sum(np.ascontiguousarray(derivative) * delphi)
+        #perturbations = perturb(mesh.origMesh)
+        #for derivative, delphi in zip(sourceGradient, perturbations):
+        #    result += np.sum(np.ascontiguousarray(derivative) * delphi)
 
         parallel.mpi.Barrier()
         end = time.time()

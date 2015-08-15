@@ -123,7 +123,7 @@ class Field(object):
         return self.__class__('-{0}'.format(self.name), -self.field, self.dimensions)
 
     def __mul__(self, phi):
-        if isinstance(phi, Number):
+        if isinstance(phi, Number) or isinstance(phi, ad.TensorVariable):
             return self.__class__('{0}*{1}'.format(self.name, phi), self.field * phi, self.dimensions)
         else:
             product = self.field * phi.field
@@ -138,7 +138,7 @@ class Field(object):
         return self.__class__('{0}**{1}'.format(self.name, power), self.field.__pow__(power), self.dimensions)
 
     def __add__(self, phi):
-        if isinstance(phi, Number):
+        if isinstance(phi, Number) or isinstance(phi, ad.TensorVariable):
             return self.__class__('{0}+{1}'.format(self.name, phi), self.field + phi, self.dimensions)
         else:
             return self.__class__('{0}+{1}'.format(self.name, phi.name), self.field + phi.field, self.dimensions)
@@ -216,6 +216,9 @@ class CellField(Field):
 
     def getInternalField(self):
         return self.field[:self.mesh.nInternalCells]
+
+    def internalField(self):
+        return Field(self.name + 'I', self.getInternalField(), self.dimensions)
 
     def updateGhostCells(self):
         logger.info('updating ghost cells for {0}'.format(self.name))
