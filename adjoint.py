@@ -40,6 +40,15 @@ if firstCheckpoint == 0:
     adjointFields = [IOField(name, np.zeros((mesh.origMesh.nInternalCells, dimensions[0]), config.precision), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(adjointNames, primal.dimensions)]
 else:
     adjointFields = [IOField.read(name, mesh, timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in adjointNames]
+adjointInternalFields = [phi.complete() for phi in adjointFields]
+adjointNewFields = [phi.phi.field for phi in adjointFields]
+oldFunc = primal.getBCFields
+primal.getBCFields = lambda: adjointFields
+adjointInitFunc = primal.function(adjointInternalFields, adjointNewFields, 'adjoint_init')
+primal.getBCFields = oldFunc
+newFields = adjointInitFunc([phi.field for phi in adjointFields])
+for phi, field in zip(adjointFields, newFields):
+    phi.field = field
 
 # local adjoint fields
 stackedAdjointFields = primal.stackFields(adjointFields, np)
@@ -68,10 +77,10 @@ def viscosity(solution):
     return 1e-9*vorticity.magSqr()
 
 # adjont field smoothing,
-adjoint = Field('a', ad.matrix(), (5,))
+adjointField = Field('a', ad.matrix(), (5,))
 weight = Field('w', ad.bcmatrix(), (1,))
-smoother = laplacian(adjoint, weight)
-smooth = primal.function([adjoint.field, weight.field], smoother.field, 'smoother', BCs=False)
+smoother = laplacian(adjointField, weight)
+smooth = primal.function([adjointField.field, weight.field], smoother.field, 'smoother', BCs=False)
 
 totalCheckpoints = nSteps/writeInterval
 for checkpoint in range(firstCheckpoint, totalCheckpoints):
