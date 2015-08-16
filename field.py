@@ -287,6 +287,7 @@ class IOField(Field):
                     boundary[patchID][key] = prefix + content[start:start+nBytes]
                     start += nBytes
                     match = re.search('\)[\s\r\n\t]*;', content[start:])
+                    boundary[patchID][key] += match.group(0)[:-1]
                     start += match.end()
                 else:
                     match = re.search(re.compile('[ ]+(.*?);', re.DOTALL), content[start:])

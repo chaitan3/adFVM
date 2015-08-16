@@ -42,11 +42,12 @@ else:
     adjointFields = [IOField.read(name, mesh, timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in adjointNames]
 adjointInternalFields = [phi.complete() for phi in adjointFields]
 adjointNewFields = [phi.phi.field for phi in adjointFields]
+# UGLY HACK
 oldFunc = primal.getBCFields
 primal.getBCFields = lambda: adjointFields
 adjointInitFunc = primal.function(adjointInternalFields, adjointNewFields, 'adjoint_init')
 primal.getBCFields = oldFunc
-newFields = adjointInitFunc([phi.field for phi in adjointFields])
+newFields = adjointInitFunc(*[phi.field for phi in adjointFields])
 for phi, field in zip(adjointFields, newFields):
     phi.field = field
 
