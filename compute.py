@@ -1,5 +1,5 @@
+import config, parallel
 from config import ad
-import config
 from parallel import pprint
 
 import numpy as np
@@ -63,5 +63,12 @@ for index, time in enumerate(user.time):
     rhoaByV[:nInternalCells] = rhoa.field[:nInternalCells]/mesh.origMesh.volumes
     rhoaByV = IOField('rhoaByV', rhoaByV, (1,))
     rhoaByV.write(time)
+    rhoUa = IOField.read('rhoUa', mesh, time)
+    rhoEa = IOField.read('rhoEa', mesh, time)
+    adjEnergy = (rhoa.getInternalField()**2).sum(axis=1)
+    adjEnergy += (rhoUa.getInternalField()**2).sum(axis=1)
+    adjEnergy += (rhoEa.getInternalField()**2).sum(axis=1)
+    adjEnergy = parallel.sum(adjEnergy)**0.5
+    pprint('L2 norm adjoint', time, ':', adjEnergy)
 
     pprint()
