@@ -69,6 +69,6 @@ for index, time in enumerate(user.time):
     adjEnergy += (rhoUa.getInternalField()**2).sum(axis=1)
     adjEnergy += (rhoEa.getInternalField()**2).sum(axis=1)
     adjEnergy = parallel.sum(adjEnergy)**0.5
-    pprint('L2 norm adjoint', time, ':', adjEnergy)
+    pprint('L2 norm adjoint', time, adjEnergy)
 
     pprint()
