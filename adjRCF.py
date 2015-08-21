@@ -110,11 +110,14 @@ class AdjRCF(object):
         rhoaI = rhoa.internalField() + dprima + (U/rho).dot(dprimUa) + 0.5*g1*U.dot(U)*dprimEa
         rhoUaI = rhoUa.internalField() + dprimUa/rho - g1*U*dprimEa
         rhoEaI = rhoEa.internalField() + g1*dprimEa
-        #boundary condition transformation?
-        #BC fields work
-        rhoa.setInternalField(rhoaI.field)
-        rhoUa.setInternalField(rhoUaI.field)
-        rhoEa.setInternalField(rhoEaI.field)
+
+        #symmetric BC
+        #using BC primal function hack
+
+        #boundary condition transformation? might not be necessary for now
+        #rhoa.setInternalField(rhoaI.field)
+        #rhoUa.setInternalField(rhoUaI.field)
+        #rhoEa.setInternalField(rhoEaI.field)
 
         return primal.stackFields([rhoa, rhoUa, rhoEa], ad), \
         primal.stackFields([syma, symUa, symEa], ad)
