@@ -108,9 +108,9 @@ for index, time in enumerate(user.time):
     M2 = np.dstack((np.hstack((Z, b*gradrho/rho, sg1*divU/2)),
                     np.hstack((np.dstack((Z,Z,Z)), gradU, (a*gradp/(2*p)).reshape(-1, 1, 3))),
                     np.hstack((Z, 2*grada/g1, g1*divU/2))))
-    M1_2norm = np.linalg.svd(M1, compute_uv=False)[:, [0]]
-    M2_2norm = np.linalg.svd(M2, compute_uv=False)[:, [0]]
-    M_2norm = np.linalg.svd(M1-M2, compute_uv=False)[:, [0]]
+    M1_2norm = np.ascontiguousarray(np.linalg.svd(M1, compute_uv=False)[:, [0]])
+    M2_2norm = np.ascontiguousarray(np.linalg.svd(M2, compute_uv=False)[:, [0]])
+    M_2norm = np.ascontiguousarray(np.linalg.svd(M1-M2, compute_uv=False)[:, [0]])
     IOField('M1_2norm', M1_2norm, (1,), boundary=mesh.calculatedBoundary).write(time)
     IOField('M2_2norm', M2_2norm, (1,), boundary=mesh.calculatedBoundary).write(time)
     IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary).write(time)
