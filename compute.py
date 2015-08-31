@@ -53,8 +53,11 @@ def createComputer():
     computer = solver.function([SF], [gradrho.field, gradU.field, gradp.field, gradc.field, divU.field], 'compute')
     return computer
 
+import time as timer
+
 for index, time in enumerate(user.time):
     pprint('Time:', time)
+    start = timer.time()
     rho, rhoU, rhoE = solver.initFields(time)
     U, T, p = solver.U, solver.T, solver.p
     SF = solver.stackFields([p, U, T], np)
@@ -114,5 +117,8 @@ for index, time in enumerate(user.time):
     IOField('M1_2norm', M1_2norm, (1,), boundary=mesh.calculatedBoundary).write(time)
     IOField('M2_2norm', M2_2norm, (1,), boundary=mesh.calculatedBoundary).write(time)
     IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary).write(time)
+
+    end = timer.time()
+    pprint('Time for computing: {0}'.format(end-start))
 
     pprint()
