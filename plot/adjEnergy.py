@@ -5,7 +5,8 @@ plt.rcParams.update({'xtick.labelsize':'large'})
 plt.rcParams.update({'ytick.labelsize':'large'})
 plt.rcParams.update({'legend.fontsize':'large'})
 
-for name,label in zip(['data.txt', 'data2.txt'], ['2D adjoint', '3D adjoint']):
+for name,label in zip(['data.txt', 'data2.txt', 'data3.txt'], ['2D adjoint', '3D adjoint', '3D long term adjoint']):
+#for name,label in zip(['data3.txt'], ['3D long term adjoint']):
     f = open(name)
     lines = f.readlines()
     x = []

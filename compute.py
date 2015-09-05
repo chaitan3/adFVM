@@ -72,22 +72,22 @@ for index, time in enumerate(user.time):
 
     # non theano outputs
     # rhoaByV
-    rhoa = IOField.read('rhoa', mesh, time)
-    rhoaByV = p.field*0
-    nInternalCells = mesh.origMesh.nInternalCells
-    rhoaByV[:nInternalCells] = rhoa.field[:nInternalCells]/mesh.origMesh.volumes
-    rhoaByV = IOField('rhoaByV', rhoaByV, (1,), boundary=mesh.calculatedBoundary)
-    rhoaByV.write(time)
-    pprint()
-    # adjoint energy
-    rhoUa = IOField.read('rhoUa', mesh, time)
-    rhoEa = IOField.read('rhoEa', mesh, time)
-    adjEnergy = (rhoa.getInternalField()**2).sum(axis=1)
-    adjEnergy += (rhoUa.getInternalField()**2).sum(axis=1)
-    adjEnergy += (rhoEa.getInternalField()**2).sum(axis=1)
-    adjEnergy = parallel.sum(adjEnergy)**0.5
-    pprint('L2 norm adjoint', time, adjEnergy)
-    pprint()
+    #rhoa = IOField.read('rhoa', mesh, time)
+    #rhoaByV = p.field*0
+    #nInternalCells = mesh.origMesh.nInternalCells
+    #rhoaByV[:nInternalCells] = rhoa.field[:nInternalCells]/mesh.origMesh.volumes
+    #rhoaByV = IOField('rhoaByV', rhoaByV, (1,), boundary=mesh.calculatedBoundary)
+    #rhoaByV.write(time)
+    #pprint()
+    ## adjoint energy
+    #rhoUa = IOField.read('rhoUa', mesh, time)
+    #rhoEa = IOField.read('rhoEa', mesh, time)
+    #adjEnergy = (rhoa.getInternalField()**2).sum(axis=1)
+    #adjEnergy += (rhoUa.getInternalField()**2).sum(axis=1)
+    #adjEnergy += (rhoEa.getInternalField()**2).sum(axis=1)
+    #adjEnergy = parallel.sum(adjEnergy)**0.5
+    #pprint('L2 norm adjoint', time, adjEnergy)
+    #pprint()
     # adjoint blowup
     gradrho, gradU, gradp, gradc, divU = outputs
     rho = rho.field
