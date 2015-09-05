@@ -62,6 +62,7 @@ class Mesh(object):
         self.points = self.read(meshDir + 'points', np.float64).astype(config.precision)
         self.owner = self.read(meshDir + 'owner', np.int32).ravel()
         self.neighbour = self.read(meshDir + 'neighbour', np.int32).ravel()
+        
         self.boundary, localPatches, self.remotePatches = self.readBoundary(meshDir + 'boundary')
         self.origPatches = copy.copy(localPatches)
         self.origPatches.sort()
@@ -74,6 +75,9 @@ class Mesh(object):
         self.nInternalCells = np.max(self.owner)+1
         self.nGhostCells = self.nBoundaryFaces
         self.nCells = self.nInternalCells + self.nGhostCells
+
+        from compat import intersect
+        print intersect(self, np.array([0.505,0.505,0.505]), np.array([0,0,1.]))
 
         self.normals = self.getNormals()
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()

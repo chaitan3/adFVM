@@ -23,4 +23,5 @@ def add_at(a, indices, b):
         assert b.dtype == np.float64
         cfuncs.add_at(a, indices, b)
 
+from cfuncs import intersect
 from memory import printMemUsage
