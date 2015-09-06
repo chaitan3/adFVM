@@ -66,26 +66,26 @@ def intersect(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] normal):
     interCellFaces[:, 0] = 0
     # get intersected cell faces
     for i in range(0, len(inter)):
-        cell = owner[inter[i]]
+        cell = interCellsMap[owner[inter[i]]]
         curr = interCellFaces[cell,0]
         interCellFaces[cell,curr+1] = i
         interCellFaces[cell,0] += 1
         if inter[i] < nInternalFaces:
-            cell = neighbour[inter[i]]
+            cell = interCellsMap[neighbour[inter[i]]]
             curr = interCellFaces[cell,0]
             interCellFaces[cell,curr+1] = i
             interCellFaces[cell,0] += 1
             
-    # get intersection area, DO triangle case!!!!
+    # get intersection area
     interCellPoints = interPoints[interCellFaces[:,1:]].reshape((-1, 2*4, 3))
+    triangles = np.where(interCellFaces[:,0] == 3)[0]
+    interCellPoints[triangles, -2:, :] = np.array([1e100,1e100,1e100])
     interDist1 = np.linalg.norm(interCellPoints-interCellPoints[:,[0],:], axis=-1)[:,1:].argmin(axis=1) + 1
-    print interDist1.shape
     interDist2 = np.linalg.norm(interCellPoints-interCellPoints[:,[1],:], axis=-1)[:,2:].argmin(axis=1) + 2
     interDist1 += np.int32(((interDist1 % 2 == 0)-0.5)*2)
     interDist2 += np.int32(((interDist2 % 2 == 0)-0.5)*2)
-    print interDist1.shape
-    a = interCellPoints[:,interDist1,:]-interCellPoints[:,[1],:]
-    b = interCellPoints[:,interDist2,:]-interCellPoints[:,[0],:]
+    a = interCellPoints[np.arange(len(interCells)),interDist1,:]-interCellPoints[:,1,:]
+    b = interCellPoints[np.arange(len(interCells)),interDist2,:]-interCellPoints[:,0,:]
     area = np.linalg.norm(np.cross(a, b), axis=1)/2
     return interCells, area
         

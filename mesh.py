@@ -76,9 +76,6 @@ class Mesh(object):
         self.nGhostCells = self.nBoundaryFaces
         self.nCells = self.nInternalCells + self.nGhostCells
 
-        from compat import intersect
-        print intersect(self, np.array([0.505,0.505,0.505]), np.array([0,0,1.]))
-
         self.normals = self.getNormals()
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()
         # uses neighbour
