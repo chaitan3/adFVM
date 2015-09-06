@@ -10,7 +10,7 @@ primal = RCF('/home/talnikar/foam/blade/laminar-lowRe/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 
 # heat transfer
-def objective_ht(fields, mesh):
+def objectiveHeatTransfer(fields, mesh):
     rho, rhoU, rhoE = fields
     solver = rhoE.solver
     U, T, p = solver.primitive(rho, rhoU, rhoE)
@@ -37,27 +37,35 @@ def objective_ht(fields, mesh):
     return res
 
 # pressure loss
-from compat import intersect 
-point = np.array([0.,0.,0.])
-normal = np.array([0.,0.,1.])
-ptin = 1.
-interCells, interArea = intersect(primal.mesh, point, normal)
-def objective_pl(fields, mesh):
+def getPlane(solver):
+    from compat import intersectPlane
+    point = np.array([0.052641,-0.1,0.005])
+    normal = np.array([1.,0.,0.])
+    interCells, interArea = intersectPlane(solver.mesh, point, normal)
+    print interCells.shape, interArea.sum()
+    solver.postpro.extend([(ad.ivector(), interCells), (ad.bcmatrix(), interArea)])
+    return solver.postpro[-2][0], solver.postpro[-1][0]
+    
+def objectivePressureLoss(fields, mesh):
+    #if not hasattr(objectivePressureLoss, interArea):
+    #    objectivePressureLoss.cells, objectivePressureLoss.area = getPlane(primal)
+    #cells, area = objectivePressureLoss.cells, objectivePressureLoss.area
+    ptin = 171371.
+    cells, area = getPlane(primal)
     rho, rhoU, rhoE = fields
     solver = rhoE.solver
     g = solver.gamma
     U, T, p = solver.primitive(rho, rhoU, rhoE)
     c = (g*p/rho).sqrt() 
-    Umag = U.magSqr()
-    pi = p.field[interCells]
-    Mi = Umag.field[interCells]/c.field[interCells]
+    Umag = U.mag()
+    pi = p.field[cells]
+    Mi = Umag.field[cells]/c.field[cells]
     pti = pi*(1 + 0.5*(g-1)*Mi*Mi)**(g/(g-1))
-
-    pli = pl[interCells]
-    res = ad.sum((ptin-pti)*interArea)
+    res = ad.sum((ptin-pti)*area)
     return res 
 
-objective = objective_pl
+#objective = objectiveHeatTransfer
+objective = objectivePressureLoss
 
 def perturb(mesh):
     mid = np.array([-0.08, 0.014, 0.005])

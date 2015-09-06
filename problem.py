@@ -27,10 +27,10 @@ stackedFields = ad.matrix()
 #stackedFields.tag.test_value = np.random.rand(primal.mesh.origMesh.nCells, 5).astype(config.precision)
 fields = primal.unstackFields(stackedFields, CellField)
 objectiveValue = objective(fields, primal.mesh)
-objectiveFunction = primal.function([stackedFields], objectiveValue, 'objective', BCs=False)
+objectiveFunction = primal.function([stackedFields], objectiveValue, 'objective', BCs=False, postpro=True)
 # objective is anyways going to be a sum over all processors
 # so no additional code req to handle parallel case
-objectiveGradient = primal.function([stackedFields], ad.grad(objectiveValue, stackedFields), 'objective_grad', BCs=False)
+objectiveGradient = primal.function([stackedFields], ad.grad(objectiveValue, stackedFields), 'objective_grad', BCs=False, postpro=True)
 primal.objective = objectiveFunction
 primal.timeStepFile = primal.mesh.case + '{0}.{1}.txt'.format(nSteps, writeInterval)
 pprint('')
