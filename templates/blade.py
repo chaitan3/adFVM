@@ -8,7 +8,9 @@ import numpy as np
 primal = RCF('/home/talnikar/foam/blade/laminar-lowRe/')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
-def objective(fields, mesh):
+
+# heat transfer
+def objective_ht(fields, mesh):
     rho, rhoU, rhoE = fields
     solver = rhoE.solver
     U, T, p = solver.primitive(rho, rhoU, rhoE)
@@ -34,6 +36,29 @@ def objective(fields, mesh):
         res += hf
     return res
 
+# pressure loss
+from compat import intersect 
+point = np.array([0.,0.,0.])
+normal = np.array([0.,0.,1.])
+ptin = 1.
+interCells, interArea = intersect(primal.mesh, point, normal)
+def objective_pl(fields, mesh):
+    rho, rhoU, rhoE = fields
+    solver = rhoE.solver
+    g = solver.gamma
+    U, T, p = solver.primitive(rho, rhoU, rhoE)
+    c = (g*p/rho).sqrt() 
+    Umag = U.magSqr()
+    pi = p.field[interCells]
+    Mi = Umag.field[interCells]/c.field[interCells]
+    pti = pi*(1 + 0.5*(g-1)*Mi*Mi)**(g/(g-1))
+
+    pli = pl[interCells]
+    res = ad.sum((ptin-pti)*interArea)
+    return res 
+
+objective = objective_pl
+
 def perturb(mesh):
     mid = np.array([-0.08, 0.014, 0.005])
     G = 10*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
@@ -48,5 +73,4 @@ nSteps = 5000
 writeInterval = 100
 startTime = 3.0
 dt = 1e-8
-
 
