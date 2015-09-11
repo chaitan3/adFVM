@@ -12,14 +12,14 @@ def add_at(np.ndarray[dtype, ndim=2] a, np.ndarray[int] indices, np.ndarray[dtyp
             a[indices[i], j] += b[i, j]
 
 @cython.boundscheck(False)
-def intersect(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] normal):
+def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] normal):
     # face points lie to left or right of plane
     cdef np.ndarray[int, ndim=2] faces = mesh.faces
-    cdef np.ndarray[int, ndim=1] owner = mesh.owner
-    cdef np.ndarray[int, ndim=1] neighbour = mesh.neighbour
     cdef np.ndarray[dtype, ndim=2] points = mesh.points
-    cdef int nInternalCells = mesh.nInternalCells
-    cdef int nInternalFaces = mesh.nInternalFaces
+    cdef np.ndarray[int, ndim=1] owner = mesh.origMesh.owner
+    cdef np.ndarray[int, ndim=1] neighbour = mesh.origMesh.neighbour
+    cdef int nInternalCells = mesh.origMesh.nInternalCells
+    cdef int nInternalFaces = mesh.origMesh.nInternalFaces
     cdef int d = faces.shape[1]-1
     left = (points[faces[:,1:]]-point).dot(normal) > 0.
     counter = left.sum(axis=1)
@@ -87,7 +87,7 @@ def intersect(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] normal):
     a = interCellPoints[np.arange(len(interCells)),interDist1,:]-interCellPoints[:,1,:]
     b = interCellPoints[np.arange(len(interCells)),interDist2,:]-interCellPoints[:,0,:]
     area = np.linalg.norm(np.cross(a, b), axis=1)/2
-    return interCells, area
+    return interCells, area.reshape((-1, 1))
         
             
         

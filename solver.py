@@ -17,9 +17,10 @@ logger = config.Logger(__name__)
 class Solver(object):
     defaultConfig = {
                         'timeIntegrator': 'euler', 'nStages': 1,
-                        'sourceTerm': None,
                         'objective': lambda x: 0,
-                        'adjoint': False
+                        'adjoint': False,
+                        'sourceTerm': None,
+                        'postpro': []
                     }
 
     def __init__(self, case, **userConfig):
@@ -161,7 +162,7 @@ class Solver(object):
 
 class SolverFunction(object):
     counter = 0
-    def __init__(self, inputs, outputs, solver, name, BCs=True):
+    def __init__(self, inputs, outputs, solver, name, BCs=True, postpro=False, source=True):
         logger.info('compiling function')
         self.symbolic = []
         self.values = []
@@ -172,8 +173,14 @@ class SolverFunction(object):
             self.populate_BCs(self.symbolic, solver, 0)
             self.populate_BCs(self.values, solver, 1)
         # source terms
-        self.symbolic.extend(solver.sourceVariables)
-        self.values.extend(solver.sourceTerm(mesh.origMesh))
+        if source:
+            self.symbolic.extend(solver.sourceVariables)
+            self.values.extend(solver.sourceTerm(mesh.origMesh))
+        # postpro variables
+        if postpro:
+            symbolic, values = zip(*solver.postpro)
+            self.symbolic.extend(symbolic)
+            self.values.extend(values)
 
         self.generate(inputs, outputs, solver.mesh.case, name)
 
