@@ -124,6 +124,8 @@ class Solver(object):
             pprint('Time for iteration:', end-start)
             pprint('Time since beginning:', end-config.runtime)
             pprint('cumulative objective: ', parallel.sum(result))
+
+            mesh.update(t, dt)
             
             result += self.objective(stackedFields)
             timeSteps.append([t, dt])

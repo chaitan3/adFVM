@@ -137,6 +137,7 @@ foamFile = {'version':'2.0', 'format': fileFormat, 'class': 'volScalarField', 'o
 
 # group patches
 processorPatches = ['processor', 'processorCyclic']
-coupledPatches = ['cyclic', 'processor', 'processorCyclic']
-valuePatches = ['processor', 'processorCyclic', 'calculated']
-defaultPatches = ['cyclic', 'symmetryPlane', 'empty', 'processor', 'processorCyclic']
+cyclicPatches = ['cyclic', 'slidingPeriodic1D']
+coupledPatches = cyclicPatches + processorPatches
+valuePatches = processorPatches + ['calculated']
+defaultPatches = coupledPatches + ['symmetryPlane', 'empty']

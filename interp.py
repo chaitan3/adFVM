@@ -54,7 +54,7 @@ def TVD_dual(phi, gradPhi):
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
         patchType = mesh.boundary[patchID]['type']
-        if patchType == 'cyclic':
+        if patchType in config.cyclicPatches:
             update(startFace, endFace, 0)
             update(startFace, endFace, 1)
         elif patchType == 'characteristic':
@@ -86,7 +86,7 @@ def upwind(phi, U):
     for patchID in mesh.origPatches:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        if phi.boundary[patchID]['type'] == 'cyclic':
+        if phi.boundary[patchID]['type'] in config.cyclicPatches:
             update(startFace, endFace)
         else:
             faceField[startFace:endFace] = phi.field[mesh.neighbour[startFace:endFace]]

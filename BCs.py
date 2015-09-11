@@ -62,6 +62,19 @@ class cyclic(BoundaryCondition):
         #self.value[:] = self.field[self.neighbourIndices]
         self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.phi.field[self.neighbourIndices])
 
+class slidingPeriodic1D(BoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        neighbourPatch = self.mesh.boundary[patchID]['neighbourPatch']
+        neighbourStartFace = self.mesh.boundary[neighbourPatch]['startFace']
+        neighbourEndFace = neighbourStartFace + self.nFaces
+        neighbourIndices = self.mesh.owner[neighbourStartFace:neighbourEndFace]
+
+    def update(self):
+        logger.debug('cyclic BC for {0}'.format(self.patchID))
+        #self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.phi.field[self.neighbourIndices])
+
+
 class zeroGradient(BoundaryCondition):
     def update(self):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))

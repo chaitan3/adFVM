@@ -315,7 +315,7 @@ class Mesh(object):
             cellEndFace = self.nInternalCells + endFace - self.nInternalFaces
             # append neighbour
             self.neighbour[startFace:endFace] = range(cellStartFace, cellEndFace)
-            if patch['type'] == 'cyclic': 
+            if patch['type'] in config.cyclicPatches:
                 neighbourPatch = self.boundary[patch['neighbourPatch']]   
                 neighbourStartFace = neighbourPatch['startFace']
                 neighbourEndFace = neighbourStartFace + nFaces
@@ -621,6 +621,14 @@ class Mesh(object):
                 patch = self.boundary[patchID]
                 patch['startFace'] = ad.iscalar()
                 patch['nFaces'] = ad.iscalar()
+
+    def update(self, t, dt):
+        logger.info('updating mesh')
+        for patchID in self.origPatches:
+            if self.boundary['type'] == 'slidingPeriodic1D':
+                self.boundary['pos'] += self.boundary['velocity']*dt
+                
+                
 
 def removeCruft(content, keepHeader=False):
     # remove comments and newlines
