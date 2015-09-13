@@ -655,6 +655,7 @@ class Mesh(object):
                     patch['extraIndex'] = index2
                     self.boundaryTensor[patchID] = [('multiplier', adsparse.csr_matrix(dtype=config.dtype))]
                 patch['movingCellCentres'] += patch['velocity']*dt
+                # only supports low enough velocities
                 transformIndices = (patch['movingCellCentres']-patch['periodicLimit']).dot(patch['velocity']) > 1e-6
                 patch['movingCellCentres'][transformIndices] += self.boundary[patch['periodicPatch']]['transform']
                 dists = sp.spatial.distance.cdist(patch['fixedCellCentres'], patch['movingCellCentres'])
@@ -663,6 +664,7 @@ class Mesh(object):
                 np.place(sortedDists, sortedDists == (m-1), patch['extraIndex'])
                 indices = np.arange(n).reshape(-1,1)
                 minDists = dists[indices, sortedDists]
+                # weights should use weighted average?
                 weights = minDists/minDists.sum(axis=1, keepdims=True)
                 indices = np.hstack((indices, indices))
                 patch['multiplier'] = sparse.coo_matrix((weights.ravel(), (indices.ravel(), sortedDists[:,[1,0]].ravel())), shape=(n, n)).tocsr()
