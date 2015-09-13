@@ -639,9 +639,10 @@ class Mesh(object):
                 if dt == 0.:
                     neighbourPatch = self.boundary[patch['neighbourPatch']]   
                     neighbourStartFace = neighbourPatch['startFace']
-                    neighbourEndFace = neighbourStartFace + nFaces
+                    neighbourEndFace = neighbourStartFace + neighbourPatch['nFaces']
+                    patch['velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
                     patch['fixedCellCentres'] = self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
-                    dists = sp.spatial.distance.pdist(patch['fixedCellCentres'])
+                    dists = sp.spatial.distance.squareform(sp.spatial.distance.pdist(patch['fixedCellCentres']))
                     index1, index2 = np.unravel_index(np.argmax(dists), dists.shape)
                     patch1 = self.boundary[patch['periodicPatch']]
                     patch2 = self.boundary[patch1['neighbourPatch']]
@@ -649,21 +650,22 @@ class Mesh(object):
                         index2, index1 = index1, index2
                     point1 = patch['fixedCellCentres'][index2] + patch1['transform']
                     point2 = patch['fixedCellCentres'][index1] + patch2['transform']
-                    patch['movingCellCentres'] = np.hstack((patch['fixedCellCentres'].copy(), point2))
+                    patch['movingCellCentres'] = np.vstack((patch['fixedCellCentres'].copy(), point2))
                     patch['periodicLimit'] = point1
                     patch['extraIndex'] = index2
-                    self.boundaryTensor['slidingPeriodic1D'] = [('multiplier', adsparse.csr_matrix(dtype=config.dtype))]
+                    self.boundaryTensor[patchID] = [('multiplier', adsparse.csr_matrix(dtype=config.dtype))]
                 patch['movingCellCentres'] += patch['velocity']*dt
                 transformIndices = (patch['movingCellCentres']-patch['periodicLimit']).dot(patch['velocity']) > 1e-6
                 patch['movingCellCentres'][transformIndices] += self.boundary[patch['periodicPatch']]['transform']
-                dists = sp.spatial.distance.cdist(patch['fixedCellCentres', patch['movingCellCentres']])
+                dists = sp.spatial.distance.cdist(patch['fixedCellCentres'], patch['movingCellCentres'])
                 n, m = dists.shape
                 sortedDists = np.argsort(dists, axis=1)[:,:2]
                 np.place(sortedDists, sortedDists == (m-1), patch['extraIndex'])
-                indices = np.arange(n)
+                indices = np.arange(n).reshape(-1,1)
                 minDists = dists[indices, sortedDists]
                 weights = minDists/minDists.sum(axis=1, keepdims=True)
-                patch['multiplier'] = sparse.coo_matrix((weights, (indices, sortedDists[:,[1,0]])), shape=(n, n)).tocsr()
+                indices = np.hstack((indices, indices))
+                patch['multiplier'] = sparse.coo_matrix((weights.ravel(), (indices.ravel(), sortedDists[:,[1,0]].ravel())), shape=(n, n)).tocsr()
         end = time.time()
         pprint('Time to update mesh:', end-start)
                 

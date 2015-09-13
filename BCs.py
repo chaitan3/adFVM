@@ -1,7 +1,7 @@
 import numpy as np
 
 import config
-from config import ad, T
+from config import ad, adsparse, T
 from mesh import extractField
 logger = config.Logger(__name__)
 
@@ -69,11 +69,11 @@ class slidingPeriodic1D(BoundaryCondition):
         neighbourStartFace = self.mesh.boundary[neighbourPatch]['startFace']
         neighbourEndFace = neighbourStartFace + self.nFaces
         self.neighbourIndices = self.mesh.owner[neighbourStartFace:neighbourEndFace]
-        self.interpOp = self.patch['multiplier']
+        self.interpOp = self.mesh.boundary[patchID]['multiplier']
 
     def update(self):
-        logger.debug('cyclic BC for {0}'.format(self.patchID))
-        value = adsparse.basic.dot(self.interpOp, self.neighbourIndices)
+        logger.debug('slidingPeriodic1D BC for {0}'.format(self.patchID))
+        value = adsparse.basic.dot(self.interpOp, self.phi.field[self.neighbourIndices])
         self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], value)
 
 class zeroGradient(BoundaryCondition):
