@@ -637,12 +637,15 @@ class Mesh(object):
             endFace = startFace + patch['nFaces']
             if patch['type'] == 'slidingPeriodic1D':
                 if dt == 0.:
+                    patch['nLayers'] = int(patch['nLayers'])
+                    patch['nFacesPerLayer'] = patch['nFaces']/patch['nLayers']
                     neighbourPatch = self.boundary[patch['neighbourPatch']]   
                     neighbourStartFace = neighbourPatch['startFace']
-                    neighbourEndFace = neighbourStartFace + neighbourPatch['nFaces']
+                    neighbourEndFace = neighbourStartFace + patch['nFacesPerLayer']
                     patch['velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
                     patch['fixedCellCentres'] = self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
                     dists = sp.spatial.distance.squareform(sp.spatial.distance.pdist(patch['fixedCellCentres']))
+                    # is this guaranteed to give extreme indices?
                     index1, index2 = np.unravel_index(np.argmax(dists), dists.shape)
                     patch1 = self.boundary[patch['periodicPatch']]
                     patch2 = self.boundary[patch1['neighbourPatch']]
@@ -665,9 +668,15 @@ class Mesh(object):
                 indices = np.arange(n).reshape(-1,1)
                 minDists = dists[indices, sortedDists]
                 # weights should use weighted average?
-                weights = minDists/minDists.sum(axis=1, keepdims=True)
-                indices = np.hstack((indices, indices))
-                patch['multiplier'] = sparse.coo_matrix((weights.ravel(), (indices.ravel(), sortedDists[:,[1,0]].ravel())), shape=(n, n)).tocsr()
+                weights = (minDists/minDists.sum(axis=1, keepdims=True))[:,[1, 0]].ravel()
+                sortedDists = sortedDists.ravel()
+                indices = np.hstack((indices, indices)).ravel()
+                # repetition
+                weights = np.tile(weights, patch['nLayers'])
+                repeater = np.repeat(np.arange(patch['nLayers']), 2*patch['nFacesPerLayer'])*patch['nFacesPerLayer']
+                indices = np.tile(indices, patch['nLayers']) + repeater
+                sortedDists = np.tile(sortedDists, patch['nLayers']) + repeater
+                patch['multiplier'] = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(n, n)).tocsr()
         end = time.time()
         pprint('Time to update mesh:', end-start)
                 
