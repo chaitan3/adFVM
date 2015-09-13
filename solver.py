@@ -167,8 +167,8 @@ class SolverFunction(object):
         self.symbolic = []
         self.values = []
         mesh = solver.mesh
-        self.populate_mesh(self.symbolic, mesh, mesh.paddedMesh, mesh.origPatches)
-        self.populate_mesh(self.values, mesh.origMesh, mesh.paddedMesh.origMesh, mesh.origPatches)
+        self.populate_mesh(self.symbolic, mesh, mesh.paddedMesh, mesh)
+        self.populate_mesh(self.values, mesh.origMesh, mesh.paddedMesh.origMesh, mesh)
         if BCs:
             self.populate_BCs(self.symbolic, solver, 0)
             self.populate_BCs(self.values, solver, 1)
@@ -184,14 +184,14 @@ class SolverFunction(object):
 
         self.generate(inputs, outputs, solver.mesh.case, name)
 
-    def populate_mesh(self, inputs, mesh, paddedMesh, origPatches):
+    def populate_mesh(self, inputs, mesh, paddedMesh, solverMesh):
         attrs = Mesh.fields + Mesh.constants
         for attr in attrs:
             inputs.append(getattr(mesh, attr))
             if parallel.nProcessors > 1:
                 inputs.append(getattr(paddedMesh, attr))
-        for patchID in origPatches:
-            for attr in mesh.getBoundaryTensor(patchID):
+        for patchID in solverMesh.origPatches:
+            for attr in solverMesh.getBoundaryTensor(patchID):
                 inputs.append(mesh.boundary[patchID][attr[0]])
 
     def populate_BCs(self, inputs, solver, index):

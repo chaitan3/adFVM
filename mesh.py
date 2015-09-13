@@ -1,5 +1,6 @@
 import numpy as np
-from scipy import sparse as sp
+import scipy as sp
+from scipy import sparse as sparse
 import re
 import time
 import copy
@@ -98,7 +99,6 @@ class Mesh(object):
         # theano shared variables
         self.origMesh = cls.copy(self, fields=True)
         self.makeTensor()
-
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
         pprint('nFaces:', parallel.sum(self.origMesh.nFaces))
@@ -224,9 +224,9 @@ class Mesh(object):
 
     def getSumOp(self, mesh, ghost=False):
         logger.info('generated sum op')
-        owner = sp.sparse.csc_matrix((np.ones(mesh.nFaces, config.precision), mesh.owner, np.arange(0, mesh.nFaces+1, dtype=np.int32)), shape=(mesh.nInternalCells, mesh.nFaces))
+        owner = sparse.csc_matrix((np.ones(mesh.nFaces, config.precision), mesh.owner, np.arange(0, mesh.nFaces+1, dtype=np.int32)), shape=(mesh.nInternalCells, mesh.nFaces))
         Nindptr = np.concatenate((np.arange(0, mesh.nInternalFaces+1, dtype=np.int32), mesh.nInternalFaces*np.ones(mesh.nFaces-mesh.nInternalFaces, np.int32)))
-        neighbour = sp.sparse.csc_matrix((-np.ones(mesh.nInternalFaces, config.precision), mesh.neighbour[:mesh.nInternalFaces], Nindptr), shape=(mesh.nInternalCells, mesh.nFaces))
+        neighbour = sparse.csc_matrix((-np.ones(mesh.nInternalFaces, config.precision), mesh.neighbour[:mesh.nInternalFaces], Nindptr), shape=(mesh.nInternalCells, mesh.nFaces))
         # skip empty patches
         #for patchID in self.boundary:
         #    patch = self.boundary[patchID]
@@ -241,7 +241,7 @@ class Mesh(object):
         nFaces = 6
         repeat = [[-1]*nFaces]
         if ghost:
-            correction = sp.sparse.lil_matrix((mesh.nInternalCells, mesh.nInternalCells), dtype=config.precision)
+            correction = sparse.lil_matrix((mesh.nInternalCells, mesh.nInternalCells), dtype=config.precision)
             correction.setdiag(np.ones(mesh.nInternalCells, config.precision))
             internalCursor = self.nInternalCells
             for patchID in self.remotePatches:
@@ -624,15 +624,15 @@ class Mesh(object):
                     self.boundary[patchID][attr[0]] = attr[1]
 
 
-    def getBoundaryTensor(patchID):
-        default = [('startFace', ad.iscalar(), ('nFaces', ad.iscalar())]
-        return default + self.boundaryTensor[patchID]
+    def getBoundaryTensor(self, patchID):
+        default = [('startFace', ad.iscalar()), ('nFaces', ad.iscalar())]
+        return default + self.boundaryTensor.get(patchID, [])
 
     def update(self, t, dt):
         logger.info('updating mesh')
         start = time.time()
         for patchID in self.origPatches:
-            patch = self.boundary['patchID']
+            patch = self.boundary[patchID]
             startFace = patch['startFace']
             endFace = startFace + patch['nFaces']
             if patch['type'] == 'slidingPeriodic1D':
@@ -663,7 +663,7 @@ class Mesh(object):
                 indices = np.arange(n)
                 minDists = dists[indices, sortedDists]
                 weights = minDists/minDists.sum(axis=1, keepdims=True)
-                patch['multiplier'] = sp.sparse.coo_matrix((weights, (indices, sortedDists[:,[1,0]])), shape=(n, n)).tocsr()
+                patch['multiplier'] = sparse.coo_matrix((weights, (indices, sortedDists[:,[1,0]])), shape=(n, n)).tocsr()
         end = time.time()
         pprint('Time to update mesh:', end-start)
                 
