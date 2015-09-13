@@ -187,15 +187,12 @@ class SolverFunction(object):
     def populate_mesh(self, inputs, mesh, paddedMesh, origPatches):
         attrs = Mesh.fields + Mesh.constants
         for attr in attrs:
-            if attr == 'boundary':
-                for patchID in origPatches:
-                    patch = getattr(mesh, attr)[patchID]
-                    inputs.append(patch['startFace'])
-                    inputs.append(patch['nFaces'])
-            else:
-                inputs.append(getattr(mesh, attr))
-                if parallel.nProcessors > 1:
-                    inputs.append(getattr(paddedMesh, attr))
+            inputs.append(getattr(mesh, attr))
+            if parallel.nProcessors > 1:
+                inputs.append(getattr(paddedMesh, attr))
+        for patchID in origPatches:
+            for attr in mesh.getBoundaryTensor(patchID):
+                inputs.append(mesh.boundary[patchID][attr[0]])
 
     def populate_BCs(self, inputs, solver, index):
         fields = solver.getBCFields()

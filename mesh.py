@@ -25,14 +25,14 @@ class Mesh(object):
               'areas', 'volumes',
               'weights', 'deltas', 'normals',
               'cellCentres', 'faceCentres',
-              'sumOp',
-              'boundary']
+              'sumOp']
 
     def __init__(self):
         for attr in Mesh.constants:
             setattr(self, attr, 0)
         for attr in Mesh.fields:
             setattr(self, attr, np.array([[]]))
+        self.boundary = []
 
         #self.localRemoteCells = None
         #self.localRemoteFaces = None
@@ -42,8 +42,9 @@ class Mesh(object):
     @classmethod
     def copy(cls, mesh, constants=True, fields=False):
         self = cls()
-        for attr in cls.fields:
-            if fields or attr == 'boundary':
+        self.boundary = copy.deepcopy(mesh.boundary)
+        if fields:
+            for attr in cls.fields:
               setattr(self, attr, copy.deepcopy(getattr(mesh, attr)))
         if constants:
             for attr in cls.constants:
@@ -64,6 +65,7 @@ class Mesh(object):
         self.neighbour = self.read(meshDir + 'neighbour', np.int32).ravel()
         
         self.boundary, localPatches, self.remotePatches = self.readBoundary(meshDir + 'boundary')
+        self.boundaryTensor = {}
         self.origPatches = copy.copy(localPatches)
         self.origPatches.sort()
         self.defaultBoundary = self.getDefaultBoundary()
@@ -607,9 +609,7 @@ class Mesh(object):
             setattr(self, attr, ad.iscalar())
         for attr in Mesh.fields:
             value = getattr(self, attr) 
-            if attr == 'boundary': 
-                continue
-            elif attr in ['owner', 'neighbour']:
+            if attr in ['owner', 'neighbour']:
                 setattr(self, attr, ad.ivector())
             elif attr == 'sumOp':
                 setattr(self, attr, adsparse.csr_matrix(dtype=config.dtype))
@@ -619,10 +619,14 @@ class Mesh(object):
                 setattr(self, attr, ad.matrix())
 
         if type(self.boundary) == type({}):
-            for patchID in self.boundary:
-                patch = self.boundary[patchID]
-                patch['startFace'] = ad.iscalar()
-                patch['nFaces'] = ad.iscalar()
+            for patchID in self.origPatches:
+                for attr in self.getBoundaryTensor(patchID):
+                    self.boundary[patchID][attr[0]] = attr[1]
+
+
+    def getBoundaryTensor(patchID):
+        default = [('startFace', ad.iscalar(), ('nFaces', ad.iscalar())]
+        return default + self.boundaryTensor[patchID]
 
     def update(self, t, dt):
         logger.info('updating mesh')
@@ -633,7 +637,10 @@ class Mesh(object):
             endFace = startFace + patch['nFaces']
             if patch['type'] == 'slidingPeriodic1D':
                 if dt == 0.:
-                    patch['fixedCellCentres'] = self.cellCentres[self.owner[startFace:endFace]]
+                    neighbourPatch = self.boundary[patch['neighbourPatch']]   
+                    neighbourStartFace = neighbourPatch['startFace']
+                    neighbourEndFace = neighbourStartFace + nFaces
+                    patch['fixedCellCentres'] = self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
                     dists = sp.spatial.distance.pdist(patch['fixedCellCentres'])
                     index1, index2 = np.unravel_index(np.argmax(dists), dists.shape)
                     patch1 = self.boundary[patch['periodicPatch']]
@@ -645,6 +652,7 @@ class Mesh(object):
                     patch['movingCellCentres'] = np.hstack((patch['fixedCellCentres'].copy(), point2))
                     patch['periodicLimit'] = point1
                     patch['extraIndex'] = index2
+                    self.boundaryTensor['slidingPeriodic1D'] = [('multiplier', adsparse.csr_matrix(dtype=config.dtype))]
                 patch['movingCellCentres'] += patch['velocity']*dt
                 transformIndices = (patch['movingCellCentres']-patch['periodicLimit']).dot(patch['velocity']) > 1e-6
                 patch['movingCellCentres'][transformIndices] += self.boundary[patch['periodicPatch']]['transform']
