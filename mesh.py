@@ -88,6 +88,8 @@ class Mesh(object):
         self.nLocalCells = self.createGhostCells()
         self.deltas = self.getDeltas()           # nFaces
         self.weights = self.getWeights()   # nFaces
+        # update mesh initialization call
+        self.update(0., 0.)
 
         # padded mesh
         self.paddedMesh = cls.createPaddedMesh(self)
@@ -220,9 +222,9 @@ class Mesh(object):
 
     def getSumOp(self, mesh, ghost=False):
         logger.info('generated sum op')
-        owner = sp.csc_matrix((np.ones(mesh.nFaces, config.precision), mesh.owner, np.arange(0, mesh.nFaces+1, dtype=np.int32)), shape=(mesh.nInternalCells, mesh.nFaces))
+        owner = sp.sparse.csc_matrix((np.ones(mesh.nFaces, config.precision), mesh.owner, np.arange(0, mesh.nFaces+1, dtype=np.int32)), shape=(mesh.nInternalCells, mesh.nFaces))
         Nindptr = np.concatenate((np.arange(0, mesh.nInternalFaces+1, dtype=np.int32), mesh.nInternalFaces*np.ones(mesh.nFaces-mesh.nInternalFaces, np.int32)))
-        neighbour = sp.csc_matrix((-np.ones(mesh.nInternalFaces, config.precision), mesh.neighbour[:mesh.nInternalFaces], Nindptr), shape=(mesh.nInternalCells, mesh.nFaces))
+        neighbour = sp.sparse.csc_matrix((-np.ones(mesh.nInternalFaces, config.precision), mesh.neighbour[:mesh.nInternalFaces], Nindptr), shape=(mesh.nInternalCells, mesh.nFaces))
         # skip empty patches
         #for patchID in self.boundary:
         #    patch = self.boundary[patchID]
@@ -237,7 +239,7 @@ class Mesh(object):
         nFaces = 6
         repeat = [[-1]*nFaces]
         if ghost:
-            correction = sp.lil_matrix((mesh.nInternalCells, mesh.nInternalCells), dtype=config.precision)
+            correction = sp.sparse.lil_matrix((mesh.nInternalCells, mesh.nInternalCells), dtype=config.precision)
             correction.setdiag(np.ones(mesh.nInternalCells, config.precision))
             internalCursor = self.nInternalCells
             for patchID in self.remotePatches:
@@ -624,10 +626,38 @@ class Mesh(object):
 
     def update(self, t, dt):
         logger.info('updating mesh')
+        start = time.time()
         for patchID in self.origPatches:
-            if self.boundary['type'] == 'slidingPeriodic1D':
-                self.boundary['pos'] += self.boundary['velocity']*dt
-                
+            patch = self.boundary['patchID']
+            startFace = patch['startFace']
+            endFace = startFace + patch['nFaces']
+            if patch['type'] == 'slidingPeriodic1D':
+                if dt == 0.:
+                    patch['fixedCellCentres'] = self.cellCentres[self.owner[startFace:endFace]]
+                    dists = sp.spatial.distance.pdist(patch['fixedCellCentres'])
+                    index1, index2 = np.unravel_index(np.argmax(dists), dists.shape)
+                    patch1 = self.boundary[patch['periodicPatch']]
+                    patch2 = self.boundary[patch1['neighbourPatch']]
+                    if np.linalg.norm(patch['fixedCellCentres'][index1] + patch2['transform'] - patch['fixedCellCentres'][index2]) > np.max(dists):
+                        index2, index1 = index1, index2
+                    point1 = patch['fixedCellCentres'][index2] + patch1['transform']
+                    point2 = patch['fixedCellCentres'][index1] + patch2['transform']
+                    patch['movingCellCentres'] = np.hstack((patch['fixedCellCentres'].copy(), point2))
+                    patch['periodicLimit'] = point1
+                    patch['extraIndex'] = index2
+                patch['movingCellCentres'] += patch['velocity']*dt
+                transformIndices = (patch['movingCellCentres']-patch['periodicLimit']).dot(patch['velocity']) > 1e-6
+                patch['movingCellCentres'][transformIndices] += self.boundary[patch['periodicPatch']]['transform']
+                dists = sp.spatial.distance.cdist(patch['fixedCellCentres', patch['movingCellCentres']])
+                n, m = dists.shape
+                sortedDists = np.argsort(dists, axis=1)[:,:2]
+                np.place(sortedDists, sortedDists == (m-1), patch['extraIndex'])
+                indices = np.arange(n)
+                minDists = dists[indices, sortedDists]
+                weights = minDists/minDists.sum(axis=1, keepdims=True)
+                patch['multiplier'] = sp.sparse.coo_matrix((weights, (indices, sortedDists[:,[1,0]])), shape=(n, n)).tocsr()
+        end = time.time()
+        pprint('Time to update mesh:', end-start)
                 
 
 def removeCruft(content, keepHeader=False):
