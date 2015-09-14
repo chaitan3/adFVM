@@ -109,7 +109,12 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
 
         adjointIndex = writeInterval-1 - step
         t, dt = timeSteps[primalIndex + adjointIndex]
-        previousSolution = solutions[adjointIndex]
+        if primal.dynamicMesh
+            previousMesh, previousSolution = solutions[adjointIndex]
+            # new mesh boundary
+            primal.mesh.origMesh.boundary = previousMesh.boundary
+        else:
+            previousSolution = solutions[adjointIndex]
         #paddedPreviousSolution = parallel.getRemoteCells(previousSolution, mesh)
         ## adjoint time stepping
         #paddedJacobian = np.ascontiguousarray(primal.gradient(paddedPreviousSolution, stackedAdjointFields))

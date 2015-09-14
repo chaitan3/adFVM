@@ -4,6 +4,7 @@ from scipy import sparse as sparse
 import re
 import time
 import copy
+import os
 
 import config, parallel
 from config import ad, adsparse, T
@@ -53,17 +54,21 @@ class Mesh(object):
         return self
 
     @classmethod
-    def create(cls, caseDir=None):
+    def create(cls, caseDir=None, currTime='constant'):
         start = time.time()
         pprint('Reading mesh')
         self = cls()
 
         self.case = caseDir + parallel.processorDirectory
-        self.meshDir = self.case + 'constant/polyMesh/'
-        self.faces = self.read(self.meshDir + 'faces', np.int32)
-        self.points = self.read(self.meshDir + 'points', np.float64).astype(config.precision)
-        self.owner = self.read(self.meshDir + 'owner', np.int32).ravel()
-        self.neighbour = self.read(self.meshDir + 'neighbour', np.int32).ravel()
+        if isinstance(currTime, float):
+            timeDir = self.getTimeDir(currTime)
+        else:
+            timeDir = self.case + currTime + '/'
+        self.meshDir = timeDir + 'polyMesh/'
+        self.faces = self.readFile(self.meshDir + 'faces', np.int32)
+        self.points = self.readFile(self.meshDir + 'points', np.float64).astype(config.precision)
+        self.owner = self.readFile(self.meshDir + 'owner', np.int32).ravel()
+        self.neighbour = self.readFile(self.meshDir + 'neighbour', np.int32).ravel()
         
         self.boundary, localPatches, self.remotePatches = self.readBoundary(self.meshDir + 'boundary')
         self.boundaryTensor = {}
@@ -89,7 +94,7 @@ class Mesh(object):
         
         # ghost cell modification
         self.nLocalCells = self.createGhostCells()
-        self.deltas = self.getDeltas()           # nFaces
+        self.deltas = self.getDeltas()           # nFaces 
         self.weights = self.getWeights()   # nFaces
 
         # padded mesh
@@ -111,7 +116,24 @@ class Mesh(object):
 
         return self
 
-    def read(self, foamFile, dtype):
+    def getTimeDir(self, time):
+        if time.is_integer():
+            time = int(time)
+        return '{0}/{1}/'.format(self.case, time)
+
+    # re-reading after mesh creation
+    def read(self, time):
+        pprint('Re-reading mesh, time', time)
+        timeDir = self.getTimeDir(time) 
+        meshDir = timeDir + 'polyMesh/'
+        # correct updating
+        boundary, _, _ = self.readBoundary(meshDir + 'boundary')
+        for patchID in boundary:
+            if boundary[patchID]['type'] == 'slidingPeriodic1D':
+                self.origMesh.boundary[patchID] = copy.deepcopy(boundary[patchID])
+        self.update(0., 0.)
+
+    def readFile(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
         content = open(foamFile).read()
         foamFileDict = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
@@ -154,6 +176,14 @@ class Mesh(object):
                 localPatches.append(patch[0])
         return boundary, localPatches, remotePatches
 
+    def write(self, time):
+        pprint('writing mesh, time', time)
+        timeDir = self.getTimeDir(time) 
+        meshDir = timeDir + 'polyMesh/'
+        if not os.path.exists(meshDir):
+            os.makedirs(meshDir)
+        self.writeBoundary(meshDir + 'boundary')
+
     def writeBoundary(self, boundaryFile):
         logger.info('writing {0}'.format(boundaryFile))
         handle = open(boundaryFile, 'w')
@@ -175,9 +205,14 @@ class Mesh(object):
             patch = self.origMesh.boundary[patchID]
             for attr in patch:
                 value = patch[attr]
-                if attr == 'transform':
+                if attr.startswith('loc_'):
+                    continue
+                elif attr == 'transform':
                     value = 'unknown'
-                handle.write('\t\t{0} {1};\n'.format(attr, value))
+                if isinstance(value, np.ndarray):
+                    writeField(handle, value, 'vector', '\t\t' + attr)
+                else:
+                    handle.write('\t\t{0} {1};\n'.format(attr, value))
             handle.write('\t}\n')
         handle.write(')\n')
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
@@ -194,7 +229,7 @@ class Mesh(object):
         return normals / norm(normals, axis=1, keepdims=True)
 
     def getCellFaces(self):
-        logger.info('generated cell faces')
+        logger.info('generated cell faces') 
         enum = lambda x: np.column_stack((np.indices(x.shape, np.int32)[0], x)) 
         combined = np.concatenate((enum(self.owner), enum(self.neighbour)))
         cellFaces = combined[combined[:,1].argsort(), 0]
@@ -669,8 +704,8 @@ class Mesh(object):
                 # single processor has everything
                 if patch['nFaces'] == 0:
                     if dt == 0.:
-                        self.boundaryTensor[patchID] = [('multiplier', adsparse.csr_matrix(dtype=config.dtype))]
-                    patch['multiplier'] = sparse.csr_matrix((0,0), dtype=config.precision)
+                        self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
+                    patch['loc_multiplier'] = sparse.csr_matrix((0,0), dtype=config.precision)
                     continue
                 if dt == 0.:
                     patch['nLayers'] = int(patch['nLayers'])
@@ -678,30 +713,33 @@ class Mesh(object):
                     neighbourPatch = mesh.boundary[patch['neighbourPatch']]   
                     neighbourStartFace = neighbourPatch['startFace']
                     neighbourEndFace = neighbourStartFace + patch['nFacesPerLayer']
-                    patch['velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
-                    patch['fixedCellCentres'] = mesh.cellCentres[mesh.owner[neighbourStartFace:neighbourEndFace]]
-                    dists = sp.spatial.distance.squareform(sp.spatial.distance.pdist(patch['fixedCellCentres']))
+                    patch['loc_velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
+                    patch['loc_fixedCellCentres'] = mesh.cellCentres[mesh.owner[neighbourStartFace:neighbourEndFace]]
+                    dists = sp.spatial.distance.squareform(sp.spatial.distance.pdist(patch['loc_fixedCellCentres']))
                     # is this guaranteed to give extreme indices?
                     index1, index2 = np.unravel_index(np.argmax(dists), dists.shape)
                     patch1 = mesh.boundary[patch['periodicPatch']]
                     patch2 = mesh.boundary[patch1['neighbourPatch']]
-                    if np.linalg.norm(patch['fixedCellCentres'][index1] + patch2['transform'] - patch['fixedCellCentres'][index2]) > np.max(dists):
+                    if np.linalg.norm(patch['loc_fixedCellCentres'][index1] + patch2['transform'] - patch['loc_fixedCellCentres'][index2]) > np.max(dists):
                         index2, index1 = index1, index2
-                    point1 = patch['fixedCellCentres'][index2] + patch1['transform']
-                    point2 = patch['fixedCellCentres'][index1] + patch2['transform']
+                    point1 = patch['loc_fixedCellCentres'][index2] + patch1['transform']
+                    point2 = patch['loc_fixedCellCentres'][index1] + patch2['transform']
                     # reread
-                    patch['movingCellCentres'] = np.vstack((patch['fixedCellCentres'].copy(), point2))
-                    patch['periodicLimit'] = point1
-                    patch['extraIndex'] = index2
-                    self.boundaryTensor[patchID] = [('multiplier', adsparse.csr_matrix(dtype=config.dtype))]
-                patch['movingCellCentres'] += patch['velocity']*dt
+                    if 'movingCellCentres' in patch:
+                        patch['movingCellCentres'] = extractField(patch['movingCellCentres'], patch['nFacesPerLayer']+1, (3,))
+                    else:
+                        patch['movingCellCentres'] = np.vstack((patch['loc_fixedCellCentres'].copy(), point2))
+                    patch['loc_periodicLimit'] = point1
+                    patch['loc_extraIndex'] = index2
+                    self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
+                patch['movingCellCentres'] += patch['loc_velocity']*dt
                 # only supports low enough velocities
-                transformIndices = (patch['movingCellCentres']-patch['periodicLimit']).dot(patch['velocity']) > 1e-6
+                transformIndices = (patch['movingCellCentres']-patch['loc_periodicLimit']).dot(patch['loc_velocity']) > 1e-6
                 patch['movingCellCentres'][transformIndices] += mesh.boundary[patch['periodicPatch']]['transform']
-                dists = sp.spatial.distance.cdist(patch['fixedCellCentres'], patch['movingCellCentres'])
+                dists = sp.spatial.distance.cdist(patch['loc_fixedCellCentres'], patch['movingCellCentres'])
                 n, m = dists.shape
                 sortedDists = np.argsort(dists, axis=1)[:,:2]
-                np.place(sortedDists, sortedDists == (m-1), patch['extraIndex'])
+                np.place(sortedDists, sortedDists == (m-1), patch['loc_extraIndex'])
                 indices = np.arange(n).reshape(-1,1)
                 minDists = dists[indices, sortedDists]
                 # weights should use weighted average?
@@ -713,8 +751,9 @@ class Mesh(object):
                 repeater = np.repeat(np.arange(patch['nLayers']), 2*patch['nFacesPerLayer'])*patch['nFacesPerLayer']
                 indices = np.tile(indices, patch['nLayers']) + repeater
                 sortedDists = np.tile(sortedDists, patch['nLayers']) + repeater
-                patch['multiplier'] = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(n, n)).tocsr()
+                patch['loc_multiplier'] = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(n, n)).tocsr()
         end = time.time()
+        parallel.mpi.Barrier()
         pprint('Time to update mesh:', end-start)
                 
 
@@ -766,4 +805,6 @@ def writeField(handle, field, dtype, initial):
             else:
                 handle.write('(' + ' '.join(np.char.mod('%f', value)) + ')\n')
     handle.write(')\n;\n')
+
+
 

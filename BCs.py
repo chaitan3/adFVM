@@ -69,7 +69,7 @@ class slidingPeriodic1D(BoundaryCondition):
         neighbourStartFace = self.mesh.boundary[neighbourPatch]['startFace']
         neighbourEndFace = neighbourStartFace + self.nFaces
         self.neighbourIndices = self.mesh.owner[neighbourStartFace:neighbourEndFace]
-        self.interpOp = self.mesh.boundary[patchID]['multiplier']
+        self.interpOp = self.mesh.boundary[patchID]['loc_multiplier']
 
     def update(self):
         logger.debug('slidingPeriodic1D BC for {0}'.format(self.patchID))

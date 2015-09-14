@@ -1,8 +1,7 @@
 import numpy as np
-from os import makedirs
-from os.path import exists
 from numbers import Number
 import re
+import os
 
 import config, parallel
 from config import ad, T
@@ -251,17 +250,11 @@ class IOField(Field):
     def getInternalField(self):
         return self.field[:self.mesh.origMesh.nInternalCells]
 
-    @staticmethod
-    def getTimeDir(mesh, time):
-        if time.is_integer():
-            time = int(time)
-        return '{0}/{1}/'.format(mesh.case, time)
-
     @classmethod
     def read(self, name, mesh, time):
         # mesh values required outside theano
         pprint('reading field {0}, time {1}'.format(name, time))
-        timeDir = self.getTimeDir(mesh, time)
+        timeDir = mesh.getTimeDir(time)
         mesh = mesh.origMesh
         content = open(timeDir + name).read()
         foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
@@ -319,9 +312,9 @@ class IOField(Field):
         assert len(field.shape) == 2
         np.set_printoptions(precision=16)
         pprint('writing field {0}, time {1}'.format(name, time))
-        timeDir = self.getTimeDir(self.mesh, time)
-        if not exists(timeDir):
-            makedirs(timeDir)
+        timeDir = self.mesh.getTimeDir(time)
+        if not os.path.exists(timeDir):
+            os.makedirs(timeDir)
         handle = open(timeDir + name, 'w')
         handle.write(config.foamHeader)
         handle.write('FoamFile\n{\n')

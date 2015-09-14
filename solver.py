@@ -2,6 +2,7 @@ import numpy as np
 import time
 import cPickle as pickle
 import os
+import copy
 
 import config, parallel
 from config import ad, T
@@ -19,6 +20,7 @@ class Solver(object):
                         'timeIntegrator': 'euler', 'nStages': 1,
                         'objective': lambda x: 0,
                         'adjoint': False,
+                        'dynamicMesh': False,
                         'sourceTerm': None,
                         'postpro': []
                     }
@@ -80,6 +82,8 @@ class Solver(object):
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
         #initialize
+        #if self.dynamicMesh:
+        #    mesh.read(startTime)
         fields = self.initFields(startTime)
         pprint()
 
@@ -98,7 +102,12 @@ class Solver(object):
         result += self.objective(stackedFields)
         # writing and returning local solutions
         if mode == 'forward':
-            solutions = [stackedFields]
+            if self.dynamicMesh:
+                instMesh = Mesh()
+                instMesh.boundary = copy.deepcopy(self.mesh.origMesh.boundary)
+                solutions = [(instMesh, stackedFields)]
+            else:
+                solutions = [stackedFields]
 
         pprint('Time marching for', ' '.join(self.names))
 
@@ -131,7 +140,12 @@ class Solver(object):
             result += self.objective(stackedFields)
             timeSteps.append([t, dt])
             if mode == 'forward':
-                solutions.append(stackedFields)
+                if self.dynamicMesh:
+                    instMesh = Mesh()
+                    instMesh.boundary = copy.deepcopy(self.mesh.origMesh.boundary)
+                    solutions.append((instMesh, stackedFields))
+                else:
+                    solutions.append(stackedFields)
 
             pprint('Simulation Time:', t, 'Time step:', dt)
             t = round(t+dt, 9)
@@ -142,6 +156,8 @@ class Solver(object):
                 dt = dts[timeIndex]
 
             if (timeIndex % writeInterval == 0) and (mode != 'forward'):
+                if self.dynamicMesh:
+                    mesh.write(t)
                 self.writeFields(fields, t)
                 with open(self.statusFile, 'w') as status:
                     status.write('{0}\n{1}\n{2}\n{3}\n' \
