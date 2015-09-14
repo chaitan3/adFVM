@@ -13,14 +13,19 @@ from mesh import extractField, writeField
 logger = config.Logger(__name__)
 
 class Field(object):
-    @staticmethod
-    def setSolver(solver):
-        Field.solver = solver
+    @classmethod
+    def setSolver(cls, solver):
+        cls.solver = solver
+        cls.setMesh(solver.mesh)
+        # why is this needed?
         mesh = solver.mesh
-        Field.mesh = mesh
         if not hasattr(mesh, 'Normals'):
             mesh.Normals = Field('nF', mesh.normals, (3,))
             mesh.paddedMesh.Normals = Field('nF', mesh.paddedMesh.normals, (3,))
+
+    @classmethod
+    def setMesh(cls, mesh):
+        cls.mesh = mesh
 
     def __init__(self, name, field, dimensions):
         self.name = name
@@ -246,15 +251,18 @@ class IOField(Field):
     def getInternalField(self):
         return self.field[:self.mesh.origMesh.nInternalCells]
 
+    @staticmethod
+    def getTimeDir(mesh, time):
+        if time.is_integer():
+            time = int(time)
+        return '{0}/{1}/'.format(mesh.case, time)
+
     @classmethod
     def read(self, name, mesh, time):
         # mesh values required outside theano
-        if time.is_integer():
-            time = int(time)
         pprint('reading field {0}, time {1}'.format(name, time))
-        timeDir = '{0}/{1}/'.format(mesh.case, time)
+        timeDir = self.getTimeDir(mesh, time)
         mesh = mesh.origMesh
-
         content = open(timeDir + name).read()
         foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
         assert re.search('format[\s\t]+(.*?);', foamFile).group(1) == config.fileFormat
@@ -300,19 +308,18 @@ class IOField(Field):
 
         return self(name, internalField, dimensions, boundary)
 
-    def write(self, time):
+    def write(self, time, skipProcessor=False):
         # mesh values required outside theano
         name = self.name
         field = self.field
         boundary = self.boundary
         # fetch processor information
-        parallel.getOrigRemoteCells(field, self.mesh)
-        if time.is_integer():
-            time = int(time)
+        if not skipProcessor:
+            parallel.getOrigRemoteCells(field, self.mesh)
         assert len(field.shape) == 2
         np.set_printoptions(precision=16)
         pprint('writing field {0}, time {1}'.format(name, time))
-        timeDir = '{0}/{1}/'.format(self.mesh.case, time)
+        timeDir = self.getTimeDir(self.mesh, time)
         if not exists(timeDir):
             makedirs(timeDir)
         handle = open(timeDir + name, 'w')
@@ -337,11 +344,11 @@ class IOField(Field):
         for patchID in boundary:
             handle.write('\t' + patchID + '\n\t{\n')
             patch = boundary[patchID]
-            if patch['type'] in config.valuePatches:
+            if patch['type'] in config.valuePatches and not skipProcessor:
                 patch.pop('value', None)
             for attr in patch:
                 handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
-            if patch['type'] in config.valuePatches:
+            if patch['type'] in config.valuePatches and not skipProcessor:
                 startFace = mesh.boundary[patchID]['startFace']
                 nFaces = mesh.boundary[patchID]['nFaces']
                 endFace = startFace + nFaces

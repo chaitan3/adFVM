@@ -59,13 +59,13 @@ class Mesh(object):
         self = cls()
 
         self.case = caseDir + parallel.processorDirectory
-        meshDir = self.case + 'constant/polyMesh/'
-        self.faces = self.read(meshDir + 'faces', np.int32)
-        self.points = self.read(meshDir + 'points', np.float64).astype(config.precision)
-        self.owner = self.read(meshDir + 'owner', np.int32).ravel()
-        self.neighbour = self.read(meshDir + 'neighbour', np.int32).ravel()
+        self.meshDir = self.case + 'constant/polyMesh/'
+        self.faces = self.read(self.meshDir + 'faces', np.int32)
+        self.points = self.read(self.meshDir + 'points', np.float64).astype(config.precision)
+        self.owner = self.read(self.meshDir + 'owner', np.int32).ravel()
+        self.neighbour = self.read(self.meshDir + 'neighbour', np.int32).ravel()
         
-        self.boundary, localPatches, self.remotePatches = self.readBoundary(meshDir + 'boundary')
+        self.boundary, localPatches, self.remotePatches = self.readBoundary(self.meshDir + 'boundary')
         self.boundaryTensor = {}
         self.origPatches = copy.copy(localPatches)
         self.origPatches.sort()
@@ -91,13 +91,13 @@ class Mesh(object):
         self.nLocalCells = self.createGhostCells()
         self.deltas = self.getDeltas()           # nFaces
         self.weights = self.getWeights()   # nFaces
-        # update mesh initialization call
-        self.update(0., 0.)
 
         # padded mesh
         self.paddedMesh = cls.createPaddedMesh(self)
         # theano shared variables
         self.origMesh = cls.copy(self, fields=True)
+        # update mesh initialization call
+        self.update(0., 0.)
         self.makeTensor()
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
@@ -153,6 +153,35 @@ class Mesh(object):
             else:
                 localPatches.append(patch[0])
         return boundary, localPatches, remotePatches
+
+    def writeBoundary(self, boundaryFile):
+        logger.info('writing {0}'.format(boundaryFile))
+        handle = open(boundaryFile, 'w')
+        handle.write(config.foamHeader)
+        handle.write('FoamFile\n{\n')
+        foamFile = config.foamFile.copy()
+        foamFile['class'] = 'polyBoundaryMesh'
+        foamFile['object'] = 'boundary'
+        foamFile['location'] = 'constant/polyMesh'
+        for key in foamFile:
+            handle.write('\t' + key + ' ' + foamFile[key] + ';\n')
+        handle.write('}\n')
+        handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
+        nPatches = len(self.boundary)
+        handle.write(str(nPatches) + '\n(\n')
+        for patchID in self.boundary:
+            handle.write('\t' + patchID + '\n')
+            handle.write('\t{\n')
+            patch = self.origMesh.boundary[patchID]
+            for attr in patch:
+                value = patch[attr]
+                if attr == 'transform':
+                    value = 'unknown'
+                handle.write('\t\t{0} {1};\n'.format(attr, value))
+            handle.write('\t}\n')
+        handle.write(')\n')
+        handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
+        handle.close()
 
     def getNormals(self):
         logger.info('generated normals')
@@ -631,28 +660,36 @@ class Mesh(object):
     def update(self, t, dt):
         logger.info('updating mesh')
         start = time.time()
+        mesh = self.origMesh
         for patchID in self.origPatches:
-            patch = self.boundary[patchID]
+            patch = mesh.boundary[patchID]
             startFace = patch['startFace']
             endFace = startFace + patch['nFaces']
             if patch['type'] == 'slidingPeriodic1D':
+                # single processor has everything
+                if patch['nFaces'] == 0:
+                    if dt == 0.:
+                        self.boundaryTensor[patchID] = [('multiplier', adsparse.csr_matrix(dtype=config.dtype))]
+                    patch['multiplier'] = sparse.csr_matrix((0,0), dtype=config.precision)
+                    continue
                 if dt == 0.:
                     patch['nLayers'] = int(patch['nLayers'])
                     patch['nFacesPerLayer'] = patch['nFaces']/patch['nLayers']
-                    neighbourPatch = self.boundary[patch['neighbourPatch']]   
+                    neighbourPatch = mesh.boundary[patch['neighbourPatch']]   
                     neighbourStartFace = neighbourPatch['startFace']
                     neighbourEndFace = neighbourStartFace + patch['nFacesPerLayer']
                     patch['velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
-                    patch['fixedCellCentres'] = self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
+                    patch['fixedCellCentres'] = mesh.cellCentres[mesh.owner[neighbourStartFace:neighbourEndFace]]
                     dists = sp.spatial.distance.squareform(sp.spatial.distance.pdist(patch['fixedCellCentres']))
                     # is this guaranteed to give extreme indices?
                     index1, index2 = np.unravel_index(np.argmax(dists), dists.shape)
-                    patch1 = self.boundary[patch['periodicPatch']]
-                    patch2 = self.boundary[patch1['neighbourPatch']]
+                    patch1 = mesh.boundary[patch['periodicPatch']]
+                    patch2 = mesh.boundary[patch1['neighbourPatch']]
                     if np.linalg.norm(patch['fixedCellCentres'][index1] + patch2['transform'] - patch['fixedCellCentres'][index2]) > np.max(dists):
                         index2, index1 = index1, index2
                     point1 = patch['fixedCellCentres'][index2] + patch1['transform']
                     point2 = patch['fixedCellCentres'][index1] + patch2['transform']
+                    # reread
                     patch['movingCellCentres'] = np.vstack((patch['fixedCellCentres'].copy(), point2))
                     patch['periodicLimit'] = point1
                     patch['extraIndex'] = index2
@@ -660,7 +697,7 @@ class Mesh(object):
                 patch['movingCellCentres'] += patch['velocity']*dt
                 # only supports low enough velocities
                 transformIndices = (patch['movingCellCentres']-patch['periodicLimit']).dot(patch['velocity']) > 1e-6
-                patch['movingCellCentres'][transformIndices] += self.boundary[patch['periodicPatch']]['transform']
+                patch['movingCellCentres'][transformIndices] += mesh.boundary[patch['periodicPatch']]['transform']
                 dists = sp.spatial.distance.cdist(patch['fixedCellCentres'], patch['movingCellCentres'])
                 n, m = dists.shape
                 sortedDists = np.argsort(dists, axis=1)[:,:2]
