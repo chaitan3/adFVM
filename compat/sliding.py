@@ -26,7 +26,7 @@ patch['velocity'] = '(0 -10 0)'
 patch['nLayers'] = '1'
 mesh.writeBoundary(mesh.meshDir + 'boundary')
 
-timeDir = IOField.getTimeDir(mesh, user.time)
+timeDir = mesh.getTimeDir(user.time)
 fields = os.listdir(timeDir)
 for phi in fields:
     field = IOField.read(phi, mesh, user.time)
