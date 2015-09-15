@@ -13,6 +13,7 @@ user = parser.parse_args(config.args)
 
 mesh = Mesh.create(user.case)
 Field.setMesh(mesh)
+#mesh.writeBoundary(mesh.meshDir + 'boundary')
 shutil.copyfile(mesh.meshDir + 'boundary', mesh.meshDir + 'boundary.cyclic')
 patch = mesh.origMesh.boundary['intersection_master']
 patch['type'] = 'slidingPeriodic1D'

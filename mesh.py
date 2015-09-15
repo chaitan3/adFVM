@@ -199,7 +199,10 @@ class Mesh(object):
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
         nPatches = len(self.boundary)
         handle.write(str(nPatches) + '\n(\n')
-        for patchID in self.boundary:
+        patchIDs = self.boundary.keys()
+        boundary = self.origMesh.boundary
+        patchIDs = sorted(patchIDs, key=lambda x: (boundary[x]['startFace'], boundary[x]['nFaces']))
+        for patchID in patchIDs:
             handle.write('\t' + patchID + '\n')
             handle.write('\t{\n')
             patch = self.origMesh.boundary[patchID]
