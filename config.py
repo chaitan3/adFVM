@@ -83,7 +83,7 @@ if not user.python:
 else:
     compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
 #T.config.compute_test_value = 'raise'
-T.config.traceback.limit = -1
+#T.config.traceback.limit = -1
 def inspect_inputs(i, node, fn):
     print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs])
 def inspect_outputs(i, node, fn):
@@ -97,7 +97,7 @@ def detect_nan(i, node, fn):
                 print('Inputs : %s' % [(min(input[0]), max(input[0])) for input in fn.inputs])
                 print('Outputs: %s' % [(min(output[0]), max(output[0])) for output in fn.outputs])
                 raise Exception('NAN')
-#compile_mode = T.compile.MonitorMode(post_func=detect_nan, optimizer='fast_run')
+#compile_mode = T.compile.MonitorMode(post_func=detect_nan, optimizer='None')
 
 # LOGGING
 

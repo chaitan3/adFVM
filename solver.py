@@ -122,7 +122,7 @@ class Solver(object):
             #stackedFields, dtc = self.forward(stackedFields)
             stackedFields, dtc, local, remote = self.forward(stackedFields, dt)
             #print local.shape, local.dtype, np.abs(local).max(), np.abs(local).min(), (local).max(), (local).min(), np.isnan(local).any()
-            #print remote.shape, remote.dtype, remote, np.abs(remote).max(), np.abs(remote).min(), (remote).max(), (remote).min(), np.isnan(remote).any()
+            #print remote.shape, remote.dtype, np.abs(remote).max(), np.abs(remote).min(), (remote).max(), (remote).min(), np.isnan(remote).any()
 
             fields = self.unstackFields(stackedFields, IOField)
             # TODO: fix unstacking F_CONTIGUOUS

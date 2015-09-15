@@ -268,7 +268,7 @@ class IOField(Field):
         content = content[startBoundary:]
         boundary = {}
         def getToken(x): 
-            token = re.match('[\s\r\n\t]+([a-zA-Z0-9_\.\-\+<>\{\}]+)', x)
+            token = re.match('[\s\r\n\t]+([a-zA-Z0-9_\.\-\+<>\{\\/}]+)', x)
             return token.group(1), token.end()
         for patchID in mesh.boundary:
             patch = re.search(re.compile('[\s\r\n\t]+' + patchID + '[\s\r\n]+{', re.DOTALL), content)

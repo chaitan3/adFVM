@@ -17,13 +17,13 @@ Field.setMesh(mesh)
 shutil.copyfile(mesh.meshDir + 'boundary', mesh.meshDir + 'boundary.cyclic')
 patch = mesh.origMesh.boundary['intersection_master']
 patch['type'] = 'slidingPeriodic1D'
-patch['periodicPatch'] = 'mid1plane'
-patch['velocity'] = '(0 10 0)'
+patch['periodicPatch'] = 'mid2plane'
+patch['velocity'] = '(0 252 0)'
 patch['nLayers'] = '1'
 patch = mesh.origMesh.boundary['intersection_slave']
 patch['type'] = 'slidingPeriodic1D'
-patch['periodicPatch'] = 'mid2plane'
-patch['velocity'] = '(0 -10 0)'
+patch['periodicPatch'] = 'mid1plane'
+patch['velocity'] = '(0 -252 0)'
 patch['nLayers'] = '1'
 mesh.writeBoundary(mesh.meshDir + 'boundary')
 
