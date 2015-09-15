@@ -155,9 +155,9 @@ class NSCBC_OUTLET_P(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
-        self.Ma = float(self.patch['Ma'])
+        self.Ma = float(self.patch['Mamax'])
         self.L = float(self.patch['L'])
-        self.pt = self.createInput('pt', (1,))
+        self.pt = self.createInput('ptar', (1,))
         self.gamma = self.solver.gamma
 
         self.UBC = zeroGradient(self.U, patchID)
