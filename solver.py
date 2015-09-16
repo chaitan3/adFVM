@@ -193,7 +193,7 @@ class SolverFunction(object):
             self.symbolic.extend(solver.sourceVariables)
             self.values.extend(solver.sourceTerm(mesh.origMesh))
         # postpro variables
-        if postpro:
+        if postpro and len(solver.postpro) > 0:
             symbolic, values = zip(*solver.postpro)
             self.symbolic.extend(symbolic)
             self.values.extend(values)

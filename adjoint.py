@@ -1,7 +1,6 @@
 #!/usr/bin/python2
 from __future__ import print_function
 
-
 import config, parallel
 from config import ad
 from parallel import pprint
@@ -10,6 +9,7 @@ from op import laplacian, curl
 from interp import central
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
 from compat import printMemUsage
+from compute import getAdjointEnergy, computeFields
 
 import numpy as np
 import time
@@ -51,13 +51,6 @@ newFields = adjointInitFunc(*[phi.field for phi in adjointFields])
 for phi, field in zip(adjointFields, newFields):
     phi.field = field
 
-# local adjoint fields
-stackedAdjointFields = primal.stackFields(adjointFields, np)
-pprint('\nSTARTING ADJOINT')
-pprint('Number of steps:', nSteps)
-pprint('Write interval:', writeInterval)
-pprint()
-
 def writeAdjointFields(stackedAdjointFields, writeTime):
     fields = primal.unstackFields(stackedAdjointFields, IOField, names=adjointNames, boundary=mesh.calculatedBoundary)
     start = time.time()
@@ -70,18 +63,29 @@ def writeAdjointFields(stackedAdjointFields, writeTime):
     pprint('Time for writing fields: {0}'.format(end-start))
     pprint()
 
-def viscosity(solution):
-    rho = solution[:,0].reshape((-1, 1))
-    rhoU = solution[:,1:4]
-    U = Field('U', rhoU/rho, (3,))
-    vorticity = curl(central(U, mesh.origMesh))
-    return 1e-9*vorticity.magSqr()
+def adjointViscosity(solution):
+    rho = Field('rho', solution[:,[0]], (1,))
+    rhoU = Field('rhoU', solution[:,1:4], (3,))
+    rhoE = Field('rhoE', solution[:,[4]], (1,))
+    U, T, p = primal.primitive(rho, rhoU, rhoE)
+    SF = primal.stackFields([p, U, T], np)
+    outputs = computeFields(SF, primal)
+    M_2norm, _, _ = getAdjointEnergy(rho, rhoU, rhoE, U, T, p, *outputs)
+    return 1e-9*M2_2norm
 
 # adjont field smoothing,
 adjointField = Field('a', ad.matrix(), (5,))
 weight = Field('w', ad.bcmatrix(), (1,))
 smoother = laplacian(adjointField, weight)
-smooth = primal.function([adjointField.field, weight.field], smoother.field, 'smoother', BCs=False)
+adjointSmoother = primal.function([adjointField.field, weight.field], smoother.field, 'smoother', BCs=False)
+pprint()
+
+# local adjoint fields
+stackedAdjointFields = primal.stackFields(adjointFields, np)
+pprint('\nSTARTING ADJOINT')
+pprint('Number of steps:', nSteps)
+pprint('Write interval:', writeInterval)
+pprint()
 
 totalCheckpoints = nSteps/writeInterval
 for checkpoint in range(firstCheckpoint, totalCheckpoints):
@@ -109,7 +113,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
 
         adjointIndex = writeInterval-1 - step
         t, dt = timeSteps[primalIndex + adjointIndex]
-        if primal.dynamicMesh
+        if primal.dynamicMesh:
             previousMesh, previousSolution = solutions[adjointIndex]
             # new mesh boundary
             primal.mesh.origMesh.boundary = previousMesh.boundary
@@ -126,8 +130,8 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
         # define function maybe
         #pprint('Smoothing adjoint field')
-        #weight = viscosity(previousSolution).field
-        #stackedAdjointFields[:mesh.origMesh.nInternalCells] += smooth(stackedAdjointFields, weight)
+        #weight = adjointViscosity(previousSolution).field
+        #stackedAdjointFields[:mesh.origMesh.nInternalCells] += adjointSmoother(stackedAdjointFields, weight)
 
         # compute sensitivity using adjoint solution
         perturbations = perturb(mesh.origMesh)

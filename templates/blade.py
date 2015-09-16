@@ -64,8 +64,8 @@ def objectivePressureLoss(fields, mesh):
     res = ad.sum((ptin-pti)*area)
     return res 
 
-#objective = objectiveHeatTransfer
-objective = objectivePressureLoss
+objective = objectiveHeatTransfer
+#objective = objectivePressureLoss
 
 def perturb(mesh):
     mid = np.array([-0.08, 0.014, 0.005])
