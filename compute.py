@@ -26,10 +26,12 @@ def computeFields(stackedFields, solver):
     c = cP.getOrigField(cP)
 
     #divU
-    gradU = grad(central(UP, paddedMesh), ghost=True)
-    ULF, URF = TVD_dual(U, gradU)
-    UF = 0.5*(ULF + URF)
-    divU = div(UF.dotN(), ghost=True)
+    UPF = central(UP, paddedMesh)
+    gradU = grad(UPF, ghost=True)
+    #ULF, URF = TVD_dual(U, gradU)
+    #UFN = 0.5*(ULF + URF)
+    #divU = div(UF.dotN(), ghost=True)
+    divU = div(UPF.dot(paddedMesh.Normals), ghost=True)
 
     #speed of sound
     gradc = grad(central(cP, paddedMesh), ghost=True)
@@ -72,9 +74,7 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     grada = gradc*sg1/sg
     Z = np.zeros_like(divU)
     Z3 = np.zeros_like(gradU)
-    np.hstack((divU, gradb, Z))
-    np.hstack((gradb[:,[0]], divU, Z, Z, grada[:,[0]]))
-    np.hstack((Z, grada, divU))
+    #print np.hstack((divU, gradb, Z)).shape,np.hstack((gradb[:,[0]], divU, Z, Z, grada[:,[0]])).shape,np.hstack((Z, grada, divU)).shape
     M1 = np.dstack((np.hstack((divU, gradb, Z)),
                np.hstack((gradb[:,[0]], divU, Z, Z, grada[:,[0]])),
                np.hstack((gradb[:,[1]], Z, divU, Z, grada[:,[1]])),
@@ -84,13 +84,9 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     M2 = np.dstack((np.hstack((Z, b*gradrho/rho, sg1*divU/2)),
                     np.hstack((np.dstack((Z,Z,Z)), gradU, (a*gradp/(2*p)).reshape(-1, 1, 3))),
                     np.hstack((Z, 2*grada/g1, g1*divU/2))))
-    M1_2norm = np.ascontiguousarray(np.linalg.svd(M1, compute_uv=False)[:, [0]])
-    M2_2norm = np.ascontiguousarray(np.linalg.svd(M2, compute_uv=False)[:, [0]])
     M_2norm = np.ascontiguousarray(np.linalg.svd(M1-M2, compute_uv=False)[:, [0]])
-    M1_2norm = IOField('M1_2norm', M1_2norm, (1,), boundary=mesh.calculatedBoundary)
-    M2_2norm = IOField('M2_2norm', M2_2norm, (1,), boundary=mesh.calculatedBoundary)
     M_2norm = IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary)
-    return M_2norm, M1_2norm, M2_2norm
+    return M_2norm
  
 if __name__ == "__main__":
     import time as timer
@@ -133,10 +129,8 @@ if __name__ == "__main__":
         pprint()
 
         # adjoint blowup
-        M_2norm, M1_2norm, M2_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+        M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
         M_2norm.write(time)
-        M1_2norm.write(time)
-        M2_2norm.write(time)
         end = timer.time()
         pprint('Time for computing: {0}'.format(end-start))
 

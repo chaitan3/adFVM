@@ -4,6 +4,7 @@
 *.avi
 *.txt
 *.pkl
+*.png
 
 *.o
 *.out

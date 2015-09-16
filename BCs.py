@@ -70,6 +70,7 @@ class slidingPeriodic1D(BoundaryCondition):
         neighbourEndFace = neighbourStartFace + self.nFaces
         self.neighbourIndices = self.mesh.owner[neighbourStartFace:neighbourEndFace]
         self.interpOp = self.mesh.boundary[patchID]['loc_multiplier']
+        self.velocity = self.mesh.origMesh.boundary[patchID]['loc_velocity']
 
     def update(self):
         logger.debug('slidingPeriodic1D BC for {0}'.format(self.patchID))
@@ -79,6 +80,8 @@ class slidingPeriodic1D(BoundaryCondition):
         value = adsparse.basic.dot(self.interpOp, neighbourPhi)
         if len(self.phi.dimensions) == 2:
             value = value.reshape((self.nFaces, 3, 3))
+        if self.phi.name == 'U':
+            value += self.velocity
         self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], value)
 
 class zeroGradient(BoundaryCondition):

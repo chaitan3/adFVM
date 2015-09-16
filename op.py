@@ -34,7 +34,10 @@ def internal_sum(phi, mesh, absolute=False):
 
 def div(phi, U=None, ghost=False):
     logger.info('divergence of {0}'.format(phi.name))
-    mesh = phi.mesh
+    if ghost:
+        mesh = phi.mesh.paddedMesh
+    else:
+        mesh = phi.mesh
     if U is None:
         divField = internal_sum(phi, mesh)
     else:
@@ -42,8 +45,9 @@ def div(phi, U=None, ghost=False):
         assert phi.dimensions == (1,)
         divField = internal_sum((phi*U).dotN(), mesh)
     if ghost:
-        logger.warning('processor values not copied')
-        return CellField('div({0})'.format(phi.name), divField, phi.dimensions, ghost=True)
+        divPhi = CellField('div({0})'.format(phi.name), divField, phi.dimensions, ghost=True)
+        divPhi.copyRemoteCells(divField)
+        return divPhi
     else:
         return Field('div({0})'.format(phi.name), divField, phi.dimensions)
 

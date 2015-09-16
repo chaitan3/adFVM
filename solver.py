@@ -82,8 +82,8 @@ class Solver(object):
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
         #initialize
-        #if self.dynamicMesh:
-        #    mesh.read(startTime)
+        if self.dynamicMesh:
+            mesh.read(startTime)
         fields = self.initFields(startTime)
         pprint()
 

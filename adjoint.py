@@ -9,11 +9,16 @@ from op import laplacian, curl
 from interp import central
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
 from compat import printMemUsage
-from compute import getAdjointEnergy, computeFields
+from compute import getAdjointNorm, computeFields
 
 import numpy as np
 import time
 import sys
+
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--smooth', action='store_true')
+user, args = parser.parse_known_args()
 
 primal.adjoint = True
 mesh = primal.mesh
@@ -70,19 +75,19 @@ def adjointViscosity(solution):
     U, T, p = primal.primitive(rho, rhoU, rhoE)
     SF = primal.stackFields([p, U, T], np)
     outputs = computeFields(SF, primal)
-    M_2norm, _, _ = getAdjointEnergy(rho, rhoU, rhoE, U, T, p, *outputs)
-    return 1e-9*M2_2norm
+    M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+    return 1e-9*M_2norm
 
 # adjont field smoothing,
 adjointField = Field('a', ad.matrix(), (5,))
 weight = Field('w', ad.bcmatrix(), (1,))
-smoother = laplacian(adjointField, weight)
+smoother = laplacian(adjointField, central(weight, primal.mesh))
 adjointSmoother = primal.function([adjointField.field, weight.field], smoother.field, 'smoother', BCs=False)
 pprint()
 
 # local adjoint fields
 stackedAdjointFields = primal.stackFields(adjointFields, np)
-pprint('\nSTARTING ADJOINT')
+pprint('STARTING ADJOINT')
 pprint('Number of steps:', nSteps)
 pprint('Write interval:', writeInterval)
 pprint()
@@ -126,12 +131,12 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         gradients = primal.gradient(previousSolution, stackedAdjointFields, dt)
         gradient = gradients[0]
         sourceGradient = gradients[1:]
-
         stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
-        # define function maybe
-        #pprint('Smoothing adjoint field')
-        #weight = adjointViscosity(previousSolution).field
-        #stackedAdjointFields[:mesh.origMesh.nInternalCells] += adjointSmoother(stackedAdjointFields, weight)
+
+        if user.smooth:
+            pprint('Smoothing adjoint field')
+            weight = adjointViscosity(previousSolution).field
+            stackedAdjointFields[:mesh.origMesh.nInternalCells] += adjointSmoother(stackedAdjointFields, weight)
 
         # compute sensitivity using adjoint solution
         perturbations = perturb(mesh.origMesh)

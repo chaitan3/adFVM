@@ -15,14 +15,15 @@ mesh = Mesh.create(user.case)
 Field.setMesh(mesh)
 #mesh.writeBoundary(mesh.meshDir + 'boundary')
 shutil.copyfile(mesh.meshDir + 'boundary', mesh.meshDir + 'boundary.cyclic')
+# intersection_master on the right, intersection_slave on the left (x-axis)
 patch = mesh.origMesh.boundary['intersection_master']
 patch['type'] = 'slidingPeriodic1D'
-patch['periodicPatch'] = 'mid2plane'
+patch['periodicPatch'] = 'mid1plane'
 patch['velocity'] = '(0 252 0)'
 patch['nLayers'] = '1'
 patch = mesh.origMesh.boundary['intersection_slave']
 patch['type'] = 'slidingPeriodic1D'
-patch['periodicPatch'] = 'mid1plane'
+patch['periodicPatch'] = 'mid2plane'
 patch['velocity'] = '(0 -252 0)'
 patch['nLayers'] = '1'
 mesh.writeBoundary(mesh.meshDir + 'boundary')

@@ -162,12 +162,17 @@ class Mesh(object):
     def readBoundary(self, boundaryFile):
         logger.info('read {0}'.format(boundaryFile))
         content = removeCruft(open(boundaryFile).read())
-        patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n]+{(.*?)}', re.DOTALL), content)
+        patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n]+{(.*?)}[\r\s\n]+', re.DOTALL), content)
         boundary = {}
         localPatches = []
         remotePatches = []
         for patch in patches:
             boundary[patch[0]] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch[1]))
+            #nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform[ ]+List<([a-z]+)+[\r\s\n\t ]+([0-9]+).*?);[\r\s\n]+', patch[1], re.DOTALL)
+            # HACK
+            nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform.*?);\n', patch[1], re.DOTALL)
+            for field in nonuniform:
+                boundary[patch[0]][field[0]] = field[1]
             boundary[patch[0]]['nFaces'] = int(boundary[patch[0]]['nFaces'])
             boundary[patch[0]]['startFace'] = int(boundary[patch[0]]['startFace'])
             if boundary[patch[0]]['type'] in config.processorPatches:
@@ -709,6 +714,7 @@ class Mesh(object):
                     if dt == 0.:
                         self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
                     patch['loc_multiplier'] = sparse.csr_matrix((0,0), dtype=config.precision)
+                    patch['loc_velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
                     continue
                 if dt == 0.:
                     patch['nLayers'] = int(patch['nLayers'])
@@ -727,6 +733,7 @@ class Mesh(object):
                         index2, index1 = index1, index2
                     point1 = patch['loc_fixedCellCentres'][index2] + patch1['transform']
                     point2 = patch['loc_fixedCellCentres'][index1] + patch2['transform']
+                    #print patchID, mesh.cellCentres[mesh.owner[startFace:endFace]][0], point1, patch['velocity']
                     # reread
                     if 'movingCellCentres' in patch:
                         patch['movingCellCentres'] = extractField(patch['movingCellCentres'], patch['nFacesPerLayer']+1, (3,))
