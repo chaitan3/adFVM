@@ -162,7 +162,7 @@ class Mesh(object):
     def readBoundary(self, boundaryFile):
         logger.info('read {0}'.format(boundaryFile))
         content = removeCruft(open(boundaryFile).read())
-        patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n]+{(.*?;[\r\s\n\t]+)}[\r\s\n]+', re.DOTALL), content)
+        patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n\t]+{(.*?;[\r\s\n\t]+)}[\r\s\n\t]+', re.DOTALL), content)
         boundary = {}
         localPatches = []
         remotePatches = []
@@ -172,7 +172,7 @@ class Mesh(object):
             # HACK
             nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform.*?\))\n;\n', patch[1], re.DOTALL)
             for field in nonuniform:
-                #print field[0], len(field[1])
+                #print patch[0], field[0], len(field[1])
                 boundary[patch[0]][field[0]] = field[1]
             boundary[patch[0]]['nFaces'] = int(boundary[patch[0]]['nFaces'])
             boundary[patch[0]]['startFace'] = int(boundary[patch[0]]['startFace'])
@@ -393,6 +393,7 @@ class Mesh(object):
             # append neighbour
             self.neighbour[startFace:endFace] = range(cellStartFace, cellEndFace)
             if patch['type'] in config.cyclicPatches:
+                #print patchID, self.cellCentres[self.owner[startFace:endFace]][0]
                 neighbourPatch = self.boundary[patch['neighbourPatch']]   
                 neighbourStartFace = neighbourPatch['startFace']
                 neighbourEndFace = neighbourStartFace + nFaces
@@ -741,7 +742,7 @@ class Mesh(object):
                     else:
                         patch['movingCellCentres'] = np.vstack((patch['loc_fixedCellCentres'].copy(), point2))
                     patch['loc_periodicLimit'] = point1
-                    patch['loc_extraIndex'] = index2
+                    patch['loc_extraIndex'] = index1
                     self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
                 patch['movingCellCentres'] += patch['loc_velocity']*dt
                 # only supports low enough velocities
@@ -770,14 +771,16 @@ class Mesh(object):
         pprint('Time to update mesh:', end-start)
                 
 
-def removeCruft(content, keepHeader=False):
-    # remove comments and newlines
-    content = re.sub(re.compile('/\*.*\*/',re.DOTALL ) , '' , content)
-    content = re.sub(re.compile('//.*\n' ) , '' , content)
-    content = re.sub(re.compile('\n\n' ) , '\n' , content)
-    # remove header
-    if not keepHeader:
-        content = re.sub(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), '', content)
+def removeCruft(content):
+    header = re.search('FoamFile', content)
+    content = content[header.start():]
+    content = re.sub(re.compile(r'FoamFile\n{(.*?)}\n', re.DOTALL), '', content)
+    # assume no number in comments
+    begin = re.search('[0-9]+', content)
+    content = content[begin.start():]
+    # assume no brackets in comments
+    end = content.rfind(')')
+    content = content[:end+1]
     return content
 
 
