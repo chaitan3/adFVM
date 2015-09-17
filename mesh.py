@@ -162,7 +162,7 @@ class Mesh(object):
     def readBoundary(self, boundaryFile):
         logger.info('read {0}'.format(boundaryFile))
         content = removeCruft(open(boundaryFile).read())
-        patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n]+{(.*?)}[\r\s\n]+', re.DOTALL), content)
+        patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n]+{(.*?;[\r\s\n\t]+)}[\r\s\n]+', re.DOTALL), content)
         boundary = {}
         localPatches = []
         remotePatches = []
@@ -170,8 +170,9 @@ class Mesh(object):
             boundary[patch[0]] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch[1]))
             #nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform[ ]+List<([a-z]+)+[\r\s\n\t ]+([0-9]+).*?);[\r\s\n]+', patch[1], re.DOTALL)
             # HACK
-            nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform.*?);\n', patch[1], re.DOTALL)
+            nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform.*?\))\n;\n', patch[1], re.DOTALL)
             for field in nonuniform:
+                #print field[0], len(field[1])
                 boundary[patch[0]][field[0]] = field[1]
             boundary[patch[0]]['nFaces'] = int(boundary[patch[0]]['nFaces'])
             boundary[patch[0]]['startFace'] = int(boundary[patch[0]]['startFace'])
@@ -745,7 +746,8 @@ class Mesh(object):
                 patch['movingCellCentres'] += patch['loc_velocity']*dt
                 # only supports low enough velocities
                 transformIndices = (patch['movingCellCentres']-patch['loc_periodicLimit']).dot(patch['loc_velocity']) > 1e-6
-                patch['movingCellCentres'][transformIndices] += mesh.boundary[patch['periodicPatch']]['transform']
+                #print patchID, patch['movingCellCentres'][0], patch['loc_periodicLimit'], patch['loc_velocity']
+                patch['movingCellCentres'][transformIndices] += mesh.boundary[mesh.boundary[patch['periodicPatch']]['neighbourPatch']]['transform']
                 dists = sp.spatial.distance.cdist(patch['loc_fixedCellCentres'], patch['movingCellCentres'])
                 n, m = dists.shape
                 sortedDists = np.argsort(dists, axis=1)[:,:2]
@@ -762,6 +764,7 @@ class Mesh(object):
                 indices = np.tile(indices, patch['nLayers']) + repeater
                 sortedDists = np.tile(sortedDists, patch['nLayers']) + repeater
                 patch['loc_multiplier'] = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(n, n)).tocsr()
+                #print patch['movingCellCentres']
         end = time.time()
         parallel.mpi.Barrier()
         pprint('Time to update mesh:', end-start)
