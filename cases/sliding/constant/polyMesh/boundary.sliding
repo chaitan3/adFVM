@@ -1,0 +1,102 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.3.1                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      binary;
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+8
+(
+    patch0_half0
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          10000;
+        startFace       19700;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  patch0_half1;
+    }
+    patch0_half1
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          10000;
+        startFace       29700;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  patch0_half0;
+    }
+    patch1_half0
+    {
+        type            patch;
+        nFaces          100;
+        startFace       39700;
+    }
+    patch1_half1
+    {
+        type            patch;
+        nFaces          100;
+        startFace       39800;
+    }
+    patch2_half0
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          100;
+        startFace       39900;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  patch2_half1;
+    }
+    patch2_half1
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          100;
+        startFace       40000;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  patch2_half0;
+    }
+    // on the left
+    intersection_master
+    {
+        type            slidingPeriodic1D;
+        periodicPatch   patch2_half1;
+        velocity        (0 -10 0);
+        nLayers         1;
+        nFaces          100;
+        startFace       40100;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  intersection_slave;
+        coupleGroup     intersection;
+    }
+    // on the right
+    intersection_slave
+    {
+        type            slidingPeriodic1D;
+        periodicPatch   patch2_half0;
+        velocity        (0 10 0);
+        nLayers         1;
+        nFaces          100;
+        startFace       40200;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  intersection_master;
+        coupleGroup     intersection;
+    }
+)
+
+// ************************************************************************* //
