@@ -73,7 +73,7 @@ FoamFile
     {
         type            slidingPeriodic1D;
         periodicPatch   patch2_half1;
-        velocity        (0 -1000 0);
+        velocity        (0 -10000 0);
         nLayers         1;
         nFaces          100;
         startFace       40100;
@@ -86,7 +86,7 @@ FoamFile
     {
         type            slidingPeriodic1D;
         periodicPatch   patch2_half0;
-        velocity        (0 1000 0);
+        velocity        (0 10000 0);
         nLayers         1;
         nFaces          100;
         startFace       40200;
