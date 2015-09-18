@@ -126,7 +126,7 @@ class Mesh(object):
         pprint('Re-reading mesh, time', time)
         timeDir = self.getTimeDir(time) 
         meshDir = timeDir + 'polyMesh/'
-        # correct updating
+        # HACK correct updating
         boundary, _, _ = self.readBoundary(meshDir + 'boundary')
         for patchID in boundary:
             if boundary[patchID]['type'] == 'slidingPeriodic1D':
@@ -764,10 +764,11 @@ class Mesh(object):
                 repeater = np.repeat(np.arange(patch['nLayers']), 2*patch['nFacesPerLayer'])*patch['nFacesPerLayer']
                 indices = np.tile(indices, patch['nLayers']) + repeater
                 sortedDists = np.tile(sortedDists, patch['nLayers']) + repeater
-                patch['loc_multiplier'] = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(n, n)).tocsr()
+                patch['loc_multiplier'] = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(patch['nFaces'], patch['nFaces'])).tocsr()
+                
                 #print patch['movingCellCentres']
-        end = time.time()
         parallel.mpi.Barrier()
+        end = time.time()
         pprint('Time to update mesh:', end-start)
                 
 
