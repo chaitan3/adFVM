@@ -26,13 +26,15 @@ for boundaryDir in [mesh.meshDir, timeDir + 'polyMesh/']:
     patch['periodicPatch'] = 'mid1plane'
     patch['velocity'] = '(0 252 0)'
     #patch['nLayers'] = '1'
-    patch['nLayers'] = '200'
+    patch['nLayers'] = '10'
+    patch.pop('movingCellCentres', None)
     patch = mesh.origMesh.boundary['intersection_slave']
     patch['type'] = 'slidingPeriodic1D'
     patch['periodicPatch'] = 'mid2plane'
     patch['velocity'] = '(0 -252 0)'
     #patch['nLayers'] = '1'
-    patch['nLayers'] = '200'
+    patch['nLayers'] = '10'
+    patch.pop('movingCellCentres', None)
     mesh.writeBoundary(boundaryFile)
 
 fields = os.listdir(timeDir)

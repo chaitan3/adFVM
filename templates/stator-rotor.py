@@ -8,6 +8,7 @@ import numpy as np
 primal = RCF('/home/talnikar/foam/stator-rotor/laminar/')#, timeIntegrator='euler')
 #primal = RCF('/master/home/talnikar/foam/stator-rotor/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/stator-rotor/les/')
+primal.dynamicMesh = True
 
 # heat transfer
 def objectiveHeatTransfer(fields, mesh):
