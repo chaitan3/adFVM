@@ -79,11 +79,12 @@ def adjointViscosity(solution):
     return 1e-9*M_2norm
 
 # adjont field smoothing,
-adjointField = Field('a', ad.matrix(), (5,))
-weight = Field('w', ad.bcmatrix(), (1,))
-smoother = laplacian(adjointField, central(weight, primal.mesh))
-adjointSmoother = primal.function([adjointField.field, weight.field], smoother.field, 'smoother', BCs=False)
-pprint()
+if user.smooth:
+    adjointField = Field('a', ad.matrix(), (5,))
+    weight = Field('w', ad.bcmatrix(), (1,))
+    smoother = laplacian(adjointField, central(weight, primal.mesh))
+    adjointSmoother = primal.function([adjointField.field, weight.field], smoother.field, 'smoother', BCs=False)
+    pprint()
 
 # local adjoint fields
 stackedAdjointFields = primal.stackFields(adjointFields, np)
