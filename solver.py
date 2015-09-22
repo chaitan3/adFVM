@@ -252,10 +252,11 @@ class SolverFunction(object):
         if fn is None:
             unloadingStages = config.user.unloadingStages
             coresPerNode = config.user.coresPerNode
-            coresPerStage = coresPerNode/unloadStages
-            nodeRank = parallel.rank % coresPerNode
+            coresPerStage = coresPerNode/unloadingStages
+            nodeStage = (parallel.rank % coresPerNode)/coresPerStage
             for stage in range(unloadingStages):
-                if nodeRank/coresPerStage == stage
+                printMemUsage()
+                if nodeStage == stage:
                     fn = pickle.loads(pkl)
                 parallel.mpi.Barrier()
         parallel.mpi.Barrier()
