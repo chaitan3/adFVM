@@ -23,6 +23,7 @@ parser.add_argument('--profile_opt', action='store_true')
 parser.add_argument('-s', '--python', action='store_true')
 parser.add_argument('--voyager', action='store_true')
 parser.add_argument('--coresPerNode', required=False, default=16, type=int)
+parser.add_argument('--unloadingStages', required=False, default=1, type=int)
 user, args = parser.parse_known_args()
 
 # compute type

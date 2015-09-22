@@ -250,7 +250,14 @@ class SolverFunction(object):
 
         start = time.time()
         if fn is None:
-            fn = pickle.loads(pkl)
+            unloadingStages = config.user.unloadingStages
+            coresPerNode = config.user.coresPerNode
+            coresPerStage = coresPerNode/unloadStages
+            nodeRank = parallel.rank % coresPerNode
+            for stage in range(unloadingStages):
+                if nodeRank/coresPerStage == stage
+                    fn = pickle.loads(pkl)
+                parallel.mpi.Barrier()
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Loading time: {0:.2f}'.format(end-start))
