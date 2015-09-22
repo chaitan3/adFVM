@@ -106,7 +106,11 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
 
     if checkpoint == 0:
         t, dt = timeSteps[-1]
-        lastSolution = solutions[-1]
+        if primal.dynamicMesh:
+            lastMesh, lastSolution = solutions[-1]
+            primal.mesh.origMesh.boundary = lastMesh.boundary
+        else:
+            lastSolution = solutions[-1]
         stackedAdjointFields  = np.ascontiguousarray(objectiveGradient(lastSolution)/(nSteps + 1))
         writeAdjointFields(stackedAdjointFields, t)
 

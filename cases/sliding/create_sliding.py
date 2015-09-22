@@ -14,7 +14,7 @@ user = parser.parse_args(config.args)
 mesh = Mesh.create(user.case)
 Field.setMesh(mesh)
 timeDir = mesh.getTimeDir(user.time)
-for boundaryDir in [mesh.meshDir, timeDir + 'polyMesh/']:
+for boundaryDir in [mesh.meshDir]:#, timeDir + 'polyMesh/']:
     if os.path.exists(boundaryDir + 'boundary.sliding'):
         shutil.copyfile(boundaryDir + 'boundary.sliding', boundaryFile)
         continue
