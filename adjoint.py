@@ -76,7 +76,10 @@ def adjointViscosity(solution):
     SF = primal.stackFields([p, U, T], np)
     outputs = computeFields(SF, primal)
     M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
-    return 1e-9*M_2norm
+    M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
+    viscosityScale = 1e-1
+    #print(parallel.rank, M_2normScale)
+    return M_2norm*(viscosityScale/M_2normScale)
 
 # adjont field smoothing,
 if user.smooth:
@@ -141,7 +144,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         if user.smooth:
             pprint('Smoothing adjoint field')
             weight = adjointViscosity(previousSolution).field
-            stackedAdjointFields[:mesh.origMesh.nInternalCells] += adjointSmoother(stackedAdjointFields, weight)
+            stackedAdjointFields[:mesh.origMesh.nInternalCells] += dt*adjointSmoother(stackedAdjointFields, weight)
 
         # compute sensitivity using adjoint solution
         perturbations = perturb(mesh.origMesh)
