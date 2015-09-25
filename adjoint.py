@@ -5,7 +5,8 @@ import config, parallel
 from config import ad
 from parallel import pprint
 from field import IOField, Field
-from op import laplacian, curl
+#from op import laplacian
+from matop import laplacian, ddt, BCs
 from interp import central
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
 from compat import printMemUsage
@@ -82,12 +83,12 @@ def adjointViscosity(solution):
     return M_2norm*(viscosityScale/M_2normScale)
 
 # adjont field smoothing,
-if user.smooth:
-    adjointField = Field('a', ad.matrix(), (5,))
-    weight = Field('w', ad.bcmatrix(), (1,))
-    smoother = laplacian(adjointField, central(weight, primal.mesh))
-    adjointSmoother = primal.function([adjointField.field, weight.field], smoother.field, 'smoother', BCs=False)
-    pprint()
+#if user.smooth:
+#    adjointField = Field('a', ad.matrix(), (5,))
+#    weight = Field('w', ad.bcmatrix(), (1,))
+#    smoother = laplacian(adjointField, central(weight, primal.mesh))
+#    adjointSmoother = primal.function([adjointField.field, weight.field], smoother.field, 'smoother', BCs=False)
+#    pprint()
 
 # local adjoint fields
 stackedAdjointFields = primal.stackFields(adjointFields, np)
@@ -111,7 +112,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         t, dt = timeSteps[-1]
         if primal.dynamicMesh:
             lastMesh, lastSolution = solutions[-1]
-            primal.mesh.origMesh.boundary = lastMesh.boundary
+            primal.mesh.origMesh.boundary = lastMesh.boundarydata[m:].reshape(-1,1)
         else:
             lastSolution = solutions[-1]
         stackedAdjointFields  = np.ascontiguousarray(objectiveGradient(lastSolution)/(nSteps + 1))
@@ -143,8 +144,12 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
 
         if user.smooth:
             pprint('Smoothing adjoint field')
-            weight = adjointViscosity(previousSolution).field
-            stackedAdjointFields[:mesh.origMesh.nInternalCells] += dt*adjointSmoother(stackedAdjointFields, weight)
+            #weight = adjointViscosity(previousSolution).field
+            #stackedAdjointFields[:mesh.origMesh.nInternalCells] += dt*adjointSmoother(stackedAdjointFields, weight)
+            stackedPhi = Field('a', stackedAdjointFields, (5,))
+            stackedPhi.old = stackedAdjointFields
+            weight = central(adjointViscosity(previousSolution), primal.mesh.origMesh)
+            stackedAdjointFields[:mesh.origMesh.nLocalCells] = BCs(stackedPhi, ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
 
         # compute sensitivity using adjoint solution
         perturbations = perturb(mesh.origMesh)
