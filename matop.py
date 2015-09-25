@@ -53,28 +53,30 @@ class Matrix(object):
 def laplacian(phi, DT):
     dim = phi.dimensions
     mesh = phi.mesh.origMesh
-    n = mesh.nLocalCells
-    m = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
+    #n = mesh.nLocalCells
+    #m = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
+    n = mesh.nInternalCells
+    m = mesh.nInternalFaces
     data = (mesh.areas*DT.field/mesh.deltas).flatten()
     row = np.arange(0, mesh.nFaces, dtype=np.int32)
-    data = np.concatenate((data, -data[:m]))
+    data = np.concatenate((-data, data[:m]))
     row = np.concatenate((row, row[:m]))
     col = np.concatenate((mesh.owner, mesh.neighbour[:m]))
     snGradOp = sp.csr_matrix((data, (row, col)), shape=(mesh.nFaces, n))
     b = np.zeros((mesh.nFaces,) + dim)
     if mesh.nFaces > m:
-        b -= data[m:mesh.nFaces].reshape(-1,1)*phi.field[mesh.neighbour[m:]]
+        b[m:mesh.nFaces] += data[m:mesh.nFaces].reshape(-1,1)*phi.field[mesh.neighbour[m:]]
     snGradM = Matrix(snGradOp, b)
     return (sp.diags(1./mesh.volumes.flatten(), 0)*mesh.sumOp)*snGradM
 
 def ddt(phi, dt):
     mesh = phi.mesh.origMesh
     oldPhi = phi.old[:mesh.nInternalCells]
-    A = sp.eye(mesh.nInternalCells, mesh.nLocalCells)*(1./dt)
+    #A = sp.eye(mesh.nInternalCells, mesh.nLocalCells)*(1./dt)
+    A = sp.eye(mesh.nInternalCells)*(1./dt)
     b = -phi.old[:mesh.nInternalCells]/dt
     return Matrix(A, b)
 
-# BC correction
 def BCs(phi, M):
     mesh = phi.mesh.origMesh
     m = mesh.nLocalCells-mesh.nInternalCells
