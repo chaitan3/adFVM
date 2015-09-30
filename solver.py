@@ -244,7 +244,8 @@ class SolverFunction(object):
         if parallel.nProcessors > 1:
             start = time.time()
             pkl = parallel.mpi.bcast(pkl, root=0)
-            parallel.mpi.Barrier()
+            #print(parallel.rank, type(pkl))
+            #parallel.mpi.Barrier()
             end = time.time()
             pprint('Transfer time: {0:.2f}'.format(end-start))
 
@@ -259,7 +260,8 @@ class SolverFunction(object):
                 if nodeStage == stage:
                     fn = pickle.loads(pkl)
                 parallel.mpi.Barrier()
-        parallel.mpi.Barrier()
+        else:
+            parallel.mpi.Barrier()
         end = time.time()
         pprint('Loading time: {0:.2f}'.format(end-start))
         printMemUsage()

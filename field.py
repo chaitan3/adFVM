@@ -45,13 +45,16 @@ class Field(object):
 
     def info(self):
         assert isinstance(self.field, np.ndarray)
+        mesh = self.mesh.origMesh
         pprint(self.name + ':', end='')
         # mesh values required outside theano
-        field = self.field[:self.mesh.origMesh.nLocalCells]
+        field = self.field[:mesh.nLocalCells]
+        nanCheck = np.isnan(field)
+        if nanCheck.any():
+            print(parallel.rank, mesh.nInternalCells, mesh.nLocalCells, np.where(nanCheck)[0])
+            raise FloatingPointError('nan found')
         fieldMin = parallel.min(field)
         fieldMax = parallel.max(field)
-        assert not np.isnan(fieldMin)
-        assert not np.isnan(fieldMax)
         pprint(' min:', fieldMin, 'max:', fieldMax)
 
     # creates a view

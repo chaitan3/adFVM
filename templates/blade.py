@@ -9,6 +9,9 @@ primal = RCF('/home/talnikar/foam/blade/laminar-lowRe/')#, timeIntegrator='euler
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 
+def dot(a, b):
+    return ad.sum(a*b, axis=1, keepdims=True)
+
 # heat transfer
 def objectiveHeatTransfer(fields, mesh):
     rho, rhoU, rhoE = fields
@@ -42,30 +45,30 @@ def getPlane(solver):
     point = np.array([0.052641,-0.1,0.005])
     normal = np.array([1.,0.,0.])
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
-    print interCells.shape, interArea.sum()
+    #print interCells.shape, interArea.sum()
     solver.postpro.extend([(ad.ivector(), interCells), (ad.bcmatrix(), interArea)])
-    return solver.postpro[-2][0], solver.postpro[-1][0]
+    return solver.postpro[-2][0], solver.postpro[-1][0], normal
     
 def objectivePressureLoss(fields, mesh):
     #if not hasattr(objectivePressureLoss, interArea):
     #    objectivePressureLoss.cells, objectivePressureLoss.area = getPlane(primal)
     #cells, area = objectivePressureLoss.cells, objectivePressureLoss.area
     ptin = 171371.
-    cells, area = getPlane(primal)
+    cells, area, normal = getPlane(primal)
     rho, rhoU, rhoE = fields
     solver = rhoE.solver
     g = solver.gamma
     U, T, p = solver.primitive(rho, rhoU, rhoE)
-    c = (g*p/rho).sqrt() 
-    Umag = U.mag()
-    pi = p.field[cells]
-    Mi = Umag.field[cells]/c.field[cells]
+    pi, rhoi, Ui = p.field[cells], rho.field[cells], U.field[cells]
+    rhoUi, ci = rhoi*Ui, ad.sqrt(g*pi/rhoi)
+    rhoUni, Umagi = dot(rhoUi, normal), ad.sqrt(dot(Ui, Ui))
+    Mi = Umagi/ci
     pti = pi*(1 + 0.5*(g-1)*Mi*Mi)**(g/(g-1))
-    res = ad.sum((ptin-pti)*area)
+    res = ad.sum((ptin-pti)*rhoUni*area)/(ad.sum(rhoUni*area) + config.VSMALL)
     return res 
 
-objective = objectiveHeatTransfer
-#objective = objectivePressureLoss
+#objective = objectiveHeatTransfer
+objective = objectivePressureLoss
 
 def perturb(mesh):
     mid = np.array([-0.08, 0.014, 0.005])

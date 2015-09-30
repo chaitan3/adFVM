@@ -4,7 +4,7 @@ from config import ad
 from compat import norm
 import numpy as np
 
-primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-4, (1,)))
+primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
 def objective(fields, mesh):
     rho, rhoU, rhoE = fields
     patchID = 'cylinder'
@@ -34,9 +34,9 @@ def perturb(mesh):
     rhoE = G*3e5
     return rho, rhoU, rhoE
 
-nSteps = 10
-writeInterval = 2
-startTime = 2.0
+nSteps = 20000
+writeInterval = 1000
+startTime = 2.00011989
 dt = 1e-9
 
 
