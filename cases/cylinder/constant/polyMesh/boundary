@@ -20,33 +20,33 @@ FoamFile
     right
     {
         type            patch;
-        nFaces          220;
-        startFace       98720;
+        nFaces          300;
+        startFace       378900;
     }
     up
     {
         type            patch;
-        nFaces          440;
-        startFace       98940;
+        nFaces          1200;
+        startFace       379200;
     }
     left
     {
         type            patch;
-        nFaces          220;
-        startFace       99380;
+        nFaces          300;
+        startFace       380400;
     }
     cylinder
     {
         type            patch;
-        nFaces          80;
-        startFace       99600;
+        nFaces          400;
+        startFace       380700;
     }
     z1
     {
         type            cyclic;
         inGroups        1(cyclic);
-        nFaces          49600;
-        startFace       99680;
+        nFaces          190000;
+        startFace       381100;
         matchTolerance  0.0001;
         transform       unknown;
         neighbourPatch  z2;
@@ -55,8 +55,8 @@ FoamFile
     {
         type            cyclic;
         inGroups        1(cyclic);
-        nFaces          49600;
-        startFace       149280;
+        nFaces          190000;
+        startFace       571100;
         matchTolerance  0.0001;
         transform       unknown;
         neighbourPatch  z1;

@@ -80,7 +80,7 @@ def adjointViscosity(solution):
     outputs = computeFields(SF, primal)
     M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
     M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
-    viscosityScale = 5e-2
+    viscosityScale = 4e-4
     #print(parallel.rank, M_2normScale)
     return M_2norm*(viscosityScale/M_2normScale)
 
@@ -129,6 +129,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
             phi.info()
 
         adjointIndex = writeInterval-1 - step
+        pprint('Time step', adjointIndex)
         t, dt = timeSteps[primalIndex + adjointIndex]
         if primal.dynamicMesh:
             previousMesh, previousSolution = solutions[adjointIndex]

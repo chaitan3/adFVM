@@ -80,8 +80,8 @@ def perturb(mesh):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 5000
-writeInterval = 100
+nSteps = 20000
+writeInterval = 500
 startTime = 3.0
 dt = 1e-8
 

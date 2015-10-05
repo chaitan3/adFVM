@@ -22,6 +22,7 @@ class Solver(object):
                         'adjoint': False,
                         'dynamicMesh': False,
                         'sourceTerm': None,
+                        'localTimeStep': False,
                         'postpro': []
                     }
 
@@ -44,8 +45,10 @@ class Solver(object):
 
     def compile(self):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
-
-        self.dt = ad.scalar()
+        if self.localTimeStep:
+            self.dt = ad.bcmatrix()
+        else:
+            self.dt = ad.scalar()
         stackedFields = ad.matrix()
         newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
         self.forward = self.function([stackedFields, self.dt], \
@@ -93,7 +96,9 @@ class Solver(object):
         t = startTime
         dts = dt
         timeIndex = startIndex
-        if isinstance(dts, np.ndarray):
+        if self.localTimeStep:
+            dt = dts*np.ones_like(mesh.origMesh.volumes)
+        elif isinstance(dts, np.ndarray):
             dt = dts[timeIndex]
         stackedFields = self.stackFields(fields, np)
         
@@ -146,14 +151,20 @@ class Solver(object):
                     solutions.append((instMesh, stackedFields))
                 else:
                     solutions.append(stackedFields)
-
-            pprint('Simulation Time:', t, 'Time step:', dt)
-            t = round(t+dt, 9)
             timeIndex += 1
+            if self.localTimeStep:
+                pprint('Simulation Time:', t, 'Time step: min', parallel.min(dt), 'max', parallel.max(dt))
+                t += 1
+            else:
+                pprint('Simulation Time:', t, 'Time step:', dt)
+                t = round(t+dt, 9)
             # compute dt for next time step
-            dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
-            if isinstance(dts, np.ndarray):
+            if self.localTimeStep:
+                dt = dtc
+            elif isinstance(dts, np.ndarray):
                 dt = dts[timeIndex]
+            else:
+                dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
 
             if (timeIndex % writeInterval == 0) and (mode != 'forward'):
                 if self.dynamicMesh:
@@ -231,7 +242,7 @@ class SolverFunction(object):
             else:
                 fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
                 #T.printing.pydotprint(fn, outfile='graph.png')
-                if config.pickleFunction or parallel.nProcessors > 1:
+                if config.pickleFunction or (parallel.nProcessors > 1):
                     pkl = pickle.dumps(fn)
                     pprint('Saving pickle file', pklFile)
                     f = open(pklFile, 'w').write(pkl)
@@ -249,8 +260,7 @@ class SolverFunction(object):
             end = time.time()
             pprint('Transfer time: {0:.2f}'.format(end-start))
 
-        start = time.time()
-        if fn is None:
+            start = time.time()
             unloadingStages = config.user.unloadingStages
             coresPerNode = config.user.coresPerNode
             coresPerStage = coresPerNode/unloadingStages
@@ -260,11 +270,9 @@ class SolverFunction(object):
                 if nodeStage == stage:
                     fn = pickle.loads(pkl)
                 parallel.mpi.Barrier()
-        else:
-            parallel.mpi.Barrier()
-        end = time.time()
-        pprint('Loading time: {0:.2f}'.format(end-start))
-        printMemUsage()
+            end = time.time()
+            pprint('Loading time: {0:.2f}'.format(end-start))
+            printMemUsage()
 
         self.fn = fn
 

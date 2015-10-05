@@ -209,6 +209,7 @@ if __name__ == "__main__":
     parser.add_argument('-l', '--CFL', required=False, default=RCF.defaultConfig['CFL'], type=float)
     parser.add_argument('--Cp', required=False, default=RCF.defaultConfig['Cp'], type=float)
     parser.add_argument('--riemann', required=False, default=RCF.defaultConfig['riemannSolver'])
+    parser.add_argument('--lts', action='store_true')
     parser.add_argument('-v', '--inviscid', action='store_true')
     parser.add_argument('--dynamic', action='store_true')
     mu = RCF.defaultConfig['mu']
@@ -219,5 +220,5 @@ if __name__ == "__main__":
     user = parser.parse_args(config.args)
     if user.inviscid:
         mu = lambda T: config.VSMALL*T
-    solver = RCF(user.case, mu=mu, timeIntegrator=user.timeIntegrator, CFL=user.CFL, Cp=user.Cp, riemannSolver=user.riemann, dynamicMesh=user.dynamic)
+    solver = RCF(user.case, mu=mu, timeIntegrator=user.timeIntegrator, CFL=user.CFL, Cp=user.Cp, riemannSolver=user.riemann, dynamicMesh=user.dynamic, localTimeStep=user.lts)
     solver.run(startTime=user.time, dt=user.dt, nSteps=user.nSteps, writeInterval=user.writeInterval)
