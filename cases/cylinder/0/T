@@ -23,7 +23,7 @@ boundaryField
 {
     right
     {
-        type            zeroGradient;
+        type            calculated;
     }
     up
     {
@@ -32,8 +32,7 @@ boundaryField
     }
     left
     {
-        type            fixedValue;
-        value           uniform 300;
+        type            calculated;
     }
     cylinder
     {

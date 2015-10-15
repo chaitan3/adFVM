@@ -165,15 +165,14 @@ class NSCBC_OUTLET_P(CharacteristicBoundaryCondition):
 
         self.UBC = zeroGradient(self.U, patchID)
         self.TBC = zeroGradient(self.T, patchID)
+        self.value = self.createInput('value', self.phi.dimensions)
 
     def update(self):
         self.UBC.update()
         self.TBC.update()
+        if self.solver.stage == 0:
+            self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.value)
         # forward euler integration
-        if self.solver.stage == 1:
-            self.p0 = self.phi.field[self.cellStartFace:self.cellEndFace]
-            self.c = self.solver.aF.field[self.startFace:self.endFace]
-            self.Un0 = dot(self.U.field[self.internalIndices], self.normals)
         elif self.solver.stage == self.solver.nStages:
             Un = dot(self.U.field[self.internalIndices], self.normals)
             rho = self.gamma*self.p0/(self.c*self.c)
@@ -182,6 +181,13 @@ class NSCBC_OUTLET_P(CharacteristicBoundaryCondition):
             p = p + rho*self.c*(Un-self.Un0)
             p = p + dt*(-0.25*self.c*(1-self.Ma*self.Ma)*(self.p0-self.pt)/self.L)
             self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], p)
+        else:
+            if self.solver.stage == 1:
+                #self.p0 = self.phi.field[self.cellStartFace:self.cellEndFace]
+                self.p0 = self.phi.field[self.internalIndices]
+                self.c = self.solver.aF.field[self.startFace:self.endFace]
+                self.Un0 = dot(self.U.field[self.internalIndices], self.normals)
+            self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.p0)
 
 class TURB_INFLOW(BoundaryCondition):
     def __init__(self, phi, patchID):
