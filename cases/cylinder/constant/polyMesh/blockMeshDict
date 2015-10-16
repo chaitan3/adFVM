@@ -32,9 +32,9 @@ vertices #codeStream
         points[3]  = point(10, 0.707107, -0.5);
         points[4]  = point(0.707107, 0.707107, -0.5);
         points[5]  = point(0.353553, 0.353553, -0.5);
-        points[6]  = point(10, 2, -0.5);
-        points[7]  = point(0.707107, 2, -0.5);
-        points[8]  = point(0, 2, -0.5);
+        points[6]  = point(10, 5, -0.5);
+        points[7]  = point(0.707107, 5, -0.5);
+        points[8]  = point(0, 5, -0.5);
         points[9]  = point(0, 1, -0.5);
         points[10] = point(0, 0.5, -0.5);
         points[11] = point(-0.5, 0, -0.5);
@@ -43,8 +43,8 @@ vertices #codeStream
         points[14] = point(-3, 0.707107, -0.5);
         points[15] = point(-0.707107, 0.707107, -0.5);
         points[16] = point(-0.353553, 0.353553, -0.5);
-        points[17] = point(-3, 2, -0.5);
-        points[18] = point(-0.707107, 2, -0.5);
+        points[17] = point(-3, 5, -0.5);
+        points[18] = point(-0.707107, 5, -0.5);
 
         // Duplicate z points
         label sz = points.size();
@@ -65,13 +65,13 @@ blocks
     hex (5 4 9 10 24 23 28 29) (50 50 1) simpleGrading (10 1 1)
     hex (0 1 4 5 19 20 23 24) (50 50 1) simpleGrading (10 1 1)
     hex (1 2 3 4 20 21 22 23) (400 50 1) simpleGrading (1 1 1)
-    hex (4 3 6 7 23 22 25 26) (400 100 1) simpleGrading (1 0.09 1)
-    hex (9 4 7 8 28 23 26 27) (50 100 1) simpleGrading (1 0.09 1)
+    hex (4 3 6 7 23 22 25 26) (400 250 1) simpleGrading (1 0.09 1)
+    hex (9 4 7 8 28 23 26 27) (50 250 1) simpleGrading (1 0.09 1)
     hex (15 16 10 9 34 35 29 28) (50 50 1) simpleGrading (0.1 1 1)
     hex (12 11 16 15 31 30 35 34) (50 50 1) simpleGrading (0.1 1 1)
     hex (13 12 15 14 32 31 34 33) (100 50 1) simpleGrading (1 1 1)
-    hex (14 15 18 17 33 34 37 36) (100 100 1) simpleGrading (1 0.09 1)
-    hex (15 9 8 18 34 28 27 37) (50 100 1) simpleGrading (1 0.09 1)
+    hex (14 15 18 17 33 34 37 36) (100 250 1) simpleGrading (1 0.09 1)
+    hex (15 9 8 18 34 28 27 37) (50 250 1) simpleGrading (1 0.09 1)
 );
 
 edges
