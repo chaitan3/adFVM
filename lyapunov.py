@@ -33,6 +33,18 @@ nCells = mesh.origMesh.nCells
 nDims = sum([dim[0] for dim in primal.dimensions])
 stackedAdjointFields = np.random.rand(nLyapunov, nCells, nDims)
 
+stackedAdjointFields = parallel.gatherCells(stackedAdjointFields, mesh.origMesh, axis=1)
+if stackedAdjointFields is not None:
+    totalCells = stackedAdjointFields.shape[1]
+    A = stackedAdjointFields.reshape((nLyapunov, totalCells*nDims))
+    Q, R = np.linalg.qr(A.T)
+    S = np.diag(np.sign(np.diag(R)))
+    Q, R = np.dot(Q, S), np.dot(S, R)
+    r = np.log(np.diag(R))/(t0-t)
+    exponents.append(r)
+    stackedAdjointFields = Q.reshape((nLyapunov, totalCells, nDims))
+stackedAdjointFields = parallel.scatterCells(stackedAdjointFields, mesh.origMesh, axis=1)
+
 def writeAdjointFields(stackedAdjointFields, names, writeTime):
     # TODO: fix unstacking F_CONTIGUOUS
     start = time.time()
@@ -83,13 +95,17 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
     # how frequently?
-    A = stackedAdjointFields.reshape((nLyapunov, nCells*nDims))
-    Q, R = np.linalg.qr(A.T)
-    S = np.diag(np.sign(np.diag(R)))
-    Q, R = np.dot(Q, S), np.dot(S, R)
-    r = np.log(np.diag(R))/(t0-t)
-    exponents.append(r)
-    stackedAdjointFields = Q.reshape((nLyapunov, nCells, nDims))
+    stackedAdjointFields = parallel.gatherCells(stackedAdjointFields, mesh.origMesh, axis=1)
+    if stackedAdjointFields is not None:
+        totalCells = stackedAdjointFields.shape[1]
+        A = stackedAdjointFields.reshape((nLyapunov, totalCells*nDims))
+        Q, R = np.linalg.qr(A.T)
+        S = np.diag(np.sign(np.diag(R)))
+        Q, R = np.dot(Q, S), np.dot(S, R)
+        r = np.log(np.diag(R))/(t0-t)
+        exponents.append(r)
+        stackedAdjointFields = Q.reshape((nLyapunov, totalCells, nDims))
+    stackedAdjointFields = parallel.scatterCells(stackedAdjointFields, mesh.origMesh, axis=1)
 
     for sim in range(0, nLyapunov):
         names = ['{0}a_{1}'.format(name, sim) for name in primal.names]

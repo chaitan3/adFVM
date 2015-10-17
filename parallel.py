@@ -72,7 +72,25 @@ class Exchanger(object):
         return self.statuses
 
 def gatherCells(field, mesh, axis=0):
-    nCells = mpi.gather()    
+    #nCells = np.array(mpi.gather(mesh.nCells))
+    #nCellsPos = np.cumsum(nCells)-nCells[0]
+    #if rank == 0:
+    #    totalField = np.zeros((np.sum(nCells),) + field.shape[1:])
+    #else:
+    #    totalField = None
+    #mpi.Gatherv(field, [totalField, nCells, nCellsPos])
+    #return totalField
+    totalField = np.concatenate(mpi.gather(field), axis=axis)
+    return totalField
+
+def scatterCells(totalField, mesh, axis=0):
+    nCells = np.array(mpi.gather(mesh.nCells))
+    nCellsPos = np.cumsum(nCells)-nCells[0]
+    #field = np.zeros((mesh.nCells,) + totalField.shape[1:])
+    #mpi.Scatterv([totalField, nCells, nCellsPos], field)
+    #return field
+    field = mpi.scatter(np.split(totalField, nCellsPos, axis=axis))
+    return field
 
 def getOrigRemoteCells(field, mesh):
     # mesh values required outside theano
