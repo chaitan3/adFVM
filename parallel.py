@@ -71,6 +71,9 @@ class Exchanger(object):
         MPI.Request.Waitall(self.requests, self.statuses)
         return self.statuses
 
+def gatherCells(field, mesh, axis=0):
+    nCells = mpi.gather()    
+
 def getOrigRemoteCells(field, mesh):
     # mesh values required outside theano
     #logger.info('fetching remote cells')

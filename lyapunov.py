@@ -15,6 +15,8 @@ import numpy as np
 import time
 import sys
 
+nLyapunov = 3
+
 primal.adjoint = True
 mesh = primal.mesh
 firstCheckpoint = 0
@@ -28,8 +30,20 @@ parallel.mpi.Bcast(timeSteps, root=0)
 
 # local adjoint fields
 nCells = mesh.origMesh.nCells
-nDims = sum([dim for dim in primal.dimensions])
-stackedAdjointFields = np.ones((nCells, nDims))
+nDims = sum([dim[0] for dim in primal.dimensions])
+stackedAdjointFields = np.random.rand(nLyapunov, nCells, nDims)
+
+def writeAdjointFields(stackedAdjointFields, names, writeTime):
+    # TODO: fix unstacking F_CONTIGUOUS
+    start = time.time()
+    fields = primal.unstackFields(stackedAdjointFields, IOField, names=names, boundary=mesh.calculatedBoundary)
+    for phi in fields:
+        phi.field = np.ascontiguousarray(phi.field)
+        phi.write(writeTime)
+    parallel.mpi.Barrier()
+    end = time.time()
+    pprint('Time for writing fields: {0}'.format(end-start))
+    pprint()
 
 pprint('STARTING ADJOINT')
 pprint('Number of steps:', nSteps)
@@ -37,6 +51,7 @@ pprint('Write interval:', writeInterval)
 pprint()
 
 totalCheckpoints = nSteps/writeInterval
+exponents = []
 for checkpoint in range(firstCheckpoint, totalCheckpoints):
     pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
     primalIndex = nSteps - (checkpoint + 1)*writeInterval
@@ -45,7 +60,8 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
 
     pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
     # if starting from 0, create the adjointField
-    pprint('Time marching for', ' '.join(adjointNames))
+    #pprint('Time marching for', ' '.join(adjointNames))
+    t0 = timeSteps[primalIndex + writeInterval]
 
     for step in range(0, writeInterval):
         printMemUsage()
@@ -55,14 +71,10 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         pprint('Time step', adjointIndex)
         t, dt = timeSteps[primalIndex + adjointIndex]
         previousSolution = solutions[adjointIndex]
-        #paddedPreviousSolution = parallel.getRemoteCells(previousSolution, mesh)
-        ## adjoint time stepping
-        #paddedJacobian = np.ascontiguousarray(primal.gradient(paddedPreviousSolution, stackedAdjointFields))
-        #jacobian = parallel.getAdjointRemoteCells(paddedJacobian, mesh)
-        gradients = primal.gradient(previousSolution, stackedAdjointFields, dt)
-        gradient = gradients[0]
-        sourceGradient = gradients[1:]
-        stackedAdjointFields = np.ascontiguousarray(gradient)
+        for sim in range(0, nLyapunov):
+            gradients = primal.gradient(previousSolution, stackedAdjointFields[sim], dt)
+            gradient = gradients[0]
+            stackedAdjointFields[sim] = np.ascontiguousarray(gradient)
 
         parallel.mpi.Barrier()
         end = time.time()
@@ -71,6 +83,18 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
     # how frequently?
-    A = stackedAdjointFields.ravel()
-    Q, R = np.linalg.qr(A)
-    stackedAdjointFields = Q.reshape((nCells, nDims))
+    A = stackedAdjointFields.reshape((nLyapunov, nCells*nDims))
+    Q, R = np.linalg.qr(A.T)
+    S = np.diag(np.sign(np.diag(R)))
+    Q, R = np.dot(Q, S), np.dot(S, R)
+    r = np.log(np.diag(R))/(t0-t)
+    exponents.append(r)
+    stackedAdjointFields = Q.reshape((nLyapunov, nCells, nDims))
+
+    for sim in range(0, nLyapunov):
+        names = ['{0}a_{1}'.format(name, sim) for name in primal.names]
+        writeAdjointFields(stackedAdjointFields[sim], names, t)
+
+exponents = np.array(exponents)
+pprint(exponents)
+pprint(np.mean(exponents, axis=0))
