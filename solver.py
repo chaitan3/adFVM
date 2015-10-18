@@ -252,7 +252,7 @@ class SolverFunction(object):
         else:
             pkl = None
 
-        if parallel.nProcessors > 1:
+        if (parallel.nProcessors > 1) or (fn is None):
             start = time.time()
             pkl = parallel.mpi.bcast(pkl, root=0)
             #print(parallel.rank, type(pkl))

@@ -50,10 +50,12 @@ def getRhoaByV(rhoa):
     return rhoaByV
 
 def getAdjointEnergy(rhoa, rhoUa, rhoEa):
+    mesh = rhoa.mesh
     adjEnergy = (rhoa.getInternalField()**2).sum(axis=1)
     adjEnergy += (rhoUa.getInternalField()**2).sum(axis=1)
     adjEnergy += (rhoEa.getInternalField()**2).sum(axis=1)
-    adjEnergy = parallel.sum(adjEnergy)**0.5
+    #adjEnergy = parallel.sum(adjEnergy)**0.5
+    adjEnergy = parallel.sum(adjEnergy*mesh.origMesh.volumes[:,0])**0.5
     return adjEnergy
 
 def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
@@ -84,9 +86,24 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     M2 = np.dstack((np.hstack((Z, b*gradrho/rho, sg1*divU/2)),
                     np.hstack((np.dstack((Z,Z,Z)), gradU, (a*gradp/(2*p)).reshape(-1, 1, 3))),
                     np.hstack((Z, 2*grada/g1, g1*divU/2))))
-    M_2norm = np.ascontiguousarray(np.linalg.svd(M1-M2, compute_uv=False)[:, [0]])
-    M_2norm = IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary)
-    return M_2norm
+    M = M1-M2
+    U, S, V = np.linalg.svd(M)
+    V = V.transpose((0, 2, 1))
+    A = ((U*V).sum(axis=1)*S) > 0.
+    # transform, U, V
+    names = [name + '_A' for name in solver.names]
+    As = solver.unstackFields(A, IOField, names)
+    Us, Vs = [], []
+    for index in range(0, U.shape[2]):
+        names = [name + '_U' + str(index + 1) for name in solver.names]
+        Us += solver.unstackFields(U[:,:,index], IOField, names)
+        names = [name + '_V' + str(index + 1) for name in solver.names]
+        Vs += solver.unstackFields(V[:,:,index], IOField, names)
+    return As + Us + Vs
+
+    #M_2norm = np.ascontiguousarray(S[:, [0]])
+    #M_2norm = IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary)
+    #return M_2norm
  
 if __name__ == "__main__":
     import time as timer
@@ -129,8 +146,9 @@ if __name__ == "__main__":
         pprint()
 
         # adjoint blowup
-        M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
-        M_2norm.write(time)
+        fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+        for phi in fields:
+            phi.write(time)
         end = timer.time()
         pprint('Time for computing: {0}'.format(end-start))
 
