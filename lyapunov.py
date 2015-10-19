@@ -1,5 +1,5 @@
 #!/usr/bin/python2
-from __future__ import print_function
+#from __future__ import print_function
 
 import config, parallel
 from config import ad
@@ -15,7 +15,7 @@ import numpy as np
 import time
 import sys
 
-nLyapunov = 3
+nLyapunov = 1
 
 primal.adjoint = True
 mesh = primal.mesh
@@ -32,18 +32,6 @@ parallel.mpi.Bcast(timeSteps, root=0)
 nCells = mesh.origMesh.nCells
 nDims = sum([dim[0] for dim in primal.dimensions])
 stackedAdjointFields = np.random.rand(nLyapunov, nCells, nDims)
-
-stackedAdjointFields = parallel.gatherCells(stackedAdjointFields, mesh.origMesh, axis=1)
-if stackedAdjointFields is not None:
-    totalCells = stackedAdjointFields.shape[1]
-    A = stackedAdjointFields.reshape((nLyapunov, totalCells*nDims))
-    Q, R = np.linalg.qr(A.T)
-    S = np.diag(np.sign(np.diag(R)))
-    Q, R = np.dot(Q, S), np.dot(S, R)
-    r = np.log(np.diag(R))/(t0-t)
-    exponents.append(r)
-    stackedAdjointFields = Q.reshape((nLyapunov, totalCells, nDims))
-stackedAdjointFields = parallel.scatterCells(stackedAdjointFields, mesh.origMesh, axis=1)
 
 def writeAdjointFields(stackedAdjointFields, names, writeTime):
     # TODO: fix unstacking F_CONTIGUOUS
@@ -64,6 +52,7 @@ pprint()
 
 totalCheckpoints = nSteps/writeInterval
 exponents = []
+
 for checkpoint in range(firstCheckpoint, totalCheckpoints):
     pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
     primalIndex = nSteps - (checkpoint + 1)*writeInterval
@@ -73,7 +62,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
     pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
     # if starting from 0, create the adjointField
     #pprint('Time marching for', ' '.join(adjointNames))
-    t0 = timeSteps[primalIndex + writeInterval]
+    t0 = timeSteps[primalIndex + writeInterval][0]
 
     for step in range(0, writeInterval):
         printMemUsage()
@@ -104,12 +93,12 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         Q, R = np.dot(Q, S), np.dot(S, R)
         r = np.log(np.diag(R))/(t0-t)
         exponents.append(r)
-        stackedAdjointFields = Q.reshape((nLyapunov, totalCells, nDims))
+        stackedAdjointFields = Q.T.reshape((nLyapunov, totalCells, nDims))
     stackedAdjointFields = parallel.scatterCells(stackedAdjointFields, mesh.origMesh, axis=1)
 
-    for sim in range(0, nLyapunov):
-        names = ['{0}a_{1}'.format(name, sim) for name in primal.names]
-        writeAdjointFields(stackedAdjointFields[sim], names, t)
+    #for sim in range(0, nLyapunov):
+    #    names = ['{0}a_{1}'.format(name, sim) for name in primal.names]
+    #    writeAdjointFields(stackedAdjointFields[sim], names, t)
 
 exponents = np.array(exponents)
 pprint(exponents)

@@ -80,16 +80,20 @@ def gatherCells(field, mesh, axis=0):
     #    totalField = None
     #mpi.Gatherv(field, [totalField, nCells, nCellsPos])
     #return totalField
-    totalField = np.concatenate(mpi.gather(field), axis=axis)
+    totalField = mpi.gather(field)
+    if totalField is not None:
+        totalField = np.concatenate(totalField, axis=axis)
     return totalField
 
 def scatterCells(totalField, mesh, axis=0):
     nCells = np.array(mpi.gather(mesh.nCells))
-    nCellsPos = np.cumsum(nCells)-nCells[0]
-    #field = np.zeros((mesh.nCells,) + totalField.shape[1:])
-    #mpi.Scatterv([totalField, nCells, nCellsPos], field)
-    #return field
-    field = mpi.scatter(np.split(totalField, nCellsPos, axis=axis))
+    if totalField is not None:
+        nCellsPos = np.cumsum(nCells)[:-1]
+        #field = np.zeros((mesh.nCells,) + totalField.shape[1:])
+        #mpi.Scatterv([totalField, nCells, nCellsPos], field)
+        #return field
+        totalField = np.split(totalField, nCellsPos, axis=axis)
+    field = mpi.scatter(totalField)
     return field
 
 def getOrigRemoteCells(field, mesh):

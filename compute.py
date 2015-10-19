@@ -54,8 +54,8 @@ def getAdjointEnergy(rhoa, rhoUa, rhoEa):
     adjEnergy = (rhoa.getInternalField()**2).sum(axis=1)
     adjEnergy += (rhoUa.getInternalField()**2).sum(axis=1)
     adjEnergy += (rhoEa.getInternalField()**2).sum(axis=1)
-    #adjEnergy = parallel.sum(adjEnergy)**0.5
-    adjEnergy = parallel.sum(adjEnergy*mesh.origMesh.volumes[:,0])**0.5
+    adjEnergy = parallel.sum(adjEnergy)**0.5
+    #adjEnergy = parallel.sum(adjEnergy*mesh.origMesh.volumes[:,0])**0.5
     return adjEnergy
 
 def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
@@ -88,22 +88,25 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
                     np.hstack((Z, 2*grada/g1, g1*divU/2))))
     M = M1-M2
     U, S, V = np.linalg.svd(M)
-    V = V.transpose((0, 2, 1))
-    A = ((U*V).sum(axis=1)*S) > 0.
+    V = np.ascontiguousarray(V.transpose((0, 2, 1)))
+    A = (((U*V).sum(axis=1)*S) > 0.)*1.
     # transform, U, V
     names = [name + '_A' for name in solver.names]
-    As = solver.unstackFields(A, IOField, names)
+    As = solver.unstackFields(A, IOField, names, boundary=mesh.calculatedBoundary)
     Us, Vs = [], []
     for index in range(0, U.shape[2]):
         names = [name + '_U' + str(index + 1) for name in solver.names]
-        Us += solver.unstackFields(U[:,:,index], IOField, names)
+        Us += solver.unstackFields(U[:,:,index], IOField, names, boundary=mesh.calculatedBoundary)
         names = [name + '_V' + str(index + 1) for name in solver.names]
-        Vs += solver.unstackFields(V[:,:,index], IOField, names)
-    return As + Us + Vs
+        Vs += solver.unstackFields(V[:,:,index], IOField, names, boundary=mesh.calculatedBoundary)
+    Fs = As + Us + Vs
+    for phi in Fs:
+        phi.field = np.ascontiguousarray(phi.field)
+    return Fs
 
     #M_2norm = np.ascontiguousarray(S[:, [0]])
     #M_2norm = IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary)
-    #return M_2norm
+    #return [M_2norm]
  
 if __name__ == "__main__":
     import time as timer
@@ -148,7 +151,7 @@ if __name__ == "__main__":
         # adjoint blowup
         fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
         for phi in fields:
-            phi.write(time)
+            phi.write(time)#, skipProcessor=True)
         end = timer.time()
         pprint('Time for computing: {0}'.format(end-start))
 

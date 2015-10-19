@@ -77,7 +77,6 @@ class Solver(object):
             fields.append(mod(name, phi, dim, **kwargs))
         return fields
 
-
     def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
             startIndex=0, initTimeSteps=np.empty((0,2)), result=0., \
             mode='simulation'):
