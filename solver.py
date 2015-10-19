@@ -61,6 +61,8 @@ class Solver(object):
             #meshGradient = ad.grad(scalarFields, mesh)
             self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], \
                             gradients, 'adjoint')
+            self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \
+                            ad.Rop(newStackedFields, stackedFields, stackedAdjointFields), 'tangent')
         pprint()
 
     def stackFields(self, fields, mod): 
@@ -298,6 +300,9 @@ class PadFieldOp(T.Op):
 
     def grad(self, inputs, output_grads):
         return [Field.solver.gradPadField(output_grads[0])]
+
+    def R_op(self, inputs, eval_points):
+        return [Field.solver.padField(eval_points[0])]
 
 class gradPadFieldOp(T.Op):
     __props__ = ()

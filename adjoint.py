@@ -167,7 +167,6 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         pprint('Time since beginning:', end-config.runtime)
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
-        #writeAdjointFields(stackedAdjointFields, t)
     writeAdjointFields(stackedAdjointFields, t)
     with open(statusFile, 'w') as status:
         status.write('{0}\n{1}\n'.format(checkpoint + 1, result))

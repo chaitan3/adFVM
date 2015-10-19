@@ -96,9 +96,9 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         stackedAdjointFields = Q.T.reshape((nLyapunov, totalCells, nDims))
     stackedAdjointFields = parallel.scatterCells(stackedAdjointFields, mesh.origMesh, axis=1)
 
-    #for sim in range(0, nLyapunov):
-    #    names = ['{0}a_{1}'.format(name, sim) for name in primal.names]
-    #    writeAdjointFields(stackedAdjointFields[sim], names, t)
+    for sim in range(0, nLyapunov):
+        names = ['{0}a_{1}'.format(name, sim) for name in primal.names]
+        writeAdjointFields(stackedAdjointFields[sim], names, t)
 
 exponents = np.array(exponents)
 pprint(exponents)

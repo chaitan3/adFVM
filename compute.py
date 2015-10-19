@@ -89,20 +89,32 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     M = M1-M2
     U, S, V = np.linalg.svd(M)
     V = np.ascontiguousarray(V.transpose((0, 2, 1)))
-    A = (((U*V).sum(axis=1)*S) > 0.)*1.
+    A = (((U*V).sum(axis=1)*S) > 0.)
+    A = A*1.
+    Smax = (A*S).max(axis=1, keepdims=True)
+    Imax = (A*S).argmax(axis=1)
+    idx = np.arange(0, mesh.origMesh.nCells)
+    Umax = U[idx, Imax]*Smax
+    Vmax = V[idx, Imax]*Smax
     # transform, U, V
     names = [name + '_A' for name in solver.names]
-    As = solver.unstackFields(A, IOField, names, boundary=mesh.calculatedBoundary)
-    Us, Vs = [], []
+    F = solver.unstackFields(A, IOField, names, boundary=mesh.calculatedBoundary)
+    names = [name + '_S' for name in solver.names]
+    F += solver.unstackFields(S, IOField, names, boundary=mesh.calculatedBoundary)
     for index in range(0, U.shape[2]):
         names = [name + '_U' + str(index + 1) for name in solver.names]
-        Us += solver.unstackFields(U[:,:,index], IOField, names, boundary=mesh.calculatedBoundary)
+        F += solver.unstackFields(U[:,:,index], IOField, names, boundary=mesh.calculatedBoundary)
         names = [name + '_V' + str(index + 1) for name in solver.names]
-        Vs += solver.unstackFields(V[:,:,index], IOField, names, boundary=mesh.calculatedBoundary)
-    Fs = As + Us + Vs
-    for phi in Fs:
+        F += solver.unstackFields(V[:,:,index], IOField, names, boundary=mesh.calculatedBoundary)
+    Smax = IOField('Smax', Smax, (1,), boundary=mesh.calculatedBoundary)
+    F.append(Smax)
+    names = [name + '_Umax' for name in solver.names]
+    F += solver.unstackFields(Umax, IOField, names, boundary=mesh.calculatedBoundary)
+    names = [name + '_Vmax' for name in solver.names]
+    F += solver.unstackFields(Vmax, IOField, names, boundary=mesh.calculatedBoundary)
+    for phi in F:
         phi.field = np.ascontiguousarray(phi.field)
-    return Fs
+    return F
 
     #M_2norm = np.ascontiguousarray(S[:, [0]])
     #M_2norm = IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary)

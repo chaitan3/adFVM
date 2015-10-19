@@ -5,9 +5,15 @@ plt.rcParams.update({'xtick.labelsize':'large'})
 plt.rcParams.update({'ytick.labelsize':'large'})
 plt.rcParams.update({'legend.fontsize':'large'})
 
-for name,label in zip(['adj_5e-4.txt'], ['adjoint']):
+import os
+
 #for name,label in zip(['data.txt', 'data2.txt', 'data3.txt'], ['2D adjoint', '3D adjoint', '3D long term adjoint']):
-    f = open(name)
+loc = '/home/talnikar/foam/blade/laminar-lowRe/'
+for name in os.listdir(loc):
+    if not (name.endswith('.txt') and name.startswith('adj')):
+        continue
+    label = name
+    f = open(loc + name)
     lines = [line for line in f.readlines() if line.startswith('L2 norm adjoint')]
     x = []
     y = []
