@@ -89,11 +89,11 @@ class RCF(Solver):
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Time for reading fields: {0}'.format(end-start))
-        UI = self.U.complete()
-        TI = self.T.complete()
-        pI = self.p.complete()
-        UN, TN, pN = self.U.phi.field, self.T.phi.field, self.p.phi.field 
         if not hasattr(self, 'initFunc'):
+            UI = self.U.complete()
+            TI = self.T.complete()
+            pI = self.p.complete()
+            UN, TN, pN = self.U.phi.field, self.T.phi.field, self.p.phi.field 
             self.initFunc = self.function([UI, TI, pI], [UN, TN, pN], 'init')
         self.U.field, self.T.field, self.p.field = self.initFunc(self.U.field, self.T.field, self.p.field)
         return self.conservative(self.U, self.T, self.p)
