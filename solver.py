@@ -44,7 +44,7 @@ class Solver(object):
         self.gradPadField = gradPadFieldOp()
 
     def compile(self):
-        if not hasattr(self, 'forward'):
+        if hasattr(self, 'forward'):
             return
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         if self.localTimeStep:
