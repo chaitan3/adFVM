@@ -1,10 +1,14 @@
 from pyRCF import RCF 
 from field import Field
 from config import ad
+import config
 from compat import norm
 import numpy as np
 
-primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+primal = RCF('cases/cylinder3/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+
+def dot(a, b):
+    return ad.sum(a*b, axis=1, keepdims=True)
 
 # drag over cylinder surface
 def objectiveDrag(fields, mesh):
@@ -29,7 +33,7 @@ def objectiveDrag(fields, mesh):
 
 def getPlane(solver):
     from compat import intersectPlane
-    point = np.array([0.0032012,0.0,0.0])
+    point = np.array([0.032012,0.0,0.0])
     normal = np.array([1.,0.,0.])
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
     #print interCells.shape, interArea.sum()
@@ -58,17 +62,17 @@ def objectivePressureLoss(fields, mesh):
 objective = objectivePressureLoss
 
 def perturb(mesh):
-    mid = np.array([-0.0032, 0.0, 0.])
-    G = 100*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    mid = np.array([-0.012, 0.0, 0.])
+    G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     rho = G
     rhoU = np.zeros((mesh.nInternalCells, 3))
     rhoU[:, 0] += G.flatten()*100
-    rhoE = G*3e5
+    rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 100000
-writeInterval = 5000
-startTime = 0.0
-dt = 1e-9
+nSteps = 20000
+writeInterval = 200
+startTime = 1.0
+dt = 4.1e-8
 
 

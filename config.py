@@ -63,7 +63,7 @@ os.environ['THEANO_FLAGS'] += ',profile_memory=' + str(user.profile_mem)
 # openmp
 #os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'
 if user.voyager:
-    os.environ['THEANO_FLAGS'] += ',cxx='
+#os.environ['THEANO_FLAGS'] += ',cxx='
     os.environ['THEANO_FLAGS'] += ',gcc.cxxflags=-I/master-usr/include/python2.7/ -I/master-usr/include/ -L/usr/lib/python2.7/config-x86_64-linux-gnu/'
 import theano as T
 import theano.tensor as ad

@@ -90,10 +90,16 @@ if __name__ == "__main__":
 
     elif user.option == 'test':
         primal.initFields(startTime)
-        a = np.zeros((mesh.nCells, 5))
-        perturb(a, startTime)
-        fields = primal.unstackFields(a, IOField)
-        primal.writeFields(fields, 100.0)
+        rho, rhoU, rhoE = perturb(mesh)
+        U, T, p = primal.U, primal.T, primal.p
+        U.field *= 0
+        T.field *= 0
+        p.field *= 0
+        U.field[:mesh.nInternalCells] = rhoU
+        T.field[:mesh.nInternalCells] = rhoE
+        p.field[:mesh.nInternalCells] = rho
+        for phi in [U, T, p]:
+            phi.write(100.0)
 
         #p = np.zeros((mesh.nCells, 5))
         #fields = primal.initFields(startTime)
