@@ -80,7 +80,7 @@ def adjointViscosity(solution):
     outputs = computeFields(SF, primal)
     M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)[0]
     M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
-    viscosityScale = 5e-3
+    viscosityScale = 4e-3
     #print(parallel.rank, M_2normScale)
     return M_2norm*(viscosityScale/M_2normScale)
 
@@ -104,6 +104,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
     pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
     primalIndex = nSteps - (checkpoint + 1)*writeInterval
     t, dt = timeSteps[primalIndex]
+    writeInterval = 1
     solutions = primal.run(startTime=t, dt=dt, nSteps=writeInterval, mode='forward')
 
     pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
@@ -172,3 +173,4 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         status.write('{0}\n{1}\n'.format(checkpoint + 1, result))
 
 writeResult('adjoint', result)
+os.remove(statusFile)

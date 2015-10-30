@@ -82,8 +82,7 @@ class Solver(object):
         return fields
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
-            startIndex=0, initTimeSteps=np.empty((0,2)), result=0., \
-            mode='simulation'):
+            startIndex=0, result=0., mode='simulation'):
 
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
@@ -103,10 +102,11 @@ class Solver(object):
         elif isinstance(dts, np.ndarray):
             dt = dts[timeIndex]
         stackedFields = self.stackFields(fields, np)
-        
-        timeSteps = []
+
         # objective is local
-        result += self.objective(stackedFields)
+        timeSteps = []
+        timeSeries  = [self.objective(stackedFields)]
+        result += timeSeries[-1]
         # writing and returning local solutions
         if mode == 'forward':
             if self.dynamicMesh:
@@ -144,8 +144,9 @@ class Solver(object):
 
             mesh.update(t, dt)
             
-            result += self.objective(stackedFields)
             timeSteps.append([t, dt])
+            timeSeries.append(self.objective(stackedFields))
+            result += timeSeries[-1]
             if mode == 'forward':
                 if self.dynamicMesh:
                     instMesh = Mesh()
@@ -176,7 +177,10 @@ class Solver(object):
                     status.write('{0}\n{1}\n{2}\n{3}\n' \
                                 .format(timeIndex, t, dt, result))
                 if mode == 'orig' and parallel.rank == 0:
-                    np.savetxt(self.timeStepFile, np.concatenate((initTimeSteps, timeSteps)))
+                    with open(self.timeStepFile, 'a') as f:
+                        np.savetxt(f, timeSteps)
+                    with open(self.timeSeriesFile, 'a') as f:
+                        np.savetxt(f, timeSeries)
             pprint()
 
 

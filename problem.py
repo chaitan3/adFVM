@@ -66,14 +66,8 @@ if __name__ == "__main__":
         startIndex = 0
         initResult = 0.
     
-    initTimeSteps = None
     if user.option == 'orig':
         dts = dt
-        if parallel.rank == 0:
-            try:
-                initTimeSteps = np.loadtxt(timeStepFile)
-            except:
-                initTimeSteps = np.empty((0,2))
 
     elif user.option == 'perturb':
         pprint('Perturbing fields')
@@ -130,6 +124,6 @@ if __name__ == "__main__":
         print('WTF')
         exit()
 
-    result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex, initTimeSteps=initTimeSteps)
+    result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex)
     writeResult(user.option, result/(nSteps + 1))
     os.remove(statusFile)
