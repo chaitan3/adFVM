@@ -198,9 +198,11 @@ class TURB_INFLOW(BoundaryCondition):
         self.pmean = self.createInput('pmean', (1,))
         self.lengthScale = float(self.patch['lengthScale'])
         self.turbulentIntensity = float(self.patch['turbulentIntensity'])
+        self.U, self.T, _ = self.solver.getBCFields()
+        self.p = self.phi
 
     def update(self):
-        pass
+        
 
 slip = symmetryPlane
 empty = zeroGradient
