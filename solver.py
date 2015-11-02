@@ -36,6 +36,7 @@ class Solver(object):
         self.mesh = Mesh.create(case)
         self.resultFile = self.mesh.case + 'objective.txt'
         self.statusFile = self.mesh.case + 'status.txt'
+        self.timeSeriesFile = self.mesh.case + 'timeSeries.txt'
         Field.setSolver(self)
 
         self.timeIntegrator = getattr(timestep, self.timeIntegrator)
