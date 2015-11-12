@@ -104,7 +104,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
     pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
     primalIndex = nSteps - (checkpoint + 1)*writeInterval
     t, dt = timeSteps[primalIndex]
-    writeInterval = 1
+    #writeInterval = 1
     solutions = primal.run(startTime=t, dt=dt, nSteps=writeInterval, mode='forward')
 
     pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))

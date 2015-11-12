@@ -202,6 +202,7 @@ class TURB_INFLOW(BoundaryCondition):
         self.p = self.phi
 
     def update(self):
+        pass
         
 
 slip = symmetryPlane
