@@ -124,6 +124,8 @@ if __name__ == "__main__":
         print('WTF')
         exit()
 
+    primal.initialize(startTime)
+    primal.compile()
     result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex)
     writeResult(user.option, result/(nSteps + 1))
     os.remove(statusFile)

@@ -53,6 +53,13 @@ oldFunc = primal.getBCFields
 primal.getBCFields = lambda: adjointFields
 adjointInitFunc = primal.function(adjointInternalFields, adjointNewFields, 'adjoint_init')
 primal.getBCFields = oldFunc
+
+# dummy initialize
+if user.smooth:
+    computer = computeFields(solver)
+primal.initialize(timeSteps[nSteps-writeInterval][0])
+primal.compile()
+
 newFields = adjointInitFunc(*[phi.field for phi in adjointFields])
 for phi, field in zip(adjointFields, newFields):
     phi.field = field
@@ -77,7 +84,7 @@ def adjointViscosity(solution):
     rhoE = Field('rhoE', solution[:,[4]], (1,))
     U, T, p = primal.primitive(rho, rhoU, rhoE)
     SF = primal.stackFields([p, U, T], np)
-    outputs = computeFields(SF, primal)
+    outputs = computer(SF, primal)
     M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)[0]
     M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
     viscosityScale = 4e-3

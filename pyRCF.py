@@ -77,25 +77,8 @@ class RCF(Solver):
         return self.U.phi, self.T.phi, self.p.phi
 
     def initFields(self, t):
-        # IO Fields, with phi attribute as a CellField
-        start = time.time()
-        self.U = IOField.read('U', self.mesh, t)
-        self.T = IOField.read('T', self.mesh, t)
-        self.p = IOField.read('p', self.mesh, t)
-        #print self.p.field.min()
-        #print self.T.field.min()
-        #print self.p.field.max()
-        #print self.T.field.max()
-        parallel.mpi.Barrier()
-        end = time.time()
-        pprint('Time for reading fields: {0}'.format(end-start))
-        if not hasattr(self, 'initFunc'):
-            UI = self.U.complete()
-            TI = self.T.complete()
-            pI = self.p.complete()
-            UN, TN, pN = self.U.phi.field, self.T.phi.field, self.p.phi.field 
-            self.initFunc = self.function([UI, TI, pI], [UN, TN, pN], 'init')
-        self.U.field, self.T.field, self.p.field = self.initFunc(self.U.field, self.T.field, self.p.field)
+        self.initialize(t)
+        self.U.field, self.T.field, self.p.field = self.init(self.U.field, self.T.field, self.p.field)
         return self.conservative(self.U, self.T, self.p)
     
     def writeFields(self, fields, t):
@@ -110,6 +93,22 @@ class RCF(Solver):
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Time for writing fields: {0}'.format(end-start))
+
+    def initialize(self, t):
+        # IO Fields, with phi attribute as a CellField
+        start = time.time()
+        self.U = IOField.read('U', self.mesh, t)
+        self.T = IOField.read('T', self.mesh, t)
+        self.p = IOField.read('p', self.mesh, t)
+        parallel.mpi.Barrier()
+        end = time.time()
+        pprint('Time for reading fields: {0}'.format(end-start))
+        if self.init is None:
+            UI = self.U.complete()
+            TI = self.T.complete()
+            pI = self.p.complete()
+            UN, TN, pN = self.U.phi.field, self.T.phi.field, self.p.phi.field 
+            self.init = self.function([UI, TI, pI], [UN, TN, pN], 'init')
            
     def equation(self, rhoP, rhoUP, rhoEP, exit=False):
         logger.info('computing RHS/LHS')
@@ -221,4 +220,6 @@ if __name__ == "__main__":
     if user.inviscid:
         mu = lambda T: config.VSMALL*T
     solver = RCF(user.case, mu=mu, timeIntegrator=user.timeIntegrator, CFL=user.CFL, Cp=user.Cp, riemannSolver=user.riemann, dynamicMesh=user.dynamic, localTimeStep=user.lts)
+    solver.initialize(user.time)
+    solver.compile()
     solver.run(startTime=user.time, dt=user.dt, nSteps=user.nSteps, writeInterval=user.writeInterval)

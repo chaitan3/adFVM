@@ -17,7 +17,8 @@ parser.add_argument('--gpu', action='store_true', dest='use_gpu')
 parser.add_argument('--temp', action='store_true', dest='use_temp')
 parser.add_argument('-p', '--no_pickle', action='store_true')
 parser.add_argument('-u', '--no_unpickle', action='store_true')
-parser.add_argument('-c', '--profile', action='store_true')
+parser.add_argument('-o', '--profile', action='store_true')
+parser.add_argument('-c', '--compile', action='store_true')
 parser.add_argument('--profile_mem', action='store_true')
 parser.add_argument('--profile_opt', action='store_true')
 parser.add_argument('-s', '--python', action='store_true')
@@ -50,6 +51,7 @@ os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
 # pickling
 os.environ['THEANO_FLAGS'] += ',reoptimize_unpickled_function=False'
+compile = user.compile
 unpickleFunction = not user.no_unpickle
 pickleFunction = not user.no_pickle
 # debugging/profiling

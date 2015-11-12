@@ -41,12 +41,11 @@ class Solver(object):
 
         self.timeIntegrator = getattr(timestep, self.timeIntegrator)
         self.stage = 0
+        self.init = None
         self.padField = PadFieldOp()
         self.gradPadField = gradPadFieldOp()
 
     def compile(self):
-        if hasattr(self, 'forward'):
-            return
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         if self.localTimeStep:
             self.dt = ad.bcmatrix()
@@ -66,6 +65,8 @@ class Solver(object):
                             gradients, 'adjoint')
             #self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \
             #                ad.Rop(newStackedFields, stackedFields, stackedAdjointFields), 'tangent')
+        if config.compile:
+            exit()
         pprint()
 
     def stackFields(self, fields, mod): 
@@ -92,8 +93,6 @@ class Solver(object):
             mesh.read(startTime)
         fields = self.initFields(startTime)
         pprint()
-
-        self.compile()
 
         t = startTime
         dts = dt
@@ -241,6 +240,7 @@ class SolverFunction(object):
         inputs.extend(self.symbolic)
 
         fn = None
+        pkl = None
         if parallel.rank == 0:
             start = time.time()
             if os.path.exists(pklFile) and config.unpickleFunction:
@@ -256,14 +256,12 @@ class SolverFunction(object):
                     pprint('Module size: {0:.2f}'.format(float(len(pkl))/(1024*1024)))
             end = time.time()
             pprint('Compilation time: {0:.2f}'.format(end-start))
-        else:
-            pkl = None
 
-        if (parallel.nProcessors > 1) or (fn is None):
+        if not config.compile:
             start = time.time()
             pkl = parallel.mpi.bcast(pkl, root=0)
-            #print(parallel.rank, type(pkl))
-            #parallel.mpi.Barrier()
+            if parallel.mpi.bcast(fn is not None, root=0) and parallel.nProcessors > 1:
+                T.gof.cc.get_module_cache().refresh(cleanup=False)
             end = time.time()
             pprint('Transfer time: {0:.2f}'.format(end-start))
 
@@ -274,7 +272,7 @@ class SolverFunction(object):
             nodeStage = (parallel.rank % coresPerNode)/coresPerStage
             for stage in range(unloadingStages):
                 printMemUsage()
-                if nodeStage == stage:
+                if (nodeStage == stage) and (fn is None):
                     fn = pickle.loads(pkl)
                 parallel.mpi.Barrier()
             end = time.time()

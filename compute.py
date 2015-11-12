@@ -10,12 +10,10 @@ from field import IOField, CellField
 from op import div, grad
 from interp import central, TVD_dual
 
-def computeFields(stackedFields, solver):
+def computeFields(solver):
     mesh = solver.mesh
     paddedMesh = mesh.paddedMesh
     g = solver.gamma
-    if hasattr(computeFields, 'computer'):
-        return computeFields.computer(stackedFields)
     SF = ad.matrix()
     PSF = solver.padField(SF)
     pP, UP, TP = solver.unstackFields(PSF, CellField)
@@ -38,8 +36,8 @@ def computeFields(stackedFields, solver):
     gradp = grad(central(pP, paddedMesh), ghost=True)
     gradrho = g*(gradp-c*p)/(c*c)
 
-    computeFields.computer = solver.function([SF], [gradrho.field, gradU.field, gradp.field, gradc.field, divU.field], 'compute')
-    return computeFields.computer(stackedFields)
+    computer = solver.function([SF], [gradrho.field, gradU.field, gradp.field, gradc.field, divU.field], 'compute')
+    return computer
 
 def getRhoaByV(rhoa):
     mesh = rhoa.mesh
@@ -133,6 +131,9 @@ if __name__ == "__main__":
 
     solver = RCF(user.case)
     mesh = solver.mesh
+    computer = computeFields(solver)
+    if config.compile:
+        return
 
     for index, time in enumerate(user.time):
         pprint('Time:', time)
@@ -140,7 +141,7 @@ if __name__ == "__main__":
         rho, rhoU, rhoE = solver.initFields(time)
         U, T, p = solver.U, solver.T, solver.p
         SF = solver.stackFields([p, U, T], np)
-        outputs = computeFields(SF, solver)
+        outputs = computer(SF, solver)
         for field, name, dim in zip(outputs, names, dimensions):
             IO = IOField(name, field, dim)
             if len(dim) != 2:
