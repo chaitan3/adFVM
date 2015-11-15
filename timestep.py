@@ -18,18 +18,15 @@ def euler(equation, boundary, stackedFields, solver):
 # classical
 def RK2(equation, boundary, stackedFields, solver):
     solver.stage = 1
-    paddedStackedFields0 = solver.padField(stackedFields)
-    paddedFields0 = solver.unstackFields(paddedStackedFields0, CellField)
-    LHS = equation(*paddedFields0)
-    internalFields = [(paddedFields0[index].getInternalField() - LHS[index].field*solver.dt/2) for index in range(0, len(paddedFields0))]
+    fields0 = solver.unstackFields(stackedFields0, CellField)
+    LHS = equation(*fields0)
+    internalFields = [(fields0[index].getInternalField() - LHS[index].field*solver.dt/2) for index in range(0, len(fields0))]
     internalFields = createFields(internalFields, solver)
     fields1 = boundary(*internalFields)
 
     solver.stage = 2
-    paddedStackedFields1 = solver.padField(solver.stackFields(fields1, ad))
-    paddedFields1 = solver.unstackFields(paddedStackedFields1, CellField)
-    LHS = equation(*paddedFields1)
-    internalFields = [(paddedFields0[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(paddedFields0))]
+    LHS = equation(*fields1)
+    internalFields = [(fields0[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields0))]
 
     internalFields = createFields(internalFields, solver)
     newFields = boundary(*internalFields)
@@ -51,9 +48,7 @@ def RK4(equation, boundary, stackedFields, solver):
             newFields = NewFields(a, LHS)
         else:
             newFields = fields
-        paddedStackedFields = solver.padField(solver.stackFields(newFields, ad))
-        paddedFields = solver.unstackFields(paddedStackedFields, CellField)
-        return equation(*paddedFields)
+        return equation(*newFields)
 
     solver.stage = 1
     k1 = f([0.])
@@ -81,9 +76,7 @@ def SSPRK(equation, boundary, stackedFields, solver):
     nFields = len(fields[0])
     for i in range(0, nStages):
         solver.stage += 1
-        paddedStackedFields = solver.padField(solver.stackFields(fields[i], ad))
-        paddedFields = solver.unstackFields(paddedStackedFields, CellField)
-        LHS.append(equation(*paddedFields))
+        LHS.append(equation(*fields))
         internalFields = [0]*nFields
         for j in range(0, i+1):
             for index in range(0, nFields):

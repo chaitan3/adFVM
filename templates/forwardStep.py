@@ -23,8 +23,8 @@ def perturb(mesh):
     cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
     stackedFields[cellStartFace:cellEndFace][:,1] += 0.1
 
-nSteps = 10
-writeInterval = 2
+nSteps = 20000
+writeInterval = 500
 startTime = 0.0
-dt = 1e-9
+dt = 1e-4
 
