@@ -76,7 +76,7 @@ def SSPRK(equation, boundary, stackedFields, solver):
     nFields = len(fields[0])
     for i in range(0, nStages):
         solver.stage += 1
-        LHS.append(equation(*fields))
+        LHS.append(equation(*fields[i]))
         internalFields = [0]*nFields
         for j in range(0, i+1):
             for index in range(0, nFields):
