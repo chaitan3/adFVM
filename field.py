@@ -198,6 +198,7 @@ class CellField(Field):
     def setInternalField(self, internalField, reset=False):
         if reset:
             self.resetField()
+        self.field = ad.set_subtensor(self.field[:self.mesh.nInternalCells], internalField)
         self.updateGhostCells()
 
     def getInternalField(self):
@@ -208,7 +209,6 @@ class CellField(Field):
         for patchID in self.BC:
             self.BC[patchID].update()
         self.field = exchange(self.field)
-    
 
 class IOField(Field):
     def __init__(self, name, field, dimensions, boundary={}):
@@ -335,4 +335,42 @@ class IOField(Field):
         handle.write('}\n')
         handle.close()
 
+class ExchangerOp(T.Op):
+    __props__ = ()
+    def __init__(self):
+        if parallel.nProcessors == 1:
+            self.view_map = {0: [0]}
 
+    def make_node(self, x):
+        assert hasattr(self, '_props')
+        x = ad.as_tensor_variable(x)
+        return T.Apply(self, [x], [x.type()])
+
+    def perform(self, node, inputs, output_storage):
+        field = np.ascontiguousarray(inputs[0])
+        output_storage[0][0] = parallel.getRemoteCells(field, Field.mesh)
+
+    def grad(self, inputs, output_grads):
+        return [gradExchange(output_grads[0])]
+
+    def R_op(self, inputs, eval_points):
+        return [exchange(eval_points[0])]
+
+class gradExchangerOp(T.Op):
+    __props__ = ()
+
+    def __init__(self):
+        if parallel.nProcessors == 1:
+            self.view_map = {0: [0]}
+
+    def make_node(self, x):
+        assert hasattr(self, '_props')
+        x = ad.as_tensor_variable(x)
+        return T.Apply(self, [x], [x.type()])
+
+    def perform(self, node, inputs, output_storage):
+        field = np.ascontiguousarray(inputs[0])
+        output_storage[0][0] = parallel.getAdjointRemoteCells(field, Field.mesh)
+
+exchange = ExchangerOp()
+gradExchange = gradExchangerOp()

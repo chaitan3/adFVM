@@ -55,8 +55,9 @@ class Solver(object):
                        [newStackedFields, self.dtc, self.local, self.remote], 'forward')
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
+            #scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
             scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
-            gradientInputs = [stackedFields] + self.sourceVariables
+            gradientInputs = [stackedFields] #+ self.sourceVariables
             gradients = ad.grad(scalarFields, gradientInputs)
             #meshGradient = ad.grad(scalarFields, mesh)
             self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], \
@@ -198,8 +199,8 @@ class SolverFunction(object):
         self.symbolic = []
         self.values = []
         mesh = solver.mesh
-        self.populate_mesh(self.symbolic, mesh, mesh.paddedMesh, mesh)
-        self.populate_mesh(self.values, mesh.origMesh, mesh.paddedMesh.origMesh, mesh)
+        self.populate_mesh(self.symbolic, mesh, mesh)
+        self.populate_mesh(self.values, mesh.origMesh, mesh)
         if BCs:
             self.populate_BCs(self.symbolic, solver, 0)
             self.populate_BCs(self.values, solver, 1)
@@ -215,12 +216,10 @@ class SolverFunction(object):
 
         self.generate(inputs, outputs, solver.mesh.case, name)
 
-    def populate_mesh(self, inputs, mesh, paddedMesh, solverMesh):
+    def populate_mesh(self, inputs, mesh, solverMesh):
         attrs = Mesh.fields + Mesh.constants
         for attr in attrs:
             inputs.append(getattr(mesh, attr))
-            if parallel.nProcessors > 1:
-                inputs.append(getattr(paddedMesh, attr))
         for patchID in solverMesh.origPatches:
             for attr in solverMesh.getBoundaryTensor(patchID):
                 inputs.append(mesh.boundary[patchID][attr[0]])
@@ -285,38 +284,3 @@ class SolverFunction(object):
         inputs.extend(self.values)
         return self.fn(*inputs)
 
-
-class PadFieldOp(T.Op):
-    __props__ = ()
-    def __init__(self):
-        if parallel.nProcessors == 1:
-            self.view_map = {0: [0]}
-
-    def make_node(self, x):
-        assert hasattr(self, '_props')
-        x = ad.as_tensor_variable(x)
-        return T.Apply(self, [x], [x.type()])
-
-    def perform(self, node, inputs, output_storage):
-        output_storage[0][0] = parallel.getRemoteCells(np.ascontiguousarray(inputs[0]), Field.mesh)
-
-    def grad(self, inputs, output_grads):
-        return [Field.solver.gradPadField(output_grads[0])]
-
-    def R_op(self, inputs, eval_points):
-        return [Field.solver.padField(eval_points[0])]
-
-class gradPadFieldOp(T.Op):
-    __props__ = ()
-
-    def __init__(self):
-        if parallel.nProcessors == 1:
-            self.view_map = {0: [0]}
-
-    def make_node(self, x):
-        assert hasattr(self, '_props')
-        x = ad.as_tensor_variable(x)
-        return T.Apply(self, [x], [x.type()])
-
-    def perform(self, node, inputs, output_storage):
-        output_storage[0][0] = parallel.getAdjointRemoteCells(np.ascontiguousarray(inputs[0]), Field.mesh)

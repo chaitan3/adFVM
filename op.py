@@ -43,7 +43,6 @@ def div(phi, U=None, ghost=False):
         divField = internal_sum((phi*U).dotN(), mesh)
     if ghost:
         divPhi = CellField('div({0})'.format(phi.name), divField, phi.dimensions, ghost=True)
-        # TODO copy remote cell substitute
         return divPhi
     else:
         return Field('div({0})'.format(phi.name), divField, phi.dimensions)
@@ -65,7 +64,6 @@ def grad(phi, ghost=False):
         gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
     if ghost:
         gradPhi = CellField('grad({0})'.format(phi.name), gradField, dimensions, ghost=True)
-        # TODO copy remote cell substitute
         return gradPhi
     else:
         return Field('grad({0})'.format(phi.name), gradField, dimensions)

@@ -10,7 +10,7 @@ from matop import laplacian, ddt, BCs
 from interp import central
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
 from compat import printMemUsage
-from compute import getAdjointNorm, computeFields
+#from compute import getAdjointNorm, computeFields
 
 import numpy as np
 import time

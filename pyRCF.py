@@ -114,11 +114,10 @@ class RCF(Solver):
         logger.info('computing RHS/LHS')
         mesh = self.mesh
 
-        U, T, p = self.primitive(rho, rhoU, rhoE)
-
         self.local = mesh.nCells
         self.remote = mesh.nCells
         
+        U, T, p = self.primitive(rho, rhoU, rhoE)
         ## face reconstruction
         #rhoLF, rhoRF = TVD_dual(rho, gradRho)
         #rhoULF, rhoURF = TVD_dual(rhoU, gradRhoU)

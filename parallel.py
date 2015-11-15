@@ -85,15 +85,20 @@ def getRemoteCells(field, meshC):
         endFace = startFace + patch['nFaces']
         cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
         cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
-        exchanger.exchange(remote, field[mesh.owner[startFace:endFace], field[cellStartFace:cellEndFace], tag)
+        exchanger.exchange(remote, field[mesh.owner[startFace:endFace]], field[cellStartFace:cellEndFace], tag)
     exchanger.wait()
     return field
 
 def getAdjointRemoteCells(field, meshC):
     if nProcessors == 1:
-        return 
-    exchanger = Exchanger()
+        return field
     mesh = meshC.origMesh
+    jacobian = np.zeros_like(field)
+    jacobian[:mesh.nLocalCells] = field[:mesh.nLocalCells]
+    precision = field.dtype
+    dimensions = field.shape[1:]
+    adjointRemoteCells = {}
+    exchanger = Exchanger()
     for patchID in meshC.remotePatches:
         patch = mesh.boundary[patchID]
         local, remote, tag = meshC.getProcessorPatchInfo(patchID)
@@ -101,48 +106,15 @@ def getAdjointRemoteCells(field, meshC):
         endFace = startFace + patch['nFaces']
         cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
         cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
-        exchanger.exchange(remote, field[mesh.owner[startFace:endFace], field[cellStartFace:cellEndFace], tag)
+        adjointRemoteCells[patchID] = np.zeros((patch['nFaces'],) + dimensions, precision)
+        exchanger.exchange(remote, field[mesh.neighbour[startFace:endFace]], adjointRemoteCells[patchID], tag)
     exchanger.wait()
-
-class ExchangerOp(T.Op):
-    __props__ = ()
-    def __init__(self):
-        if nProcessors == 1:
-            self.view_map = {0: [0]}
-
-    def make_node(self, x):
-        assert hasattr(self, '_props')
-        x = ad.as_tensor_variable(x)
-        return T.Apply(self, [x], [x.type()])
-
-    def perform(self, node, inputs, output_storage):
-        field = np.ascontiguousarray(inputs[0])
-        output_storage[0][0] = getRemoteCells(field, Field.mesh)
-
-    def grad(self, inputs, output_grads):
-        return [gradExchange(output_grads[0])]
-
-    def R_op(self, inputs, eval_points):
-        return [exchange(eval_points[0])]
-
-class gradExchangerOp(T.Op):
-    __props__ = ()
-
-    def __init__(self):
-        if nProcessors == 1:
-            self.view_map = {0: [0]}
-
-    def make_node(self, x):
-        assert hasattr(self, '_props')
-        x = ad.as_tensor_variable(x)
-        return T.Apply(self, [x], [x.type()])
-
-    def perform(self, node, inputs, output_storage):
-        field = np.ascontiguousarray(inputs[0])
-        output_storage[0][0] = getAdjointRemoteCells(field, Field.mesh)
-
-exchange = ExchangerOp()
-gradExchanger = gradExchangerOp()
+    for patchID in meshC.remotePatches:
+        patch = mesh.boundary[patchID]
+        startFace = patch['startFace']
+        endFace = startFace + patch['nFaces']
+        add_at(jacobian, mesh.owner[startFace:endFace], adjointRemoteCells[patchID])
+    return jacobian
 
 def gatherCells(field, mesh, axis=0):
     #nCells = np.array(mpi.gather(mesh.nCells))

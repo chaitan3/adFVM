@@ -15,7 +15,7 @@ def objective(fields, mesh):
     field = rhoE.field[cellStartFace:cellEndFace]
     return ad.sum(field*areas)
 
-def perturb(stackedFields, mesh, t):
+def perturb(mesh):
     patchID = 'inlet'
     startFace = mesh.boundary[patchID]['startFace']
     endFace = startFace + mesh.boundary[patchID]['nFaces']
