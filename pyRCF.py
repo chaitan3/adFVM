@@ -110,29 +110,15 @@ class RCF(Solver):
             UN, TN, pN = self.U.phi.field, self.T.phi.field, self.p.phi.field 
             self.init = self.function([UI, TI, pI], [UN, TN, pN], 'init')
            
-    def equation(self, rhoP, rhoUP, rhoEP, exit=False):
+    def equation(self, rho, rhoU, rhoE, exit=False):
         logger.info('computing RHS/LHS')
         mesh = self.mesh
-        paddedMesh = mesh.paddedMesh
 
-        # phi is in paddedMesh form, needs to be copied to regular
-        # phi from phiPaddedMesh
-        UP, TP, pP = self.primitive(rhoP, rhoUP, rhoEP)
-        U = CellField.getOrigField(UP)
-        T = CellField.getOrigField(TP)
-        p = CellField.getOrigField(pP)
+        U, T, p = self.primitive(rho, rhoU, rhoE)
 
         self.local = mesh.nCells
         self.remote = mesh.nCells
         
-        # gradient evaluated using gauss integration rule
-        #rho = CellField.getOrigField(rhoP)
-        #rhoU = CellField.getOrigField(rhoUP)
-        #rhoE = CellField.getOrigField(rhoEP)
-        #gradRho = grad(central(rhoP, paddedMesh), ghost=True)
-        #gradRhoU = grad(central(rhoUP, paddedMesh), ghost=True)
-        #gradRhoE = grad(central(rhoEP, paddedMesh), ghost=True)
-
         ## face reconstruction
         #rhoLF, rhoRF = TVD_dual(rho, gradRho)
         #rhoULF, rhoURF = TVD_dual(rhoU, gradRhoU)
@@ -141,9 +127,9 @@ class RCF(Solver):
         #URF, TRF, pRF = self.primitive(rhoRF, rhoURF, rhoERF)
 
         # gradient evaluated using gauss integration rule
-        gradU = grad(central(UP, paddedMesh), ghost=True)
-        gradT = grad(central(TP, paddedMesh), ghost=True)
-        gradp = grad(central(pP, paddedMesh), ghost=True)
+        gradU = grad(central(U, mesh), ghost=True)
+        gradT = grad(central(T, mesh), ghost=True)
+        gradp = grad(central(p, mesh), ghost=True)
         # for zeroGradient boundary
         UB, TB, pB = self.getBCFields()
         UB.grad, TB.grad, pB.grad = gradU, gradT, gradp

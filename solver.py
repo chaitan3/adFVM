@@ -42,8 +42,6 @@ class Solver(object):
         self.timeIntegrator = getattr(timestep, self.timeIntegrator)
         self.stage = 0
         self.init = None
-        self.padField = PadFieldOp()
-        self.gradPadField = gradPadFieldOp()
 
     def compile(self):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])

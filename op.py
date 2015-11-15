@@ -34,10 +34,7 @@ def internal_sum(phi, mesh, absolute=False):
 
 def div(phi, U=None, ghost=False):
     logger.info('divergence of {0}'.format(phi.name))
-    if ghost:
-        mesh = phi.mesh.paddedMesh
-    else:
-        mesh = phi.mesh
+    mesh = phi.mesh
     if U is None:
         divField = internal_sum(phi, mesh)
     else:
@@ -46,7 +43,7 @@ def div(phi, U=None, ghost=False):
         divField = internal_sum((phi*U).dotN(), mesh)
     if ghost:
         divPhi = CellField('div({0})'.format(phi.name), divField, phi.dimensions, ghost=True)
-        divPhi.copyRemoteCells(divField)
+        # TODO copy remote cell substitute
         return divPhi
     else:
         return Field('div({0})'.format(phi.name), divField, phi.dimensions)
@@ -54,10 +51,7 @@ def div(phi, U=None, ghost=False):
 def grad(phi, ghost=False):
     assert len(phi.dimensions) == 1
     logger.info('gradient of {0}'.format(phi.name))
-    if ghost:
-        mesh = phi.mesh.paddedMesh
-    else:
-        mesh = phi.mesh
+    mesh = phi.mesh
     if phi.dimensions[0] == 1:
         product = phi * mesh.Normals
         dimensions = (3,)
@@ -71,7 +65,7 @@ def grad(phi, ghost=False):
         gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
     if ghost:
         gradPhi = CellField('grad({0})'.format(phi.name), gradField, dimensions, ghost=True)
-        gradPhi.copyRemoteCells(gradField)
+        # TODO copy remote cell substitute
         return gradPhi
     else:
         return Field('grad({0})'.format(phi.name), gradField, dimensions)

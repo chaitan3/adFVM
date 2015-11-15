@@ -20,7 +20,6 @@ class Field(object):
         mesh = solver.mesh
         if not hasattr(mesh, 'Normals'):
             mesh.Normals = Field('nF', mesh.normals, (3,))
-            mesh.paddedMesh.Normals = Field('nF', mesh.paddedMesh.normals, (3,))
 
     @classmethod
     def setMesh(cls, mesh):
@@ -190,24 +189,6 @@ class CellField(Field):
         logger.info('copying field {0}'.format(phi.name))
         return self(phi.name, ad.array(ad.value(phi.field).copy()), phi.dimensions, phi.boundary.copy())
 
-    @classmethod
-    def getOrigField(self, phi):
-        logger.info('getting original field {0}'.format(phi.name))
-        if parallel.nProcessors == 1:
-            return phi
-
-        mesh = self.mesh.paddedMesh
-        # every cell gets filled
-        phiField = ad.bcalloc(config.precision(0.), ((self.mesh.nCells, ) + phi.dimensions))
-        phiField = ad.set_subtensor(phiField[:self.mesh.nInternalCells], phi.field[:self.mesh.nInternalCells])
-        phiField = ad.set_subtensor(phiField[self.mesh.nInternalCells:self.mesh.nLocalCells], phi.field[mesh.nInternalCells:self.mesh.nCells])
-        phiField = ad.set_subtensor(phiField[self.mesh.nLocalCells:], phi.field[self.mesh.nInternalCells:mesh.nInternalCells])
-        return self(phi.name, phiField, phi.dimensions, phi.boundary)
-
-    def copyRemoteCells(self, internalField):
-        # processor boundary condition completed by copying the extra data in internalField, HACK
-        self.field = ad.set_subtensor(self.field[self.mesh.nLocalCells:], internalField[self.mesh.nInternalCells:])
-
     def resetField(self):
         mesh = self.mesh
         size = (mesh.nCells, ) + self.dimensions
@@ -217,8 +198,6 @@ class CellField(Field):
     def setInternalField(self, internalField, reset=False):
         if reset:
             self.resetField()
-        # boundary conditions complete cell field after setting internal field
-        self.field = ad.set_subtensor(self.field[:self.mesh.nInternalCells], internalField[:self.mesh.nInternalCells])
         self.updateGhostCells()
 
     def getInternalField(self):
@@ -228,6 +207,7 @@ class CellField(Field):
         logger.info('updating ghost cells for {0}'.format(self.name))
         for patchID in self.BC:
             self.BC[patchID].update()
+        self.field = exchange(self.field)
     
 
 class IOField(Field):
@@ -311,7 +291,7 @@ class IOField(Field):
         boundary = self.boundary
         # fetch processor information
         if not skipProcessor:
-            parallel.getOrigRemoteCells(field, self.mesh)
+            field = parallel.getRemoteCells(field, self.mesh)
         assert len(field.shape) == 2
         np.set_printoptions(precision=16)
         pprint('writing field {0}, time {1}'.format(name, time))

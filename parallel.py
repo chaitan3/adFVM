@@ -71,6 +71,79 @@ class Exchanger(object):
         MPI.Request.Waitall(self.requests, self.statuses)
         return self.statuses
 
+def getRemoteCells(field, meshC):
+    # mesh values required outside theano
+    #logger.info('fetching remote cells')
+    if nProcessors == 1:
+        return field
+    exchanger = Exchanger()
+    mesh = meshC.origMesh
+    for patchID in meshC.remotePatches:
+        patch = mesh.boundary[patchID]
+        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+        startFace = patch['startFace']
+        endFace = startFace + patch['nFaces']
+        cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
+        cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+        exchanger.exchange(remote, field[mesh.owner[startFace:endFace], field[cellStartFace:cellEndFace], tag)
+    exchanger.wait()
+    return field
+
+def getAdjointRemoteCells(field, meshC):
+    if nProcessors == 1:
+        return 
+    exchanger = Exchanger()
+    mesh = meshC.origMesh
+    for patchID in meshC.remotePatches:
+        patch = mesh.boundary[patchID]
+        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+        startFace = patch['startFace']
+        endFace = startFace + patch['nFaces']
+        cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
+        cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+        exchanger.exchange(remote, field[mesh.owner[startFace:endFace], field[cellStartFace:cellEndFace], tag)
+    exchanger.wait()
+
+class ExchangerOp(T.Op):
+    __props__ = ()
+    def __init__(self):
+        if nProcessors == 1:
+            self.view_map = {0: [0]}
+
+    def make_node(self, x):
+        assert hasattr(self, '_props')
+        x = ad.as_tensor_variable(x)
+        return T.Apply(self, [x], [x.type()])
+
+    def perform(self, node, inputs, output_storage):
+        field = np.ascontiguousarray(inputs[0])
+        output_storage[0][0] = getRemoteCells(field, Field.mesh)
+
+    def grad(self, inputs, output_grads):
+        return [gradExchange(output_grads[0])]
+
+    def R_op(self, inputs, eval_points):
+        return [exchange(eval_points[0])]
+
+class gradExchangerOp(T.Op):
+    __props__ = ()
+
+    def __init__(self):
+        if nProcessors == 1:
+            self.view_map = {0: [0]}
+
+    def make_node(self, x):
+        assert hasattr(self, '_props')
+        x = ad.as_tensor_variable(x)
+        return T.Apply(self, [x], [x.type()])
+
+    def perform(self, node, inputs, output_storage):
+        field = np.ascontiguousarray(inputs[0])
+        output_storage[0][0] = getAdjointRemoteCells(field, Field.mesh)
+
+exchange = ExchangerOp()
+gradExchanger = gradExchangerOp()
+
 def gatherCells(field, mesh, axis=0):
     #nCells = np.array(mpi.gather(mesh.nCells))
     #nCellsPos = np.cumsum(nCells)-nCells[0]
@@ -96,136 +169,117 @@ def scatterCells(totalField, mesh, axis=0):
     field = mpi.scatter(totalField)
     return field
 
-def getOrigRemoteCells(field, mesh):
-    # mesh values required outside theano
-    #logger.info('fetching remote cells')
-    if nProcessors == 1:
-        return 
-    exchanger = Exchanger()
-    meshC = mesh
-    meshP = mesh.paddedMesh
-    mesh = mesh.origMesh
-    for patchID in meshC.remotePatches:
-        patch = mesh.boundary[patchID]
-        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
-        startFace = patch['startFace']
-        endFace = startFace + patch['nFaces']
-        cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-        cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
-        exchanger.exchange(remote, field[meshP.localRemoteCells['internal'][patchID]], field[cellStartFace:cellEndFace], tag)
-    exchanger.wait()
-
-def getRemoteCells(stackedFields, mesh):
-    # mesh values required outside theano
-    #logger.info('fetching remote cells')
-    if nProcessors == 1:
-        return stackedFields
-
-    meshC = mesh
-    origMesh = mesh.origMesh
-    meshP = mesh.paddedMesh 
-    mesh = meshP.origMesh
-    precision = stackedFields.dtype
-
-    paddedStackedFields = np.zeros((mesh.nCells, ) + stackedFields.shape[1:], precision)
-    paddedStackedFields[:origMesh.nInternalCells] = stackedFields[:origMesh.nInternalCells]
-    nLocalBoundaryFaces = origMesh.nLocalCells - origMesh.nInternalCells
-    paddedStackedFields[mesh.nInternalCells:mesh.nInternalCells + nLocalBoundaryFaces] = stackedFields[origMesh.nInternalCells:origMesh.nLocalCells]
-
-    exchanger = Exchanger()
-    internalCursor = origMesh.nInternalCells
-    boundaryCursor = origMesh.nCells
-    for patchID in meshC.remotePatches:
-        nInternalCells = len(meshP.remoteCells['internal'][patchID])
-        nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
-        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
-        exchanger.exchange(remote, stackedFields[meshP.localRemoteCells['internal'][patchID]], paddedStackedFields[internalCursor:internalCursor+nInternalCells], tag)
-        tag += len(meshC.origPatches) + 1
-        exchanger.exchange(remote, stackedFields[meshP.localRemoteCells['boundary'][patchID]], paddedStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
-        internalCursor += nInternalCells
-        boundaryCursor += nBoundaryCells
-    exchanger.wait()
-
-    # second round of transferring: does not matter which processor
-    # the second layer belongs to, in previous transfer the correct values have been put in 
-    # the extra remote ghost cells, transfer that portion
-    exchanger = Exchanger()
-    boundaryCursor = origMesh.nCells
-    for patchID in meshC.remotePatches:
-        nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
-        boundaryCursor += nBoundaryCells
-        nExtraRemoteBoundaryCells = len(meshP.remoteCells['extra'][patchID])
-        nLocalBoundaryCells = origMesh.nLocalCells - origMesh.nInternalCells
-        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
-        # does it work if sendData/recvData is empty
-        exchanger.exchange(remote, paddedStackedFields[-nLocalBoundaryCells + meshP.localRemoteCells['extra'][patchID]], paddedStackedFields[boundaryCursor-nExtraRemoteBoundaryCells:boundaryCursor], tag)
-    exchanger.wait()
-
-    return paddedStackedFields
-
-def getAdjointRemoteCells(paddedJacobian, mesh):
-    # mesh values required outside theano
-    #logger.info('fetching adjoint remote cells')
-    if nProcessors == 1:
-        return paddedJacobian
-
-    meshC = mesh
-    meshP = mesh.paddedMesh 
-    origMesh = mesh.origMesh
-    mesh = meshP.origMesh
-    precision = paddedJacobian.dtype
-    dimensions = paddedJacobian.shape[1:]
-
-    jacobian = np.zeros(((origMesh.nCells,) + dimensions), precision)
-    jacobian[:origMesh.nInternalCells] = paddedJacobian[:origMesh.nInternalCells]
-    nLocalBoundaryFaces = origMesh.nLocalCells - origMesh.nInternalCells
-    jacobian[origMesh.nInternalCells:origMesh.nLocalCells] = paddedJacobian[mesh.nInternalCells:mesh.nInternalCells+nLocalBoundaryFaces]
-
-    exchanger = Exchanger()
-    internalCursor = origMesh.nInternalCells
-    boundaryCursor = origMesh.nCells
-    adjointRemoteCells = {'internal':{}, 'boundary':{}, 'extra':{}}
-    for patchID in meshC.remotePatches:
-        nInternalCells = len(meshP.remoteCells['internal'][patchID])
-        nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
-        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
-        
-        size = (len(meshP.localRemoteCells['internal'][patchID]), ) + dimensions
-        adjointRemoteCells['internal'][patchID] = np.zeros(size, precision)
-        exchanger.exchange(remote, paddedJacobian[internalCursor:internalCursor+nInternalCells], adjointRemoteCells['internal'][patchID], tag)
-        internalCursor += nInternalCells
-        tag += len(meshC.origPatches) + 1
-
-        size = (len(meshP.localRemoteCells['boundary'][patchID]), ) + dimensions
-        adjointRemoteCells['boundary'][patchID] = np.zeros(size, precision)
-        exchanger.exchange(remote, paddedJacobian[boundaryCursor:boundaryCursor+nBoundaryCells], adjointRemoteCells['boundary'][patchID], tag)
-        boundaryCursor += nBoundaryCells
-        tag += len(meshC.origPatches) + 1
-
-    exchanger.wait()
-    for patchID in meshC.remotePatches:
-        add_at(jacobian, meshP.localRemoteCells['internal'][patchID], adjointRemoteCells['internal'][patchID])
-        add_at(jacobian, meshP.localRemoteCells['boundary'][patchID], adjointRemoteCells['boundary'][patchID])
-
-    # code for second layer: transfer to remote jacobians again and add up
-    exchanger = Exchanger()
-    internalCursor = origMesh.nLocalCells
-    for patchID in meshC.remotePatches:
-        nInternalCells = len(meshP.localRemoteCells['internal'][patchID])
-        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
-        
-        size = (nInternalCells, ) + dimensions
-        adjointRemoteCells['extra'][patchID] = np.zeros(size, precision)
-        exchanger.exchange(remote, jacobian[internalCursor:internalCursor+nInternalCells], adjointRemoteCells['extra'][patchID], tag)
-        internalCursor += nInternalCells
-
-    exchanger.wait()
-    for patchID in meshC.remotePatches:
-        add_at(jacobian, meshP.localRemoteCells['internal'][patchID], adjointRemoteCells['extra'][patchID])
-
-    # make processor cells zero again
-    jacobian[origMesh.nLocalCells:] = 0.
-
-    return jacobian
-
-
+#def getRemoteCells(stackedFields, mesh):
+#    # mesh values required outside theano
+#    #logger.info('fetching remote cells')
+#    if nProcessors == 1:
+#        return stackedFields
+#
+#    meshC = mesh
+#    origMesh = mesh.origMesh
+#    meshP = mesh.paddedMesh 
+#    mesh = meshP.origMesh
+#    precision = stackedFields.dtype
+#
+#    paddedStackedFields = np.zeros((mesh.nCells, ) + stackedFields.shape[1:], precision)
+#    paddedStackedFields[:origMesh.nInternalCells] = stackedFields[:origMesh.nInternalCells]
+#    nLocalBoundaryFaces = origMesh.nLocalCells - origMesh.nInternalCells
+#    paddedStackedFields[mesh.nInternalCells:mesh.nInternalCells + nLocalBoundaryFaces] = stackedFields[origMesh.nInternalCells:origMesh.nLocalCells]
+#
+#    exchanger = Exchanger()
+#    internalCursor = origMesh.nInternalCells
+#    boundaryCursor = origMesh.nCells
+#    for patchID in meshC.remotePatches:
+#        nInternalCells = len(meshP.remoteCells['internal'][patchID])
+#        nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
+#        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+#        exchanger.exchange(remote, stackedFields[meshP.localRemoteCells['internal'][patchID]], paddedStackedFields[internalCursor:internalCursor+nInternalCells], tag)
+#        tag += len(meshC.origPatches) + 1
+#        exchanger.exchange(remote, stackedFields[meshP.localRemoteCells['boundary'][patchID]], paddedStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
+#        internalCursor += nInternalCells
+#        boundaryCursor += nBoundaryCells
+#    exchanger.wait()
+#
+#    # second round of transferring: does not matter which processor
+#    # the second layer belongs to, in previous transfer the correct values have been put in 
+#    # the extra remote ghost cells, transfer that portion
+#    exchanger = Exchanger()
+#    boundaryCursor = origMesh.nCells
+#    for patchID in meshC.remotePatches:
+#        nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
+#        boundaryCursor += nBoundaryCells
+#        nExtraRemoteBoundaryCells = len(meshP.remoteCells['extra'][patchID])
+#        nLocalBoundaryCells = origMesh.nLocalCells - origMesh.nInternalCells
+#        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+#        # does it work if sendData/recvData is empty
+#        exchanger.exchange(remote, paddedStackedFields[-nLocalBoundaryCells + meshP.localRemoteCells['extra'][patchID]], paddedStackedFields[boundaryCursor-nExtraRemoteBoundaryCells:boundaryCursor], tag)
+#    exchanger.wait()
+#
+#    return paddedStackedFields
+#
+#def getAdjointRemoteCells(paddedJacobian, mesh):
+#    # mesh values required outside theano
+#    #logger.info('fetching adjoint remote cells')
+#    if nProcessors == 1:
+#        return paddedJacobian
+#
+#    meshC = mesh
+#    meshP = mesh.paddedMesh 
+#    origMesh = mesh.origMesh
+#    mesh = meshP.origMesh
+#    precision = paddedJacobian.dtype
+#    dimensions = paddedJacobian.shape[1:]
+#
+#    jacobian = np.zeros(((origMesh.nCells,) + dimensions), precision)
+#    jacobian[:origMesh.nInternalCells] = paddedJacobian[:origMesh.nInternalCells]
+#    nLocalBoundaryFaces = origMesh.nLocalCells - origMesh.nInternalCells
+#    jacobian[origMesh.nInternalCells:origMesh.nLocalCells] = paddedJacobian[mesh.nInternalCells:mesh.nInternalCells+nLocalBoundaryFaces]
+#
+#    exchanger = Exchanger()
+#    internalCursor = origMesh.nInternalCells
+#    boundaryCursor = origMesh.nCells
+#    adjointRemoteCells = {'internal':{}, 'boundary':{}, 'extra':{}}
+#    for patchID in meshC.remotePatches:
+#        nInternalCells = len(meshP.remoteCells['internal'][patchID])
+#        nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
+#        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+#        
+#        size = (len(meshP.localRemoteCells['internal'][patchID]), ) + dimensions
+#        adjointRemoteCells['internal'][patchID] = np.zeros(size, precision)
+#        exchanger.exchange(remote, paddedJacobian[internalCursor:internalCursor+nInternalCells], adjointRemoteCells['internal'][patchID], tag)
+#        internalCursor += nInternalCells
+#        tag += len(meshC.origPatches) + 1
+#
+#        size = (len(meshP.localRemoteCells['boundary'][patchID]), ) + dimensions
+#        adjointRemoteCells['boundary'][patchID] = np.zeros(size, precision)
+#        exchanger.exchange(remote, paddedJacobian[boundaryCursor:boundaryCursor+nBoundaryCells], adjointRemoteCells['boundary'][patchID], tag)
+#        boundaryCursor += nBoundaryCells
+#        tag += len(meshC.origPatches) + 1
+#
+#    exchanger.wait()
+#    for patchID in meshC.remotePatches:
+#        add_at(jacobian, meshP.localRemoteCells['internal'][patchID], adjointRemoteCells['internal'][patchID])
+#        add_at(jacobian, meshP.localRemoteCells['boundary'][patchID], adjointRemoteCells['boundary'][patchID])
+#
+#    # code for second layer: transfer to remote jacobians again and add up
+#    exchanger = Exchanger()
+#    internalCursor = origMesh.nLocalCells
+#    for patchID in meshC.remotePatches:
+#        nInternalCells = len(meshP.localRemoteCells['internal'][patchID])
+#        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+#        
+#        size = (nInternalCells, ) + dimensions
+#        adjointRemoteCells['extra'][patchID] = np.zeros(size, precision)
+#        exchanger.exchange(remote, jacobian[internalCursor:internalCursor+nInternalCells], adjointRemoteCells['extra'][patchID], tag)
+#        internalCursor += nInternalCells
+#
+#    exchanger.wait()
+#    for patchID in meshC.remotePatches:
+#        add_at(jacobian, meshP.localRemoteCells['internal'][patchID], adjointRemoteCells['extra'][patchID])
+#
+#    # make processor cells zero again
+#    jacobian[origMesh.nLocalCells:] = 0.
+#
+#    return jacobian
+#
+#

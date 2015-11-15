@@ -8,10 +8,9 @@ createFields = lambda internalFields, solver : [Field(solver.names[index], phi, 
 
 def euler(equation, boundary, stackedFields, solver):
     solver.stage = 1
-    paddedStackedFields = solver.padField(stackedFields)
-    paddedFields = solver.unstackFields(paddedStackedFields, CellField)
-    LHS = equation(*paddedFields)
-    internalFields = [(paddedFields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(paddedFields))]
+    fields = solver.unstackFields(stackedFields, CellField)
+    LHS = equation(*fields)
+    internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields))]
     internalFields = createFields(internalFields, solver)
     newFields = boundary(*internalFields)
     return solver.stackFields(newFields, ad)
