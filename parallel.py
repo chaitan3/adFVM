@@ -117,6 +117,8 @@ def getAdjointRemoteCells(field, meshC):
     return jacobian
 
 def gatherCells(field, mesh, axis=0):
+    if nProcessors == 1:
+        return field
     #nCells = np.array(mpi.gather(mesh.nCells))
     #nCellsPos = np.cumsum(nCells)-nCells[0]
     #if rank == 0:
@@ -131,6 +133,8 @@ def gatherCells(field, mesh, axis=0):
     return totalField
 
 def scatterCells(totalField, mesh, axis=0):
+    if nProcessors == 1:
+        return totalField
     nCells = np.array(mpi.gather(mesh.nCells))
     if totalField is not None:
         nCellsPos = np.cumsum(nCells)[:-1]
