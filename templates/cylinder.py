@@ -5,7 +5,7 @@ import config
 from compat import norm
 import numpy as np
 
-primal = RCF('cases/cylinder3/', mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*5e-4, (1,)))
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
@@ -55,11 +55,12 @@ def objectivePressureLoss(fields, mesh):
     rhoUni, Umagi = dot(rhoUi, normal), ad.sqrt(dot(Ui, Ui))
     Mi = Umagi/ci
     pti = pi*(1 + 0.5*(g-1)*Mi*Mi)**(g/(g-1))
-    res = ad.sum((ptin-pti)*rhoUni*area)/(ad.sum(rhoUni*area) + config.VSMALL)
+    #res = ad.sum((ptin-pti)*rhoUni*area)/(ad.sum(rhoUni*area) + config.VSMALL)
+    res = ad.sum((ptin-pti)*rhoUni*area)#/(ad.sum(rhoUni*area) + config.VSMALL)
     return res 
 
-#objective = objectiveDrag
-objective = objectivePressureLoss
+objective = objectiveDrag
+#objective = objectivePressureLoss
 
 def perturb(mesh):
     mid = np.array([-0.012, 0.0, 0.])
@@ -70,9 +71,9 @@ def perturb(mesh):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 20000
-writeInterval = 200
-startTime = 1.0
+nSteps = 10000
+writeInterval = 500
+startTime = 0.0
 dt = 4.1e-8
 
 

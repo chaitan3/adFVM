@@ -7,7 +7,7 @@ from parallel import pprint
 from field import Field, CellField, IOField
 from op import  div, snGrad, grad, laplacian, internal_sum
 from solver import Solver
-from interp import central, TVD_dual
+from interp import central, reconstruct, TVD
 import riemann
 
 import numpy as np
@@ -134,9 +134,9 @@ class RCF(Solver):
         UB.grad, TB.grad, pB.grad = gradU, gradT, gradp
 
         # face reconstruction
-        ULF, URF = TVD_dual(U, gradU)
-        TLF, TRF = TVD_dual(T, gradT)
-        pLF, pRF = TVD_dual(p, gradp)
+        ULF, URF = reconstruct(U, gradU, TVD)
+        TLF, TRF = reconstruct(T, gradT, TVD)
+        pLF, pRF = reconstruct(p, gradp, TVD)
         #ULF, URF = central(U, mesh), central(U, mesh)
         #TLF, TRF = central(T, mesh), central(T, mesh)
         #pLF, pRF = central(p, mesh), central(p, mesh)

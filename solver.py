@@ -96,6 +96,7 @@ class Solver(object):
         t = startTime
         dts = dt
         timeIndex = startIndex
+        lastIndex = 0
         if self.localTimeStep:
             dt = dts*np.ones_like(mesh.origMesh.volumes)
         elif isinstance(dts, np.ndarray):
@@ -104,8 +105,9 @@ class Solver(object):
 
         # objective is local
         timeSteps = []
-        timeSeries  = [self.objective(stackedFields)]
-        result += timeSeries[-1]
+        instObjective  = self.objective(stackedFields)
+        result += instObjective
+        timeSeries = [parallel.sum(instObjective)/(nSteps + 1)]
         # writing and returning local solutions
         if mode == 'forward':
             if self.dynamicMesh:
@@ -144,8 +146,9 @@ class Solver(object):
             mesh.update(t, dt)
             
             timeSteps.append([t, dt])
-            timeSeries.append(self.objective(stackedFields))
-            result += timeSeries[-1]
+            instObjective = self.objective(stackedFields)
+            result += instObjective
+            timeSeries.append(parallel.sum(instObjective)/(nSteps + 1))
             if mode == 'forward':
                 if self.dynamicMesh:
                     instMesh = Mesh()
@@ -175,11 +178,13 @@ class Solver(object):
                 with open(self.statusFile, 'w') as status:
                     status.write('{0}\n{1}\n{2}\n{3}\n' \
                                 .format(timeIndex, t, dt, result))
+
                 if mode == 'orig' and parallel.rank == 0:
                     with open(self.timeStepFile, 'a') as f:
-                        np.savetxt(f, timeSteps)
+                        np.savetxt(f, timeSteps[lastIndex:])
                     with open(self.timeSeriesFile, 'a') as f:
-                        np.savetxt(f, timeSeries)
+                        np.savetxt(f, timeSeries[lastIndex:])
+                    lastIndex = len(timeSeries)
             pprint()
 
 

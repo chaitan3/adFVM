@@ -64,7 +64,8 @@ def objectivePressureLoss(fields, mesh):
     rhoUni, Umagi = dot(rhoUi, normal), ad.sqrt(dot(Ui, Ui))
     Mi = Umagi/ci
     pti = pi*(1 + 0.5*(g-1)*Mi*Mi)**(g/(g-1))
-    res = ad.sum((ptin-pti)*rhoUni*area)/(ad.sum(rhoUni*area) + config.VSMALL)
+    #res = ad.sum((ptin-pti)*rhoUni*area)/(ad.sum(rhoUni*area) + config.VSMALL)
+    res = ad.sum((ptin-pti)*rhoUni*area)#/(ad.sum(rhoUni*area) + config.VSMALL)
     return res 
 
 #objective = objectiveHeatTransfer
@@ -81,8 +82,8 @@ def perturb(mesh):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 20000
-writeInterval = 500
+nSteps = 200000
+writeInterval = 2000
 startTime = 3.0
 dt = 1e-8
 

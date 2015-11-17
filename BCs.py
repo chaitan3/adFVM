@@ -5,6 +5,15 @@ from config import ad, adsparse, T
 from mesh import extractField
 logger = config.Logger(__name__)
 
+# from charles
+# WALL BC's
+# isothermal: p_wall extrapolated, u, T set
+# adiabatic : p_wall extrapolated, u set, dt/dn set
+# CBC
+# internal extrapolated using gradient
+# external set
+# calcEulerFlux applied
+
 def dot(v, w, dims=1):
     if dims == 1:
         return ad.sum(v*w, axis=1, keepdims=True)

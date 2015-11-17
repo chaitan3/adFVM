@@ -69,7 +69,7 @@ def operator(vector):
 vectors = [None for sim in range(0, nEigen)]
 if parallel.rank == 0:
     A = linalg.LinearOperator((N,N), matvec=operator)
-    values, vectors = linalg.eigs(A, nEigen, tol=1e-6)
+    values, vectors = linalg.eigs(A, nEigen, tol=1e-10)
     vectors = vectors.reshape((totalCells, nDims, nEigen))
     vectors = [vectors[:,:,i] for i in range(0, nEigen)]
     parallel.mpi.bcast(False)
