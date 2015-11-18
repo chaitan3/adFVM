@@ -178,7 +178,7 @@ class Solver(object):
                     status.write('{0}\n{1}\n{2}\n{3}\n' \
                                 .format(timeIndex, t, dt, result))
 
-                if mode == 'orig' and parallel.rank == 0:
+                if mode == 'orig' and parallel.rank == 0 and not self.localTimeStep:
                     with open(self.timeStepFile, 'a') as f:
                         np.savetxt(f, timeSteps[lastIndex:])
                     with open(self.timeSeriesFile, 'a') as f:
