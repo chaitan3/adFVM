@@ -181,22 +181,25 @@ class NSCBC_OUTLET_P(CharacteristicBoundaryCondition):
         self.TBC.update()
         if self.solver.stage == 0:
             self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.value)
-        # forward euler integration
-        elif self.solver.stage == self.solver.nStages:
-            Un = dot(self.U.field[self.internalIndices], self.normals)
-            rho = self.gamma*self.p0/(self.c*self.c)
-            dt = self.solver.dt
-            p = self.p0
-            p = p + rho*self.c*(Un-self.Un0)
-            p = p + dt*(-0.25*self.c*(1-self.Ma*self.Ma)*(self.p0-self.pt)/self.L)
-            self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], p)
         else:
+            # forward euler integration
             if self.solver.stage == 1:
                 #self.p0 = self.phi.field[self.cellStartFace:self.cellEndFace]
                 self.p0 = self.phi.field[self.internalIndices]
                 self.c = self.solver.aF.field[self.startFace:self.endFace]
                 self.Un0 = dot(self.U.field[self.internalIndices], self.normals)
-            self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.p0)
+            if self.solver.stage == self.solver.nStages:
+                Un = dot(self.U.field[self.internalIndices], self.normals)
+                rho = self.gamma*self.p0/(self.c*self.c)
+                dt = self.solver.dt
+                if self.solver.localTimeStep:
+                    dt = dt[self.internalIndices]
+                p = self.p0
+                p = p + rho*self.c*(Un-self.Un0)
+                p = p + dt*(-0.25*self.c*(1-self.Ma*self.Ma)*(self.p0-self.pt)/self.L)
+                self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], p)
+            else:
+                self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], self.p0)
 
 class TURB_INFLOW(BoundaryCondition):
     def __init__(self, phi, patchID):

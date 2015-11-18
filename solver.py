@@ -104,10 +104,9 @@ class Solver(object):
         stackedFields = self.stackFields(fields, np)
 
         # objective is local
+        result += self.objective(stackedFields)
         timeSteps = []
-        instObjective  = self.objective(stackedFields)
-        result += instObjective
-        timeSeries = [parallel.sum(instObjective)/(nSteps + 1)]
+        timeSeries = []
         # writing and returning local solutions
         if mode == 'forward':
             if self.dynamicMesh:
@@ -184,7 +183,7 @@ class Solver(object):
                         np.savetxt(f, timeSteps[lastIndex:])
                     with open(self.timeSeriesFile, 'a') as f:
                         np.savetxt(f, timeSeries[lastIndex:])
-                    lastIndex = len(timeSeries)
+                    lastIndex = len(timeSteps)
             pprint()
 
 
