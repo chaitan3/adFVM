@@ -73,7 +73,7 @@ objective = objectivePressureLoss
 
 def perturb(mesh):
     #mid = np.array([-0.08, 0.014, 0.005])
-    mid = np.array([-0.06, -0.014, 0.005])
+    mid = np.array([0.03, -0.03, 0.005])
     G = 10*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     #rho
     rho = G
@@ -82,8 +82,8 @@ def perturb(mesh):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 200000
-writeInterval = 2000
+nSteps = 2000
+writeInterval = 500
 startTime = 3.0
 dt = 1e-8
 

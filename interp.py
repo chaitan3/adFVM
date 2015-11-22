@@ -44,8 +44,12 @@ def reconstruct(phi, gradPhi, update):
             update(startFace, endFace, 0, faceFields, phi, gradPhi)
             update(startFace, endFace, 1, faceFields, phi, gradPhi)
         elif patchType == 'characteristic':
+            # TVD
             #update(startFace, endFace, 0)
-            faceFields[0] = characteristic(startFace, endFace, faceFields[0], phi, gradPhi)
+            # charles
+            #faceFields[0] = characteristic(startFace, endFace, faceFields[0], phi, gradPhi)
+            # first order
+            faceFields[0] = ad.set_subtensor(faceFields[0][startFace:endFace], phi.field[mesh.owner[startFace:endFace]])
             faceFields[1] = ad.set_subtensor(faceFields[1][startFace:endFace], phi.field[mesh.neighbour[startFace:endFace]])
         else:
             for index in range(0, 2):

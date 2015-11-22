@@ -5,7 +5,7 @@ import config
 from compat import norm
 import numpy as np
 
-primal = RCF('cases/cylinder/', mu=lambda T: Field('mu', T.field/T.field*5e-4, (1,)))
+primal = RCF('cases/cylinder/', timeIntegrator='euler', mu=lambda T: Field('mu', T.field/T.field*5e-4, (1,)))
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
@@ -59,21 +59,23 @@ def objectivePressureLoss(fields, mesh):
     res = ad.sum((ptin-pti)*rhoUni*area)#/(ad.sum(rhoUni*area) + config.VSMALL)
     return res 
 
-objective = objectiveDrag
-#objective = objectivePressureLoss
+#objective = objectiveDrag
+objective = objectivePressureLoss
 
 def perturb(mesh):
-    mid = np.array([-0.012, 0.0, 0.])
-    G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    #mid = np.array([-0.012, 0.0, 0.])
+    #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    mid = np.array([0.012, 0.0, 0.])
+    G = 1e2*np.exp(-3e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     rho = G
     rhoU = np.zeros((mesh.nInternalCells, 3))
     rhoU[:, 0] += G.flatten()*100
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 10000
-writeInterval = 500
-startTime = 0.0
+nSteps = 10
+writeInterval = 2
+startTime = 0.000830339
 dt = 4.1e-8
 
 

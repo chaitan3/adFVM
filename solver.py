@@ -55,9 +55,8 @@ class Solver(object):
                        [newStackedFields, self.dtc, self.local, self.remote], 'forward')
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
-            #scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
             scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
-            gradientInputs = [stackedFields] #+ self.sourceVariables
+            gradientInputs = [stackedFields] + self.sourceVariables
             gradients = ad.grad(scalarFields, gradientInputs)
             #meshGradient = ad.grad(scalarFields, mesh)
             self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], \
@@ -210,6 +209,7 @@ class SolverFunction(object):
             self.populate_BCs(self.values, solver, 1)
         # source terms
         if source:
+            self.source = len(self.values)
             self.symbolic.extend(solver.sourceVariables)
             self.values.extend(solver.sourceTerm(mesh.origMesh))
         # postpro variables

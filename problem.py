@@ -83,41 +83,33 @@ if __name__ == "__main__":
         primal.sourceTerm = perturb
 
     elif user.option == 'test':
-        primal.initFields(startTime)
-        rho, rhoU, rhoE = perturb(mesh)
-        U, T, p = primal.U, primal.T, primal.p
-        U.field *= 0
-        T.field *= 0
-        p.field *= 0
-        U.field[:mesh.nInternalCells] = rhoU
-        T.field[:mesh.nInternalCells] = rhoE
-        p.field[:mesh.nInternalCells] = rho
-        for phi in [U, T, p]:
-            phi.write(100.0)
-
-        #p = np.zeros((mesh.nCells, 5))
-        #fields = primal.initFields(startTime)
-        #stackedFields = primal.stackFields(fields, np) 
-        #result = objectiveFunction(stackedFields)
-        #perturb(p, startTime)
-        #print(np.sum(objectiveGradient(stackedFields)*p))
-        #stackedFields += p
-        #resultp = objectiveFunction(stackedFields)
-        #print(resultp-result)
-
         #primal.adjoint = True
-        #p = np.zeros((mesh.nCells, 5))
-        #perturb(p, startTime)
-        #writeInterval = config.LARGE
-        #timeSteps, result = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction, perturb=None)
-        #timeSteps, resultp = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, objective=objectiveFunction, perturb=perturb)
+        primal.initialize(startTime)
+        primal.compile()
+        #primal.initFields(startTime)
+        #rho, rhoU, rhoE = perturb(mesh)
+        #U, T, p = primal.U, primal.T, primal.p
+        #U.field *= 0
+        #T.field *= 0
+        #p.field *= 0
+        #U.field[:mesh.nInternalCells] = rhoU
+        #T.field[:mesh.nInternalCells] = rhoE
+        #p.field[:mesh.nInternalCells] = rho
+        #for phi in [U, T, p]:
+        #    phi.write(100.0)
+
+        result = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, mode='orig')
+        forward = primal.forward
+        forward.values[forward.source:forward.source+3] = perturb(mesh)
+        resultp = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, mode='orig')
         #solutions = primal.run(startTime=startTime, dt=dt, nSteps=nSteps, writeInterval=writeInterval, mode='forward')
         #grad1 = np.ascontiguousarray(objectiveGradient(solutions[-1]))
         #grad2 = np.ascontiguousarray(primal.gradient(solutions[0], grad1))
         #grad3 = np.ascontiguousarray(objectiveGradient(solutions[0]))
         #grad = grad2 + grad3
         #print(np.sum(grad*p))
-        #print(resultp-result)
+        print(result, resultp)
+        print(resultp-result)
 
         exit()
     else:

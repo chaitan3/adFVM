@@ -15,6 +15,7 @@ from compat import printMemUsage
 import numpy as np
 import time
 import sys
+import os
 
 import argparse
 parser = argparse.ArgumentParser()
