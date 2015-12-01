@@ -150,7 +150,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         ## adjoint time stepping
         #paddedJacobian = np.ascontiguousarray(primal.gradient(paddedPreviousSolution, stackedAdjointFields))
         #jacobian = parallel.getAdjointRemoteCells(paddedJacobian, mesh)
-        gradients = primal.gradient(previousSolution, stackedAdjointFields, dt)
+        gradients = primal.gradient(previousSolution, stackedAdjointFields, dt, t)
         gradient = gradients[0]
         sourceGradient = gradients[1:]
         stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))

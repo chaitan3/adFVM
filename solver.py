@@ -49,9 +49,11 @@ class Solver(object):
             self.dt = ad.bcmatrix()
         else:
             self.dt = ad.scalar()
+        self.t0 = ad.scalar()
+        self.t = self.t0*1.
         stackedFields = ad.matrix()
         newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
-        self.forward = self.function([stackedFields, self.dt], \
+        self.forward = self.function([stackedFields, self.dt, self.t0], \
                        [newStackedFields, self.dtc, self.local, self.remote], 'forward')
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
@@ -59,7 +61,7 @@ class Solver(object):
             gradientInputs = [stackedFields] + self.sourceVariables
             gradients = ad.grad(scalarFields, gradientInputs)
             #meshGradient = ad.grad(scalarFields, mesh)
-            self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt], \
+            self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt, self.t], \
                             gradients, 'adjoint')
             #self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \
             #                ad.Rop(newStackedFields, stackedFields, stackedAdjointFields), 'tangent')
@@ -126,7 +128,7 @@ class Solver(object):
 
             pprint('Time step', timeIndex)
             #stackedFields, dtc = self.forward(stackedFields)
-            stackedFields, dtc, local, remote = self.forward(stackedFields, dt)
+            stackedFields, dtc, local, remote = self.forward(stackedFields, dt, t)
             #print local.shape, local.dtype, np.abs(local).max(), np.abs(local).min(), (local).max(), (local).min(), np.isnan(local).any()
             #print remote.shape, remote.dtype, np.abs(remote).max(), np.abs(remote).min(), (remote).max(), (remote).min(), np.isnan(remote).any()
 

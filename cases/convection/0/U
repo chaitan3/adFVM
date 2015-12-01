@@ -31,7 +31,16 @@ boundaryField
     }
     patch1_half0
     {
-        type            zeroGradient;
+        type            turbulentInletVelocity;
+        Umean           uniform (100 0 0);
+        r11   25;
+        r22   25;
+        r33   25;
+        r12   0;
+        r13   0;
+        r23   0;
+        lengthScale     0.04;
+        timeScale       0.01;
     }
     patch1_half1
     {

@@ -31,7 +31,8 @@ boundaryField
     }
     patch1_half0
     {
-        type            zeroGradient;
+        type            fixedValue;
+        value           uniform 300;
     }
     patch1_half1
     {

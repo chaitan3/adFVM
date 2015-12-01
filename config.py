@@ -9,6 +9,7 @@ titan = 'lustre' in os.getcwd()
 if titan:
     sys.path = [p for p in sys.path if 'egg' not in p]
 import numpy as np
+np.random.seed(3)
 import parallel
 
 import argparse

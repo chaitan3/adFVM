@@ -25,6 +25,7 @@ def RK2(equation, boundary, stackedFields, solver):
     fields1 = boundary(*internalFields)
 
     solver.stage = 2
+    solver.t = solver.t0 + solver.dt/2
     LHS = equation(*fields1)
     internalFields = [(fields0[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields0))]
 
@@ -53,11 +54,14 @@ def RK4(equation, boundary, stackedFields, solver):
     solver.stage = 1
     k1 = f([0.])
     solver.stage = 2
+    solver.t = solver.t0 + solver.dt/2
     k2 = f([0.5], k1)
     solver.stage = 3
+    solver.t = solver.t0 + solver.dt/2
     k3 = f([0.5], k2)
     solver.stage = 4
     k4 = f([1.], k3)
+    solver.t = solver.t0 + solver.dt
     newFields = NewFields([1./6, 1./3, 1./3, 1./6], [k1, k2, k3, k4])
 
     return solver.stackFields(newFields, ad)
@@ -69,6 +73,7 @@ def SSPRK(equation, boundary, stackedFields, solver):
     # 3rd order
     alpha = np.array([[1,0,0],[3./4,1./4, 0],[1./3,0,2./3]], config.precision)
     beta = np.array([[1,0,0],[0,1./4,0],[0,0,2./3]], config.precision)
+    c = np.array([0.,1,0.5], config.precision)
     nStages = alpha.shape[0]
     LHS = []
     fields = []
@@ -76,6 +81,7 @@ def SSPRK(equation, boundary, stackedFields, solver):
     nFields = len(fields[0])
     for i in range(0, nStages):
         solver.stage += 1
+        solver.t = solver.t0 + c[i]*solver.dt
         LHS.append(equation(*fields[i]))
         internalFields = [0]*nFields
         for j in range(0, i+1):
