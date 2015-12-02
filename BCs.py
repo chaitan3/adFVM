@@ -99,7 +99,7 @@ class slidingPeriodic1D(BoundaryCondition):
         if len(self.phi.dimensions) == 2:
             value = value.reshape((self.nFaces, 3, 3))
         if self.phi.name == 'U':
-            value += self.velocity
+            value = value + self.velocity
         self.setValue(value)
 
 class zeroGradient(BoundaryCondition):
@@ -232,11 +232,11 @@ class turbulentInletVelocity(BoundaryCondition):
         #self.patch['value'] = 'uniform (0 0 0)'
         self.N = 100
         self.omega = np.random.randn(self.N, 1)
-        self.k = np.random.randn(self.N, 3)/2**0.5
+        self.kd = np.random.randn(self.N, 3)/2**0.5
         self.psi = np.random.rand(self.N, 3)
 
         self.Uscale = self.lengthScale/self.timeScale
-        self.k = self.k*self.Uscale/self.c
+        self.k = self.kd*self.Uscale/self.c
 
     def update(self):
         logger.debug('turbulentInletVelocity BC for {0}'.format(self.patchID))
@@ -245,11 +245,12 @@ class turbulentInletVelocity(BoundaryCondition):
         if self.solver.stage == 0:
             self.setValue(self.Umean)
         else:
-            x = self.mesh.cellCentres[self.cellStartFace:self.cellEndFace]/self.lengthScale
+            x = self.mesh.cellCentres[self.cellStartFace:self.cellEndFace]
+            x = (x-x[0,:])/self.lengthScale
             t = self.solver.t/self.timeScale
-            p = cross(self.k, self.psi)[:,np.newaxis,:]
+            p = cross(self.kd, self.psi)[:,np.newaxis,:]
             phi = ad.cos((self.k[:,np.newaxis,:]*x[np.newaxis,:,:]).sum(axis=2) + self.omega*t)[:,:,np.newaxis]
-            value += self.c*(2./self.N)**0.5*(p*phi).sum(axis=0)
+            value = value + self.c*(2./self.N)**0.5*(p*phi).sum(axis=0)
             value = ad.sum(self.T.T*value[:,:,np.newaxis], axis=1)
             self.setValue(value)
 
