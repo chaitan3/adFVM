@@ -6,6 +6,8 @@ import config
 
 createFields = lambda internalFields, solver : [Field(solver.names[index], phi, solver.dimensions[index]) for index, phi in enumerate(internalFields)]
 
+nStages = {'euler': 1, 'SSPRK': 3, 'RK2': 2, 'RK4': 4}
+
 def euler(equation, boundary, stackedFields, solver):
     solver.stage = 1
     fields = solver.unstackFields(stackedFields, CellField)

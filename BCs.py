@@ -173,7 +173,7 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
         self.T.field = ad.set_subtensor(self.T.field[self.cellStartFace:self.cellEndFace], T)
         self.p.field = ad.set_subtensor(self.p.field[self.cellStartFace:self.cellEndFace], p)
 
-class NSCBC_OUTLET_P(CharacteristicBoundaryCondition):
+class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
@@ -209,7 +209,7 @@ class NSCBC_OUTLET_P(CharacteristicBoundaryCondition):
                 p = p + dt*(-0.25*self.c*(1-self.Ma*self.Ma)*(self.p0-self.pt)/self.L)
                 self.setValue(p)
             else:
-                self.setValue(p0)
+                self.setValue(self.p0)
 
 class turbulentInletVelocity(BoundaryCondition):
     def __init__(self, phi, patchID):

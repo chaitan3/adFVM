@@ -17,7 +17,7 @@ logger = config.Logger(__name__)
 
 class Solver(object):
     defaultConfig = {
-                        'timeIntegrator': 'euler', 'nStages': 1,
+                        'timeIntegrator': 'euler',
                         'objective': lambda x: 0,
                         'adjoint': False,
                         'dynamicMesh': False,
@@ -39,6 +39,7 @@ class Solver(object):
         self.timeSeriesFile = self.mesh.case + 'timeSeries.txt'
         Field.setSolver(self)
 
+        self.nStages = timestep.nStages[self.timeIntegrator]
         self.timeIntegrator = getattr(timestep, self.timeIntegrator)
         self.stage = 0
         self.init = None
