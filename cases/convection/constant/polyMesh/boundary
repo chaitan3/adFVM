@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  2.3.1                                 |
+|  \\    /   O peration     | Version:  2.2.2                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -21,8 +21,8 @@ FoamFile
     {
         type            cyclic;
         inGroups        1(cyclic);
-        nFaces          1000;
-        startFace       288000;
+        nFaces          10000;
+        startFace       2970000;
         matchTolerance  0.0001;
         transform       unknown;
         neighbourPatch  patch0_half1;
@@ -31,8 +31,8 @@ FoamFile
     {
         type            cyclic;
         inGroups        1(cyclic);
-        nFaces          1000;
-        startFace       289000;
+        nFaces          10000;
+        startFace       2980000;
         matchTolerance  0.0001;
         transform       unknown;
         neighbourPatch  patch0_half0;
@@ -41,20 +41,20 @@ FoamFile
     {
         type            patch;
         nFaces          10000;
-        startFace       290000;
+        startFace       2990000;
     }
     patch1_half1
     {
         type            patch;
         nFaces          10000;
-        startFace       300000;
+        startFace       3000000;
     }
     patch2_half0
     {
         type            cyclic;
         inGroups        1(cyclic);
-        nFaces          1000;
-        startFace       310000;
+        nFaces          10000;
+        startFace       3010000;
         matchTolerance  0.0001;
         transform       unknown;
         neighbourPatch  patch2_half1;
@@ -63,8 +63,8 @@ FoamFile
     {
         type            cyclic;
         inGroups        1(cyclic);
-        nFaces          1000;
-        startFace       311000;
+        nFaces          10000;
+        startFace       3020000;
         matchTolerance  0.0001;
         transform       unknown;
         neighbourPatch  patch2_half0;

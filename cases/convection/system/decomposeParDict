@@ -15,9 +15,15 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-numberOfSubdomains 2;
+numberOfSubdomains 32;
 
-method          scotch;
+method          simple;
+
+simpleCoeffs
+{
+    n (4 4 2);
+    delta 1e-4;
+}
 
 distributed     no;
 
