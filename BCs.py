@@ -110,7 +110,7 @@ class zeroGradient(BoundaryCondition):
             # second order correction
             grad = self.phi.grad.field[self.internalIndices]
             R = self.mesh.faceCentres[self.startFace:self.endFace] - self.mesh.cellCentres[self.internalIndices]
-            boundaryValue = boundaryValue + 0.5*dot(grad, R, self.phi.dimensions[0])
+            #boundaryValue = boundaryValue + 0.5*dot(grad, R, self.phi.dimensions[0])
         self.setValue(boundaryValue)
 
 class symmetryPlane(zeroGradient):
@@ -246,7 +246,8 @@ class turbulentInletVelocity(BoundaryCondition):
             self.setValue(self.Umean)
         else:
             x = self.mesh.cellCentres[self.cellStartFace:self.cellEndFace]
-            x = (x-x[0,:])/self.lengthScale
+            x = T.ifelse(ad.eq(x.shape[0], 0), x, x-x[0,:])
+            x = x / self.lengthScale
             t = self.solver.t/self.timeScale
             p = cross(self.kd, self.psi)[:,np.newaxis,:]
             phi = ad.cos((self.k[:,np.newaxis,:]*x[np.newaxis,:,:]).sum(axis=2) + self.omega*t)[:,:,np.newaxis]
