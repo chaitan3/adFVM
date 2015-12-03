@@ -24,45 +24,70 @@ def central(phi, mesh):
         faceField.field = ad.patternbroadcast(faceField.field, phi.field.broadcastable)
     return faceField
 
-def reconstruct(phi, gradPhi, update):
-    assert len(phi.dimensions) == 1
-    logger.info('TVD {0}'.format(phi.name))
-    mesh = phi.mesh
+class Reconstruct(object):
+    def __init__(self, mesh, update):
+        self.update = update
+        self.mesh = mesh
+        indices = [ad.arange(0, mesh.nInternalFaces)]
+        Cindices = []
+        Bindices = []
+        for patchID in mesh.origPatches:
+            startFace = mesh.boundary[patchID]['startFace']
+            endFace = startFace + mesh.boundary[patchID]['nFaces']
+            patchType = mesh.boundary[patchID]['type']
+            if patchType in config.cyclicPatches:
+                indices.append(ad.arange(startFace, endFace))
+            elif patchType == 'characteristic':
+                Cindices.append(ad.arange(startFace, endFace))
+            else:
+                Bindices.append(ad.arange(startFace, endFace))
+        nRemoteFaces = mesh.nFaces-(mesh.nCells-mesh.nLocalCells)
+        indices.append(ad.arange(nRemoteFaces, mesh.nFaces))
+        self.indices = ad.concatenate(indices)
+        self.Cindices = Cindices
+        self.Bindices = Bindices
+
+    def dual(self, phi, gradPhi):
+        assert len(phi.dimensions) == 1
+        logger.info('TVD {0}'.format(phi.name))
+        mesh = phi.mesh
+
+        faceFields = []
+        faceFields.append(self.update(self.indices, 0, phi, gradPhi))
+        faceFields.append(self.update(self.indices, 1, phi, gradPhi))
+
+        return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
 
     # every face gets filled
-    faceField = ad.bcalloc(config.precision(0.), (mesh.nFaces, phi.dimensions[0]))
-    faceFields = [faceField, faceField.copy()]
-    # van leer
-    # internal, then local patches and finally remote
-    update(0, mesh.nInternalFaces, 0, faceFields, phi, gradPhi)
-    update(0, mesh.nInternalFaces, 1, faceFields, phi, gradPhi)
-    for patchID in mesh.origPatches:
-        startFace = mesh.boundary[patchID]['startFace']
-        endFace = startFace + mesh.boundary[patchID]['nFaces']
-        patchType = mesh.boundary[patchID]['type']
-        if patchType in config.cyclicPatches:
-            update(startFace, endFace, 0, faceFields, phi, gradPhi)
-            update(startFace, endFace, 1, faceFields, phi, gradPhi)
-        elif patchType == 'characteristic':
-            # TVD
-            #update(startFace, endFace, 0)
-            # charles
-            #faceFields[0] = characteristic(startFace, endFace, faceFields[0], phi, gradPhi)
-            # first order
-            faceFields[0] = ad.set_subtensor(faceFields[0][startFace:endFace], phi.field[mesh.owner[startFace:endFace]])
-            faceFields[1] = ad.set_subtensor(faceFields[1][startFace:endFace], phi.field[mesh.neighbour[startFace:endFace]])
-        else:
-            for index in range(0, 2):
-                faceFields[index] = ad.set_subtensor(faceFields[index][startFace:endFace], phi.field[mesh.neighbour[startFace:endFace]])
-    nRemoteFaces = mesh.nFaces-(mesh.nCells-mesh.nLocalCells)
-    update(nRemoteFaces, mesh.nFaces, 0, faceFields, phi, gradPhi)
-    update(nRemoteFaces, mesh.nFaces, 1, faceFields, phi, gradPhi)
+    #faceField = ad.bcalloc(config.precision(0.), (mesh.nFaces, phi.dimensions[0]))
+    #faceFields = [faceField, faceField.copy()]
+    #update(0, mesh.nInternalFaces, 0, faceFields, phi, gradPhi)
+    #update(0, mesh.nInternalFaces, 1, faceFields, phi, gradPhi)
+    #for patchID in mesh.origPatches:
+    #    startFace = mesh.boundary[patchID]['startFace']
+    #    endFace = startFace + mesh.boundary[patchID]['nFaces']
+    #    patchType = mesh.boundary[patchID]['type']
+    #    if patchType in config.cyclicPatches:
+    #        update(startFace, endFace, 0, faceFields, phi, gradPhi)
+    #        update(startFace, endFace, 1, faceFields, phi, gradPhi)
+    #    elif patchType == 'characteristic':
+    #        # TVD
+    #        #update(startFace, endFace, 0)
+    #        # charles
+    #        #faceFields[0] = characteristic(startFace, endFace, faceFields[0], phi, gradPhi)
+    #        # first order
+    #        faceFields[0] = ad.set_subtensor(faceFields[0][startFace:endFace], phi.field[mesh.owner[startFace:endFace]])
+    #        faceFields[1] = ad.set_subtensor(faceFields[1][startFace:endFace], phi.field[mesh.neighbour[startFace:endFace]])
+    #    else:
+    #        for index in range(0, 2):
+    #            faceFields[index] = ad.set_subtensor(faceFields[index][startFace:endFace], phi.field[mesh.neighbour[startFace:endFace]])
+    #nRemoteFaces = mesh.nFaces-(mesh.nCells-mesh.nLocalCells)
+    #update(nRemoteFaces, mesh.nFaces, 0, faceFields, phi, gradPhi)
+    #update(nRemoteFaces, mesh.nFaces, 1, faceFields, phi, gradPhi)
 
     #if phi.name == 'T':
     #    phi.solver.local = phi.field
     #    phi.solver.remote = gradPhi.field
-
-    return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
 
 def characteristic(startFace, endFace, faceField, phi, gradPhi):
     mesh = phi.mesh
@@ -72,12 +97,18 @@ def characteristic(startFace, endFace, faceField, phi, gradPhi):
     gradC = Field('gradC({0})'.format(phi.name), gradPhi.field[owner], gradPhi.dimensions)
     return ad.set_subtensor(faceField[startFace:endFace], phiC + (gradC.dot(F)).field)
 
-def TVD(start, end, index, faceFields, phi, gradPhi):
+#def TVD(start, end, index, faceFields, phi, gradPhi):
+#    mesh = phi.mesh
+#    owner = mesh.owner[start:end]
+#    neighbour = mesh.neighbour[start:end]
+#    faceCentres = mesh.faceCentres[start:end]
+#    deltas = mesh.deltas[start:end]
+def TVD(indices, index, phi, gradPhi):
     mesh = phi.mesh
-    owner = mesh.owner[start:end]
-    neighbour = mesh.neighbour[start:end]
-    faceCentres = mesh.faceCentres[start:end]
-    deltas = mesh.deltas[start:end]
+    owner = mesh.owner[indices]
+    neighbour = mesh.neighbour[indices]
+    faceCentres = mesh.faceCentres[indices]
+    deltas = mesh.deltas[indices]
     if index == 0:
         C, D = [owner, neighbour]
     else:
@@ -103,8 +134,8 @@ def TVD(start, end, index, faceFields, phi, gradPhi):
     limiter = psi(r, r.abs()).field
     #phi.solver.local = phiC
     #phi.solver.remote = phiD
-    faceFields[index] = ad.set_subtensor(faceFields[index][start:end], phiC + weights*limiter*phiDC)
-    return faceFields
+    #faceFields[index] = ad.set_subtensor(faceFields[index][start:end], phiC + weights*limiter*phiDC)
+    return phiC + weights*limiter*phiDC
 
 #def TVD_dual(phi, gradPhi):
 #    from op import grad

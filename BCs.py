@@ -137,14 +137,13 @@ class fixedValue(BoundaryCondition):
 class CharacteristicBoundaryCondition(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(CharacteristicBoundaryCondition, self).__init__(phi, patchID)
-        self.mesh.boundary[patchID]['type'] = 'characteristic'
-        # CBCs always defined on p
         self.U, self.T, _ = self.solver.getBCFields()
         self.p = self.phi
 
 class CBC_UPT(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
+        self.mesh.boundary[patchID]['type'] = 'characteristic'
         self.U0 = self.createInput('U0', (3,))
         self.T0 = self.createInput('T0', (1,))
         self.p0 = self.createInput('p0', (1,))
@@ -158,6 +157,7 @@ class CBC_UPT(CharacteristicBoundaryCondition):
 class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
+        self.mesh.boundary[patchID]['type'] = 'characteristic'
         self.Tt = self.createInput('Tt', (1,))
         self.pt = self.createInput('pt', (1,))
         self.Cp = self.solver.Cp
@@ -181,10 +181,10 @@ class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
         self.L = float(self.patch['L'])
         self.pt = self.createInput('ptar', (1,))
         self.gamma = self.solver.gamma
+        self.value = self.createInput('value', self.phi.dimensions)
 
         self.UBC = zeroGradient(self.U, patchID)
         self.TBC = zeroGradient(self.T, patchID)
-        self.value = self.createInput('value', self.phi.dimensions)
 
     def update(self):
         self.UBC.update()

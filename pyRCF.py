@@ -7,7 +7,7 @@ from parallel import pprint
 from field import Field, CellField, IOField
 from op import  div, snGrad, grad, laplacian, internal_sum
 from solver import Solver
-from interp import central, reconstruct, TVD
+from interp import central, Reconstruct, TVD
 import riemann
 
 import numpy as np
@@ -28,6 +28,7 @@ class RCF(Solver):
                              'stepFactor': 1.2,
                              'timeIntegrator': 'SSPRK', 'nStages': 3,
                              'riemannSolver': 'eulerRoe',
+                             'boundaryRiemannSolver': 'eulerLaxFriedrichs',
                         })
 
     def __init__(self, case, **userConfig):
@@ -37,6 +38,7 @@ class RCF(Solver):
         self.R = self.Cp - self.Cv
         self.kappa = lambda mu, T: mu*(self.Cp/self.Pr)
         self.riemannSolver = getattr(riemann, self.riemannSolver)
+        self.boundaryRiemannSolver = getattr(riemann, self.boundaryRiemannSolver)
 
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
@@ -47,6 +49,7 @@ class RCF(Solver):
             size = self.mesh.origMesh.nInternalCells
             self.sourceTerm = lambda x: [np.zeros((size,) + dim, config.precision) for dim in self.dimensions]
         self.source = [Field('S' + name, variable, dim) for name, variable, dim in zip(self.names, self.sourceVariables, self.dimensions)]
+
 
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
@@ -67,6 +70,14 @@ class RCF(Solver):
         rhoE = rho*E
         rho.name, rhoU.name, rhoE.name = self.names
         return rho, rhoU, rhoE
+
+    def flux(self, U, T, p, Normals):
+        rho, rhoU, rhoE = self.conservative(U, T, p)
+        Un = U.dot(Normals)
+        rhoFlux = rho*Un
+        rhoUFlux = rhoU*Un + p*Normals
+        rhoEFlux = (rhoE + p)*Un
+        return rhoFlux, rhoUFlux, rhoEFlux
 
     def getRho(self, T, p):
         e = self.Cv*T
@@ -109,6 +120,7 @@ class RCF(Solver):
             pI = self.p.complete()
             UN, TN, pN = self.U.phi.field, self.T.phi.field, self.p.phi.field 
             self.init = self.function([UI, TI, pI], [UN, TN, pN], 'init')
+            self.reconstructor = Reconstruct(self.mesh, TVD)
            
     def equation(self, rho, rhoU, rhoE, exit=False):
         logger.info('computing RHS/LHS')
@@ -134,25 +146,81 @@ class RCF(Solver):
         UB.grad, TB.grad, pB.grad = gradU, gradT, gradp
 
         # face reconstruction
-        ULF, URF = reconstruct(U, gradU, TVD)
-        TLF, TRF = reconstruct(T, gradT, TVD)
-        pLF, pRF = reconstruct(p, gradp, TVD)
-        #ULF, URF = central(U, mesh), central(U, mesh)
-        #TLF, TRF = central(T, mesh), central(T, mesh)
-        #pLF, pRF = central(p, mesh), central(p, mesh)
+        #reconstuctor = Reconstruct(mesh, TVD)
+        #ULF, URF = reconstructor.dual(U, gradU)
+        #TLF, TRF = reconstructor.dual(T, gradT)
+        #pLF, pRF = reconstructor.dual(p, gradp)
+        ##ULF, URF = central(U, mesh), central(U, mesh)
+        ##TLF, TRF = central(T, mesh), central(T, mesh)
+        ##pLF, pRF = central(p, mesh), central(p, mesh)
 
-        rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
-        rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
+        #rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
+        #rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
 
-        # don't apply TVD to boundary faces
-        # instead use the standard scalar dissipation?
+        ## don't apply TVD to boundary faces
+        ## instead use the standard scalar dissipation?
 
-        rhoFlux, rhoUFlux, rhoEFlux, aF, UnF = self.riemannSolver(mesh, self.gamma, \
-                pLF, pRF, TLF, TRF, ULF, URF, \
-                rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF)
+        #rhoFlux, rhoUFlux, rhoEFlux, aF, UnF = self.riemannSolver(mesh, self.gamma, \
+        #        pLF, pRF, TLF, TRF, ULF, URF, \
+        #        rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF)
+        rhoFlux = Field('rho', ad.zeros((mesh.nFaces,) + rho.dimensions), rho.dimensions)
+        rhoUFlux = Field('rhoU', ad.zeros((mesh.nFaces,) + rhoU.dimensions), rhoU.dimensions)
+        rhoEFlux = Field('rhoE', ad.zeros((mesh.nFaces,) + rhoE.dimensions), rhoE.dimensions)
+        UF = Field('U', ad.zeros((mesh.nFaces,) + U.dimensions), U.dimensions)
+        TF = Field('T', ad.zeros((mesh.nFaces,) + T.dimensions), T.dimensions)
+        indices, Bindices, Cindices = self.reconstructor.indices, self.reconstructor.Bindices, self.reconstructor.Cindices
+
+        # INTERNAL FLUX
+        # face reconstruction
+        ULIF, URIF = self.reconstructor.dual(U, gradU)
+        TLIF, TRIF = self.reconstructor.dual(T, gradT)
+        pLIF, pRIF = self.reconstructor.dual(p, gradp)
+
+        rhoLIF, rhoULIF, rhoELIF = self.conservative(ULIF, TLIF, pLIF)
+        rhoRIF, rhoURIF, rhoERIF = self.conservative(URIF, TRIF, pRIF)
+        Normals = mesh.Normals.getField(indices)
+
+        rhoIFlux, rhoUIFlux, rhoEIFlux = self.riemannSolver(self.gamma, \
+                pLIF, pRIF, TLIF, TRIF, ULIF, URIF, \
+                rhoLIF, rhoRIF, rhoULIF, rhoURIF, rhoELIF, rhoERIF, Normals)
+        rhoFlux.setField(indices, rhoIFlux)
+        rhoUFlux.setField(indices, rhoUIFlux)
+        rhoEFlux.setField(indices, rhoEIFlux)
+        UF.setField(indices, 0.5*(ULIF + URIF))
+        TF.setField(indices, 0.5*(TLIF + TRIF))
+
+        # BOUNDARY FLUX
+        if len(Bindices) > 0:
+            indices = ad.concatenate(Bindices)
+            cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
+            UBF, TBF, pBF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
+            BNormals = mesh.Normals.getField(indices)
+            rhoBFlux, rhoUBFlux, rhoEBFlux = self.flux(UBF, TBF, pBF, BNormals)
+            rhoFlux.setField(indices, rhoBFlux)
+            rhoUFlux.setField(indices, rhoUBFlux)
+            rhoEFlux.setField(indices, rhoEBFlux)
+            UF.setField(indices, UBF)
+            TF.setField(indices, TBF)
+        # CHARACTERISTIC BOUNDARY FLUX 
+        if len(Cindices) > 0:
+            indices = ad.concatenate(Cindices)
+            cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
+            Iindices = mesh.owner[indices]
+            URCF, TRCF, pRCF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
+            ULCF, TLCF, pLCF = U.getField(Iindices), T.getField(Iindices), p.getField(Iindices)
+            rhoLCF, rhoULCF, rhoELCF = self.conservative(ULCF, TLCF, pLCF)
+            rhoRCF, rhoURCF, rhoERCF = self.conservative(URCF, TRCF, pRCF)
+            CNormals = mesh.Normals.getField(indices)
+            rhoCFlux, rhoUCFlux, rhoECFlux = self.boundaryRiemannSolver(self.gamma, \
+                    pLCF, pRCF, TLCF, TRCF, ULCF, URCF, \
+                    rhoLCF, rhoRCF, rhoULCF, rhoURCF, rhoELCF, rhoERCF, CNormals)
+            rhoFlux.setField(indices, rhoCFlux)
+            rhoUFlux.setField(indices, rhoUCFlux)
+            rhoEFlux.setField(indices, rhoECFlux)
+            UF.setField(indices, 0.5*(ULCF + URCF))
+            TF.setField(indices, 0.5*(TLCF + TRCF))
 
         # viscous part
-        TF = 0.5*(TLF + TRF)
         mu = self.mu(TF)
         kappa = self.kappa(mu, TF)
         #qF = snGrad(T)*kappa
@@ -165,13 +233,12 @@ class RCF(Solver):
         gradUF = central(gradU, mesh)
         gradUCF = gradUF + snGrad(U).outer(mesh.Normals) - (gradUF.dotN()).outer(mesh.Normals)
         sigmaF = mu*((gradUCF + gradUCF.transpose()).dotN() - (2./3)*gradUCF.trace()*mesh.Normals)
-        UF = 0.5*(ULF + URF)
         sigmadotUF = sigmaF.dot(UF)
 
         # CFL based time step
-        self.aF = aF
-        aF = UnF.abs() + aF
-        self.dtc = 2*self.CFL/internal_sum(aF, mesh, absolute=True)
+        self.aF = ((self.gamma-1)*self.Cp*TF).sqrt()
+        maxaF = (UF.dotN()).abs() + self.aF
+        self.dtc = 2*self.CFL/internal_sum(maxaF, mesh, absolute=True)
 
         return [div(rhoFlux) - self.source[0], \
                 #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],

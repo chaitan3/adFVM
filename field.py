@@ -56,6 +56,20 @@ class Field(object):
         fieldMax = parallel.max(field)
         pprint(' min:', fieldMin, 'max:', fieldMax)
 
+    def getField(self, indices):
+        if isinstance(indices, tuple):
+            return self.__class__(self.name, self.field[indices[0]:indices[1]], self.dimensions)
+        else:
+            return self.__class__(self.name, self.field[indices], self.dimensions)
+
+    def setField(self, indices, field):
+        if isinstance(field, Field):
+            field = field.field
+        if isinstance(indices, tuple):
+            self.field = ad.set_subtensor(self.field[indices[0]:indices[1]], field)
+        else:
+            self.field = ad.set_subtensor(self.field[indices], field)
+
     # creates a view
     def component(self, component): 
         assert self.dimensions == (3,)
@@ -198,7 +212,7 @@ class CellField(Field):
     def setInternalField(self, internalField, reset=False):
         if reset:
             self.resetField()
-        self.field = ad.set_subtensor(self.field[:self.mesh.nInternalCells], internalField)
+        self.setField((0, self.mesh.nInternalCells), internalField)
         self.updateGhostCells()
 
     def getInternalField(self):
