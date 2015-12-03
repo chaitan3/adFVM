@@ -39,6 +39,7 @@ boundaryField
         r12   0;
         r13   0;
         r23   0;
+        x0    (0 0.5 0.5);
         lengthScale     0.04;
         timeScale       0.01;
         value           uniform (100 0 0);

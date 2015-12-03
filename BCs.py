@@ -2,7 +2,7 @@ import numpy as np
 
 import config
 from config import ad, adsparse, T
-from mesh import extractField
+from mesh import extractField, extractVector
 logger = config.Logger(__name__)
 
 # from charles
@@ -223,6 +223,7 @@ class turbulentInletVelocity(BoundaryCondition):
         r22 = float(self.patch['r22'])
         r23 = float(self.patch['r23'])
         r33 = float(self.patch['r33'])
+        self.x0 = np.array(extractVector(self.patch['x0'])).astype(config.precision)
         R = np.array([[r11,0,0],[r12,r22,0],[r13,r23,r33]])
         w, v = np.linalg.eigh(R)
         self.c = np.sqrt(w)
@@ -246,8 +247,7 @@ class turbulentInletVelocity(BoundaryCondition):
             self.setValue(self.Umean)
         else:
             x = self.mesh.cellCentres[self.cellStartFace:self.cellEndFace]
-            x = ad.ifelse(ad.eq(x.shape[0], 0), x, x-x[0,:])
-            x = x / self.lengthScale
+            x = (x-self.x0) / self.lengthScale
             t = self.solver.t/self.timeScale
             p = cross(self.kd, self.psi)[:,np.newaxis,:]
             phi = ad.cos((self.k[:,np.newaxis,:]*x[np.newaxis,:,:]).sum(axis=2) + self.omega*t)[:,:,np.newaxis]

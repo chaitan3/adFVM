@@ -540,13 +540,17 @@ def removeCruft(content):
     content = content[:end+1]
     return content
 
+def extractScalar(data):
+    return re.findall('[0-9\.Ee\-]+', data)
+
+def extractVector(data):
+    return list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', data)))
 
 def extractField(data, size, dimensions):
     if size == 0:
         return np.zeros((0,) + dimensions, config.precision)
-    extractScalar = lambda x: re.findall('[0-9\.Ee\-]+', x)
     if dimensions == (3,):
-        extractor = lambda y: list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', y)))
+        extractor = extractVector
     else:
         extractor = extractScalar
     nonUniform = re.search('nonuniform', data)
