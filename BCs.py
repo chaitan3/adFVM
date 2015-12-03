@@ -246,7 +246,7 @@ class turbulentInletVelocity(BoundaryCondition):
             self.setValue(self.Umean)
         else:
             x = self.mesh.cellCentres[self.cellStartFace:self.cellEndFace]
-            x = T.ifelse(ad.eq(x.shape[0], 0), x, x-x[0,:])
+            x = ad.ifelse(ad.eq(x.shape[0], 0), x, x-x[0,:])
             x = x / self.lengthScale
             t = self.solver.t/self.timeScale
             p = cross(self.kd, self.psi)[:,np.newaxis,:]

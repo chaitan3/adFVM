@@ -217,7 +217,7 @@ def upwind(phi, U):
     mesh = phi.mesh
     faceField = ad.bcalloc(config.precision(0.), (mesh.nFaces, phi.dimensions[0]))
     def update(start, end):
-        positiveFlux = ad.value(ad.sum(U.field[start:end] * mesh.normals[start:end], axis=1)) > 0
+        positiveFlux = ad.sum(U.field[start:end] * mesh.normals[start:end], axis=1) > 0
         negativeFlux = 1 - positiveFlux
         faceField[positiveFlux] = phi.field[mesh.owner[positiveFlux]]
         faceField[negativeFlux] = phi.field[mesh.neighbour[negativeFlux]]

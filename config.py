@@ -71,8 +71,8 @@ if user.voyager:
 import theano as T
 import theano.tensor as ad
 import theano.sparse as adsparse
-ad.array = lambda x: x
-ad.value = lambda x: x
+from theano.ifelse import ifelse
+ad.ifelse = ifelse
 broadcastPattern = (False, True)
 ad.bcmatrix = ad.TensorType(dtype, broadcastable=broadcastPattern)
 def bcalloc(value, shape):

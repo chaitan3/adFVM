@@ -569,10 +569,10 @@ def writeField(handle, field, dtype, initial):
     handle.write(initial + ' nonuniform List<'+ dtype +'>\n')
     handle.write('{0}\n('.format(len(field)))
     if config.fileFormat == 'binary':
-        handle.write(ad.value(field.astype(np.float64)).tostring())
+        handle.write(field.astype(np.float64).tostring())
     else:
         handle.write('\n')
-        for value in ad.value(field):
+        for value in field:
             if dtype == 'scalar':
                 handle.write(str(value[0]) + '\n')
             else:
