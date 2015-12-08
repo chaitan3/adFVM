@@ -8,7 +8,7 @@ import numpy as np
 from pyRCF import RCF
 from field import IOField, CellField
 from op import div, grad
-from interp import central, TVD_dual
+from interp import central
 
 def computeFields(solver):
     mesh = solver.mesh
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     mesh = solver.mesh
     computer = computeFields(solver)
     if config.compile:
-        return
+        exit()
 
     for index, time in enumerate(user.time):
         pprint('Time:', time)
