@@ -87,6 +87,7 @@ class RCF(Solver):
     def getBCFields(self):
         return self.U.phi, self.T.phi, self.p.phi
 
+    # reads and updates ghost cells
     def initFields(self, t):
         self.initialize(t)
         self.U.field, self.T.field, self.p.field = self.init(self.U.field, self.T.field, self.p.field)
@@ -105,6 +106,7 @@ class RCF(Solver):
         end = time.time()
         pprint('Time for writing fields: {0}'.format(end-start))
 
+    # only reads fields
     def initialize(self, t):
         # IO Fields, with phi attribute as a CellField
         start = time.time()

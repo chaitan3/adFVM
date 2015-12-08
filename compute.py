@@ -12,28 +12,22 @@ from interp import central
 
 def computeFields(solver):
     mesh = solver.mesh
-    paddedMesh = mesh.paddedMesh
     g = solver.gamma
     SF = ad.matrix()
-    PSF = solver.padField(SF)
-    pP, UP, TP = solver.unstackFields(PSF, CellField)
-    cP = (g*TP*solver.R).sqrt()
-    U = CellField.getOrigField(UP)
-    T = CellField.getOrigField(TP)
-    p = CellField.getOrigField(pP)
-    c = cP.getOrigField(cP)
+    p, U, T = solver.unstackFields(SF, CellField)
+    c = (g*T*solver.R).sqrt()
 
     #divU
-    UPF = central(UP, paddedMesh)
-    gradU = grad(UPF, ghost=True)
+    UF = central(U, mesh)
+    gradU = grad(UF, ghost=True)
     #ULF, URF = TVD_dual(U, gradU)
     #UFN = 0.5*(ULF + URF)
     #divU = div(UF.dotN(), ghost=True)
-    divU = div(UPF.dot(paddedMesh.Normals), ghost=True)
+    divU = div(UF.dot(mesh.Normals), ghost=True)
 
     #speed of sound
-    gradc = grad(central(cP, paddedMesh), ghost=True)
-    gradp = grad(central(pP, paddedMesh), ghost=True)
+    gradc = grad(central(c, mesh), ghost=True)
+    gradp = grad(central(p, mesh), ghost=True)
     gradrho = g*(gradp-c*p)/(c*c)
 
     computer = solver.function([SF], [gradrho.field, gradU.field, gradp.field, gradc.field, divU.field], 'compute')
@@ -131,6 +125,7 @@ if __name__ == "__main__":
 
     solver = RCF(user.case)
     mesh = solver.mesh
+    solver.initialize(user.time[0])
     computer = computeFields(solver)
     if config.compile:
         exit()
@@ -141,7 +136,7 @@ if __name__ == "__main__":
         rho, rhoU, rhoE = solver.initFields(time)
         U, T, p = solver.U, solver.T, solver.p
         SF = solver.stackFields([p, U, T], np)
-        outputs = computer(SF, solver)
+        outputs = computer(SF)
         for field, name, dim in zip(outputs, names, dimensions):
             IO = IOField(name, field, dim)
             if len(dim) != 2:
@@ -154,7 +149,7 @@ if __name__ == "__main__":
         rhoaByV.write(time)
         pprint()
 
-        ## adjoint energy
+        # adjoint energy
         rhoUa = IOField.read('rhoUa', mesh, time)
         rhoEa = IOField.read('rhoEa', mesh, time)
         adjEnergy = getAdjointEnergy(rhoa, rhoUa, rhoEa)
