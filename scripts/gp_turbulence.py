@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist
 
-g = 50
+g = 64
 n = 100
 x = np.linspace(0, 1, g)
 dx = dy = x[1]-x[0]
@@ -10,7 +10,7 @@ X, Y = np.meshgrid(x, x)
 
 def covariance(x1, x2):
     dist = cdist(x1, x2)
-    L = 0.1
+    L = 0.04
     return np.exp(-dist**2/(2*L**2))
 
 def simulate(x):
@@ -61,6 +61,16 @@ def gradient(Z):
 
     return gz
 
+def corr2d(Z):
+    m, n = Z.shape
+    res = np.zeros_like(Z)
+    for i in range(0, m):
+        x = m-i
+        for j in range(0, n):
+            y = n-j
+            res[i, j] = (Z[:x,:y]*Z[i:,j:]).sum()/(x*y)
+    return res
+
 x = np.vstack((X.flatten(), Y.flatten())).T
 
 #l, v = eigen(x)
@@ -77,20 +87,13 @@ x = np.vstack((X.flatten(), Y.flatten())).T
 
 z = simulate(x)
 Z = z.reshape(X.shape)
-#from scipy.fftpack import fft
-#f = np.abs(fft(Z[:,10]))[:g/2]*2/g
-#from scipy.signal import blackman
-#w = blackman(g)
-#f = np.abs(fft(w*Z[:,10]))[:g/2]*2/g
-#xf = np.linspace(0.0, 1.0/(2.0*dx), g/2)
-#plt.plot(xf, f)
-#plt.show()
-from scipy.signal import convolve2d
 
-a = convolve2d(Z, Z, 'full')
-print a.shape, a.max()
-a = a[g-1:,g-1:]
-print (Z*Z).sum()
+#from scipy.fftpack import fft2, fftshift
+#Z = corr2d(Z)
+#f = fftshift(fft2(Z))
+##f = f[:g/2,:g/2]
+#f = np.abs(f)**2
+#plt.imshow(np.log(f))
 
 plt.contourf(X, Y, Z, 50)
 plt.colorbar()
