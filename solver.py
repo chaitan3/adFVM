@@ -134,6 +134,9 @@ class Solver(object):
             #print remote.shape, remote.dtype, np.abs(remote).max(), np.abs(remote).min(), (remote).max(), (remote).min(), np.isnan(remote).any()
 
             fields = self.unstackFields(stackedFields, IOField)
+            #from plot.visualize import plot
+            #plot(fields[1], 'patch1_half0')
+
             # TODO: fix unstacking F_CONTIGUOUS
             for phi in fields:
                 phi.field = np.ascontiguousarray(phi.field)
