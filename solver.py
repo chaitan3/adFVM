@@ -135,7 +135,10 @@ class Solver(object):
 
             fields = self.unstackFields(stackedFields, IOField)
             #from plot.visualize import plot
-            #plot(fields[1], 'patch1_half0')
+            #Z = plot(fields[1], 'patch1_half0', 'scripts/images/fourier_0000.png')
+            #from scripts.fft import fft
+            #fft(Z, 'scripts/images/fourier_fft.png')
+            #exit(1)
 
             # TODO: fix unstacking F_CONTIGUOUS
             for phi in fields:

@@ -237,7 +237,7 @@ class turbulentInletVelocity(BoundaryCondition):
         self.psi = np.random.rand(self.N, 3)
 
         self.Uscale = self.lengthScale/self.timeScale
-        self.k = self.kd*self.Uscale/self.c
+        self.k = self.kd#*self.Uscale/self.c
 
     def update(self):
         logger.debug('turbulentInletVelocity BC for {0}'.format(self.patchID))

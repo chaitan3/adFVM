@@ -8,10 +8,12 @@ x = np.linspace(0, 1, g)
 dx = dy = x[1]-x[0]
 X, Y = np.meshgrid(x, x)
 
+L = 0.02
+T = 0.04
+u = 4
 def covariance(x1, x2):
     dist = cdist(x1, x2)
-    L = 0.04
-    return np.exp(-dist**2/(2*L**2))
+    return u**2*np.exp(-dist**2/(2*L**2))
 
 def simulate(x):
     C = covariance(x, x) + np.eye(x.shape[0])*1e-12
@@ -51,50 +53,62 @@ def kl_simulate(x, l, v):
 def gradient(Z):
     gz = np.zeros(Z.shape + (2,))
 
-    gz[1:-1,:,0] = (Z[1:,:]-Z[:-1,:])/(2*dx)
+    gz[1:-1,:,0] = (Z[2:,:]-Z[:-2,:])/(2*dx)
     gz[0,:,0] = (Z[1,:]-Z[0,:])/dx
     gz[-1,:,0] = (Z[-1,:]-Z[-2,:])/dx
 
-    gz[:,1:-1,1] = (Z[:,1:]-Z[:,:-1])/(2*dy)
+    gz[:,1:-1,1] = (Z[:,2:]-Z[:,:-2])/(2*dy)
     gz[:,0,1] = (Z[:,1]-Z[:,0])/dy
     gz[:,-1,1] = (Z[:,-1]-Z[:,-2])/dy
 
     return gz
 
-def corr2d(Z):
-    m, n = Z.shape
-    res = np.zeros_like(Z)
-    for i in range(0, m):
-        x = m-i
-        for j in range(0, n):
-            y = n-j
-            res[i, j] = (Z[:x,:y]*Z[i:,j:]).sum()/(x*y)
-    return res
-
 x = np.vstack((X.flatten(), Y.flatten())).T
 
-#l, v = eigen(x)
-##for i in range(0, 10):
-##    Z = v[:,i].reshape(X.shape)
-##    plt.contourf(X, Y, Z, 50)
-##    plt.colorbar()
-##    plt.show()
-#z = kl_simulate(x, l, v)
+dt = 0.001
+#for i in range(0, 10):
+#    Z = v[:,i].reshape(X.shape)
+#    plt.contourf(X, Y, Z, 50)
+#    plt.colorbar()
+#    plt.show()
+i = 0
+alpha = np.exp(-np.pi*dt/T)
+print alpha
+l, v = eigen(x)
+print 'done'
+z = np.array([0])
+plt.clf()
+#t = 1
+t = dt
+for t in np.arange(0, t, dt):
+    print i
+    zn = kl_simulate(x, l, v)
+    zn = gradient(zn.reshape(X.shape))/50.
+    if i == 0:
+        z = zn.copy()
+    else:
+        z = (1-alpha)*zn + alpha*z
+    zN = z/np.linalg.norm(z, axis=2,keepdims=1)
+    Z1 = zN[:,:,0]
+    Z2 = zN[:,:,1]
+    Z = np.sqrt((z**2).sum(axis=2))
+    vt = np.linspace(0, u/2, 101, endpoint=True)
+    Z[Z > u/2] = u/2
+    plt.contourf(X, Y, Z, vt)
+    plt.colorbar(ticks=vt[::10])
+    inter = 3
+    plt.quiver(X[::inter,::inter], Y[::inter,::inter], Z1[::inter,::inter], Z2[::inter,::inter], color='k', linewidth=2)
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.savefig('images/gp_{0:04d}.png'.format(i))
+    plt.clf()
+
+    i += 1
+
+from fft import fft
+fft(Z, 'images/gp_fft.png')
+#z = simulate(x)
 #Z = z.reshape(X.shape)
 #plt.contourf(X, Y, Z, 50)
 #plt.colorbar()
 #plt.show()
-
-z = simulate(x)
-Z = z.reshape(X.shape)
-
-#from scipy.fftpack import fft2, fftshift
-#Z = corr2d(Z)
-#f = fftshift(fft2(Z))
-##f = f[:g/2,:g/2]
-#f = np.abs(f)**2
-#plt.imshow(np.log(f))
-
-plt.contourf(X, Y, Z, 50)
-plt.colorbar()
-plt.show()
