@@ -2,6 +2,7 @@ import numpy as np
 
 import config
 from config import ad, adsparse, T
+from parallel import pprint
 from mesh import extractField, extractVector
 logger = config.Logger(__name__)
 
@@ -13,6 +14,13 @@ logger = config.Logger(__name__)
 # internal extrapolated using gradient
 # external set
 # calcEulerFlux applied
+
+valuePatches = config.processorPatches + ['calculated',
+                                          'CBC_UPT',
+                                          'CBC_TOTAL_PT',
+                                          'nonReflectingOutletPressure'
+                                          ]
+
 
 def dot(v, w, dims=1):
     if dims == 1:
@@ -211,6 +219,7 @@ class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
             else:
                 self.setValue(self.p0)
 
+# adjoint?
 class turbulentInletVelocity(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
@@ -251,7 +260,10 @@ class turbulentInletVelocity(BoundaryCondition):
             t = self.solver.t/self.timeScale
             p = cross(self.kd, self.psi)[:,np.newaxis,:]
             phi = ad.cos((self.k[:,np.newaxis,:]*x[np.newaxis,:,:]).sum(axis=2) + self.omega*t)[:,:,np.newaxis]
-            value = value + self.c*(2./self.N)**0.5*(p*phi).sum(axis=0)
+            #value = value + self.c*(2./self.N)**0.5*(p*phi).sum(axis=0)
+            #pprint('HACK')
+            #f = (1./0.265)*ad.exp(-(1/(1.00001-(self.mesh.cellCentres[self.cellStartFace:self.cellEndFace,[1]]-0.5)**2)))
+            value = value + self.c*f*(2./self.N)**0.5*(p*phi).sum(axis=0)
             value = ad.sum(self.T.T*value[:,:,np.newaxis], axis=1)
             self.setValue(value)
 

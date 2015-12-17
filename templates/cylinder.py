@@ -5,7 +5,7 @@ import config
 from compat import norm
 import numpy as np
 
-primal = RCF('cases/cylinder/', timeIntegrator='euler', mu=lambda T: Field('mu', T.field/T.field*5e-4, (1,)))
+primal = RCF('cases/cylinder/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
@@ -33,7 +33,7 @@ def objectiveDrag(fields, mesh):
 
 def getPlane(solver):
     from compat import intersectPlane
-    point = np.array([0.032012,0.0,0.0])
+    point = np.array([0.00032012,0.0,0.0])
     normal = np.array([1.,0.,0.])
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
     #print interCells.shape, interArea.sum()
@@ -73,9 +73,9 @@ def perturb(mesh):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 10
-writeInterval = 2
-startTime = 0.000830339
-dt = 4.1e-8
+nSteps = 100000
+writeInterval = 5000
+startTime = 0.0
+dt = 8e-10
 
 

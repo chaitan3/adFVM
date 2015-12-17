@@ -8,7 +8,6 @@ from config import ad, T
 from parallel import pprint
 import BCs
 from mesh import extractField, writeField
-
 logger = config.Logger(__name__)
 
 class Field(object):
@@ -334,11 +333,11 @@ class IOField(Field):
         for patchID in boundary:
             handle.write('\t' + patchID + '\n\t{\n')
             patch = boundary[patchID]
-            if patch['type'] in config.valuePatches and not skipProcessor:
+            if patch['type'] in BCs.valuePatches and not skipProcessor:
                 patch.pop('value', None)
             for attr in patch:
                 handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
-            if patch['type'] in config.valuePatches and not skipProcessor:
+            if patch['type'] in BCs.valuePatches and not skipProcessor:
                 startFace = mesh.boundary[patchID]['startFace']
                 nFaces = mesh.boundary[patchID]['nFaces']
                 endFace = startFace + nFaces

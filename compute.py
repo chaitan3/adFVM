@@ -144,17 +144,17 @@ if __name__ == "__main__":
         pprint()
 
         # rhoaByV
-        rhoa = IOField.read('rhoa', mesh, time)
-        rhoaByV = getRhoaByV(rhoa)
-        rhoaByV.write(time)
-        pprint()
+        #rhoa = IOField.read('rhoa', mesh, time)
+        #rhoaByV = getRhoaByV(rhoa)
+        #rhoaByV.write(time)
+        #pprint()
 
-        # adjoint energy
-        rhoUa = IOField.read('rhoUa', mesh, time)
-        rhoEa = IOField.read('rhoEa', mesh, time)
-        adjEnergy = getAdjointEnergy(rhoa, rhoUa, rhoEa)
-        pprint('L2 norm adjoint', time, adjEnergy)
-        pprint()
+        ## adjoint energy
+        #rhoUa = IOField.read('rhoUa', mesh, time)
+        #rhoEa = IOField.read('rhoEa', mesh, time)
+        #adjEnergy = getAdjointEnergy(rhoa, rhoUa, rhoEa)
+        #pprint('L2 norm adjoint', time, adjEnergy)
+        #pprint()
 
         # adjoint blowup
         fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)

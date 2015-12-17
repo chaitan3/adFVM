@@ -65,6 +65,8 @@ if __name__ == "__main__":
     except:
         startIndex = 0
         initResult = 0.
+    if 'source' in locals():
+        primal.sourceTerm = source
     
     if user.option == 'orig':
         dts = dt

@@ -41,7 +41,7 @@ boundaryField
         r23   0;
         x0    (0 0.5 0.5);
         lengthScale     0.03;
-        timeScale       0.01;
+        timeScale       0.001;
         value           uniform (100 0 0);
     }
     patch1_half1

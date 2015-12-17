@@ -23,9 +23,9 @@ boundaryField
 {
     right
     {
-        type            NSCBC_OUTLET_P;
-        L               0.003;
-        Mamax           0.7;
+        type            nonReflectingOutletPressure;
+        L               2e-4;
+        Mamax           0.25;
         ptar            uniform 101325;
         value           uniform 101325;
     }
@@ -38,8 +38,8 @@ boundaryField
         type            CBC_UPT;
         T0              uniform 300;
         U0              uniform (33 0 0);
-        p0              uniform 101325;
-        value           uniform 101325;
+        p0              uniform 102325;
+        value           uniform 102325;
     }
     cylinder
     {
