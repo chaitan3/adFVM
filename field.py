@@ -208,9 +208,7 @@ class CellField(Field):
         self.field = ad.bcalloc(config.precision(1.), size)
         #self.field.tag.test_value = np.zeros((mesh.origMesh.nCells,) + self.dimensions, config.precision)
 
-    def setInternalField(self, internalField, reset=False):
-        if reset:
-            self.resetField()
+    def setInternalField(self, internalField):
         self.setField((0, self.mesh.nInternalCells), internalField)
         self.updateGhostCells()
 

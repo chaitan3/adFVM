@@ -202,8 +202,8 @@ class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
         else:
             # FORWARD EULER INTEGRATION
             if self.solver.stage == 1:
-                #self.p0 = self.phi.field[self.cellStartFace:self.cellEndFace]
-                self.p0 = self.phi.field[self.internalIndices]
+                self.p0 = self.phi.field[self.cellStartFace:self.cellEndFace]
+                #self.p0 = self.phi.field[self.internalIndices]
                 self.c = self.solver.aF.field[self.startFace:self.endFace]
                 self.Un0 = dot(self.U.field[self.internalIndices], self.normals)
             if self.solver.stage == self.solver.nStages:

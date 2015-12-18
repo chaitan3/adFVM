@@ -132,6 +132,8 @@ class RCF(Solver):
         self.remote = mesh.nCells
         
         U, T, p = self.primitive(rho, rhoU, rhoE)
+        UB, TB, pB = self.getBCFields()
+        UB.field, TB.field, pB.field = U.field, T.field, p.field
         ## face reconstruction
         #rhoLF, rhoRF = TVD_dual(rho, gradRho)
         #rhoULF, rhoURF = TVD_dual(rhoU, gradRhoU)
@@ -144,7 +146,6 @@ class RCF(Solver):
         gradT = grad(central(T, mesh), ghost=True)
         gradp = grad(central(p, mesh), ghost=True)
         # for zeroGradient boundary
-        UB, TB, pB = self.getBCFields()
         UB.grad, TB.grad, pB.grad = gradU, gradT, gradp
 
         # face reconstruction
@@ -251,9 +252,9 @@ class RCF(Solver):
         logger.info('correcting boundary')
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
         U, T, p = self.getBCFields()
-        U.setInternalField(UN.field, reset=True)
-        T.setInternalField(TN.field, reset=True)
-        p.setInternalField(pN.field, reset=True)
+        U.setInternalField(UN.field)
+        T.setInternalField(TN.field)
+        p.setInternalField(pN.field)
         return self.conservative(U, T, p)
     
 if __name__ == "__main__":
