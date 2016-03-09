@@ -28,7 +28,8 @@ class RCF(Solver):
                              'stepFactor': 1.2,
                              'timeIntegrator': 'SSPRK', 'nStages': 3,
                              'riemannSolver': 'eulerRoe',
-                             'boundaryRiemannSolver': 'eulerLaxFriedrichs',
+                             #'boundaryRiemannSolver': 'eulerLaxFriedrichs',
+                             'boundaryRiemannSolver': 'eulerRoe'
                         })
 
     def __init__(self, case, **userConfig):
