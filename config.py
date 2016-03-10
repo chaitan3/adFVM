@@ -1,16 +1,11 @@
 from __future__ import print_function
 import time
-import sys
-import os
 runtime = time.time()
+
+import os
+import sys
 sys.setrecursionlimit(100000)
 # titan/voyager fixes
-titan = 'lustre' in os.getcwd()
-if titan:
-    sys.path = [p for p in sys.path if 'egg' not in p]
-import numpy as np
-np.random.seed(3)
-import parallel
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -24,9 +19,18 @@ parser.add_argument('--profile_mem', action='store_true')
 parser.add_argument('--profile_opt', action='store_true')
 parser.add_argument('-s', '--python', action='store_true')
 parser.add_argument('--voyager', action='store_true')
+parser.add_argument('--titan', action='store_true')
+parser.add_argument('--bw', action='store_true')
 parser.add_argument('--coresPerNode', required=False, default=16, type=int)
 parser.add_argument('--unloadingStages', required=False, default=1, type=int)
 user, args = parser.parse_known_args()
+
+if user.titan:
+    sys.path = [p for p in sys.path if 'egg' not in p]
+
+import numpy as np
+np.random.seed(3)
+import parallel
 
 # compute type
 if not user.use_gpu:
@@ -41,9 +45,11 @@ project = 'adFVM'
 dtype = str(np.zeros(1, precision).dtype)
 home = os.path.expanduser('~')
 # titan check
-if titan:
+if user.titan:
     home = '/lustre/atlas/proj-shared/tur103'
     assert np.__version__ == '1.9.2'
+elif user.bw:
+    home = '/scratch/sciteam/talnikar/sw/.theano/'
 if user.use_temp:
     home = parallel.copyToTemp(home, user.coresPerNode)
 #os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
