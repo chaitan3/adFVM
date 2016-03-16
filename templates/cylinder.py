@@ -5,7 +5,7 @@ import config
 from compat import norm
 import numpy as np
 
-primal = RCF('cases/cylinder_per4/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*1e-4, (1,)))
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
@@ -33,7 +33,7 @@ def objectiveDrag(fields, mesh):
 
 def getPlane(solver):
     from compat import intersectPlane
-    point = np.array([3e-4,0.0,0.0])
+    point = np.array([5e-4,0.0,0.0])
     normal = np.array([1.,0.,0.])
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
     #print interCells.shape, interArea.sum()
