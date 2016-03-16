@@ -85,7 +85,7 @@ def adjointViscosity(solution):
     rhoE = Field('rhoE', solution[:,[4]], (1,))
     U, T, p = primal.primitive(rho, rhoU, rhoE)
     SF = primal.stackFields([p, U, T], np)
-    outputs = computer(SF, primal)
+    outputs = computer(SF)
     M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)[0]
     M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
     viscosityScale = 4e-3

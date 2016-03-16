@@ -252,20 +252,18 @@ class turbulentInletVelocity(BoundaryCondition):
         logger.debug('turbulentInletVelocity BC for {0}'.format(self.patchID))
         #self.value[:] = self.fixedValue
         value = self.Umean
-        if self.solver.stage == 0:
-            self.setValue(self.Umean)
-        else:
+        if self.solver.stage > 0:
             x = self.mesh.cellCentres[self.cellStartFace:self.cellEndFace]
             x = (x-self.x0) / self.lengthScale
             t = self.solver.t/self.timeScale
             p = cross(self.kd, self.psi)[:,np.newaxis,:]
             phi = ad.cos((self.k[:,np.newaxis,:]*x[np.newaxis,:,:]).sum(axis=2) + self.omega*t)[:,:,np.newaxis]
-            #value = value + self.c*(2./self.N)**0.5*(p*phi).sum(axis=0)
+            value = value + self.c*(2./self.N)**0.5*(p*phi).sum(axis=0)
             #pprint('HACK')
             #f = (1./0.265)*ad.exp(-(1/(1.00001-(self.mesh.cellCentres[self.cellStartFace:self.cellEndFace,[1]]-0.5)**2)))
-            value = value + self.c*f*(2./self.N)**0.5*(p*phi).sum(axis=0)
+            #value = value + self.c*f*(2./self.N)**0.5*(p*phi).sum(axis=0)
             value = ad.sum(self.T.T*value[:,:,np.newaxis], axis=1)
-            self.setValue(value)
+        self.setValue(value)
 
 slip = symmetryPlane
 empty = zeroGradient
