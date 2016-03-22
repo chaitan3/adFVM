@@ -133,42 +133,53 @@ class Mesh(object):
 
     def readFile(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
-        content = open(foamFile).read()
-        foamFileDict = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
-        assert re.search('format[\s\t]+(.*?);', foamFileDict).group(1) == config.fileFormat
-        start = content.find('(') + 1
-        end = content.rfind(')')
-        if config.fileFormat == 'binary':
-            if foamFile[-5:] == 'faces':
-                nFaces1 = int(re.search('[0-9]+', content[start-2:0:-1]).group(0)[::-1])
-                endIndices = start + nFaces1*4
-                faceIndices = np.fromstring(content[start:endIndices], dtype)
-                faceIndices = faceIndices[1:] - faceIndices[:-1]
-                startData = content.find('(', endIndices) + 1
-                data = np.fromstring(content[startData:end], dtype)
-                nCellFaces = faceIndices[0] 
-                return np.hstack((faceIndices.reshape(-1, 1), data.reshape(len(data)/nCellFaces, nCellFaces)))
+        try: 
+            content = open(foamFile).read()
+            foamFileDict = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
+            assert re.search('format[\s\t]+(.*?);', foamFileDict).group(1) == config.fileFormat
+            start = content.find('(') + 1
+            end = content.rfind(')')
+            if config.fileFormat == 'binary':
+                if foamFile[-5:] == 'faces':
+                    nFaces1 = int(re.search('[0-9]+', content[start-2:0:-1]).group(0)[::-1])
+                    endIndices = start + nFaces1*4
+                    faceIndices = np.fromstring(content[start:endIndices], dtype)
+                    faceIndices = faceIndices[1:] - faceIndices[:-1]
+                    startData = content.find('(', endIndices) + 1
+                    data = np.fromstring(content[startData:end], dtype)
+                    nCellFaces = faceIndices[0] 
+                    return np.hstack((faceIndices.reshape(-1, 1), data.reshape(len(data)/nCellFaces, nCellFaces)))
+                else:
+                    data = np.fromstring(content[start:end], dtype)
+                    if foamFile[-6:] == 'points':
+                        data = data.reshape(len(data)/3, 3)
+                    return data
             else:
-                data = np.fromstring(content[start:end], dtype)
-                if foamFile[-6:] == 'points':
-                    data = data.reshape(len(data)/3, 3)
-                return data
-        else:
-            f = lambda x: list(filter(None, re.split('[ ()\n]+', x)))
-            return np.array(list(map(f, filter(None, re.split('\n', content[start:end])))), dtype)
+                f = lambda x: list(filter(None, re.split('[ ()\n]+', x)))
+                return np.array(list(map(f, filter(None, re.split('\n', content[start:end])))), dtype)
+        except Exception as e: 
+            config.exceptInfo(e, foamFile)
 
     def readBoundary(self, boundaryFile):
         logger.info('read {0}'.format(boundaryFile))
-        content = removeCruft(open(boundaryFile).read())
-        patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n\t]+{(.*?;[\r\s\n\t]+)}[\r\s\n\t]+', re.DOTALL), content)
+        try:
+            content = removeCruft(open(boundaryFile).read())
+            patches = re.findall(re.compile('([A-Za-z0-9_]+)[\r\s\n\t]+{(.*?;[\r\s\n\t]+)}[\r\s\n\t]+', re.DOTALL), content)
+        except Exception as e: 
+            config.exceptInfo(e, boundaryFile)
+
         boundary = {}
         localPatches = []
         remotePatches = []
         for patch in patches:
-            boundary[patch[0]] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch[1]))
-            #nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform[ ]+List<([a-z]+)+[\r\s\n\t ]+([0-9]+).*?);[\r\s\n]+', patch[1], re.DOTALL)
-            # HACK
-            nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform.*?\))\n;\n', patch[1], re.DOTALL)
+            try:
+                boundary[patch[0]] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch[1]))
+                #nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform[ ]+List<([a-z]+)+[\r\s\n\t ]+([0-9]+).*?);[\r\s\n]+', patch[1], re.DOTALL)
+                # HACK
+                nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform.*?\))\n;\n', patch[1], re.DOTALL)
+            except Exception as e: 
+                config.exceptInfo(e, patch)
+
             for field in nonuniform:
                 #print patch[0], field[0], len(field[1])
                 boundary[patch[0]][field[0]] = field[1]

@@ -32,6 +32,14 @@ import numpy as np
 np.random.seed(3)
 import parallel
 
+def exceptInfo(e, info=''):
+    rank = parallel.rank
+    #raise type(e), \
+    #      type(e)(e.message + ' '), \
+    #      sys.exc_info()[2]
+    e.args += (info, rank)
+    raise 
+
 # compute type
 if not user.use_gpu:
     device = 'cpu'
