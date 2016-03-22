@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 from scipy import sparse as sparse
+import h5py
 import re
 import time
 import copy
@@ -59,18 +60,36 @@ class Mesh(object):
         pprint('Reading mesh')
         self = cls()
 
+        self.caseDir = caseDir
         self.case = caseDir + parallel.processorDirectory
         if isinstance(currTime, float):
             timeDir = self.getTimeDir(currTime)
         else:
             timeDir = self.case + currTime + '/'
-        self.meshDir = timeDir + 'polyMesh/'
-        self.faces = self.readFile(self.meshDir + 'faces', np.int32)
-        self.points = self.readFile(self.meshDir + 'points', np.float64).astype(config.precision)
-        self.owner = self.readFile(self.meshDir + 'owner', np.int32).ravel()
-        self.neighbour = self.readFile(self.meshDir + 'neighbour', np.int32).ravel()
-        
-        self.boundary, localPatches, self.remotePatches = self.readBoundary(self.meshDir + 'boundary')
+
+        if not config.hdf5:
+            self.meshDir = timeDir + 'polyMesh/'
+            self.faces = self.readFile(self.meshDir + 'faces', np.int32)
+            self.points = self.readFile(self.meshDir + 'points', np.float64).astype(config.precision)
+            self.owner = self.readFile(self.meshDir + 'owner', np.int32).ravel()
+            self.neighbour = self.readFile(self.meshDir + 'neighbour', np.int32).ravel()
+            
+            self.boundary = self.readBoundary(self.meshDir + 'boundary')
+        else:
+            meshFile = h5py.File(self.caseDir + 'mesh.hdf5', 'r', driver='mpio', comm=parallel.mpi)
+            hdf5File = meshFile['mesh' + parallel.processorDirectory]
+            self.faces = np.array(hdf5File['faces'])
+            self.points = np.array(hdf5File['points'])
+            self.owner = np.array(hdf5File['owner'])
+            self.neighbour = np.array(hdf5File['neighbour'])
+            self.boundary = self.readHDF5Boundary(hdf5File)
+            meshFile.close()
+            #import pdb;pdb.set_trace()
+
+        #self.writeHDF5()
+        #exit()
+
+        localPatches, self.remotePatches = self.splitPatches(self.boundary)
         self.boundaryTensor = {}
         self.origPatches = copy.copy(localPatches)
         self.origPatches.sort()
@@ -160,6 +179,17 @@ class Mesh(object):
         except Exception as e: 
             config.exceptInfo(e, foamFile)
 
+    def splitPatches(self, boundary):
+        localPatches = []
+        remotePatches = []
+
+        for patchID in boundary.keys():
+            if boundary[patchID] in config.processorPatches:
+                remotePatches.append(patchID)
+            else:
+                localPatches.append(patchID)
+        return localPatches, remotePatches
+
     def readBoundary(self, boundaryFile):
         logger.info('read {0}'.format(boundaryFile))
         try:
@@ -169,8 +199,6 @@ class Mesh(object):
             config.exceptInfo(e, boundaryFile)
 
         boundary = {}
-        localPatches = []
-        remotePatches = []
         for patch in patches:
             try:
                 boundary[patch[0]] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch[1]))
@@ -185,11 +213,22 @@ class Mesh(object):
                 boundary[patch[0]][field[0]] = field[1]
             boundary[patch[0]]['nFaces'] = int(boundary[patch[0]]['nFaces'])
             boundary[patch[0]]['startFace'] = int(boundary[patch[0]]['startFace'])
-            if boundary[patch[0]]['type'] in config.processorPatches:
-                remotePatches.append(patch[0])
-            else:
-                localPatches.append(patch[0])
-        return boundary, localPatches, remotePatches
+        return boundary
+
+    def readHDF5Boundary(self, meshFile):
+        boundary = {}
+        boundaryGroup = meshFile['boundary']
+        for patchID in boundaryGroup.keys():
+            patch = {}
+            patchGroup = boundaryGroup[patchID]
+            for key in patchGroup.keys():
+                value = patchGroup[key]
+                if value.dtype == 'S100':
+                    patch[key] = str(np.array(value)[0])
+                elif value.dtype == 'int64':
+                    patch[key] = int(np.array(value))
+            boundary[patchID] = patch.copy()
+        return boundary
 
     def write(self, time):
         pprint('writing mesh, time', time)
@@ -235,6 +274,26 @@ class Mesh(object):
         handle.write(')\n')
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
         handle.close()
+
+    def writeHDF5(self):
+        pprint('writing mesh.hdf5')
+        meshFile = h5py.File(self.caseDir + 'mesh.hdf5', 'a', driver='mpio', comm=parallel.mpi)
+        hdf5File = meshFile.create_group('mesh' + parallel.processorDirectory)
+        hdf5File.create_dataset('faces', data=self.faces)
+        hdf5File.create_dataset('owner', data=self.owner)
+        hdf5File.create_dataset('neighbour', data=self.neighbour)
+        hdf5File.create_dataset('points', data=self.points)
+        boundary = self.boundary
+        boundaryGroup = hdf5File.create_group("boundary")
+        for patchID in boundary.keys():
+            patch = boundary[patchID]
+            patchGroup = boundaryGroup.create_group(patchID)
+            for key, value in patch.iteritems():
+                if isinstance(value, str):
+                    patchGroup.create_dataset(key, data=[value], dtype='S100')
+                else:
+                    patchGroup.create_dataset(key, data=value)
+        meshFile.close()
 
     def getNormals(self):
         logger.info('generated normals')
