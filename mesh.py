@@ -62,32 +62,10 @@ class Mesh(object):
 
         self.caseDir = caseDir
         self.case = caseDir + parallel.processorDirectory
-        if isinstance(currTime, float):
-            timeDir = self.getTimeDir(currTime)
+        if config.hdf5:
+            self.readHDF5(self.caseDir + 'mesh.hdf5')
         else:
-            timeDir = self.case + currTime + '/'
-
-        if not config.hdf5:
-            self.meshDir = timeDir + 'polyMesh/'
-            self.faces = self.readFile(self.meshDir + 'faces', np.int32)
-            self.points = self.readFile(self.meshDir + 'points', np.float64).astype(config.precision)
-            self.owner = self.readFile(self.meshDir + 'owner', np.int32).ravel()
-            self.neighbour = self.readFile(self.meshDir + 'neighbour', np.int32).ravel()
-            
-            self.boundary = self.readBoundary(self.meshDir + 'boundary')
-        else:
-            meshFile = h5py.File(self.caseDir + 'mesh.hdf5', 'r', driver='mpio', comm=parallel.mpi)
-            hdf5File = meshFile['mesh' + parallel.processorDirectory]
-            self.faces = np.array(hdf5File['faces'])
-            self.points = np.array(hdf5File['points'])
-            self.owner = np.array(hdf5File['owner'])
-            self.neighbour = np.array(hdf5File['neighbour'])
-            self.boundary = self.readHDF5Boundary(hdf5File)
-            meshFile.close()
-            #import pdb;pdb.set_trace()
-
-        #self.writeHDF5()
-        #exit()
+            self.readFoam(currTime) 
 
         localPatches, self.remotePatches = self.splitPatches(self.boundary)
         self.boundaryTensor = {}
@@ -144,13 +122,27 @@ class Mesh(object):
         timeDir = self.getTimeDir(time) 
         meshDir = timeDir + 'polyMesh/'
         # HACK correct updating
-        boundary, _, _ = self.readBoundary(meshDir + 'boundary')
+        boundary, _, _ = self.readFoamBoundary(meshDir + 'boundary')
         for patchID in boundary:
             if boundary[patchID]['type'] == 'slidingPeriodic1D':
                 self.origMesh.boundary[patchID] = copy.deepcopy(boundary[patchID])
         self.update(0., 0.)
 
-    def readFile(self, foamFile, dtype):
+    def readFoam(self, currTime):
+        if isinstance(currTime, float):
+            timeDir = self.getTimeDir(currTime)
+        else:
+            timeDir = self.case + currTime + '/'
+
+        meshDir = timeDir + 'polyMesh/'
+        self.faces = self.readFoamFile(meshDir + 'faces', np.int32)
+        self.points = self.readFoamFile(meshDir + 'points', np.float64).astype(config.precision)
+        self.owner = self.readFoamFile(meshDir + 'owner', np.int32).ravel()
+        self.neighbour = self.readFoamFile(meshDir + 'neighbour', np.int32).ravel()
+        
+        self.boundary = self.readFoamBoundary(meshDir + 'boundary')
+
+    def readFoamFile(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
         try: 
             content = open(foamFile).read()
@@ -190,7 +182,7 @@ class Mesh(object):
                 localPatches.append(patchID)
         return localPatches, remotePatches
 
-    def readBoundary(self, boundaryFile):
+    def readFoamBoundary(self, boundaryFile):
         logger.info('read {0}'.format(boundaryFile))
         try:
             content = removeCruft(open(boundaryFile).read())
@@ -214,6 +206,16 @@ class Mesh(object):
             boundary[patch[0]]['nFaces'] = int(boundary[patch[0]]['nFaces'])
             boundary[patch[0]]['startFace'] = int(boundary[patch[0]]['startFace'])
         return boundary
+
+    def readHDF5(self, meshFile):
+        meshFile = h5py.File(meshFile, 'r', driver='mpio', comm=parallel.mpi)
+        hdf5File = meshFile['mesh' + parallel.processorDirectory]
+        self.faces = np.array(hdf5File['faces'])
+        self.points = np.array(hdf5File['points'])
+        self.owner = np.array(hdf5File['owner'])
+        self.neighbour = np.array(hdf5File['neighbour'])
+        self.boundary = self.readHDF5Boundary(hdf5File)
+        meshFile.close()
 
     def readHDF5Boundary(self, meshFile):
         boundary = {}
