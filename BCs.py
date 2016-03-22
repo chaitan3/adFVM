@@ -18,7 +18,8 @@ logger = config.Logger(__name__)
 valuePatches = config.processorPatches + ['calculated',
                                           'CBC_UPT',
                                           'CBC_TOTAL_PT',
-                                          'nonReflectingOutletPressure'
+                                          'nonReflectingOutletPressure',
+                                          'turbulentInletVelocity'
                                           ]
 
 
@@ -224,6 +225,7 @@ class turbulentInletVelocity(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         self.Umean = self.createInput('Umean', (3,))
+        self.value = self.createInput('value', self.phi.dimensions)
         self.lengthScale = float(self.patch['lengthScale'])
         self.timeScale = float(self.patch['timeScale'])
         r11 = float(self.patch['r11'])
@@ -251,7 +253,7 @@ class turbulentInletVelocity(BoundaryCondition):
     def update(self):
         logger.debug('turbulentInletVelocity BC for {0}'.format(self.patchID))
         #self.value[:] = self.fixedValue
-        value = self.Umean
+        value = self.value
         if self.solver.stage > 0:
             x = self.mesh.cellCentres[self.cellStartFace:self.cellEndFace]
             x = (x-self.x0) / self.lengthScale
