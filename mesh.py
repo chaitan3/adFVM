@@ -178,7 +178,7 @@ class Mesh(object):
                 # HACK
                 nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform.*?\))\n;\n', patch[1], re.DOTALL)
             except Exception as e: 
-                config.exceptInfo(e, patch)
+                config.exceptInfo(e, (boundaryFile, patch[0], patch[1]))
 
             for field in nonuniform:
                 #print patch[0], field[0], len(field[1])

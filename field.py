@@ -250,44 +250,51 @@ class IOField(Field):
         pprint('reading field {0}, time {1}'.format(name, time))
         timeDir = mesh.getTimeDir(time)
         mesh = mesh.origMesh
-        content = open(timeDir + name).read()
-        foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
-        assert re.search('format[\s\t]+(.*?);', foamFile).group(1) == config.fileFormat
-        vector = re.search('class[\s\t]+(.*?);', foamFile).group(1) == 'volVectorField'
-        dimensions = 1 + vector*2
-        bytesPerField = 8*(1 + 2*vector)
-        startBoundary = content.find('boundaryField')
-        data = re.search(re.compile('internalField[\s\r\n]+(.*)', re.DOTALL), content[:startBoundary]).group(1)
-        internalField = extractField(data, mesh.nInternalCells, (dimensions,))
+        try: 
+            content = open(timeDir + name).read()
+            foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
+            assert re.search('format[\s\t]+(.*?);', foamFile).group(1) == config.fileFormat
+            vector = re.search('class[\s\t]+(.*?);', foamFile).group(1) == 'volVectorField'
+            dimensions = 1 + vector*2
+            bytesPerField = 8*(1 + 2*vector)
+            startBoundary = content.find('boundaryField')
+            data = re.search(re.compile('internalField[\s\r\n]+(.*)', re.DOTALL), content[:startBoundary]).group(1)
+            internalField = extractField(data, mesh.nInternalCells, (dimensions,))
+        except Exception as e:
+            config.exceptInfo(e, timeDir + name)
+
         content = content[startBoundary:]
         boundary = {}
         def getToken(x): 
             token = re.match('[\s\r\n\t]+([a-zA-Z0-9_\.\-\+<>\{\\/}]+)', x)
             return token.group(1), token.end()
         for patchID in mesh.boundary:
-            patch = re.search(re.compile('[\s\r\n\t]+' + patchID + '[\s\r\n]+{', re.DOTALL), content)
-            boundary[patchID] = {}
-            start = patch.end()
-            while 1:
-                key, end = getToken(content[start:])
-                start += end
-                if key == '}':
-                    break
-                # skip non binary, non value, uniform or empty patches
-                elif key == 'value' and config.fileFormat == 'binary' and getToken(content[start:])[0] != 'uniform' and mesh.boundary[patchID]['nFaces'] != 0:
-                    match = re.search(re.compile('[ ]+(nonuniform[ ]+List<[a-z]+>[\s\r\n\t0-9]*\()', re.DOTALL), content[start:])
-                    nBytes = bytesPerField * mesh.boundary[patchID]['nFaces']
-                    start += match.end()
-                    prefix = match.group(1)
-                    boundary[patchID][key] = prefix + content[start:start+nBytes]
-                    start += nBytes
-                    match = re.search('\)[\s\r\n\t]*;', content[start:])
-                    boundary[patchID][key] += match.group(0)[:-1]
-                    start += match.end()
-                else:
-                    match = re.search(re.compile('[ ]+(.*?);', re.DOTALL), content[start:])
-                    start += match.end() 
-                    boundary[patchID][key] = match.group(1)
+            try:
+                patch = re.search(re.compile('[\s\r\n\t]+' + patchID + '[\s\r\n]+{', re.DOTALL), content)
+                boundary[patchID] = {}
+                start = patch.end()
+                while 1:
+                    key, end = getToken(content[start:])
+                    start += end
+                    if key == '}':
+                        break
+                    # skip non binary, non value, uniform or empty patches
+                    elif key == 'value' and config.fileFormat == 'binary' and getToken(content[start:])[0] != 'uniform' and mesh.boundary[patchID]['nFaces'] != 0:
+                        match = re.search(re.compile('[ ]+(nonuniform[ ]+List<[a-z]+>[\s\r\n\t0-9]*\()', re.DOTALL), content[start:])
+                        nBytes = bytesPerField * mesh.boundary[patchID]['nFaces']
+                        start += match.end()
+                        prefix = match.group(1)
+                        boundary[patchID][key] = prefix + content[start:start+nBytes]
+                        start += nBytes
+                        match = re.search('\)[\s\r\n\t]*;', content[start:])
+                        boundary[patchID][key] += match.group(0)[:-1]
+                        start += match.end()
+                    else:
+                        match = re.search(re.compile('[ ]+(.*?);', re.DOTALL), content[start:])
+                        start += match.end() 
+                        boundary[patchID][key] = match.group(1)
+            except Exception as e:
+                config.exceptInfo(e, (timeDir + name, patchID))
         if vector:
             dimensions = (3,)
         else:
