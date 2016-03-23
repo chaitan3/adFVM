@@ -60,12 +60,10 @@ class Mesh(object):
         pprint('Reading mesh')
         self = cls()
 
-        self.caseDir = caseDir
-        self.case = caseDir + parallel.processorDirectory
         if config.hdf5:
-            self.readHDF5(self.caseDir + 'mesh.hdf5')
+            self.readHDF5(caseDir)
         else:
-            self.readFoam(currTime) 
+            self.readFoam(caseDir, currTime) 
 
         localPatches, self.remotePatches = self.splitPatches(self.boundary)
         self.boundaryTensor = {}
@@ -128,8 +126,9 @@ class Mesh(object):
                 self.origMesh.boundary[patchID] = copy.deepcopy(boundary[patchID])
         self.update(0., 0.)
 
-    def readFoam(self, currTime):
+    def readFoam(self, caseDir, currTime):
         pprint('reading foam mesh')
+        self.case = caseDir + parallel.processorDirectory
         if isinstance(currTime, float):
             timeDir = self.getTimeDir(currTime)
         else:
@@ -208,9 +207,12 @@ class Mesh(object):
             boundary[patch[0]]['startFace'] = int(boundary[patch[0]]['startFace'])
         return boundary
 
-    def readHDF5(self, meshFile):
+    def readHDF5(self, caseDir):
         pprint('reading hdf5 mesh')
-        meshFile = h5py.File(meshFile, 'r', driver='mpio', comm=parallel.mpi)
+
+        self.case = caseDir 
+        meshFile = h5py.File(self.case + 'mesh.hdf5', 'r', driver='mpio', comm=parallel.mpi)
+        assert meshFile['parallel/start'].shape[0] == parallel.nProcessors
 
         rank = parallel.rank
         parallelStart = meshFile['parallel/start'][rank]
@@ -278,9 +280,9 @@ class Mesh(object):
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
         handle.close()
 
-    def writeHDF5(self):
+    def writeHDF5(self, case):
         pprint('writing hdf5 mesh')
-        meshFile = h5py.File(self.caseDir + 'mesh.hdf5', 'w', driver='mpio', comm=parallel.mpi)
+        meshFile = h5py.File(case + 'mesh.hdf5', 'w', driver='mpio', comm=parallel.mpi)
         rank = parallel.rank
         nProcs = parallel.nProcessors
 
@@ -290,10 +292,12 @@ class Mesh(object):
                 boundary.append([patchID, key, str(value)])
         boundary = np.array(boundary, dtype='S100')
 
-        assert self.nInternalFaces == 0
-        neighbour = self.neighbour
-        parallelInfo = np.array([self.faces.shape[0], self.points.shape[0], \
-                                 self.owner.shape[0], neighbour.shape[0],
+        mesh = self.origMesh
+        faces, points, owner, neighbour = self.faces, self.points, mesh.owner, mesh.neighbour
+        if mesh.nInternalFaces > 0:
+            neighbour = neighbour[:mesh.nInternalFaces]
+        parallelInfo = np.array([faces.shape[0], points.shape[0], \
+                                 owner.shape[0], neighbour.shape[0],
                                  boundary.shape[0]])
         parallelStart = np.zeros_like(parallelInfo)
         parallelEnd = np.zeros_like(parallelInfo)
@@ -308,12 +312,12 @@ class Mesh(object):
         parallelEndData = parallelGroup.create_dataset('end', (nProcs, len(parallelInfo)), np.int64)
         parallelEndData[rank] = parallelEnd
         
-        facesData = meshFile.create_dataset('faces', (parallelSize[0],) + self.faces.shape[1:], self.faces.dtype)
-        facesData[parallelStart[0]:parallelEnd[0]] = self.faces
-        pointsData = meshFile.create_dataset('points', (parallelSize[1],) + self.points.shape[1:], self.points.dtype)
-        pointsData[parallelStart[1]:parallelEnd[1]] = self.points
-        ownerData = meshFile.create_dataset('owner', (parallelSize[2],) + self.owner.shape[1:], self.owner.dtype)
-        ownerData[parallelStart[2]:parallelEnd[2]] = self.owner
+        facesData = meshFile.create_dataset('faces', (parallelSize[0],) + faces.shape[1:], faces.dtype)
+        facesData[parallelStart[0]:parallelEnd[0]] = faces
+        pointsData = meshFile.create_dataset('points', (parallelSize[1],) + points.shape[1:], points.dtype)
+        pointsData[parallelStart[1]:parallelEnd[1]] = points
+        ownerData = meshFile.create_dataset('owner', (parallelSize[2],) + owner.shape[1:], owner.dtype)
+        ownerData[parallelStart[2]:parallelEnd[2]] = owner
         neighbourData = meshFile.create_dataset('neighbour', (parallelSize[3],) + neighbour.shape[1:], neighbour.dtype)
         neighbourData[parallelStart[3]:parallelEnd[3]] = neighbour
 

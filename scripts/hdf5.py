@@ -1,11 +1,19 @@
 #!/usr/bin/python2
-from mesh import Mesh
 import parallel
+import config
 import sys
+config.hdf5 = False
+case = sys.argv[1]
 
-mesh = Mesh()
+from mesh import Mesh
+mesh = Mesh.create(case)
+mesh.writeHDF5(case)
 
-mesh.caseDir = sys.argv[1]
-mesh.case = mesh.caseDir + parallel.processorDirectory
-mesh.readFoam('constant') 
-mesh.writeHDF5()
+from field import IOField
+IOField.setMesh(mesh)
+time = 0.0
+U = IOField.readFoam('U', mesh, time)
+# testing hack
+import numpy as np
+U.field = np.zeros((mesh.origMesh.nCells, 3))
+U.writeHDF5(case, time)

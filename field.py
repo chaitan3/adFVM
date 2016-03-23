@@ -1,4 +1,5 @@
 import numpy as np
+import h5py
 from numbers import Number
 import re
 import os
@@ -246,8 +247,15 @@ class IOField(Field):
 
     @classmethod
     def read(self, name, mesh, time):
+        if config.hdf5:
+            return self.readHDF5(name, mesh, time)
+        else:
+            return self.readFoam(name, mesh, time)
+
+    @classmethod
+    def readFoam(self, name, mesh, time):
         # mesh values required outside theano
-        pprint('reading field {0}, time {1}'.format(name, time))
+        pprint('reading foam field {0}, time {1}'.format(name, time))
         timeDir = mesh.getTimeDir(time)
         mesh = mesh.origMesh
         try: 
@@ -302,6 +310,45 @@ class IOField(Field):
 
         return self(name, internalField, dimensions, boundary)
 
+    @classmethod
+    def readHDF5(self, name, mesh, time):
+        pprint('reading hdf5 field {0}, time {1}'.format(name, time))
+
+        if time.is_integer():
+            time = int(time)
+        fieldsFile = self.case + str(time) + '.hdf5'
+        fieldsFile = h5py.File(fieldsFile, 'r')
+        fieldGroup = fieldsFile[name]
+        assert fieldsGroup['parallel/start'].shape[0] == parallel.nProcessors
+
+        rank = parallel.rank
+        parallelStart = fieldsGroup['parallel/start'][rank]
+        parallelEnd = fieldsGroup['parallel/end'][rank]
+
+        mesh = mesh.origMesh
+        field = np.array(fieldsGroup['field'][parallelStart[0]:parallelEnd[0]])
+        internalField = field[:mesh.nInternalCells]
+        dimensions = field.shape[1:]
+
+        boundaryData = fieldsGroup['boundary'][parallelStart[1]:parallelEnd[1]]
+        boundary = {}
+        for patchID, key, value in boundaryData:
+            if patchID not in boundary:
+                boundary[patchID] = {}
+            boundary[patchID][key] = value
+        for patchID in boundary:
+            patch = boundary[patchID]
+            if patch['type'] in BCs.valuePatches:
+                startFace = mesh.boundary[patchID]['startFace']
+                nFaces = mesh.boundary[patchID]['nFaces']
+                endFace = startFace + nFaces
+                cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
+                cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+                patch['value'] = field[cellStartFace:cellEndFace]
+
+        return self(name, internalField, dimensions, boundary)
+
+
     def write(self, time, skipProcessor=False):
         # mesh values required outside theano
         name = self.name
@@ -352,6 +399,53 @@ class IOField(Field):
             handle.write('\t}\n')
         handle.write('}\n')
         handle.close()
+
+    def writeHDF5(self, case, time, skipProcessor=False):
+        # mesh values required outside theano
+        pprint('writing hdf5 field {0}, time {1}'.format(self.name, time))
+        nProcs = parallel.nProcessors
+        rank = parallel.rank
+
+        boundary = []
+        for patchID in self.boundary.keys():
+            for key, value in self.boundary[patchID].iteritems():
+                if key != 'value':
+                    boundary.append([patchID, key, str(value)])
+        boundary = np.array(boundary, dtype='S100')
+
+        # fetch processor information
+        field = self.field
+        if not skipProcessor:
+            field = parallel.getRemoteCells(field, self.mesh)
+
+        if time.is_integer():
+            time = int(time)
+        fieldsFile = case + str(time) + '.hdf5'
+        fieldsFile = h5py.File(fieldsFile, 'w')
+        fieldGroup = fieldsFile.create_group(self.name)
+        #fieldGroup.create_dataset('dimensions', data=self.dimensions)
+
+        parallelInfo = np.array([field.shape[0], boundary.shape[0]])
+        parallelStart = np.zeros_like(parallelInfo)
+        parallelEnd = np.zeros_like(parallelInfo)
+        parallel.mpi.Exscan(parallelInfo, parallelStart)
+        parallel.mpi.Scan(parallelInfo, parallelEnd)
+        parallelSize = parallelEnd.copy()
+        parallel.mpi.Bcast(parallelSize, nProcs-1)
+
+        parallelGroup = fieldGroup.create_group('parallel')
+        parallelStartData = parallelGroup.create_dataset('start', (nProcs, len(parallelInfo)), np.int64)
+        parallelStartData[rank] = parallelStart
+        parallelEndData = parallelGroup.create_dataset('end', (nProcs, len(parallelInfo)), np.int64)
+        parallelEndData[rank] = parallelEnd
+
+        fieldData = fieldGroup.create_dataset('field', (parallelSize[0],) + self.dimensions)
+        fieldData[parallelStart[0]:parallelEnd[0]] = field
+        boundaryData = fieldGroup.create_dataset('boundary', (parallelSize[1], 3), 'S100') 
+        boundaryData[parallelStart[1]:parallelEnd[1]] = boundary
+
+        fieldsFile.close()
+
 
 class ExchangerOp(T.Op):
     __props__ = ()
