@@ -127,15 +127,19 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         else:
             lastSolution = solutions[-1]
         stackedAdjointFields  = np.ascontiguousarray(objectiveGradient(lastSolution)/(nSteps + 1))
-        for phi in unstackAdjointFields(stackedAdjointFields):
+        adjointFields = unstackAdjointFields(stackedAdjointFields)
+        for phi in adjointFields
             phi.info()
+        pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *adjointFields))
         writeAdjointFields(stackedAdjointFields, t)
 
     for step in range(0, writeInterval):
         printMemUsage()
         start = time.time()
-        for phi in unstackAdjointFields(stackedAdjointFields):
+        adjointFields = unstackAdjointFields(stackedAdjointFields)
+        for phi in adjointFields:
             phi.info()
+        pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *adjointFields))
 
         adjointIndex = writeInterval-1 - step
         pprint('Time step', adjointIndex)

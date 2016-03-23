@@ -41,7 +41,7 @@ def getRhoaByV(rhoa):
     rhoaByV = IOField('rhoaByV', rhoaByV, (1,), boundary=mesh.calculatedBoundary)
     return rhoaByV
 
-def getAdjointEnergy(rhoa, rhoUa, rhoEa, solver)
+def getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
     mesh = rhoa.mesh
     # J = rhohV*rho/t
     Uref, Tref, pref = solver.Uref, solver.Tref, solver.pref
@@ -157,7 +157,7 @@ if __name__ == "__main__":
         # adjoint energy
         rhoUa = IOField.read('rhoUa', mesh, time)
         rhoEa = IOField.read('rhoEa', mesh, time)
-        adjEnergy = getAdjointEnergy(rhoa, rhoUa, rhoEa, solver)
+        adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
         pprint('L2 norm adjoint', time, adjEnergy)
         pprint()
 
