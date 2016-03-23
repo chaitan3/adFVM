@@ -129,6 +129,7 @@ class Mesh(object):
         self.update(0., 0.)
 
     def readFoam(self, currTime):
+        pprint('reading foam mesh')
         if isinstance(currTime, float):
             timeDir = self.getTimeDir(currTime)
         else:
@@ -176,7 +177,7 @@ class Mesh(object):
         remotePatches = []
 
         for patchID in boundary.keys():
-            if boundary[patchID] in config.processorPatches:
+            if boundary[patchID]['type'] in config.processorPatches:
                 remotePatches.append(patchID)
             else:
                 localPatches.append(patchID)
@@ -208,28 +209,28 @@ class Mesh(object):
         return boundary
 
     def readHDF5(self, meshFile):
+        pprint('reading hdf5 mesh')
         meshFile = h5py.File(meshFile, 'r', driver='mpio', comm=parallel.mpi)
-        hdf5File = meshFile['mesh' + parallel.processorDirectory]
-        self.faces = np.array(hdf5File['faces'])
-        self.points = np.array(hdf5File['points'])
-        self.owner = np.array(hdf5File['owner'])
-        self.neighbour = np.array(hdf5File['neighbour'])
-        self.boundary = self.readHDF5Boundary(hdf5File)
+
+        rank = parallel.rank
+        parallelStart = meshFile['parallel/start'][rank]
+        parallelEnd = meshFile['parallel/end'][rank]
+        self.faces = np.array(meshFile['faces'][parallelStart[0]:parallelEnd[0]])
+        self.points = np.array(meshFile['points'][parallelStart[1]:parallelEnd[1]])
+        self.owner = np.array(meshFile['owner'][parallelStart[2]:parallelEnd[2]])
+        self.neighbour = np.array(meshFile['neighbour'][parallelStart[3]:parallelEnd[3]])
+        self.boundary = self.readHDF5Boundary(meshFile['boundary'][parallelStart[4]:parallelEnd[4]])
+        #import pdb;pdb.set_trace()
         meshFile.close()
 
-    def readHDF5Boundary(self, meshFile):
+    def readHDF5Boundary(self, boundaryData):
         boundary = {}
-        boundaryGroup = meshFile['boundary']
-        for patchID in boundaryGroup.keys():
-            patch = {}
-            patchGroup = boundaryGroup[patchID]
-            for key in patchGroup.keys():
-                value = patchGroup[key]
-                if value.dtype == 'S100':
-                    patch[key] = str(np.array(value)[0])
-                elif value.dtype == 'int64':
-                    patch[key] = int(np.array(value))
-            boundary[patchID] = patch.copy()
+        for patchID, key, value in boundaryData:
+            if patchID not in boundary:
+                boundary[patchID] = {}
+            if key in ['nFaces', 'startFace']:
+                value = int(value)
+            boundary[patchID][key] = value
         return boundary
 
     def write(self, time):
@@ -278,23 +279,47 @@ class Mesh(object):
         handle.close()
 
     def writeHDF5(self):
-        pprint('writing mesh.hdf5')
-        meshFile = h5py.File(self.caseDir + 'mesh.hdf5', 'a', driver='mpio', comm=parallel.mpi)
-        hdf5File = meshFile.create_group('mesh' + parallel.processorDirectory)
-        hdf5File.create_dataset('faces', data=self.faces)
-        hdf5File.create_dataset('owner', data=self.owner)
-        hdf5File.create_dataset('neighbour', data=self.neighbour)
-        hdf5File.create_dataset('points', data=self.points)
-        boundary = self.boundary
-        boundaryGroup = hdf5File.create_group("boundary")
-        for patchID in boundary.keys():
-            patch = boundary[patchID]
-            patchGroup = boundaryGroup.create_group(patchID)
-            for key, value in patch.iteritems():
-                if isinstance(value, str):
-                    patchGroup.create_dataset(key, data=[value], dtype='S100')
-                else:
-                    patchGroup.create_dataset(key, data=value)
+        pprint('writing hdf5 mesh')
+        meshFile = h5py.File(self.caseDir + 'mesh.hdf5', 'w', driver='mpio', comm=parallel.mpi)
+        rank = parallel.rank
+        nProcs = parallel.nProcessors
+
+        boundary = []
+        for patchID in self.boundary.keys():
+            for key, value in self.boundary[patchID].iteritems():
+                boundary.append([patchID, key, str(value)])
+        boundary = np.array(boundary, dtype='S100')
+
+        assert self.nInternalFaces == 0
+        neighbour = self.neighbour
+        parallelInfo = np.array([self.faces.shape[0], self.points.shape[0], \
+                                 self.owner.shape[0], neighbour.shape[0],
+                                 boundary.shape[0]])
+        parallelStart = np.zeros_like(parallelInfo)
+        parallelEnd = np.zeros_like(parallelInfo)
+        parallel.mpi.Exscan(parallelInfo, parallelStart)
+        parallel.mpi.Scan(parallelInfo, parallelEnd)
+        parallelSize = parallelEnd.copy()
+        parallel.mpi.Bcast(parallelSize, nProcs-1)
+
+        parallelGroup = meshFile.create_group('parallel')
+        parallelStartData = parallelGroup.create_dataset('start', (nProcs, len(parallelInfo)), np.int64)
+        parallelStartData[rank] = parallelStart
+        parallelEndData = parallelGroup.create_dataset('end', (nProcs, len(parallelInfo)), np.int64)
+        parallelEndData[rank] = parallelEnd
+        
+        facesData = meshFile.create_dataset('faces', (parallelSize[0],) + self.faces.shape[1:], self.faces.dtype)
+        facesData[parallelStart[0]:parallelEnd[0]] = self.faces
+        pointsData = meshFile.create_dataset('points', (parallelSize[1],) + self.points.shape[1:], self.points.dtype)
+        pointsData[parallelStart[1]:parallelEnd[1]] = self.points
+        ownerData = meshFile.create_dataset('owner', (parallelSize[2],) + self.owner.shape[1:], self.owner.dtype)
+        ownerData[parallelStart[2]:parallelEnd[2]] = self.owner
+        neighbourData = meshFile.create_dataset('neighbour', (parallelSize[3],) + neighbour.shape[1:], neighbour.dtype)
+        neighbourData[parallelStart[3]:parallelEnd[3]] = neighbour
+
+        boundaryData = meshFile.create_dataset('boundary', (parallelSize[4], 3), 'S100') 
+        boundaryData[parallelStart[4]:parallelEnd[4]] = boundary
+
         meshFile.close()
 
     def getNormals(self):
@@ -445,6 +470,7 @@ class Mesh(object):
     def createGhostCells(self):
         logger.info('generated ghost cells')
         self.neighbour = np.concatenate((self.neighbour, np.zeros(self.nBoundaryFaces, np.int32)))
+        rank = parallel.rank
         self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3), config.precision)))
         nLocalCells = self.nInternalCells
         exchanger = Exchanger()
