@@ -51,6 +51,12 @@ class RCF(Solver):
             self.sourceTerm = lambda x: [np.zeros((size,) + dim, config.precision) for dim in self.dimensions]
         self.source = [Field('S' + name, variable, dim) for name, variable, dim in zip(self.names, self.sourceVariables, self.dimensions)]
 
+        self.Uref = 33.
+        self.Tref = 300.
+        self.pref = 1e5
+        self.tref = 1.
+        self.Jref = 1.
+
 
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')

@@ -41,13 +41,17 @@ def getRhoaByV(rhoa):
     rhoaByV = IOField('rhoaByV', rhoaByV, (1,), boundary=mesh.calculatedBoundary)
     return rhoaByV
 
-def getAdjointEnergy(rhoa, rhoUa, rhoEa):
+def getAdjointEnergy(rhoa, rhoUa, rhoEa, solver)
     mesh = rhoa.mesh
-    adjEnergy = (rhoa.getInternalField()**2).sum(axis=1)
-    adjEnergy += (rhoUa.getInternalField()**2).sum(axis=1)
-    adjEnergy += (rhoEa.getInternalField()**2).sum(axis=1)
-    adjEnergy = parallel.sum(adjEnergy)**0.5
-    #adjEnergy = parallel.sum(adjEnergy*mesh.origMesh.volumes[:,0])**0.5
+    # J = rhohV*rho/t
+    Uref, Tref, pref = solver.Uref, solver.Tref, solver.pref
+    rhoref = pref/(Tref*solver.R)
+    rhoUref = Uref*rhoref
+    rhoEref = (solver.Cv*Tref + Uref**2/2)*rhoref
+    adjEnergy = (rhoref*rhoa.getInternalField()**2).sum(axis=1)
+    adjEnergy += (rhoUref*rhoUa.getInternalField()**2).sum(axis=1)
+    adjEnergy += (rhoEref*rhoEa.getInternalField()**2).sum(axis=1)
+    adjEnergy = (parallel.sum(adjEnergy)**0.5)/(solver.Jref*solver.tref)
     return adjEnergy
 
 def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
@@ -125,42 +129,43 @@ if __name__ == "__main__":
 
     solver = RCF(user.case)
     mesh = solver.mesh
-    solver.initialize(user.time[0])
-    computer = computeFields(solver)
+    #solver.initialize(user.time[0])
+    #computer = computeFields(solver)
+
     if config.compile:
         exit()
 
     for index, time in enumerate(user.time):
         pprint('Time:', time)
         start = timer.time()
-        rho, rhoU, rhoE = solver.initFields(time)
-        U, T, p = solver.U, solver.T, solver.p
-        SF = solver.stackFields([p, U, T], np)
-        outputs = computer(SF)
-        for field, name, dim in zip(outputs, names, dimensions):
-            IO = IOField(name, field, dim)
-            if len(dim) != 2:
-                IO.write(time)
-        pprint()
+        #rho, rhoU, rhoE = solver.initFields(time)
+        #U, T, p = solver.U, solver.T, solver.p
+        #SF = solver.stackFields([p, U, T], np)
+        #outputs = computer(SF)
+        #for field, name, dim in zip(outputs, names, dimensions):
+        #    IO = IOField(name, field, dim)
+        #    if len(dim) != 2:
+        #        IO.write(time)
+        #pprint()
 
         # rhoaByV
-        #rhoa = IOField.read('rhoa', mesh, time)
-        #rhoaByV = getRhoaByV(rhoa)
-        #rhoaByV.write(time)
-        #pprint()
+        rhoa = IOField.read('rhoa', mesh, time)
+        rhoaByV = getRhoaByV(rhoa)
+        rhoaByV.write(time)
+        pprint()
 
-        ## adjoint energy
-        #rhoUa = IOField.read('rhoUa', mesh, time)
-        #rhoEa = IOField.read('rhoEa', mesh, time)
-        #adjEnergy = getAdjointEnergy(rhoa, rhoUa, rhoEa)
-        #pprint('L2 norm adjoint', time, adjEnergy)
-        #pprint()
+        # adjoint energy
+        rhoUa = IOField.read('rhoUa', mesh, time)
+        rhoEa = IOField.read('rhoEa', mesh, time)
+        adjEnergy = getAdjointEnergy(rhoa, rhoUa, rhoEa, solver)
+        pprint('L2 norm adjoint', time, adjEnergy)
+        pprint()
 
         # adjoint blowup
-        fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
-        for phi in fields:
-            phi.write(time)#, skipProcessor=True)
-        end = timer.time()
+        #fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+        #for phi in fields:
+        #    phi.write(time)#, skipProcessor=True)
+        #end = timer.time()
         pprint('Time for computing: {0}'.format(end-start))
 
         pprint()
