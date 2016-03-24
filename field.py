@@ -242,6 +242,24 @@ class IOField(Field):
         self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, ghost=True)
         return internalField
 
+    def partialComplete(self):
+        mesh = self.mesh.origMesh
+        boundary = self.boundary
+        self.field = np.vstack((self.field, np.zeros((mesh.nGhostCells,) + self.dimensions)))
+        for patchID in self.boundary:
+            patch = boundary[patchID]
+            if patch['type'] in BCs.valuePatches:
+                startFace = mesh.boundary[patchID]['startFace']
+                nFaces = mesh.boundary[patchID]['nFaces']
+                endFace = startFace + nFaces
+                cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
+                cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+                value = patch['value']
+                if isinstance(value, str):
+                    value = extractField(value, nFaces, self.dimensions)
+                #print patchID, type(value)
+                self.field[cellStartFace:cellEndFace] = value
+
     def getInternalField(self):
         return self.field[:self.mesh.origMesh.nInternalCells]
 
@@ -400,6 +418,7 @@ class IOField(Field):
         handle.write('}\n')
         handle.close()
 
+    # nonuniform non-value inputs not supported (and fixedValue value)
     def writeHDF5(self, case, time, skipProcessor=False):
         # mesh values required outside theano
         pprint('writing hdf5 field {0}, time {1}'.format(self.name, time))
@@ -408,8 +427,9 @@ class IOField(Field):
 
         boundary = []
         for patchID in self.boundary.keys():
-            for key, value in self.boundary[patchID].iteritems():
-                if key != 'value':
+            patch = self.boundary[patchID]
+            for key, value in patch.iteritems():
+                if key != 'value' and patch['type'] in BCs.valuePatches:
                     boundary.append([patchID, key, str(value)])
         boundary = np.array(boundary, dtype='S100')
 
@@ -421,7 +441,7 @@ class IOField(Field):
         if time.is_integer():
             time = int(time)
         fieldsFile = case + str(time) + '.hdf5'
-        fieldsFile = h5py.File(fieldsFile, 'w')
+        fieldsFile = h5py.File(fieldsFile, 'a')
         fieldGroup = fieldsFile.create_group(self.name)
         #fieldGroup.create_dataset('dimensions', data=self.dimensions)
 
