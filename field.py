@@ -363,6 +363,8 @@ class IOField(Field):
                 cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
                 patch['value'] = field[cellStartFace:cellEndFace]
 
+        fieldsFile.close()
+
         return self(name, internalField, dimensions, boundary)
 
 
