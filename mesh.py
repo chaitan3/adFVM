@@ -288,8 +288,8 @@ class Mesh(object):
 
         mesh = self.origMesh
         boundary = []
-        for patchID in self.boundary.keys():
-            for key, value in self.boundary[patchID].iteritems():
+        for patchID in mesh.boundary.keys():
+            for key, value in mesh.boundary[patchID].iteritems():
                 boundary.append([patchID, key, str(value)])
         boundary = np.array(boundary, dtype='S100')
         faces, points, owner, neighbour = self.faces, self.points, mesh.owner, mesh.neighbour
