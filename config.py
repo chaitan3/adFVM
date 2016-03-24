@@ -151,7 +151,7 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 \*---------------------------------------------------------------------------*/
 '''
 
-hdf5 = False
+hdf5 = True
 fileFormat = 'binary'
 #fileFormat = 'ascii'
 foamFile = {'version':'2.0', 'format': fileFormat, 'class': 'volScalarField', 'object': ''}

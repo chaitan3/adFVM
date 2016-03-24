@@ -334,27 +334,28 @@ class IOField(Field):
 
         if time.is_integer():
             time = int(time)
-        fieldsFile = self.case + str(time) + '.hdf5'
+        fieldsFile = mesh.case + str(time) + '.hdf5'
         fieldsFile = h5py.File(fieldsFile, 'r')
         fieldGroup = fieldsFile[name]
-        assert fieldsGroup['parallel/start'].shape[0] == parallel.nProcessors
+        assert fieldGroup['parallel/start'].shape[0] == parallel.nProcessors
 
         rank = parallel.rank
-        parallelStart = fieldsGroup['parallel/start'][rank]
-        parallelEnd = fieldsGroup['parallel/end'][rank]
+        parallelStart = fieldGroup['parallel/start'][rank]
+        parallelEnd = fieldGroup['parallel/end'][rank]
 
         mesh = mesh.origMesh
-        field = np.array(fieldsGroup['field'][parallelStart[0]:parallelEnd[0]])
+        field = np.array(fieldGroup['field'][parallelStart[0]:parallelEnd[0]])
         internalField = field[:mesh.nInternalCells]
         dimensions = field.shape[1:]
 
-        boundaryData = fieldsGroup['boundary'][parallelStart[1]:parallelEnd[1]]
+        boundaryData = fieldGroup['boundary'][parallelStart[1]:parallelEnd[1]]
         boundary = {}
         for patchID, key, value in boundaryData:
             if patchID not in boundary:
                 boundary[patchID] = {}
             boundary[patchID][key] = value
         for patchID in boundary:
+            print rank, name, patchID
             patch = boundary[patchID]
             if patch['type'] in BCs.valuePatches:
                 startFace = mesh.boundary[patchID]['startFace']
@@ -427,6 +428,7 @@ class IOField(Field):
 
         boundary = []
         for patchID in self.boundary.keys():
+            print rank, self.name, patchID
             patch = self.boundary[patchID]
             for key, value in patch.iteritems():
                 if key != 'value' and patch['type'] in BCs.valuePatches:
