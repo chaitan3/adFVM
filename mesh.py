@@ -286,16 +286,16 @@ class Mesh(object):
         rank = parallel.rank
         nProcs = parallel.nProcessors
 
+        mesh = self.origMesh
         boundary = []
         for patchID in self.boundary.keys():
             for key, value in self.boundary[patchID].iteritems():
                 boundary.append([patchID, key, str(value)])
         boundary = np.array(boundary, dtype='S100')
-
-        mesh = self.origMesh
         faces, points, owner, neighbour = self.faces, self.points, mesh.owner, mesh.neighbour
         if mesh.nInternalFaces > 0:
             neighbour = neighbour[:mesh.nInternalFaces]
+
         parallelInfo = np.array([faces.shape[0], points.shape[0], \
                                  owner.shape[0], neighbour.shape[0],
                                  boundary.shape[0]])
