@@ -366,9 +366,14 @@ class IOField(Field):
         fieldsFile.close()
 
         return self(name, internalField, dimensions, boundary)
-
-
+    
     def write(self, time, skipProcessor=False):
+        if config.hdf5:
+            return self.writeHDF5(self.mesh.case, time, skipProcessor)
+        else:
+            return self.writeFoam(self.mesh.case, time, skipProcessor)
+
+    def writeFoam(self, case, time, skipProcessor=False):
         # mesh values required outside theano
         name = self.name
         field = self.field
@@ -379,7 +384,9 @@ class IOField(Field):
         assert len(field.shape) == 2
         np.set_printoptions(precision=16)
         pprint('writing field {0}, time {1}'.format(name, time))
-        timeDir = self.mesh.getTimeDir(time)
+        if time.is_integer():
+            time = int(time)
+        timeDir = '{0}/{1}/'.format(case, time)
         if not os.path.exists(timeDir):
             os.makedirs(timeDir)
         handle = open(timeDir + name, 'w')
