@@ -255,7 +255,6 @@ class IOField(Field):
                 cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
                 cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
                 value = extractField(patch['value'], nFaces, self.dimensions)
-                #print patchID, type(value)
                 self.field[cellStartFace:cellEndFace] = value
 
     def getInternalField(self):
@@ -333,7 +332,8 @@ class IOField(Field):
         if time.is_integer():
             time = int(time)
         fieldsFile = mesh.case + str(time) + '.hdf5'
-        fieldsFile = h5py.File(fieldsFile, 'r')
+        fieldsFile = h5py.File(fieldsFile, 'r', driver='mpio', comm=parallel.mpi)
+
         fieldGroup = fieldsFile[name]
         assert fieldGroup['parallel/start'].shape[0] == parallel.nProcessors
 
@@ -352,8 +352,8 @@ class IOField(Field):
             if patchID not in boundary:
                 boundary[patchID] = {}
             boundary[patchID][key] = value
+        #print rank, name, parallelStart[1], parallelEnd[1], boundaryData
         for patchID in boundary:
-            #print rank, name, patchID
             patch = boundary[patchID]
             if patch['type'] in BCs.valuePatches:
                 startFace = mesh.boundary[patchID]['startFace']
@@ -441,7 +441,7 @@ class IOField(Field):
         if time.is_integer():
             time = int(time)
         fieldsFile = case + str(time) + '.hdf5'
-        fieldsFile = h5py.File(fieldsFile, 'a')
+        fieldsFile = h5py.File(fieldsFile, 'a', driver='mpio', comm=parallel.mpi)
         fieldGroup = fieldsFile.create_group(self.name)
         #fieldGroup.create_dataset('dimensions', data=self.dimensions)
 
@@ -462,7 +462,7 @@ class IOField(Field):
         fieldData = fieldGroup.create_dataset('field', (parallelSize[0],) + self.dimensions, np.float64)
         fieldData[parallelStart[0]:parallelEnd[0]] = field.astype(np.float64)
         boundaryData = fieldGroup.create_dataset('boundary', (parallelSize[1], 3), 'S100') 
-        #print rank, self.name, boundary
+        #print rank, self.name, parallelStart, parallelEnd, parallelSize
         boundaryData[parallelStart[1]:parallelEnd[1]] = boundary
 
         fieldsFile.close()
