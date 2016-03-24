@@ -314,8 +314,8 @@ class Mesh(object):
         
         facesData = meshFile.create_dataset('faces', (parallelSize[0],) + faces.shape[1:], faces.dtype)
         facesData[parallelStart[0]:parallelEnd[0]] = faces
-        pointsData = meshFile.create_dataset('points', (parallelSize[1],) + points.shape[1:], points.dtype)
-        pointsData[parallelStart[1]:parallelEnd[1]] = points
+        pointsData = meshFile.create_dataset('points', (parallelSize[1],) + points.shape[1:], np.float64)
+        pointsData[parallelStart[1]:parallelEnd[1]] = points.astype(np.float64)
         ownerData = meshFile.create_dataset('owner', (parallelSize[2],) + owner.shape[1:], owner.dtype)
         ownerData[parallelStart[2]:parallelEnd[2]] = owner
         neighbourData = meshFile.create_dataset('neighbour', (parallelSize[3],) + neighbour.shape[1:], neighbour.dtype)
@@ -649,6 +649,9 @@ def extractVector(data):
     return list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', data)))
 
 def extractField(data, size, dimensions):
+    if isinstance(data, np.ndarray):
+        assert data.shape == (size, ) + dimensions
+        return data
     if size == 0:
         return np.zeros((0,) + dimensions, config.precision)
     if dimensions == (3,):

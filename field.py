@@ -254,9 +254,7 @@ class IOField(Field):
                 endFace = startFace + nFaces
                 cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
                 cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
-                value = patch['value']
-                if isinstance(value, str):
-                    value = extractField(value, nFaces, self.dimensions)
+                value = extractField(patch['value'], nFaces, self.dimensions)
                 #print patchID, type(value)
                 self.field[cellStartFace:cellEndFace] = value
 
@@ -344,7 +342,7 @@ class IOField(Field):
         parallelEnd = fieldGroup['parallel/end'][rank]
 
         mesh = mesh.origMesh
-        field = np.array(fieldGroup['field'][parallelStart[0]:parallelEnd[0]])
+        field = np.array(fieldGroup['field'][parallelStart[0]:parallelEnd[0]]).astype(config.precision)
         internalField = field[:mesh.nInternalCells]
         dimensions = field.shape[1:]
 
@@ -355,7 +353,7 @@ class IOField(Field):
                 boundary[patchID] = {}
             boundary[patchID][key] = value
         for patchID in boundary:
-            print rank, name, patchID
+            #print rank, name, patchID
             patch = boundary[patchID]
             if patch['type'] in BCs.valuePatches:
                 startFace = mesh.boundary[patchID]['startFace']
@@ -428,10 +426,10 @@ class IOField(Field):
 
         boundary = []
         for patchID in self.boundary.keys():
-            print rank, self.name, patchID
+            #print rank, self.name, patchID
             patch = self.boundary[patchID]
             for key, value in patch.iteritems():
-                if key != 'value' and patch['type'] in BCs.valuePatches:
+                if not (key == 'value' and patch['type'] in BCs.valuePatches):
                     boundary.append([patchID, key, str(value)])
         boundary = np.array(boundary, dtype='S100')
 
@@ -461,9 +459,10 @@ class IOField(Field):
         parallelEndData = parallelGroup.create_dataset('end', (nProcs, len(parallelInfo)), np.int64)
         parallelEndData[rank] = parallelEnd
 
-        fieldData = fieldGroup.create_dataset('field', (parallelSize[0],) + self.dimensions)
-        fieldData[parallelStart[0]:parallelEnd[0]] = field
+        fieldData = fieldGroup.create_dataset('field', (parallelSize[0],) + self.dimensions, np.float64)
+        fieldData[parallelStart[0]:parallelEnd[0]] = field.astype(np.float64)
         boundaryData = fieldGroup.create_dataset('boundary', (parallelSize[1], 3), 'S100') 
+        #print rank, self.name, boundary
         boundaryData[parallelStart[1]:parallelEnd[1]] = boundary
 
         fieldsFile.close()
