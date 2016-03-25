@@ -13,9 +13,11 @@ def equal(a, b):
 old = ['left', 'type', 'calculated']
 new = ['left', 'type', 'zeroGradient']
 
+counter = 0
 for index, data in enumerate(boundary):
     if equal(data, old):
+        counter += 1
         boundary[index] = new
-
+print counter, old, new
 hdf5File.close()
         
