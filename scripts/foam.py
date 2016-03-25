@@ -6,7 +6,6 @@ import glob
 import h5py
 config.hdf5 = True
 case = sys.argv[1]
-times = [float(x) for x in sys.argv[2:]]
 
 from mesh import Mesh
 mesh = Mesh.create(case)

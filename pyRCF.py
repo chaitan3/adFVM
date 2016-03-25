@@ -57,7 +57,6 @@ class RCF(Solver):
         self.tref = 1.
         self.Jref = 1.
 
-
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
         U = rhoU/rho

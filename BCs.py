@@ -56,12 +56,7 @@ class BoundaryCondition(object):
 
     def createInput(self, key, dimensions):
         nFaces = self.mesh.origMesh.boundary[self.patchID]['nFaces']
-        try:
-            value = extractField(self.patch[key], nFaces, dimensions)
-        except:
-            import parallel
-            print parallel.rank, self.phi.name, nFaces
-            raise
+        value = extractField(self.patch[key], nFaces, dimensions)
         symbolic = ad.matrix()
         self.inputs.append((symbolic, value))
         return symbolic

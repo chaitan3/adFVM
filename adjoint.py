@@ -10,7 +10,7 @@ from matop import laplacian, ddt, BCs
 from interp import central
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
 from compat import printMemUsage
-from compute import getAdjointNorm, computeFields
+from compute import getAdjointNorm, computeFields, getAdjointEnergy
 
 import numpy as np
 import time
@@ -128,7 +128,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
             lastSolution = solutions[-1]
         stackedAdjointFields  = np.ascontiguousarray(objectiveGradient(lastSolution)/(nSteps + 1))
         adjointFields = unstackAdjointFields(stackedAdjointFields)
-        for phi in adjointFields
+        for phi in adjointFields:
             phi.info()
         pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *adjointFields))
         writeAdjointFields(stackedAdjointFields, t)
