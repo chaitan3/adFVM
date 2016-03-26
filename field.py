@@ -357,12 +357,14 @@ class IOField(Field):
         assert parallelStartData.shape[0] == parallel.nProcessors
         with parallelStartData.collective:
             parallelStart = parallelStartData[rank]
+        with parallelEndData.collective:
             parallelEnd = parallelEndData[rank]
 
         mesh = mesh.origMesh
         fieldData = fieldGroup['field']
         with fieldData.collective:
-            field = np.array(fieldData[parallelStart[0]:parallelEnd[0]]).astype(config.precision)
+            field = fieldData[parallelStart[0]:parallelEnd[0]])
+        field = np.array(field).astype(config.precision)
         internalField = field[:mesh.nInternalCells]
         dimensions = field.shape[1:]
 
@@ -489,6 +491,7 @@ class IOField(Field):
         parallelEndData = parallelGroup.create_dataset('end', (nProcs, nInfo), np.int64)
         with parallelStartData.collective:
             parallelStartData[rank] = parallelStart
+        with parallelEndData.collective:
             parallelEndData[rank] = parallelEnd
 
         fieldData = fieldGroup.create_dataset('field', (parallelSize[0],) + self.dimensions, np.float64)
