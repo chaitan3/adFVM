@@ -103,11 +103,15 @@ class RCF(Solver):
         U, T, p = self.primitive(*fields)
         self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
         start = time.time()
+
+        IOField.openHandle(self.mesh.case, t)
         for phi in fields:
             phi.write(t)
         self.U.write(t)
         self.T.write(t)
         self.p.write(t)
+        IOField.closeHandle()
+
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Time for writing fields: {0}'.format(end-start))
@@ -116,9 +120,11 @@ class RCF(Solver):
     def initialize(self, t):
         # IO Fields, with phi attribute as a CellField
         start = time.time()
+        IOField.openHandle(self.mesh.case, t)
         self.U = IOField.read('U', self.mesh, t)
         self.T = IOField.read('T', self.mesh, t)
         self.p = IOField.read('p', self.mesh, t)
+        IOField.closeHandle()
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Time for reading fields: {0}'.format(end-start))

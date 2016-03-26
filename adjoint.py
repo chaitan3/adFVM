@@ -46,7 +46,11 @@ adjointNames = ['{0}a'.format(name) for name in primal.names]
 if firstCheckpoint == 0:
     adjointFields = [IOField(name, np.zeros((mesh.origMesh.nInternalCells, dimensions[0]), config.precision), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(adjointNames, primal.dimensions)]
 else:
-    adjointFields = [IOField.read(name, mesh, timeSteps[nSteps - firstCheckpoint*writeInterval][0]) for name in adjointNames]
+    t = timeSteps[nSteps - firstCheckpoint*writeInterval][0]
+    IOField.openHandle(mesh.case, t)
+    adjointFields = [IOField.read(name, mesh, t) for name in adjointNames]
+    IOField.closeHandle()
+
 adjointInternalFields = [phi.complete() for phi in adjointFields]
 adjointNewFields = [phi.phi.field for phi in adjointFields]
 # UGLY HACK
@@ -71,9 +75,11 @@ def unstackAdjointFields(stackedAdjointFields):
 def writeAdjointFields(stackedAdjointFields, writeTime):
     # TODO: fix unstacking F_CONTIGUOUS
     start = time.time()
+    IOField.openHandle(mesh.case, writeTime)
     for phi in unstackAdjointFields(stackedAdjointFields):
         phi.field = np.ascontiguousarray(phi.field)
         phi.write(writeTime)
+    IOField.closeHandle()
     parallel.mpi.Barrier()
     end = time.time()
     pprint('Time for writing fields: {0}'.format(end-start))

@@ -149,6 +149,7 @@ if __name__ == "__main__":
         #pprint()
 
         # rhoaByV
+        IOField.openHandle(mesh.case, time)
         rhoa = IOField.read('rhoa', mesh, time)
         rhoaByV = getRhoaByV(rhoa)
         rhoaByV.write(time)
@@ -165,6 +166,7 @@ if __name__ == "__main__":
         #fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
         #for phi in fields:
         #    phi.write(time)#, skipProcessor=True)
+        IOField.closeHandle()
         end = timer.time()
         pprint('Time for computing: {0}'.format(end-start))
 

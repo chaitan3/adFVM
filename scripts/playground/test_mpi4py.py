@@ -12,12 +12,19 @@ mpi = MPI.COMM_WORLD
 #b = mpi.gather(a, root=0)
 #print b
 rank = mpi.rank
-
 n = mpi.Get_size()
-a = np.array([rank])
-b = np.array([0])
-#a = np.zeros(n)
-#a[rank] = rank
-#b = np.zeros(n)
-mpi.Scan(a, b)
-print rank, a, b
+
+#a = np.array([rank])
+#b = np.array([0])
+##a = np.zeros(n)
+##a[rank] = rank
+##b = np.zeros(n)
+#mpi.Scan(a, b)
+#print rank, a, b
+
+a = np.array([rank], dtype=np.int64)
+b = None
+if rank == 0:
+    b = np.zeros((n, 1), np.int64)
+mpi.Gather(a, b)
+print a, b

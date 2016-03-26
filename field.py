@@ -223,6 +223,8 @@ class CellField(Field):
         self.field = exchange(self.field)
 
 class IOField(Field):
+    readWriteHandle = None
+
     def __init__(self, name, field, dimensions, boundary={}):
         super(self.__class__, self).__init__(name, field, dimensions)
         logger.debug('initializing IOField {0}'.format(name))
@@ -259,6 +261,20 @@ class IOField(Field):
 
     def getInternalField(self):
         return self.field[:self.mesh.origMesh.nInternalCells]
+
+    @classmethod
+    def openHandle(self, case, time):
+        if config.hdf5:
+            if time.is_integer():
+                time = int(time)
+            fieldsFile = case + str(time) + '.hdf5'
+            IOField.readWriteHandle = h5py.File(fieldsFile, 'a', driver='mpio', comm=parallel.mpi)
+
+    @classmethod
+    def closeHandle(self):
+        if config.hdf5:
+            self.readWriteHandle.close()
+            self.readWriteHandle = None
 
     @classmethod
     def read(self, name, mesh, time):
@@ -327,28 +343,34 @@ class IOField(Field):
 
     @classmethod
     def readHDF5(self, name, mesh, time):
+
         pprint('reading hdf5 field {0}, time {1}'.format(name, time))
 
-        if time.is_integer():
-            time = int(time)
-        fieldsFile = mesh.case + str(time) + '.hdf5'
-        fieldsFile = h5py.File(fieldsFile, 'r', driver='mpio', comm=parallel.mpi)
-
+        assert IOField.readWriteHandle is not None
+        fieldsFile = IOField.readWriteHandle
         fieldGroup = fieldsFile[name]
-        assert fieldGroup['parallel/start'].shape[0] == parallel.nProcessors
+        parallelGroup = fieldGroup['parallel']
 
         rank = parallel.rank
-        parallelStart = fieldGroup['parallel/start'][rank]
-        parallelEnd = fieldGroup['parallel/end'][rank]
+        parallelStartData = parallelGroup['start']
+        parallelEndData = parallelGroup['end']
+        assert parallelStartData.shape[0] == parallel.nProcessors
+        with parallelStartData.collective:
+            parallelStart = parallelStartData[rank]
+            parallelEnd = parallelEndData[rank]
 
         mesh = mesh.origMesh
-        field = np.array(fieldGroup['field'][parallelStart[0]:parallelEnd[0]]).astype(config.precision)
+        fieldData = fieldGroup['field']
+        with fieldData.collective:
+            field = np.array(fieldData[parallelStart[0]:parallelEnd[0]]).astype(config.precision)
         internalField = field[:mesh.nInternalCells]
         dimensions = field.shape[1:]
 
-        boundaryData = fieldGroup['boundary'][parallelStart[1]:parallelEnd[1]]
+        boundaryData = fieldGroup['boundary']
+        with boundaryData.collective:
+            boundaryList = boundaryData[parallelStart[1]:parallelEnd[1]]
         boundary = {}
-        for patchID, key, value in boundaryData:
+        for patchID, key, value in boundaryList:
             if patchID not in boundary:
                 boundary[patchID] = {}
             boundary[patchID][key] = value
@@ -363,7 +385,7 @@ class IOField(Field):
                 cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
                 patch['value'] = field[cellStartFace:cellEndFace]
 
-        fieldsFile.close()
+        #fieldsFile.close()
 
         return self(name, internalField, dimensions, boundary)
     
@@ -447,14 +469,14 @@ class IOField(Field):
         if not skipProcessor:
             field = parallel.getRemoteCells(field, self.mesh)
 
-        if time.is_integer():
-            time = int(time)
-        fieldsFile = case + str(time) + '.hdf5'
-        fieldsFile = h5py.File(fieldsFile, 'a', driver='mpio', comm=parallel.mpi)
+        assert IOField.readWriteHandle is not None
+            
+        fieldsFile = IOField.readWriteHandle
         fieldGroup = fieldsFile.create_group(self.name)
         #fieldGroup.create_dataset('dimensions', data=self.dimensions)
 
         parallelInfo = np.array([field.shape[0], boundary.shape[0]])
+        nInfo = len(parallelInfo)
         parallelStart = np.zeros_like(parallelInfo)
         parallelEnd = np.zeros_like(parallelInfo)
         parallel.mpi.Exscan(parallelInfo, parallelStart)
@@ -463,19 +485,21 @@ class IOField(Field):
         parallel.mpi.Bcast(parallelSize, nProcs-1)
 
         parallelGroup = fieldGroup.create_group('parallel')
-        parallelStartData = parallelGroup.create_dataset('start', (nProcs, len(parallelInfo)), np.int64)
-        parallelStartData[rank] = parallelStart
-        parallelEndData = parallelGroup.create_dataset('end', (nProcs, len(parallelInfo)), np.int64)
-        parallelEndData[rank] = parallelEnd
+        parallelStartData = parallelGroup.create_dataset('start', (nProcs, nInfo), np.int64)
+        parallelEndData = parallelGroup.create_dataset('end', (nProcs, nInfo), np.int64)
+        with parallelStartData.collective:
+            parallelStartData[rank] = parallelStart
+            parallelEndData[rank] = parallelEnd
 
         fieldData = fieldGroup.create_dataset('field', (parallelSize[0],) + self.dimensions, np.float64)
-        fieldData[parallelStart[0]:parallelEnd[0]] = field.astype(np.float64)
+        with fieldData.collective:
+            fieldData[parallelStart[0]:parallelEnd[0]] = field.astype(np.float64)
+
         boundaryData = fieldGroup.create_dataset('boundary', (parallelSize[1], 3), 'S100') 
-        #print rank, self.name, parallelStart, parallelEnd, parallelSize
-        boundaryData[parallelStart[1]:parallelEnd[1]] = boundary
+        with boundaryData.collective:
+            boundaryData[parallelStart[1]:parallelEnd[1]] = boundary
 
-        fieldsFile.close()
-
+        #fieldsFile.close()
 
 class ExchangerOp(T.Op):
     __props__ = ()
