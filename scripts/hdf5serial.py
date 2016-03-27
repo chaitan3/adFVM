@@ -59,11 +59,11 @@ def meshWriteHDF5(self, rank, maxRank):
         ownerData = meshFile['owner']
         neighbourData = meshFile['neighbour']
         boundaryData = meshFile['boundary']
-        #facesData.resize(facesData.shape[0] + faces.shape[0], axis=0)
-        #pointsData.resize(pointsData.shape[0] + points.shape[0], axis=0)
-        #ownerData.resize(ownerData.shape[0] + owner.shape[0], axis=0)
-        #neighbourData.resize(neighbourData.shape[0] + neighbour.shape[0], axis=0)
-        #boundaryData.resize(boundaryData.shape[0] + boundary.shape[0], axis=0)
+        facesData.resize(facesData.shape[0] + faces.shape[0], axis=0)
+        pointsData.resize(pointsData.shape[0] + points.shape[0], axis=0)
+        ownerData.resize(ownerData.shape[0] + owner.shape[0], axis=0)
+        neighbourData.resize(neighbourData.shape[0] + neighbour.shape[0], axis=0)
+        boundaryData.resize(boundaryData.shape[0] + boundary.shape[0], axis=0)
     
     parallelStartData[rank] = parallelStart
     parallelEndData[rank] = parallelEnd
@@ -116,6 +116,8 @@ def fieldWriteHDF5(self, time, rank, maxRank):
 
         fieldData = fieldGroup['field']
         boundaryData = fieldGroup['boundary']
+        fieldData.resize(fieldData.shape[0] + field.shape[0], axis=0)
+        boundaryData.resize(boundaryData.shape[0] + boundary.shape[0], axis=0)
 
     parallelStartData[rank] = parallelStart
     parallelEndData[rank] = parallelEnd
