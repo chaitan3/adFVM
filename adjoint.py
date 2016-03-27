@@ -20,6 +20,7 @@ import os
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--smooth', action='store_true')
+parser.add_argument('--scaling', required=False, default=0.0)
 user, args = parser.parse_known_args()
 
 primal.adjoint = True
@@ -94,7 +95,7 @@ def adjointViscosity(solution):
     outputs = computer(SF)
     M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)[0]
     M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
-    viscosityScale = 4e-3
+    viscosityScale = user.scaling
     #print(parallel.rank, M_2normScale)
     return M_2norm*(viscosityScale/M_2normScale)
 
