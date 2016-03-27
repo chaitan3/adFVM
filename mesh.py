@@ -65,6 +65,7 @@ class Mesh(object):
         else:
             self.readFoam(caseDir, currTime) 
 
+        # patches
         localPatches, self.remotePatches = self.splitPatches(self.boundary)
         self.boundaryTensor = {}
         self.origPatches = copy.copy(localPatches)
@@ -72,13 +73,8 @@ class Mesh(object):
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
 
-        self.nInternalFaces = len(self.neighbour)
-        self.nFaces = len(self.owner)
-        self.nBoundaryFaces = self.nFaces-self.nInternalFaces
-        self.nInternalCells = np.max(self.owner)+1
-        self.nGhostCells = self.nBoundaryFaces
-        self.nCells = self.nInternalCells + self.nGhostCells
-
+        self.populateSizes()
+        # mesh computation
         self.normals = self.getNormals()
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()
         # uses neighbour
@@ -325,6 +321,15 @@ class Mesh(object):
         boundaryData[parallelStart[4]:parallelEnd[4]] = boundary
 
         meshFile.close()
+
+
+    def populateSizes(self):
+        self.nInternalFaces = len(self.neighbour)
+        self.nFaces = len(self.owner)
+        self.nBoundaryFaces = self.nFaces-self.nInternalFaces
+        self.nInternalCells = np.max(self.owner)+1
+        self.nGhostCells = self.nBoundaryFaces
+        self.nCells = self.nInternalCells + self.nGhostCells
 
     def getNormals(self):
         logger.info('generated normals')

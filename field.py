@@ -363,7 +363,7 @@ class IOField(Field):
         mesh = mesh.origMesh
         fieldData = fieldGroup['field']
         with fieldData.collective:
-            field = fieldData[parallelStart[0]:parallelEnd[0]])
+            field = fieldData[parallelStart[0]:parallelEnd[0]]
         field = np.array(field).astype(config.precision)
         internalField = field[:mesh.nInternalCells]
         dimensions = field.shape[1:]
