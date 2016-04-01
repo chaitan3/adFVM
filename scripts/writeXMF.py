@@ -21,6 +21,8 @@ index = meshFile[0]
 meshFile = timeFiles[index]
 del timeFiles[index]
 times = [os.path.basename(timeFile[:-5]) for timeFile in timeFiles]
+times = sorted(times, key=lambda x: float(x))
+timeFiles = sorted(timeFiles, key=lambda x: float(os.path.basename(x[:-5])))
 
 mesh = h5py.File(meshFile, 'a')
 parallelStart = mesh['parallel/start']
@@ -33,7 +35,7 @@ xmf.write("""
     <Grid Name="TimeSeries" GridType="Collection" CollectionType="Temporal">
         <Time TimeType="List">
                 <DataItem Format="XML" NumberType="Float" Dimensions="3">
-                """ + ''.join(times) + """
+                """ + ' '.join(times) + """
             </DataItem>
         </Time>
 """)
