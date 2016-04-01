@@ -16,16 +16,20 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
     # face points lie to left or right of plane
     cdef np.ndarray[int, ndim=2] faces = mesh.faces
     cdef np.ndarray[dtype, ndim=2] points = mesh.points
-    cdef np.ndarray[int, ndim=1] owner = mesh.origMesh.owner
-    cdef np.ndarray[int, ndim=1] neighbour = mesh.origMesh.neighbour
+    cdef np.ndarray[int] owner = mesh.origMesh.owner
+    cdef np.ndarray[int] neighbour = mesh.origMesh.neighbour
     cdef int nInternalCells = mesh.origMesh.nInternalCells
     cdef int nInternalFaces = mesh.origMesh.nInternalFaces
     cdef int d = faces.shape[1]-1
+
     left = (points[faces[:,1:]]-point).dot(normal) > 0.
     counter = left.sum(axis=1)
     inter = np.where((counter > 0) & (counter < d))[0]
     cdef int n = inter.shape[0]
-    lines = -np.ones((n, 4), np.int32)
+    cdef np.ndarray[int, ndim=2] lines = -np.ones((n, 4), np.int32)
+
+    cdef int i, j, k
+    cdef int truth
 
     # get lines of intersection
     for i in range(0, n):
@@ -35,13 +39,13 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
             for k in range(0, d):
                 if left[j,k] == truth:
                     break
-            lines[i][0] = k
-            lines[i][1] = (k-1)%d
-            lines[i][2] = k
-            lines[i][3] = (k+1)%d
+            lines[i,0] = k
+            lines[i,1] = (k-1)%d
+            lines[i,2] = k
+            lines[i,3] = (k+1)%d
         else:
-            lines[i][0] = 0
-            lines[i][2] = 2
+            lines[i,0] = 0
+            lines[i,2] = 2
             for k in [0, 2]:
                 if left[j,(k-1)%d] != left[j,k]:
                     lines[i,k+1] = (k-1)%d
@@ -96,10 +100,11 @@ def getCells(object mesh):
     cdef np.ndarray[int, ndim=2] cellFaces = mesh.cellFaces
     cdef np.ndarray[int, ndim=2] faces = mesh.faces
     cdef int nCells = cellFaces.shape[0]
+    assert cellFaces.shape[1] == 6
 
-    cdef np.ndarray cellPoints = np.zeros((nCells, 8), int)
-    cdef np.ndarray firstFace = np.zeros(4, int)
-    cdef np.ndarray nextFace = np.zeros(4, int)
+    cdef np.ndarray[int, ndim=2] cellPoints = np.zeros((nCells, 8), dtype=np.int32)
+    cdef int firstFace[4]
+    cdef int nextFace[4]
 
     cdef int point, found
     cdef int i, j, k, l, m, n

@@ -73,7 +73,10 @@ class Mesh(object):
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
 
+        start = time.time()
+
         self.computeBeforeWrite()
+
        
         self.normals = self.getNormals()
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()
@@ -81,10 +84,12 @@ class Mesh(object):
         # uses neighbour
         self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
         
+
         # ghost cell modification
         self.nLocalCells = self.createGhostCells()
         self.deltas = self.getDeltas()           # nFaces 
         self.weights = self.getWeights()   # nFaces
+
 
         # theano shared variables
         self.origMesh = cls.copy(self, fields=True)
@@ -426,31 +431,6 @@ class Mesh(object):
         #        owner.data[startFace:endFace] = 0
         sumOp = (owner + neighbour).tocsr()
     
-        # different faces, same owner repeat fix
-        nFaces = 6
-        repeat = [[-1]*nFaces]
-        if ghost:
-            correction = sparse.lil_matrix((mesh.nInternalCells, mesh.nInternalCells), dtype=config.precision)
-            correction.setdiag(np.ones(mesh.nInternalCells, config.precision))
-            internalCursor = self.nInternalCells
-            for patchID in self.remotePatches:
-                internal = mesh.remoteCells['internal'][patchID]
-                uniqueInternal, inverse = np.unique(internal, return_inverse=True)
-                repeaters = np.where(np.bincount(inverse) > 1)
-                for index in uniqueInternal[repeaters]:
-                    indices = internalCursor + np.where(internal == index)[0]
-                    #print indices, patchID, index
-                    for i,j in enumerate(indices):
-                        # rotate and pad this
-                        padded = -np.ones(nFaces, dtype=np.int32)
-                        padded[:len(indices)] = np.roll(indices, -i)
-                        repeat.append(padded)
-                        correction[indices, j] = 1.
-
-                internalCursor += len(internal)
-            sumOp = (correction.tocsr())*sumOp
-        #mesh.repeat = T.shared(np.array(repeat, dtype=np.int32).T)
-
         #return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
         return sumOp
 
