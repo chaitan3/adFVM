@@ -16,7 +16,7 @@ import BCs
 case = sys.argv[1]
 times = [float(x) for x in sys.argv[2:]]
 processorDirs = glob.glob(case + 'processor*')
-ranks = [int(re.search('[0-9]+', proc).group(0)) for proc in processorDirs]
+ranks = [int(re.search('processor([0-9]+)', proc).group(1)) for proc in processorDirs]
 processorDirs = [proc for (rank, proc) in sorted(zip(ranks, processorDirs))]
 
 meshFile = h5py.File(case + '/mesh.hdf5', 'w')
