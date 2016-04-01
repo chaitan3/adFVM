@@ -90,6 +90,44 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
     return interCells, area.reshape((-1, 1))
         
             
-        
+@cython.boundscheck(False)
+def getCells(object mesh):
+    cdef np.ndarray[dtype, ndim=2] points = mesh.points
+    cdef np.ndarray[int, ndim=2] cellFaces = mesh.cellFaces
+    cdef np.ndarray[int, ndim=2] faces = mesh.faces
+    cdef int nCells = cellFaces.shape[0]
 
+    cdef np.ndarray cellPoints = np.zeros((nCells, 8), int)
+    cdef np.ndarray firstFace = np.zeros(4, int)
+    cdef np.ndarray nextFace = np.zeros(4, int)
+
+    cdef int point, found
+    cdef int i, j, k, l, m, n
+
+    for i in range(0, nCells):
+        for j in range(0, 4):
+            firstFace[j] = faces[cellFaces[i, 0], 1+j]
+        for j in range(0, 4):
+            point = firstFace[j]
+            found = 0
+            for n in range(1, 6):
+                for k in range(0, 4):
+                    nextFace[k] = faces[cellFaces[i, n], 1+k]
+                for k in range(0, 4):
+                    if nextFace[k] == point:
+                        l = (k + 1) % 4
+                        for m in range(0, 4):
+                            if firstFace[m] == nextFace[l]:
+                                l = (k - 1) % 4
+                                break
+                        cellPoints[i,4+j] = nextFace[l]
+                        found = 1
+                        break
+                if found:
+                    break
+
+        for j in range(0, 4):
+            cellPoints[i,j] = firstFace[j]
+
+    return cellPoints
 

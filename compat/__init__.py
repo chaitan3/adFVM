@@ -24,5 +24,5 @@ def add_at(a, indices, b):
         cfuncs.add_at(a, indices, b)
 
 
-from cfuncs import intersectPlane
+from cfuncs import *
 from memory import printMemUsage

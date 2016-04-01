@@ -474,8 +474,7 @@ class IOField(Field):
         assert IOField.readWriteHandle is not None
             
         fieldsFile = IOField.readWriteHandle
-        fieldGroup = fieldsFile.create_group(self.name)
-        #fieldGroup.create_dataset('dimensions', data=self.dimensions)
+        fieldGroup = fieldsFile.require_group(self.name)
 
         parallelInfo = np.array([field.shape[0], boundary.shape[0]])
         nInfo = len(parallelInfo)
@@ -486,19 +485,19 @@ class IOField(Field):
         parallelSize = parallelEnd.copy()
         parallel.mpi.Bcast(parallelSize, nProcs-1)
 
-        parallelGroup = fieldGroup.create_group('parallel')
-        parallelStartData = parallelGroup.create_dataset('start', (nProcs, nInfo), np.int64)
-        parallelEndData = parallelGroup.create_dataset('end', (nProcs, nInfo), np.int64)
+        parallelGroup = fieldGroup.require_group('parallel')
+        parallelStartData = parallelGroup.require_dataset('start', (nProcs, nInfo), np.int64)
+        parallelEndData = parallelGroup.require_dataset('end', (nProcs, nInfo), np.int64)
         with parallelStartData.collective:
             parallelStartData[rank] = parallelStart
         with parallelEndData.collective:
             parallelEndData[rank] = parallelEnd
 
-        fieldData = fieldGroup.create_dataset('field', (parallelSize[0],) + self.dimensions, np.float64)
+        fieldData = fieldGroup.require_dataset('field', (parallelSize[0],) + self.dimensions, np.float64)
         with fieldData.collective:
             fieldData[parallelStart[0]:parallelEnd[0]] = field.astype(np.float64)
 
-        boundaryData = fieldGroup.create_dataset('boundary', (parallelSize[1], 3), 'S100') 
+        boundaryData = fieldGroup.require_dataset('boundary', (parallelSize[1], 3), 'S100') 
         with boundaryData.collective:
             boundaryData[parallelStart[1]:parallelEnd[1]] = boundary
 

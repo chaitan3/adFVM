@@ -5,6 +5,7 @@
 *.txt
 *.pkl
 *.png
+*.csv
 
 *.o
 *.out
@@ -19,6 +20,7 @@ points
 cellZones
 pointZones
 faceZones
+*.hdf5
 
 dynamicCode
 

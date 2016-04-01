@@ -11,7 +11,7 @@ import config, parallel
 from config import ad, adsparse, T
 from compat import norm
 from parallel import pprint, Exchanger
-from compat import printMemUsage
+from compat import printMemUsage, getCells
 
 logger = config.Logger(__name__)
 
@@ -73,12 +73,10 @@ class Mesh(object):
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
 
-        self.populateSizes()
-        # mesh computation
+        self.computeBeforeWrite()
+       
         self.normals = self.getNormals()
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()
-        # uses neighbour
-        self.cellFaces = self.getCellFaces()     # nInternalCells
         self.cellCentres, self.volumes = self.getCellCentresAndVolumes() # nCells after ghost cell mod
         # uses neighbour
         self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
@@ -289,12 +287,16 @@ class Mesh(object):
                 boundary.append([patchID, key, str(value)])
         boundary = np.array(boundary, dtype='S100')
         faces, points, owner, neighbour = self.faces, self.points, mesh.owner, mesh.neighbour
+        cells = self.cells
+
         if mesh.nInternalFaces > 0:
             neighbour = neighbour[:mesh.nInternalFaces]
 
         parallelInfo = np.array([faces.shape[0], points.shape[0], \
                                  owner.shape[0], neighbour.shape[0],
-                                 boundary.shape[0]])
+                                 boundary.shape[0],
+                                 cells.shape[0]
+                                ])
         parallelStart = np.zeros_like(parallelInfo)
         parallelEnd = np.zeros_like(parallelInfo)
         parallel.mpi.Exscan(parallelInfo, parallelStart)
@@ -320,8 +322,18 @@ class Mesh(object):
         boundaryData = meshFile.create_dataset('boundary', (parallelSize[4], 3), 'S100') 
         boundaryData[parallelStart[4]:parallelEnd[4]] = boundary
 
+        cellsData = meshFile.create_dataset('cells', (parallelSize[5],) + cells.shape[1:], cells.dtype)
+        cellsData[parallelStart[5]:parallelEnd[5]] = cells
+
         meshFile.close()
 
+    def computeBeforeWrite(self):
+        self.populateSizes()
+        # mesh computation
+        # uses neighbour
+        self.cellFaces = self.getCellFaces()     # nInternalCells
+        # time consuming 
+        self.cells = getCells(self)
 
     def populateSizes(self):
         self.nInternalFaces = len(self.neighbour)

@@ -31,12 +31,16 @@ def meshWriteHDF5(self, rank, maxRank):
             boundary.append([patchID, key, str(value)])
     boundary = np.array(boundary, dtype='S100')
     faces, points, owner, neighbour = self.faces, self.points, mesh.owner, mesh.neighbour
+    cells = self.cells
+
     if mesh.nInternalFaces > 0:
         neighbour = neighbour[:mesh.nInternalFaces]
 
     parallelInfo = np.array([faces.shape[0], points.shape[0], \
                              owner.shape[0], neighbour.shape[0],
-                             boundary.shape[0]])
+                             boundary.shape[0],
+                             cells.shape[0]
+                            ])
 
     if rank == 0:
         parallelGroup = meshFile.create_group('parallel')
@@ -50,6 +54,7 @@ def meshWriteHDF5(self, rank, maxRank):
         ownerData = meshFile.create_dataset('owner', (parallelInfo[2],) + owner.shape[1:], owner.dtype, maxshape=(None,) + owner.shape[1:])
         neighbourData = meshFile.create_dataset('neighbour', (parallelInfo[3],) + neighbour.shape[1:], neighbour.dtype, maxshape=(None,) + neighbour.shape[1:])
         boundaryData = meshFile.create_dataset('boundary', (parallelInfo[4], 3), 'S100', maxshape=(None,3)) 
+        cellsData = meshFile.create_dataset('cells', (parallelInfo[5],) + cells.shape[1:], cells.dtype, maxshape=(None,) + cells.shape[1:])
     else:
         parallelStartData = meshFile['parallel/start']
         parallelEndData = meshFile['parallel/end']
@@ -61,11 +66,13 @@ def meshWriteHDF5(self, rank, maxRank):
         ownerData = meshFile['owner']
         neighbourData = meshFile['neighbour']
         boundaryData = meshFile['boundary']
+        cellsData = meshFile['cells']
         facesData.resize(facesData.shape[0] + faces.shape[0], axis=0)
         pointsData.resize(pointsData.shape[0] + points.shape[0], axis=0)
         ownerData.resize(ownerData.shape[0] + owner.shape[0], axis=0)
         neighbourData.resize(neighbourData.shape[0] + neighbour.shape[0], axis=0)
         boundaryData.resize(boundaryData.shape[0] + boundary.shape[0], axis=0)
+        cellsData.resize(cellsData.shape[0] + cells.shape[0], axis=0)
     
     parallelStartData[rank] = parallelStart
     parallelEndData[rank] = parallelEnd
@@ -76,6 +83,8 @@ def meshWriteHDF5(self, rank, maxRank):
     neighbourData[parallelStart[3]:parallelEnd[3]] = neighbour
 
     boundaryData[parallelStart[4]:parallelEnd[4]] = boundary
+
+    cellsData[parallelStart[5]:parallelEnd[5]] = cells
 
 def fieldWriteHDF5(self, time, rank, maxRank):
     # mesh values required outside theano
@@ -139,7 +148,7 @@ for rank, processor in enumerate(processorDirs):
     print processor
     mesh = Mesh()
     mesh.readFoam(processor, 'constant')
-    mesh.populateSizes()
+    mesh.computeBeforeWrite()
     mesh.origMesh = mesh
     meshWriteHDF5(mesh, rank, len(processorDirs))
 
