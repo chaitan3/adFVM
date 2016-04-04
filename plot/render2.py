@@ -5,12 +5,17 @@ paraview.simple._DisableFirstRenderCameraReset()
 
 fieldName = 'U'
 limits = [1.25, 232.24, 463.]
+dataType = 'POINTS'
+#dataType = 'CELLS'
 
 # create a new 'OpenFOAMReader'
 #afoam = OpenFOAMReader(FileName='a.foam')
 afoam = OpenFOAMReader(FileName='a.foam', CaseType='Decomposed Case')
 afoam.MeshRegions = ['internalMesh']
 afoam.CellArrays = ['T', 'U', 'p', 'rho', 'rhoE', 'rhoU']
+#afoam = XDMFReader(FileNames=['les.xmf'])
+#afoam.CellArrayStatus = [fieldName]
+##afoam.GridStatus = ['U']
 
 # get active view
 renderView1 = GetActiveViewOrCreate('RenderView')
@@ -37,7 +42,7 @@ PWF.ScalarRangeInitialized = 1
 # show data in view
 afoamDisplay = Show(afoam, renderView1)
 # trace defaults for the display properties.
-afoamDisplay.ColorArrayName = ['POINTS', fieldName]
+afoamDisplay.ColorArrayName = [dataType, fieldName]
 afoamDisplay.LookupTable = LUT
 afoamDisplay.EdgeColor = [0.0, 0.0, 0.0]
 afoamDisplay.ScalarOpacityUnitDistance = 0.001241735216909729
@@ -65,7 +70,7 @@ slice1.SliceType.Normal = [0.0, 0.0, 1.0]
 # show data in view
 slice1Display = Show(slice1, renderView1)
 # trace defaults for the display properties.
-slice1Display.ColorArrayName = ['POINTS', fieldName]
+slice1Display.ColorArrayName = [dataType, fieldName]
 slice1Display.LookupTable = LUT
 slice1Display.EdgeColor = [0.0, 0.0, 0.0]
 

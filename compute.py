@@ -30,7 +30,20 @@ def computeFields(solver):
     gradp = grad(central(p, mesh), ghost=True)
     gradrho = g*(gradp-c*p)/(c*c)
 
-    computer = solver.function([SF], [gradrho.field, gradU.field, gradp.field, gradc.field, divU.field], 'compute')
+    enstrophy =  gradU.norm()
+    gradUT = gradU.transpose()
+    omega = 0.5*(gradU - gradUT)
+    S = 0.5*(gradU + gradUT)
+    Q = 0.5*(omega.norm()**2 - S.norm()**2)
+
+    computer = solver.function([SF], [gradrho.field, 
+                                      gradU.field, 
+                                      gradp.field, 
+                                      gradc.field, 
+                                      divU.field,
+                                      enstrophy.field,
+                                      Q.field
+                                     ], 'compute')
     return computer
 
 def getRhoaByV(rhoa):
@@ -62,7 +75,7 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     g1 = g-1
     sg1 = np.sqrt(g1)
 
-    gradrho, gradU, gradp, gradc, divU = outputs
+    gradrho, gradU, gradp, gradc, divU = outputs[:5]
     rho = rho.field
     p = p.field
     c = np.sqrt(g*p/rho)
@@ -124,13 +137,13 @@ if __name__ == "__main__":
     parser.add_argument('time', nargs='+', type=float)
     user = parser.parse_args(config.args)
 
-    names = ['gradrho', 'gradU', 'gradp', 'gradc', 'divU']
-    dimensions = [(3,), (3,3), (3,),(3,),(1,)]
+    names = ['gradrho', 'gradU', 'gradp', 'gradc', 'divU', 'Q', 'enstrophy']
+    dimensions = [(3,), (3,3), (3,),(3,),(1,), (1,), (1,)]
 
     solver = RCF(user.case)
     mesh = solver.mesh
-    #solver.initialize(user.time[0])
-    #computer = computeFields(solver)
+    solver.initialize(user.time[0])
+    computer = computeFields(solver)
 
     if config.compile:
         exit()
@@ -138,34 +151,38 @@ if __name__ == "__main__":
     for index, time in enumerate(user.time):
         pprint('Time:', time)
         start = timer.time()
-        #rho, rhoU, rhoE = solver.initFields(time)
-        #U, T, p = solver.U, solver.T, solver.p
-        #SF = solver.stackFields([p, U, T], np)
-        #outputs = computer(SF)
-        #for field, name, dim in zip(outputs, names, dimensions):
-        #    IO = IOField(name, field, dim)
-        #    if len(dim) != 2:
-        #        IO.write(time)
-        #pprint()
+        rho, rhoU, rhoE = solver.initFields(time)
+        U, T, p = solver.U, solver.T, solver.p
+        SF = solver.stackFields([p, U, T], np)
+        outputs = computer(SF)
+        for field, name, dim in zip(outputs, names, dimensions):
+            IO = IOField(name, field, dim)
+            if len(dim) != 2:
+                IO.write(time)
+        pprint()
 
         # rhoaByV
-        IOField.openHandle(mesh.case, time)
-        rhoa = IOField.read('rhoa', mesh, time)
-        rhoaByV = getRhoaByV(rhoa)
-        rhoaByV.write(time)
-        pprint()
+        try:
+            IOField.openHandle(mesh.case, time)
+            rhoa = IOField.read('rhoa', mesh, time)
+            rhoaByV = getRhoaByV(rhoa)
+            rhoaByV.write(time)
+            pprint()
 
-        # adjoint energy
-        rhoUa = IOField.read('rhoUa', mesh, time)
-        rhoEa = IOField.read('rhoEa', mesh, time)
-        adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
-        pprint('L2 norm adjoint', time, adjEnergy)
-        pprint()
+            # adjoint energy
+            rhoUa = IOField.read('rhoUa', mesh, time)
+            rhoEa = IOField.read('rhoEa', mesh, time)
+            adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
+            pprint('L2 norm adjoint', time, adjEnergy)
+            pprint()
+        except:
+            pprint('Adjoint computation failed')
+            pprint()
 
         # adjoint blowup
-        #fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
-        #for phi in fields:
-        #    phi.write(time)#, skipProcessor=True)
+        fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+        for phi in fields:
+            phi.write(time)#, skipProcessor=True)
         IOField.closeHandle()
         end = timer.time()
         pprint('Time for computing: {0}'.format(end-start))

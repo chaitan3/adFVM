@@ -139,6 +139,12 @@ class Field(object):
         phi = self.field
         return self.__class__('tr({0})'.format(self.name), (phi[:,0,0] + phi[:,1,1] + phi[:,2,2]).reshape((phi.shape[0],1)), (1,))
 
+    def norm(self):
+        assert len(self.dimensions) == 2
+        phi = self.field
+        normPhi = ad.sqrt(ad.sum(ad.sum(phi*phi, axis=2), axis=1, keepdims=True))
+        return self.__class__('norm({0})'.format(self.name), normPhi, (1,))
+
     def __neg__(self):
         return self.__class__('-{0}'.format(self.name), -self.field, self.dimensions)
 
