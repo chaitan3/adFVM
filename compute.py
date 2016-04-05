@@ -137,7 +137,7 @@ if __name__ == "__main__":
     parser.add_argument('time', nargs='+', type=float)
     user = parser.parse_args(config.args)
 
-    names = ['gradrho', 'gradU', 'gradp', 'gradc', 'divU', 'Q', 'enstrophy']
+    names = ['gradrho', 'gradU', 'gradp', 'gradc', 'divU', 'enstrophy', 'Q']
     dimensions = [(3,), (3,3), (3,),(3,),(1,), (1,), (1,)]
 
     solver = RCF(user.case)

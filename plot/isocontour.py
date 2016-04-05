@@ -3,58 +3,116 @@ from paraview.simple import *
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 
-# find source
-afoam = FindSource('a.foam')
+fieldName = 'rhoa'
+fieldRange = [-10, -5, -1]
 
-# create a new 'Contour'
-contour1 = Contour(Input=afoam)
-contour1.PointMergeMethod = 'Uniform Binning'
-
-# set active source
-SetActiveSource(afoam)
-
-# get color transfer function/color map for 'p'
-pLUT = GetColorTransferFunction('p')
-
-# get opacity transfer function/opacity map for 'p'
-pPWF = GetOpacityTransferFunction('p')
-
-# set active source
-SetActiveSource(contour1)
-
-# Properties modified on contour1
-contour1.ContourBy = ['POINTS', 'M_2norm']
-contour1.Isosurfaces = [1000000.0, 1291549.6650148828, 1668100.537200059, 2154434.6900318824, 2782559.402207126, 3593813.6638046256, 4641588.833612773, 5994842.503189409, 7742636.8268112615, 10000000.0]
+# create a new 'OpenFOAMReader'
+afoam = OpenFOAMReader(FileName='a.foam')
+afoam.MeshRegions = ['internalMesh']
+afoam.CellArrays = [fieldName]
 
 # get active view
 renderView1 = GetActiveViewOrCreate('RenderView')
 # uncomment following to set a specific view size
-# renderView1.ViewSize = [1229, 860]
+renderView1.ViewSize = [1220, 860]
 
 # show data in view
-contour1Display = Show(contour1, renderView1)
+afoamDisplay = Show(afoam, renderView1)
 # trace defaults for the display properties.
-contour1Display.ColorArrayName = ['CELLS', 'p']
-contour1Display.LookupTable = pLUT
-contour1Display.EdgeColor = [0.0, 0.0, 0.0]
+afoamDisplay.ColorArrayName = [None, '']
+afoamDisplay.EdgeColor = [0.0, 0.0, 0.0]
+afoamDisplay.ScalarOpacityUnitDistance = 0.001241735216909729
+
+# reset view to fit data
+renderView1.ResetCamera()
+
+# set scalar coloring
+ColorBy(afoamDisplay, ('CELLS', fieldName))
+
+# rescale color and/or opacity maps used to include current data range
+afoamDisplay.RescaleTransferFunctionToDataRange(True)
+
+# show color bar/color legend
+afoamDisplay.SetScalarBarVisibility(renderView1, True)
+
+# get color transfer function/color map for fieldName
+fieldLUT = GetColorTransferFunction(fieldName)
+fieldLUT.RGBPoints = [fieldRange[0], 0.231373, 0.298039, 0.752941, fieldRange[1], 0.865003, 0.865003, 0.865003, fieldRange[2], 0.705882, 0.0156863, 0.14902]
+fieldLUT.ScalarRangeInitialized = 1.0
+
+# get opacity transfer function/opacity map for fieldName
+fieldPWF = GetOpacityTransferFunction(fieldName)
+fieldPWF.Points = [fieldRange[0], 0.0, 0.5, 0.0, fieldRange[2], 1.0, 0.5, 0.0]
+fieldPWF.ScalarRangeInitialized = 1
+
+# create a new 'Extract Surface'
+extractSurface1 = ExtractSurface(Input=afoam)
+
+# show data in view
+extractSurface1Display = Show(extractSurface1, renderView1)
+# trace defaults for the display properties.
+extractSurface1Display.ColorArrayName = ['CELLS', fieldName]
+extractSurface1Display.LookupTable = fieldLUT
+extractSurface1Display.EdgeColor = [0.0, 0.0, 0.0]
 
 # hide data in view
 Hide(afoam, renderView1)
 
 # show color bar/color legend
+extractSurface1Display.SetScalarBarVisibility(renderView1, True)
+
+# turn off scalar coloring
+ColorBy(extractSurface1Display, None)
+
+# Properties modified on extractSurface1Display
+extractSurface1Display.Opacity = 0.3
+
+# change solid color
+extractSurface1Display.DiffuseColor = [0.32941176470588235, 1.0, 0.9568627450980393]
+
+# set active source
+SetActiveSource(afoam)
+
+# create a new 'Contour'
+contour1 = Contour(Input=afoam)
+
+# Properties modified on contour1
+contour1.ContourBy = ['POINTS', fieldName]
+#contour1.Isosurfaces = np.linspace(fieldRange[0], fieldRange[2], 10).tolist()
+#contour1.Isosurfaces = np.linspace(fieldRange[0], fieldRange[2], 10).tolist() 
+contour1.Isosurfaces = np.logspace(fieldRange[0], fieldRange[2], 10).tolist()
+contour1.PointMergeMethod = 'Uniform Binning'
+
+# show data in view
+contour1Display = Show(contour1, renderView1)
+# trace defaults for the display properties.
+contour1Display.ColorArrayName = ['CELLS', fieldName]
+contour1Display.LookupTable = fieldLUT
+contour1Display.EdgeColor = [0.0, 0.0, 0.0]
+
+# hide data in view
+Hide(afoam, renderView1)
+
+# set scalar coloring
+ColorBy(contour1Display, ('POINTS', fieldName))
+
+# rescale color and/or opacity maps used to include current data range
+contour1Display.RescaleTransferFunctionToDataRange(True)
+
+# show color bar/color legend
 contour1Display.SetScalarBarVisibility(renderView1, True)
 
-# reset view to fit data bounds
-renderView1.ResetCamera(-5.39679895155e-05, 0.0408239811659, -0.0601080879569, 0.0100035862997, 0.0, 0.00999999977648)
+# Rescale transfer function
+fieldLUT.RescaleTransferFunction(fieldRange[0], fieldRange[2])
 
-#### saving camera placements for all active views
+# Rescale transfer function
+fieldPWF.RescaleTransferFunction(fieldRange[0], fieldRange[2])
 
 # current camera placement for renderView1
-renderView1.CameraPosition = [0.10088236281787376, -0.07190762696023895, 0.05946474829354532]
-renderView1.CameraFocalPoint = [0.020385006588185196, -0.025052250828593966, 0.004999999888241293]
-renderView1.CameraViewUp = [0.4934918367798123, 0.8695494595381434, 0.018696107846543908]
-renderView1.CameraParallelScale = 0.04088598045096883
+renderView1.CameraPosition = [0.15652329443511975, -0.03445140075875224, 0.30691556175293677]
+renderView1.CameraFocalPoint = [0.00595836116733855, -0.061600928039124536, 0.005673611448174642]
+renderView1.CameraViewUp = [-0.03575294422593495, 0.9967662222716278, -0.07196405434329668]
+renderView1.CameraParallelScale = 0.1549163171639415
 
-#### uncomment the following to render all views
-# RenderAllViews()
-# alternatively, if you want to write images, you can use SaveScreenshot(...).
+# save screenshot
+SaveScreenshot(fieldName + '.png', magnification=1, quality=100, view=renderView1)
