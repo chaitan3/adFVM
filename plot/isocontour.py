@@ -1,5 +1,6 @@
 #### import the simple module from the paraview
 from paraview.simple import *
+import numpy as np
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 
@@ -16,12 +17,16 @@ renderView1 = GetActiveViewOrCreate('RenderView')
 # uncomment following to set a specific view size
 renderView1.ViewSize = [1220, 860]
 
+
+animationScene1 = GetAnimationScene()
+animationScene1.UpdateAnimationUsingDataTimeSteps()
+
 # show data in view
 afoamDisplay = Show(afoam, renderView1)
 # trace defaults for the display properties.
 afoamDisplay.ColorArrayName = [None, '']
 afoamDisplay.EdgeColor = [0.0, 0.0, 0.0]
-afoamDisplay.ScalarOpacityUnitDistance = 0.001241735216909729
+#afoamDisplay.ScalarOpacityUnitDistance = 0.001241735216909729
 
 # reset view to fit data
 renderView1.ResetCamera()
@@ -114,5 +119,18 @@ renderView1.CameraFocalPoint = [0.00595836116733855, -0.061600928039124536, 0.00
 renderView1.CameraViewUp = [-0.03575294422593495, 0.9967662222716278, -0.07196405434329668]
 renderView1.CameraParallelScale = 0.1549163171639415
 
-# save screenshot
-SaveScreenshot(fieldName + '.png', magnification=1, quality=100, view=renderView1)
+index = 0
+folder = 'anim'
+
+fileName = '{0}/{1}_{2:04d}.png'.format(folder, fieldName, index)
+SaveScreenshot(fileName, magnification=1, quality=100, view=renderView1)
+
+print renderView1.ViewTime, animationScene1.EndTime
+while renderView1.ViewTime != animationScene1.EndTime:
+    animationScene1.GoToNext()
+    print renderView1.ViewTime, animationScene1.EndTime
+    index += 1
+    # save screenshot
+
+    fileName = '{0}/{1}_{2:04d}.png'.format(folder, fieldName, index)
+    SaveScreenshot(fileName, magnification=1, quality=100, view=renderView1)
