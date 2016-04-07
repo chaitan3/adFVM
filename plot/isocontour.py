@@ -85,7 +85,7 @@ contour1 = Contour(Input=afoam)
 contour1.ContourBy = ['POINTS', fieldName]
 #contour1.Isosurfaces = np.linspace(fieldRange[0], fieldRange[2], 10).tolist()
 #contour1.Isosurfaces = np.linspace(fieldRange[0], fieldRange[2], 10).tolist() 
-contour1.Isosurfaces = np.logspace(fieldRange[0], fieldRange[2], 10).tolist()
+contour1.Isosurfaces = np.linspace(fieldRange[0], fieldRange[2], 10).tolist()
 contour1.PointMergeMethod = 'Uniform Binning'
 
 # show data in view
