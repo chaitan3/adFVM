@@ -18,28 +18,40 @@ viscosity = []
 sens = []
 perturb = 0.
 
-f = open('vane_energy/objective.txt')
+f = open('vane/objective.txt')
 lines =  f.readlines()
 for line in lines:
     words = line.split(' ')
-    print words
     if words[0] == 'perturb':
         perturb = float(words[1])
     elif words[0] == 'adjoint':
         sens.append(float(words[1]))
     else:
-        viscosity.append(float(words[0]))
+        if words[0] != 'orig':
+            viscosity.append(float(words[0]))
+index = np.argsort(viscosity)
+viscosity = np.array(viscosity)[index]
+sens = np.array(sens)[index]
 
+viscosity = viscosity[3:]
+sens = sens[3:]
+
+print viscosity
+print sens
 error = 100*(sens-perturb)/abs(perturb)
 
 from numpy import *
 from matplotlib.pyplot import *
-coeff = polyfit(viscosity, error, 5)
-print coeff
-poly = poly1d(coeff)
-plt.semilogx(viscosity, poly(viscosity))
-plt.semilogx(viscosity, np.zeros_like(viscosity))
-plt.semilogx(viscosity, error, 'b.',markersize=20)
+#coeff = polyfit(viscosity, error, 1)
+#poly = poly1d(coeff)
+#plt.semilogx(viscosity, poly(viscosity))
 plt.xlabel('viscosity scaling factor')
-plt.ylabel('percent error in sensitivity')
-plt.show()
+
+plt.semilogx(viscosity, perturb*np.ones_like(viscosity))
+plt.semilogx(viscosity, sens, 'b.',markersize=20)
+plt.ylabel('sensitivity')
+#plt.semilogx(viscosity, np.zeros_like(viscosity))
+#plt.semilogx(viscosity, error, 'b.',markersize=20)
+#plt.ylabel('percent error in sensitivity')
+
+plt.savefig('vane/error.png')
