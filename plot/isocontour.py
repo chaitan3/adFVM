@@ -6,11 +6,14 @@ paraview.simple._DisableFirstRenderCameraReset()
 
 fieldName = 'rhoa'
 fieldRange = [-10, -5, -1]
+dataType = 'POINTS'
 
 # create a new 'OpenFOAMReader'
-afoam = OpenFOAMReader(FileName='a.foam')
-afoam.MeshRegions = ['internalMesh']
-afoam.CellArrays = [fieldName]
+#afoam = OpenFOAMReader(FileName='a.foam')
+#afoam.MeshRegions = ['internalMesh']
+#afoam.CellArrays = [fieldName]
+afoam = XDMFReader(FileNames=['cylinder.xmf'])
+afoam.CellArrayStatus = [fieldName]
 
 # get active view
 renderView1 = GetActiveViewOrCreate('RenderView')
@@ -32,7 +35,7 @@ afoamDisplay.EdgeColor = [0.0, 0.0, 0.0]
 renderView1.ResetCamera()
 
 # set scalar coloring
-ColorBy(afoamDisplay, ('CELLS', fieldName))
+ColorBy(afoamDisplay, (dataType, fieldName))
 
 # rescale color and/or opacity maps used to include current data range
 afoamDisplay.RescaleTransferFunctionToDataRange(True)
@@ -50,13 +53,30 @@ fieldPWF = GetOpacityTransferFunction(fieldName)
 fieldPWF.Points = [fieldRange[0], 0.0, 0.5, 0.0, fieldRange[2], 1.0, 0.5, 0.0]
 fieldPWF.ScalarRangeInitialized = 1
 
+# required for xmf
+cellDatatoPointData1 = CellDatatoPointData(Input=afoam)
+cellDatatoPointData1Display = Show(cellDatatoPointData1, renderView1)
+cellDatatoPointData1Display.ColorArrayName = ['POINTS', fieldName]
+cellDatatoPointData1Display.LookupTable = fieldLUT
+cellDatatoPointData1Display.EdgeColor = [0.0, 0.0, 0.0]
+#cellDatatoPointData1Display.ScalarOpacityUnitDistance = 2.3253122444215028e-05
+afoam = cellDatatoPointData1
+
+# hide data in view
+Hide(cylinderxmf, renderView1)
+
+# show color bar/color legend
+cellDatatoPointData1Display.SetScalarBarVisibility(renderView1, True)
+
+
+
 # create a new 'Extract Surface'
 extractSurface1 = ExtractSurface(Input=afoam)
 
 # show data in view
 extractSurface1Display = Show(extractSurface1, renderView1)
 # trace defaults for the display properties.
-extractSurface1Display.ColorArrayName = ['CELLS', fieldName]
+extractSurface1Display.ColorArrayName = [dataType, fieldName]
 extractSurface1Display.LookupTable = fieldLUT
 extractSurface1Display.EdgeColor = [0.0, 0.0, 0.0]
 
@@ -91,8 +111,11 @@ contour1.PointMergeMethod = 'Uniform Binning'
 # show data in view
 contour1Display = Show(contour1, renderView1)
 # trace defaults for the display properties.
-contour1Display.ColorArrayName = ['CELLS', fieldName]
-contour1Display.LookupTable = fieldLUT
+# xmf
+contour1Display.ColorArrayName = [None, '']
+# foam
+#contour1Display.ColorArrayName = [dataType, fieldName]
+#contour1Display.LookupTable = fieldLUT
 contour1Display.EdgeColor = [0.0, 0.0, 0.0]
 
 # hide data in view
@@ -100,12 +123,9 @@ Hide(afoam, renderView1)
 
 # set scalar coloring
 ColorBy(contour1Display, ('POINTS', fieldName))
-
-# rescale color and/or opacity maps used to include current data range
 contour1Display.RescaleTransferFunctionToDataRange(True)
-
-# show color bar/color legend
 contour1Display.SetScalarBarVisibility(renderView1, True)
+# show color bar/color legend
 
 # Rescale transfer function
 fieldLUT.RescaleTransferFunction(fieldRange[0], fieldRange[2])

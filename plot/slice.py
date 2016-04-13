@@ -4,18 +4,18 @@ from paraview.simple import *
 paraview.simple._DisableFirstRenderCameraReset()
 
 fieldName = 'U'
-limits = [1.25, 232.24, 463.]
-dataType = 'POINTS'
-#dataType = 'CELLS'
+limits = [0, 30, 60.]
+#dataType = 'POINTS'
+dataType = 'CELLS'
 
 # create a new 'OpenFOAMReader'
 #afoam = OpenFOAMReader(FileName='a.foam')
-afoam = OpenFOAMReader(FileName='a.foam', CaseType='Decomposed Case')
-afoam.MeshRegions = ['internalMesh']
-afoam.CellArrays = ['T', 'U', 'p', 'rho', 'rhoE', 'rhoU']
-#afoam = XDMFReader(FileNames=['les.xmf'])
-#afoam.CellArrayStatus = [fieldName]
-##afoam.GridStatus = ['U']
+#afoam = OpenFOAMReader(FileName='a.foam', CaseType='Decomposed Case')
+#afoam.MeshRegions = ['internalMesh']
+#afoam.CellArrays = ['T', 'U', 'p', 'rho', 'rhoE', 'rhoU']
+afoam = XDMFReader(FileNames=['cylinder.xmf'])
+afoam.CellArrayStatus = ['T', 'U', 'p', 'rho', 'rhoE', 'rhoU']
+#afoam.GridStatus = ['TimeSeries']
 
 # get active view
 renderView1 = GetActiveViewOrCreate('RenderView')
@@ -59,7 +59,10 @@ slice1.SliceType = 'Plane'
 slice1.SliceOffsetValues = [0.0]
 
 # init the 'Plane' selected for 'SliceType'
-slice1.SliceType.Origin = [0.010560549795627594, -0.07964942511171103, 0.004999999888241291]
+# vane
+#slice1.SliceType.Origin = [0.010560549795627594, -0.07964942511171103, 0.004999999888241291]
+# cylinder
+slice1.SliceType.Origin = [0.0, 0.0, 0.0]
 
 # toggle 3D widget visibility (only when running from the GUI)
 Hide3DWidgets(proxy=slice1)
@@ -87,9 +90,15 @@ Hide(afoam, renderView1)
 slice1Display.SetScalarBarVisibility(renderView1, True)
 
 # current camera placement for renderView1
-renderView1.CameraPosition = [0.010560549795627594, -0.07964942511171103, 0.4138181725874819]
-renderView1.CameraFocalPoint = [0.010560549795627594, -0.07964942511171103, 0.004999999888241291]
-renderView1.CameraParallelScale = 0.1549163171639415
+# vane
+#renderView1.CameraPosition = [0.010560549795627594, -0.07964942511171103, 0.4138181725874819]
+#renderView1.CameraFocalPoint = [0.010560549795627594, -0.07964942511171103, 0.004999999888241291]
+#renderView1.CameraParallelScale = 0.1549163171639415
+
+# cylinder
+renderView1.CameraPosition = [0.00022399998852051795, 0.0, 0.0016789982844243006]
+renderView1.CameraFocalPoint = [0.00022399998852051795, 0.0, 0.0]
+renderView1.CameraParallelScale = 0.0005258136465711964
 
 index = 0
 folder = 'anim'
