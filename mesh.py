@@ -94,7 +94,7 @@ class Mesh(object):
         # theano shared variables
         self.origMesh = cls.copy(self, fields=True)
         # update mesh initialization call
-        self.update(0., 0.)
+        self.update(currTime, 0.)
         self.makeTensor()
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
@@ -123,7 +123,7 @@ class Mesh(object):
         for patchID in boundary:
             if boundary[patchID]['type'] == 'slidingPeriodic1D':
                 self.origMesh.boundary[patchID] = copy.deepcopy(boundary[patchID])
-        self.update(0., 0.)
+        self.update(time, 0.)
 
     def readFoam(self, caseDir, currTime):
         pprint('reading foam mesh')
