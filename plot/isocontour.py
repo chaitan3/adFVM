@@ -4,15 +4,15 @@ import numpy as np
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 
-fieldName = 'rhoa'
-fieldRange = [-10, -5, -1]
+fieldName = 'p'
+fieldRange = [101325.,101325., 101325.]
 dataType = 'POINTS'
 
 # create a new 'OpenFOAMReader'
 #afoam = OpenFOAMReader(FileName='a.foam')
 #afoam.MeshRegions = ['internalMesh']
 #afoam.CellArrays = [fieldName]
-afoam = XDMFReader(FileNames=['cylinder.xmf'])
+afoam = XDMFReader(FileNames=['les.xmf'])
 afoam.CellArrayStatus = [fieldName]
 
 # get active view
@@ -60,15 +60,9 @@ cellDatatoPointData1Display.ColorArrayName = ['POINTS', fieldName]
 cellDatatoPointData1Display.LookupTable = fieldLUT
 cellDatatoPointData1Display.EdgeColor = [0.0, 0.0, 0.0]
 #cellDatatoPointData1Display.ScalarOpacityUnitDistance = 2.3253122444215028e-05
+Hide(afoam, renderView1)
 afoam = cellDatatoPointData1
-
-# hide data in view
-Hide(cylinderxmf, renderView1)
-
-# show color bar/color legend
 cellDatatoPointData1Display.SetScalarBarVisibility(renderView1, True)
-
-
 
 # create a new 'Extract Surface'
 extractSurface1 = ExtractSurface(Input=afoam)
@@ -105,24 +99,24 @@ contour1 = Contour(Input=afoam)
 contour1.ContourBy = ['POINTS', fieldName]
 #contour1.Isosurfaces = np.linspace(fieldRange[0], fieldRange[2], 10).tolist()
 #contour1.Isosurfaces = np.linspace(fieldRange[0], fieldRange[2], 10).tolist() 
-contour1.Isosurfaces = np.linspace(fieldRange[0], fieldRange[2], 10).tolist()
+contour1.Isosurfaces = np.linspace(fieldRange[0], fieldRange[2], 1).tolist()
 contour1.PointMergeMethod = 'Uniform Binning'
 
 # show data in view
 contour1Display = Show(contour1, renderView1)
 # trace defaults for the display properties.
 # xmf
-contour1Display.ColorArrayName = [None, '']
+#contour1Display.ColorArrayName = [None, '']
 # foam
-#contour1Display.ColorArrayName = [dataType, fieldName]
-#contour1Display.LookupTable = fieldLUT
+contour1Display.ColorArrayName = [dataType, fieldName]
+contour1Display.LookupTable = fieldLUT
 contour1Display.EdgeColor = [0.0, 0.0, 0.0]
 
 # hide data in view
 Hide(afoam, renderView1)
 
 # set scalar coloring
-ColorBy(contour1Display, ('POINTS', fieldName))
+#ColorBy(contour1Display, ('POINTS', fieldName))
 contour1Display.RescaleTransferFunctionToDataRange(True)
 contour1Display.SetScalarBarVisibility(renderView1, True)
 # show color bar/color legend
