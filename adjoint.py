@@ -9,6 +9,7 @@ from field import IOField, Field
 from matop import laplacian, ddt, BCs
 from interp import central
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
+from problem import nPerturb
 from compat import printMemUsage
 from compute import getAdjointNorm, computeFields, getAdjointEnergy
 
@@ -16,6 +17,7 @@ import numpy as np
 import time
 import sys
 import os
+import cPickle as pkl
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -27,14 +29,12 @@ primal.adjoint = True
 mesh = primal.mesh
 statusFile = primal.statusFile
 try:
-    with open(statusFile, 'r') as status:
-        firstCheckpoint, result = status.readlines()
+    with open(statusFile, 'rb') as status:
+        firstCheckpoint, result = pkl.load(status)
     pprint('Read status file, checkpoint =', firstCheckpoint)
-    firstCheckpoint = int(firstCheckpoint)
-    result = float(result)
 except:
     firstCheckpoint = 0
-    result = 0.
+    result = [0.]*nPerturb
 if parallel.rank == 0:
     timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
     timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(9), 0]])))
@@ -177,9 +177,9 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
             stackedAdjointFields[:mesh.origMesh.nInternalCells] = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
 
         # compute sensitivity using adjoint solution
-        perturbations = perturb(mesh.origMesh)
-        for derivative, delphi in zip(sourceGradient, perturbations):
-            result += np.sum(np.ascontiguousarray(derivative) * delphi)
+        for index, perturbation in enumerate(perturb):
+            for derivative, delphi in zip(sourceGradient, perturbation(mesh.origMesh)):
+                result[index] += np.sum(np.ascontiguousarray(derivative) * delphi)
 
         parallel.mpi.Barrier()
         end = time.time()
@@ -188,8 +188,9 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
     writeAdjointFields(stackedAdjointFields, t)
-    with open(statusFile, 'w') as status:
-        status.write('{0}\n{1}\n'.format(checkpoint + 1, result))
+    with open(statusFile, 'wb') as status:
+        pkl.dump([firstCheckpoint + 1, result], status)
 
-writeResult('adjoint', result)
+for index in range(0, nPerturb):
+    writeResult('adjoint', result[index], '{} {}'.format(index, user.scaling))
 os.remove(statusFile)

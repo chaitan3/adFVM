@@ -1,6 +1,6 @@
 import numpy as np
 import time
-import cPickle as pickle
+import cPickle as pkl
 import os
 import copy
 
@@ -35,7 +35,7 @@ class Solver(object):
 
         self.mesh = Mesh.create(case)
         self.resultFile = self.mesh.case + 'objective.txt'
-        self.statusFile = self.mesh.case + 'status.txt'
+        self.statusFile = self.mesh.case + 'status.pkl'
         self.timeSeriesFile = self.mesh.case + 'timeSeries.txt'
         Field.setSolver(self)
 
@@ -182,9 +182,8 @@ class Solver(object):
                 if self.dynamicMesh:
                     mesh.write(t)
                 self.writeFields(fields, t)
-                with open(self.statusFile, 'w') as status:
-                    status.write('{0}\n{1}\n{2}\n{3}\n' \
-                                .format(timeIndex, t, dt, result))
+                with open(self.statusFile, 'wb') as status:
+                    pkl.dump([timeIndex, t, dt, result], status)
 
                 if mode == 'orig' and parallel.rank == 0 and not self.localTimeStep:
                     with open(self.timeStepFile, 'a') as f:
@@ -250,26 +249,26 @@ class SolverFunction(object):
         inputs.extend(self.symbolic)
 
         fn = None
-        pkl = None
+        pklData = None
         if parallel.rank == 0:
             start = time.time()
             if os.path.exists(pklFile) and config.unpickleFunction:
                 pprint('Loading pickled file', pklFile)
-                pkl = open(pklFile).read()
+                pklData = open(pklFile).read()
             else:
                 fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
                 #T.printing.pydotprint(fn, outfile='graph.png')
                 if config.pickleFunction or (parallel.nProcessors > 1):
-                    pkl = pickle.dumps(fn)
+                    pklData = pkl.dumps(fn)
                     pprint('Saving pickle file', pklFile)
-                    f = open(pklFile, 'w').write(pkl)
-                    pprint('Module size: {0:.2f}'.format(float(len(pkl))/(1024*1024)))
+                    f = open(pklFile, 'w').write(pklData)
+                    pprint('Module size: {0:.2f}'.format(float(len(pklData))/(1024*1024)))
             end = time.time()
             pprint('Compilation time: {0:.2f}'.format(end-start))
 
         if not config.compile:
             start = time.time()
-            pkl = parallel.mpi.bcast(pkl, root=0)
+            pklData = parallel.mpi.bcast(pklData, root=0)
             if parallel.mpi.bcast(fn is not None, root=0) and parallel.nProcessors > 1:
                 T.gof.cc.get_module_cache().refresh(cleanup=False)
             end = time.time()
@@ -283,7 +282,7 @@ class SolverFunction(object):
             for stage in range(unloadingStages):
                 printMemUsage()
                 if (nodeStage == stage) and (fn is None):
-                    fn = pickle.loads(pkl)
+                    fn = pkl.loads(pklData)
                 parallel.mpi.Barrier()
             end = time.time()
             pprint('Loading time: {0:.2f}'.format(end-start))

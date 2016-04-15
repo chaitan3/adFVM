@@ -9,6 +9,7 @@ from field import CellField, Field, IOField
 import numpy as np
 import sys
 import os
+import cPickle as pkl
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -21,6 +22,9 @@ for attr in dir(caseFile):
     if not attr.startswith('_'):
         # defines primal, objective and perturb, nSteps, writeInterval, startTime, dt
         locals()[attr] = getattr(caseFile, attr)
+if not isinstance(perturb, list):
+    perturb = [perturb]
+nPerturb = len(perturb)
 
 pprint('Compiling objective')
 stackedFields = ad.matrix()
@@ -35,7 +39,7 @@ primal.objective = objectiveFunction
 primal.timeStepFile = primal.mesh.case + '{0}.{1}.txt'.format(nSteps, writeInterval)
 pprint('')
 
-def writeResult(option, result):
+def writeResult(option, result, info=''):
     globalResult = parallel.sum(result)
     resultFile = primal.resultFile
     if parallel.rank == 0:
@@ -43,7 +47,10 @@ def writeResult(option, result):
             previousResult = float(open(resultFile).readline().split(' ')[1])
             globalResult -= previousResult
         with open(resultFile, 'a') as handle:
-            handle.write('{0} {1}\n'.format(option, globalResult))
+            if len(info) > 0:
+                handle.write('{} {} {}\n'.format(option, info, globalResult))
+            else:
+                handle.write('{} {}\n'.format(option, globalResult))
 
 if __name__ == "__main__":
     mesh = primal.mesh.origMesh
@@ -55,21 +62,19 @@ if __name__ == "__main__":
     user = parser.parse_args(args)
 
     try:
-        with open(statusFile, 'r') as status:
-            startIndex, startTime, dt, initResult = status.readlines()
+        with open(statusFile, 'rb') as status:
+            startIndex, startTime, dt, initResult = pkl.load(status)
         pprint('Read status file, index =', startIndex)
-        startTime = float(startTime)
-        dt = float(dt)
-        startIndex = int(startIndex)
-        initResult = float(initResult)
     except:
         startIndex = 0
         initResult = 0.
+    # WTF is this?
     if 'source' in locals():
         primal.sourceTerm = source
     
     if user.option == 'orig':
         dts = dt
+        nSims = 1
 
     elif user.option == 'perturb':
         pprint('Perturbing fields')
@@ -80,9 +85,9 @@ if __name__ == "__main__":
             timeSteps = np.zeros((nSteps+1, 2))
         parallel.mpi.Bcast(timeSteps, root=0)
         dts = timeSteps[startIndex:,1]
-
         writeInterval = config.LARGE
-        primal.sourceTerm = perturb
+
+        nSims = nPerturb
 
     elif user.option == 'test':
         #primal.adjoint = True
@@ -120,6 +125,11 @@ if __name__ == "__main__":
 
     primal.initialize(startTime)
     primal.compile()
-    result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex)
-    writeResult(user.option, result/(nSteps + 1))
-    os.remove(statusFile)
+
+    # restarting perturb not fully supported
+    for sim in range(0, nSims):
+        if user.option == 'perturb':
+            primal.sourceTerm = perturb[sim]
+        result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex)
+        writeResult(user.option, result/(nSteps + 1), '{}'.format(sim))
+        os.remove(statusFile)
