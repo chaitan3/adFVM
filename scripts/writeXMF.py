@@ -2,27 +2,33 @@
 import os
 import numpy as np
 import sys
-import glob
 import h5py
+import re
 
 case = sys.argv[1]
 name = os.path.basename(case.rstrip('/'))
 
-xmf = open(case + name + '.xmf', 'w')
+serial = ''
+serial = '_serial'
+offset = 5 + len(serial)
+
+xmfFile = case + name + serial + '.xmf'
+print 'writing xmf ' +  xmfFile
+
+xmf = open(xmfFile, 'w')
 xmf.write("""<?xml version="1.0" ?>
 <!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
 <Xdmf Version="2.0">
 <Domain>
 """)
 
-timeFiles = glob.glob(case + '/*.hdf5')
-meshFile = [index for index, tmpFile in enumerate(timeFiles) if tmpFile.endswith('mesh.hdf5')]
-index = meshFile[0]
-meshFile = timeFiles[index]
-del timeFiles[index]
-times = [os.path.basename(timeFile[:-5]) for timeFile in timeFiles]
+timeFiles = os.listdir(case)
+regex = re.compile('[-+]?(\d*[.])?\d+' + serial + '.hdf5')
+timeFiles = [case + timeFile for timeFile in filter(regex.match, timeFiles)]
+meshFile = case + 'mesh{}.hdf5'.format(serial)
+times = [os.path.basename(timeFile[:-offset]) for timeFile in timeFiles]
 times = sorted(times, key=lambda x: float(x))
-timeFiles = sorted(timeFiles, key=lambda x: float(os.path.basename(x[:-5])))
+timeFiles = sorted(timeFiles, key=lambda x: float(os.path.basename(x[:-offset])))
 
 mesh = h5py.File(meshFile, 'a')
 parallelStart = mesh['parallel/start']
