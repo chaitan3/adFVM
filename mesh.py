@@ -119,7 +119,7 @@ class Mesh(object):
         timeDir = self.getTimeDir(time) 
         meshDir = timeDir + 'polyMesh/'
         # HACK correct updating
-        boundary, _, _ = self.readFoamBoundary(meshDir + 'boundary')
+        boundary = self.readFoamBoundary(meshDir + 'boundary')
         for patchID in boundary:
             if boundary[patchID]['type'] == 'slidingPeriodic1D':
                 self.origMesh.boundary[patchID] = copy.deepcopy(boundary[patchID])
