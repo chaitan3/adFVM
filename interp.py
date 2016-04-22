@@ -38,6 +38,7 @@ class Reconstruct(object):
             if patchType in config.cyclicPatches:
                 indices.append(ad.arange(startFace, endFace))
             elif patchType == 'characteristic':
+                print(patchID)
                 Cindices.append(ad.arange(startFace, endFace))
             else:
                 Bindices.append(ad.arange(startFace, endFace))

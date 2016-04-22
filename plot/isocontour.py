@@ -6,14 +6,14 @@ paraview.simple._DisableFirstRenderCameraReset()
 
 fieldName = 'p'
 fieldRange = [101325.,101325., 101325.]
-dataType = 'POINTS'
+dataType = 'CELLS'
 
 # create a new 'OpenFOAMReader'
-#afoam = OpenFOAMReader(FileName='a.foam')
-#afoam.MeshRegions = ['internalMesh']
-#afoam.CellArrays = [fieldName]
-afoam = XDMFReader(FileNames=['les.xmf'])
-afoam.CellArrayStatus = [fieldName]
+afoam = OpenFOAMReader(FileName='a.foam')
+afoam.MeshRegions = ['internalMesh']
+afoam.CellArrays = [fieldName]
+#afoam = XDMFReader(FileNames=['les.xmf'])
+#afoam.CellArrayStatus = [fieldName]
 
 # get active view
 renderView1 = GetActiveViewOrCreate('RenderView')
@@ -54,15 +54,15 @@ fieldPWF.Points = [fieldRange[0], 0.0, 0.5, 0.0, fieldRange[2], 1.0, 0.5, 0.0]
 fieldPWF.ScalarRangeInitialized = 1
 
 # required for xmf
-cellDatatoPointData1 = CellDatatoPointData(Input=afoam)
-cellDatatoPointData1Display = Show(cellDatatoPointData1, renderView1)
-cellDatatoPointData1Display.ColorArrayName = ['POINTS', fieldName]
-cellDatatoPointData1Display.LookupTable = fieldLUT
-cellDatatoPointData1Display.EdgeColor = [0.0, 0.0, 0.0]
-#cellDatatoPointData1Display.ScalarOpacityUnitDistance = 2.3253122444215028e-05
-Hide(afoam, renderView1)
-afoam = cellDatatoPointData1
-cellDatatoPointData1Display.SetScalarBarVisibility(renderView1, True)
+#cellDatatoPointData1 = CellDatatoPointData(Input=afoam)
+#cellDatatoPointData1Display = Show(cellDatatoPointData1, renderView1)
+#cellDatatoPointData1Display.ColorArrayName = ['POINTS', fieldName]
+#cellDatatoPointData1Display.LookupTable = fieldLUT
+#cellDatatoPointData1Display.EdgeColor = [0.0, 0.0, 0.0]
+##cellDatatoPointData1Display.ScalarOpacityUnitDistance = 2.3253122444215028e-05
+#Hide(afoam, renderView1)
+#afoam = cellDatatoPointData1
+#cellDatatoPointData1Display.SetScalarBarVisibility(renderView1, True)
 
 # create a new 'Extract Surface'
 extractSurface1 = ExtractSurface(Input=afoam)
@@ -116,7 +116,7 @@ contour1Display.EdgeColor = [0.0, 0.0, 0.0]
 Hide(afoam, renderView1)
 
 # set scalar coloring
-#ColorBy(contour1Display, ('POINTS', fieldName))
+ColorBy(contour1Display, ('POINTS', fieldName))
 contour1Display.RescaleTransferFunctionToDataRange(True)
 contour1Display.SetScalarBarVisibility(renderView1, True)
 # show color bar/color legend
@@ -128,10 +128,16 @@ fieldLUT.RescaleTransferFunction(fieldRange[0], fieldRange[2])
 fieldPWF.RescaleTransferFunction(fieldRange[0], fieldRange[2])
 
 # current camera placement for renderView1
-renderView1.CameraPosition = [0.15652329443511975, -0.03445140075875224, 0.30691556175293677]
-renderView1.CameraFocalPoint = [0.00595836116733855, -0.061600928039124536, 0.005673611448174642]
-renderView1.CameraViewUp = [-0.03575294422593495, 0.9967662222716278, -0.07196405434329668]
-renderView1.CameraParallelScale = 0.1549163171639415
+#renderView1.CameraPosition = [0.15652329443511975, -0.03445140075875224, 0.30691556175293677]
+#renderView1.CameraFocalPoint = [0.00595836116733855, -0.061600928039124536, 0.005673611448174642]
+#renderView1.CameraViewUp = [-0.03575294422593495, 0.9967662222716278, -0.07196405434329668]
+#renderView1.CameraParallelScale = 0.1549163171639415
+# stator-rotor
+renderView1.CameraPosition = [0.219534174855262, 0.04197477184286539, 0.3049577863957352]
+renderView1.CameraFocalPoint = [0.05664698407053944, -0.044069361872971065, 0.004999999888241285]
+renderView1.CameraViewUp = [-0.06867598140634713, 0.9682296712581044, -0.24044731912270967]
+renderView1.CameraParallelScale = 0.1333893118803982
+
 
 index = 0
 folder = 'anim'
