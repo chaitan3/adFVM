@@ -9,7 +9,8 @@ fieldRange = [101325.,101325., 101325.]
 dataType = 'CELLS'
 
 # create a new 'OpenFOAMReader'
-afoam = OpenFOAMReader(FileName='a.foam')
+#afoam = OpenFOAMReader(FileName='a.foam', CaseType='Decomposed Case')
+afoam = OpenFOAMReader(FileName='a.foam', CaseType='Reconstructed Case')
 afoam.MeshRegions = ['internalMesh']
 afoam.CellArrays = [fieldName]
 #afoam = XDMFReader(FileNames=['les.xmf'])

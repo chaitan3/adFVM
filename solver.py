@@ -150,6 +150,24 @@ class Solver(object):
             pprint('Time since beginning:', end-config.runtime)
             pprint('cumulative objective: ', parallel.sum(result))
 
+            import matplotlib.pyplot as plt
+            meshO = mesh.origMesh
+            offset = meshO.nInternalCells - meshO.nInternalFaces
+            patch = meshO.boundary['intersection_master']
+            startFace = offset + patch['startFace']
+            endFace = startFace + patch['nFaces']
+            x = meshO.faceCentres[startFace-offset:endFace-offset,1]
+            U = fields[1]/fields[0]
+            y = U.field[startFace:endFace,0]
+            plt.scatter(x,y, color='blue', label='new')
+            patch = meshO.boundary['intersection_slave']
+            startFace = patch['startFace']
+            endFace = startFace + patch['nFaces']
+            y = U.field[meshO.owner[startFace:endFace],0]
+            plt.scatter(x,y, color='red', label='orig')
+            plt.legend()
+            plt.show()
+
             mesh.update(t, dt)
             
             timeSteps.append([t, dt])
@@ -293,6 +311,7 @@ class SolverFunction(object):
     def __call__(self, *inputs):
         logger.info('running function')
         inputs = list(inputs)
+        #print 'get', id(self.values[29].data)
         inputs.extend(self.values)
         return self.fn(*inputs)
 

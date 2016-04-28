@@ -5,7 +5,7 @@ from compat import norm
 import numpy as np
 
 #primal = RCF('.')
-primal = RCF('/home/talnikar/foam/stator-rotor/laminar/')#, timeIntegrator='euler')
+primal = RCF('/home/talnikar/adFVM/cases/stator-rotor/laminar/')#, timeIntegrator='euler')
 #primal = RCF('/master/home/talnikar/foam/stator-rotor/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/stator-rotor/les/')
 primal.dynamicMesh = True

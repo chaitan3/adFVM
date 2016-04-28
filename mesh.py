@@ -122,7 +122,7 @@ class Mesh(object):
         boundary = self.readFoamBoundary(meshDir + 'boundary')
         for patchID in boundary:
             if boundary[patchID]['type'] == 'slidingPeriodic1D':
-                self.origMesh.boundary[patchID] = copy.deepcopy(boundary[patchID])
+                self.origMesh.boundary[patchID].update(boundary[patchID])
         self.update(time, 0.)
 
     def readFoam(self, caseDir, currTime):
@@ -619,9 +619,15 @@ class Mesh(object):
                 repeater = np.repeat(np.arange(patch['nLayers']), 2*patch['nFacesPerLayer'])*patch['nFacesPerLayer']
                 indices = np.tile(indices, patch['nLayers']) + repeater
                 sortedDists = np.tile(sortedDists, patch['nLayers']) + repeater
-                patch['loc_multiplier'] = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(patch['nFaces'], patch['nFaces'])).tocsr()
-                
+                loc_multiplier = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(patch['nFaces'], patch['nFaces'])).tocsr()
+                if 'loc_multiplier' not in patch:
+                    patch['loc_multiplier'] = loc_multiplier
+                else:
+                    patch['loc_multiplier'].data = loc_multiplier.data
+                    patch['loc_multiplier'].indices = loc_multiplier.indices
+                    patch['loc_multiplier'].indptr = loc_multiplier.indptr
                 #print patch['movingCellCentres']
+                #print 'set', id(patch['loc_multiplier'].data)
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Time to update mesh:', end-start)
