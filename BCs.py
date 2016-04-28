@@ -201,24 +201,47 @@ class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
         if self.solver.stage == 0:
             self.setValue(self.value)
         else:
-            # FORWARD EULER INTEGRATION
-            if self.solver.stage == 1:
-                self.p0 = self.phi.field[self.cellStartFace:self.cellEndFace]
-                #self.p0 = self.phi.field[self.internalIndices]
-                self.c = self.solver.aF.field[self.startFace:self.endFace]
-                self.Un0 = dot(self.U.field[self.internalIndices], self.normals)
-            if self.solver.stage == self.solver.nStages:
+            alpha, beta, _ = self.solver.timeStepCoeff
+            i = self.solver.stage - 1
+
+            dt = self.solver.dt
+            if self.solver.localTimeStep:
+                dt = dt[self.internalIndices]
+
+            c = self.solver.aF.field[self.startFace:self.endFace]
+            if i == 0:
+                self.p = [self.phi.field[self.cellStartFace:self.cellEndFace]]
+                self.dp = []
                 Un = dot(self.U.field[self.internalIndices], self.normals)
-                rho = self.gamma*self.p0/(self.c*self.c)
-                dt = self.solver.dt
-                if self.solver.localTimeStep:
-                    dt = dt[self.internalIndices]
-                p = self.p0
-                p = p + rho*self.c*(Un-self.Un0)
-                p = p + dt*(-0.25*self.c*(1-self.Ma*self.Ma)*(self.p0-self.pt)/self.L)
-                self.setValue(p)
-            else:
-                self.setValue(self.p0)
+                Un0 = dot(self.U.field[self.cellStartFace:self.cellEndFace], self.normals)
+                rho = self.gamma*self.p[i]/(c*c)
+                self.dUn = rho*c*(Un-Un0)
+            dp = -0.25*c*(1-self.Ma**2)*(self.p[i]-self.pt)/self.L
+            self.dp.append(dp)
+            p = self.dUn
+            for j in range(0, i+1):
+                p += alpha[i,j]*self.p[j] + beta[i,j]*self.dp[j]*dt
+            self.p.append(p)
+            self.setValue(p) 
+
+            # FORWARD EULER INTEGRATION
+            #if self.solver.stage == 1:
+            #    self.p0 = self.phi.field[self.cellStartFace:self.cellEndFace]
+            #    #self.p0 = self.phi.field[self.internalIndices]
+            #    self.c = self.solver.aF.field[self.startFace:self.endFace]
+            #    self.Un0 = dot(self.U.field[self.internalIndices], self.normals)
+            #if self.solver.stage == self.solver.nStages:
+            #    Un = dot(self.U.field[self.internalIndices], self.normals)
+            #    rho = self.gamma*self.p0/(self.c*self.c)
+            #    dt = self.solver.dt
+            #    if self.solver.localTimeStep:
+            #        dt = dt[self.internalIndices]
+            #    p = self.p0
+            #    p = p + rho*self.c*(Un-self.Un0)
+            #    p = p + dt*(-0.25*self.c*(1-self.Ma*self.Ma)*(self.p0-self.pt)/self.L)
+            #    self.setValue(p)
+            #else:
+            #    self.setValue(self.p0)
 
 # adjoint?
 class turbulentInletVelocity(BoundaryCondition):

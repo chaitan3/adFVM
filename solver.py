@@ -39,8 +39,8 @@ class Solver(object):
         self.timeSeriesFile = self.mesh.case + 'timeSeries.txt'
         Field.setSolver(self)
 
-        self.nStages = timestep.nStages[self.timeIntegrator]
-        self.timeIntegrator = getattr(timestep, self.timeIntegrator)
+        self.timeStepCoeff = getattr(timestep, self.timeIntegrator)()
+        self.nStages = self.timeStepCoeff[0].shape[0]
         self.stage = 0
         self.init = None
 
@@ -53,7 +53,7 @@ class Solver(object):
         self.t0 = ad.scalar()
         self.t = self.t0*1.
         stackedFields = ad.matrix()
-        newStackedFields = self.timeIntegrator(self.equation, self.boundary, stackedFields, self)
+        newStackedFields = timestep.timeStepper(self.equation, self.boundary, stackedFields, self)
         self.forward = self.function([stackedFields, self.dt, self.t0], \
                        [newStackedFields, self.dtc, self.local, self.remote], 'forward')
         if self.adjoint:
