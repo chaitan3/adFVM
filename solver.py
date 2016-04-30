@@ -217,9 +217,8 @@ class SolverFunction(object):
             self.populate_BCs(self.values, solver, 1)
         # source terms
         if source:
-            self.source = len(self.values)
             self.symbolic.extend(solver.sourceVariables)
-            self.values.extend(solver.sourceTerm(mesh.origMesh))
+            self.values.extend(solver.sourceTerm)
         # postpro variables
         if postpro and len(solver.postpro) > 0:
             symbolic, values = zip(*solver.postpro)

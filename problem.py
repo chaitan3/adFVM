@@ -129,7 +129,9 @@ if __name__ == "__main__":
     # restarting perturb not fully supported
     for sim in range(0, nSims):
         if user.option == 'perturb':
-            primal.sourceTerm = perturb[sim]
+            perturbation = perturb[sim](mesh)
+            for index, phi in enumerate(perturbation):
+                primal.sourceTerm[index][:] = phi
         result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex)
         writeResult(user.option, result/(nSteps + 1), '{}'.format(sim))
         os.remove(statusFile)

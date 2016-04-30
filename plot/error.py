@@ -33,12 +33,46 @@ index = np.argsort(viscosity)
 viscosity = np.array(viscosity)[index]
 sens = np.array(sens)[index]
 
+
+def polynomial(h, t, Ah, n=None, k=None):
+    if n is None:
+        n = len(Ah)-1
+    if k is None:
+        k = np.arange(1, n+1)
+    def Ar(x, i):
+        if i == 0:
+            return Ah[x]
+        return (t**k[i-1]*Ar(x/t, i-1)-Ar(x, i-1))/(t**k[i-1]-1)
+    Ac = []
+    print Ah
+    for i in range(0, n):
+        A = Ar(h, i+1)
+        Ac.append(A)
+    return Ac
+
+from scipy.optimize import brentq
+def unknown(h, t, s, Ah):
+    print Ah
+    def f(x):
+        def A(h, t):
+            return (t**x*Ah[h/t]-Ah[h])/(t**x-1)
+        return A(h, t)-A(h, s)
+    return brentq(f, 0.1, 5.)
+
+h = 6e-2
+t = 6e-2/1e-1
+Ah = {6e-2: sens[-3], 1e-1:sens[-2]}
+print polynomial(h, t, Ah)
+h = 3e-2
+t = 3e-2/1e-1
+s = 3e-2/6e-2
+Ah = {3e-2:sens[-5], 6e-2: sens[-3], 1e-1:sens[-2]}
+print unknown(h, t, s, Ah)
+
 viscosity = viscosity[3:]
 sens = sens[3:]
-
-print viscosity
-print sens
 error = 100*(sens-perturb)/abs(perturb)
+
 
 from numpy import *
 from matplotlib.pyplot import *
