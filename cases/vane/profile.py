@@ -11,7 +11,7 @@ def get_length(pat, coords):
         s.append(integrate.quad(lambda x: sqrt(1 + d(x)**2), 0, i)[0])
     return array(s)
 
-f = open('../mesh/gmsh/coords.txt', 'r')
+f = open('/home/talnikar/adFVM/cases/vane/mesh/coords.txt', 'r')
 v1 = []
 v2 = []
 n = 18

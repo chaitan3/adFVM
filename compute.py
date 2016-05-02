@@ -65,10 +65,17 @@ def getHTC(T, T0, patches):
         htc[patchID] = k*dtdn/dT
     return htc
 
-def getIsentropicMa(p, p0):
+def getIsentropicMa(p, p0, patches):
+    mesh = p.mesh.origMesh
     solver = p.solver
     g = solver.gamma
-    Ma = (2.0/(g-1)*((1./p0*p)**((g-1)/g)-1))**0.5
+    Ma = {}
+    for patchID in patches:
+        startFace = mesh.boundary[patchID]['startFace']
+        nFaces = mesh.boundary[patchID]['nFaces']
+        endFace = startFace + nFaces
+        pw = p.field[mesh.neighbour[startFace:endFace]]
+        Ma[patchID] = (2.0/(g-1)*((1./p0*pw)**((1-g)/g)-1))**0.5
     return Ma
 
 def getRhoaByV(rhoa):
