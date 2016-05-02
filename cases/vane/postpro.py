@@ -15,7 +15,7 @@ solver.initialize(user.time[0])
 
 nLayers = 1
 #nLayers = 200
-for time in user.time:
+for index, time in enumerate(user.time):
     rho, rhoU, rhoE = solver.initFields(time)
     U, T, p = solver.U, solver.T, solver.p
 
@@ -41,6 +41,8 @@ for time in user.time:
         print y
         Ma_args.extend([y, x])
 
-    match_htc(*htc_args)
+    htc_args.append('{}/htc_{}.png'.format(user.case, index))
+    Ma_args.append('{}/Ma_{}.png'.format(user.case, index))
+    match_htc(*htc_args) 
     match_velocity(*Ma_args)
     

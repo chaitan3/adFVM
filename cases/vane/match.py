@@ -5,7 +5,7 @@ import os
 from profile import get_length, pressure, suction, c
 from numpy import *
 
-def match_htc(hp, coordsp, hs, coordss):
+def match_htc(hp, coordsp, hs, coordss, saveFile):
     im = plt.imread('/home/talnikar/Dropbox/Research/results/2014/turbine_blade_verification/blade-htc1.png')
     plt.imshow(im)
 
@@ -22,9 +22,10 @@ def match_htc(hp, coordsp, hs, coordss):
     plt.scatter(transx(-sp*1000), transy(hp), c='r', s=10, alpha=fill,marker='+')
     plt.scatter(transx(ss*1000), transy(hs), c='b', s=10, alpha=fill, marker='+')
 
-    plt.show()
+    plt.savefig(saveFile)
+    plt.clf()
 
-def match_velocity(Map, coordsp, Mas, coordss):
+def match_velocity(Map, coordsp, Mas, coordss, saveFile):
     im = plt.imread('/home/talnikar/Dropbox/Research/results/2014/turbine_blade_verification/blade-velocity.png')
     plt.imshow(im)
 
@@ -41,4 +42,5 @@ def match_velocity(Map, coordsp, Mas, coordss):
     plt.scatter(transx(sp/c), transy(Map), c='r', s=10, alpha=fill)
     plt.scatter(transx(ss/c), transy(Mas), c='b', s=10, alpha=fill)
 
-    plt.show()
+    plt.savefig(saveFile)
+    plt.clf()
