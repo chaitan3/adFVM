@@ -68,7 +68,7 @@ def getHTC(T, T0, patches):
 def getIsentropicMa(p, p0):
     solver = p.solver
     g = solver.gamma
-    Ma = (2.0/(g-1)*((p0/p)**((g-1)/g)-1))**0.5
+    Ma = (2.0/(g-1)*((1./p0*p)**((g-1)/g)-1))**0.5
     return Ma
 
 def getRhoaByV(rhoa):
