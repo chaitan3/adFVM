@@ -15,14 +15,16 @@ solver.initialize(user.time[0])
 
 nLayers = 1
 #nLayers = 200
+
 for index, time in enumerate(user.time):
     rho, rhoU, rhoE = solver.initFields(time)
     U, T, p = solver.U, solver.T, solver.p
 
     patches = ['pressure', 'suction']
     htc = getHTC(T, 420., patches)
-    #Ma = getIsentropicMa(p, 171325., patches)
-    Ma = getIsentropicMa(p, 1.4e5, patches)
+    # p = 186147, U = 67.642, T = 420, c = 410, p0 = 189718
+    Ma = getIsentropicMa(p, 189718.67, patches)
+
     htc_args = []
     Ma_args = []
     for patchID in patches:
@@ -38,11 +40,10 @@ for index, time in enumerate(user.time):
         htc_args.extend([y, x])
         y = Ma[patchID].reshape((nLayers, nFacesPerLayer))
         y = y.sum(axis=0)/nLayers
-        print y
         Ma_args.extend([y, x])
 
-    htc_args.append('{}/htc_{}.png'.format(user.case, index))
-    Ma_args.append('{}/Ma_{}.png'.format(user.case, index))
+    htc_args.append('{}/htc_{:04d}.png'.format(user.case, index))
+    Ma_args.append('{}/Ma_{:04d}.png'.format(user.case, index))
     match_htc(*htc_args) 
     match_velocity(*Ma_args)
     
