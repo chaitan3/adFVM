@@ -21,7 +21,7 @@ def getAddressing(proc):
     return cellAddressing, pointAddressing
 
 print 'reading hdf5 mesh'
-mesh = h5py.File(case + '/mesh_parallel.hdf5', 'r')
+mesh = h5py.File(case + '/mesh.hdf5', 'r')
 parallelStart = mesh['parallel/start']
 parallelEnd = mesh['parallel/end']
 nProcs = parallelStart.shape[0]
@@ -61,7 +61,7 @@ meshSerial.close()
 
 for time in times:
     print 'reading hdf5 fields ' + time
-    field = h5py.File(case + '/{}_parallel.hdf5'.format(time), 'r')
+    field = h5py.File(case + '/{}.hdf5'.format(time), 'r')
     fieldSerial = h5py.File(case + '/{}_serial.hdf5'.format(time), 'w')
     for name in field.keys():
         print 'reading field ' + name
