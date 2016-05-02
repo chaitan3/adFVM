@@ -46,6 +46,31 @@ def computeFields(solver):
                                      ], 'compute')
     return computer
 
+def getHTC(T, T0, patches):
+    mesh = T.mesh.origMesh
+    solver = T.solver
+    htc = {}
+    for patchID in patches:
+        startFace = mesh.boundary[patchID]['startFace']
+        nFaces = mesh.boundary[patchID]['nFaces']
+        endFace = startFace + nFaces
+        internalIndices = mesh.owner[startFace:endFace]
+        deltas = mesh.deltas[startFace:endFace]
+
+        Ti = T.field[internalIndices] 
+        Tw = T.field[mesh.neighbour[startFace:endFace]]
+        dtdn = (Ti-Tw)/deltas
+        k = solver.Cp*solver.mu(Tw)/solver.Pr
+        dT = T0-Tw
+        htc[patchID] = k*dtdn/dT
+    return htc
+
+def getIsentropicMa(p, p0):
+    solver = p.solver
+    g = solver.gamma
+    Ma = (2.0/(g-1)*((p0/p)**((g-1)/g)-1))**0.5
+    return Ma
+
 def getRhoaByV(rhoa):
     mesh = rhoa.mesh
     rhoaByV = np.zeros((mesh.origMesh.nCells, 1))
@@ -151,19 +176,24 @@ if __name__ == "__main__":
     for index, time in enumerate(user.time):
         pprint('Time:', time)
         start = timer.time()
-        rho, rhoU, rhoE = solver.initFields(time)
-        U, T, p = solver.U, solver.T, solver.p
-        SF = solver.stackFields([p, U, T], np)
-        outputs = computer(SF)
-        for field, name, dim in zip(outputs, names, dimensions):
-            IO = IOField(name, field, dim)
-            if len(dim) != 2:
-                IO.write(time)
-        pprint()
+        #rho, rhoU, rhoE = solver.initFields(time)
+        #U, T, p = solver.U, solver.T, solver.p
+        #SF = solver.stackFields([p, U, T], np)
+        #outputs = computer(SF)
+        #for field, name, dim in zip(outputs, names, dimensions):
+        #    IO = IOField(name, field, dim)
+        #    if len(dim) != 2:
+        #        IO.write(time)
+        #pprint()
+
+        IOField.openHandle(mesh.case, time)
+
+        #T = IOField.read('T', mesh, time)
+        #getHTC(T)
+        #pprint()
 
         # rhoaByV
         try:
-            IOField.openHandle(mesh.case, time)
             rhoa = IOField.read('rhoa', mesh, time)
             rhoaByV = getRhoaByV(rhoa)
             rhoaByV.write(time)
@@ -178,11 +208,12 @@ if __name__ == "__main__":
         except:
             pprint('Adjoint computation failed')
             pprint()
+            pass
 
         # adjoint blowup
-        fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
-        for phi in fields:
-            phi.write(time)#, skipProcessor=True)
+        #fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+        #for phi in fields:
+        #    phi.write(time)#, skipProcessor=True)
         IOField.closeHandle()
         end = timer.time()
         pprint('Time for computing: {0}'.format(end-start))

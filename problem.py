@@ -44,7 +44,7 @@ def writeResult(option, result, info=''):
     resultFile = primal.resultFile
     if parallel.rank == 0:
         if option == 'perturb':
-            previousResult = float(open(resultFile).readline().split(' ')[1])
+            previousResult = float(open(resultFile).readline().split(' ')[2])
             globalResult -= previousResult
         with open(resultFile, 'a') as handle:
             if len(info) > 0:
