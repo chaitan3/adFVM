@@ -234,10 +234,6 @@ if __name__ == "__main__":
 
         IOField.openHandle(mesh.case, time)
 
-        #T = IOField.read('T', mesh, time)
-        #getHTC(T)
-        #pprint()
-
         # rhoaByV
         try:
             rhoa = IOField.read('rhoa', mesh, time)
