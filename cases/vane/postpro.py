@@ -1,5 +1,6 @@
 from pyRCF import RCF
-from compute import getHTC, getIsentropicMa, getPressureLoss
+from field import IOField
+from compute import getHTC, getIsentropicMa, getPressureLoss, getYPlus
 import config
 
 import numpy as np
@@ -31,6 +32,7 @@ for index, time in enumerate(user.time):
     htc = getHTC(T, T0, patches)
     Ma = getIsentropicMa(p, p0, patches)
     wakeCells, pl = getPressureLoss(p, T, U, p0, point, normal)
+    yplus = getYPlus(U, T, rho, patches)
 
     htc_args = []
     Ma_args = []
@@ -63,3 +65,9 @@ for index, time in enumerate(user.time):
     match_htc(*htc_args) 
     match_velocity(*Ma_args)
     
+    IOField.openHandle(solver.mesh.case, time)
+    yplus = IOField.boundaryField('yplus', yplus, (1,))
+    yplus.write(time)
+    IOField.closeHandle()
+
+

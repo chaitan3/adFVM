@@ -179,12 +179,16 @@ class Solver(object):
                 dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
 
             if (timeIndex % writeInterval == 0) and (mode != 'forward'):
+                # write mesh, fields, status
                 if self.dynamicMesh:
                     mesh.write(t)
-                self.writeFields(fields, t)
+                dtc = IOField('dtc', dtc, (1,))
+                dtc.partialComplete()
+                self.writeFields(fields + [dtc], t)
                 with open(self.statusFile, 'wb') as status:
                     pkl.dump([timeIndex, t, dt, result], status)
 
+                # write timeSeries if in orig mode (problem.py)
                 if mode == 'orig' and parallel.rank == 0 and not self.localTimeStep:
                     with open(self.timeStepFile, 'a') as f:
                         np.savetxt(f, timeSteps[lastIndex:])
@@ -197,7 +201,9 @@ class Solver(object):
         if mode == 'forward':
             return solutions
         if (timeIndex % writeInterval != 0) and (timeIndex >= writeInterval):
-            self.writeFields(fields, t)
+            dtc = IOField('dtc', dtc, (1,))
+            dtc.partialComplete()
+            self.writeFields(fields + [dtc], t)
         return result
 
     def function(self, inputs, outputs, name, **kwargs):

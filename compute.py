@@ -46,6 +46,30 @@ def computeFields(solver):
                                      ], 'compute')
     return computer
 
+def getYPlus(U, T, rho, patches):
+    mesh = U.mesh.origMesh
+    solver = U.solver
+    yplus = {}
+    for patchID in patches:
+        startFace = mesh.boundary[patchID]['startFace']
+        nFaces = mesh.boundary[patchID]['nFaces']
+        endFace = startFace + nFaces
+        internalIndices = mesh.owner[startFace:endFace]
+        faceIndices = mesh.neighbour[startFace:endFace]
+        deltas = mesh.deltas[startFace:endFace]
+
+        Uw = U.field[faceIndices]
+        Ui = U.field[internalIndices]
+        Tw = T.field[faceIndices]
+        rhow = rho.field[faceIndices]
+        nuw = solver.mu(Tw)*rhow
+        tauw = (Ui-Uw)/deltas
+        tauw = (tauw**2).sum(axis=1, keepdims=True)**0.5
+        
+        yplus[patchID] = tauw**0.5*deltas/nuw
+ 
+    return yplus
+
 def getHTC(T, T0, patches):
     mesh = T.mesh.origMesh
     solver = T.solver

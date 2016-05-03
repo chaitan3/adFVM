@@ -100,7 +100,7 @@ class RCF(Solver):
         return self.conservative(self.U, self.T, self.p)
     
     def writeFields(self, fields, t):
-        U, T, p = self.primitive(*fields)
+        U, T, p = self.primitive(*fields[:-1])
         self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
         start = time.time()
 

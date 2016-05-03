@@ -3,6 +3,7 @@ import h5py
 from numbers import Number
 import re
 import os
+import copy
 
 import config, parallel
 from config import ad, T
@@ -264,6 +265,22 @@ class IOField(Field):
                 cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
                 value = extractField(patch['value'], nFaces, self.dimensions)
                 self.field[cellStartFace:cellEndFace] = value
+
+    @classmethod
+    def boundaryField(self, name, boundary, dimensions):
+        mesh = self.mesh.origMesh
+        field = np.zeros((mesh.nCells,) + dimensions, config.precision)
+        meshBoundary = copy.deepcopy(self.mesh.defaultBoundary)
+        for patchID in boundary.keys():
+            meshBoundary[patchID]['type'] = 'calculated'
+            startFace = mesh.boundary[patchID]['startFace']
+            nFaces = mesh.boundary[patchID]['nFaces']
+            endFace = startFace + nFaces
+            cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
+            cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+            field[cellStartFace:cellEndFace] = boundary[patchID]
+
+        return self(name, field, dimensions, meshBoundary)
 
     def getInternalField(self):
         return self.field[:self.mesh.origMesh.nInternalCells]
