@@ -2,7 +2,8 @@
 from matplotlib import pyplot as plt, mlab
 from matplotlib import markers as mk
 import os
-from profile import get_length, pressure, suction, c, pitch
+#from blade_profile import get_length, pressure, suction, c, pitch
+from nozzle_profile import get_length, pressure, suction, c, pitch
 from numpy import *
 
 def match_htc(hp, coordsp, hs, coordss, saveFile):

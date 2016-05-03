@@ -16,6 +16,9 @@ solver.initialize(user.time[0])
 
 nLayers = 1
 #nLayers = 200
+surface = 'blade'
+#surface = 'blade0'
+#surface = 'nozzle'
 
 for index, time in enumerate(user.time):
     rho, rhoU, rhoE = solver.initFields(time)
@@ -26,7 +29,7 @@ for index, time in enumerate(user.time):
     p0 = 184900.
     point = np.array([0.052641,-0.1,0.005])
     normal = np.array([1.,0.,0.])
-    patches = ['nozzle_pressure', 'nozzle_suction']
+    patches = [surface + '_pressure', surface + '_suction']
 
     htc = getHTC(T, T0, patches)
     Ma = getIsentropicMa(p, p0, patches)
@@ -56,9 +59,9 @@ for index, time in enumerate(user.time):
     x = mesh.cellCentres[wakeCells[:nCellsPerLayer], 1]
     wake_args = [y, x]
 
-    htc_args.append('{}/htc_{:04d}.png'.format(user.case, index))
-    Ma_args.append('{}/Ma_{:04d}.png'.format(user.case, index))
-    wake_args.append('{}/wake_{:04d}.png'.format(user.case, index))
+    htc_args.append('{}/{}_htc_{:04d}.png'.format(user.case, surface, index))
+    Ma_args.append('{}/{}_Ma_{:04d}.png'.format(user.case, surface, index))
+    wake_args.append('{}/{}_wake_{:04d}.png'.format(user.case, surface, index))
     match_wakes(*wake_args)
     match_htc(*htc_args) 
     match_velocity(*Ma_args)
