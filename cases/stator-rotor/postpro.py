@@ -40,7 +40,7 @@ for index, time in enumerate(user.time):
     for patchID in patches:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        x = mesh.faceCentres[startFace:endFace, 0]
+        x = mesh.faceCentres[startFace:endFace, [0,1]]
         nFaces = x.shape[0]
         nFacesPerLayer = nFaces/nLayers
         x = x[:nFacesPerLayer]
