@@ -78,6 +78,21 @@ def getIsentropicMa(p, p0, patches):
         Ma[patchID] = (2.0/(g-1)*((1./p0*pw)**((1-g)/g)-1))**0.5
     return Ma
 
+from compat import intersectPlane
+def getPressureLoss(p, T, U, p0, point, normal):
+    solver = p.solver
+    mesh = p.mesh.origMesh
+
+    cells, _ = intersectPlane(solver.mesh, point, normal)
+
+    g = solver.gamma
+    pi, Ti, Ui = p.field[cells], T.field[cells], U.field[cells]
+    ci = (g*solver.R*Ti)**0.5
+    Umagi = (Ui*Ui).sum(axis=1, keepdims=True)**0.5
+    Mi = Umagi/ci
+    pti = pi*(1 + 0.5*(g-1)*Mi*Mi)**(g/(g-1))
+    return p0 - pti
+
 def getRhoaByV(rhoa):
     mesh = rhoa.mesh
     rhoaByV = np.zeros((mesh.origMesh.nCells, 1))

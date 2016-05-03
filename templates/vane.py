@@ -54,6 +54,7 @@ def objectivePressureLoss(fields, mesh):
     #    objectivePressureLoss.cells, objectivePressureLoss.area = getPlane(primal)
     #cells, area = objectivePressureLoss.cells, objectivePressureLoss.area
     ptin = 171371.
+    #actual ptin = 189718.8
     cells, area, normal = getPlane(primal)
     rho, rhoU, rhoE = fields
     solver = rhoE.solver

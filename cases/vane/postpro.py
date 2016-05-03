@@ -1,5 +1,5 @@
 from pyRCF import RCF
-from compute import getHTC, getIsentropicMa
+from compute import getHTC, getIsentropicMa, getPressureLoss
 import config
 
 from match import match_htc, match_velocity
@@ -24,6 +24,10 @@ for index, time in enumerate(user.time):
     htc = getHTC(T, 420., patches)
     # p = 186147, U = 67.642, T = 420, c = 410, p0 = 189718
     Ma = getIsentropicMa(p, 189718.67, patches)
+
+    point = np.array([0.052641,-0.1,0.005])
+    normal = np.array([1.,0.,0.])
+    pl = getPressureLoss(p, T, U, 190000, point, normal)
 
     htc_args = []
     Ma_args = []
