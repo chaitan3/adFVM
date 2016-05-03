@@ -2,7 +2,7 @@
 from matplotlib import pyplot as plt, mlab
 from matplotlib import markers as mk
 import os
-from profile import get_length, pressure, suction, c
+from profile import get_length, pressure, suction, c, pitch
 from numpy import *
 
 def match_htc(hp, coordsp, hs, coordss, saveFile):
@@ -44,3 +44,8 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
 
     plt.savefig(saveFile)
     plt.clf()
+
+def match_wakes(pl, coords, saveFile):
+    coords = (coords-coords.min())/pitch
+    plt.scatter(coords, pl)
+    plt.savefig(saveFile)

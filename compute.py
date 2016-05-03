@@ -91,7 +91,7 @@ def getPressureLoss(p, T, U, p0, point, normal):
     Umagi = (Ui*Ui).sum(axis=1, keepdims=True)**0.5
     Mi = Umagi/ci
     pti = pi*(1 + 0.5*(g-1)*Mi*Mi)**(g/(g-1))
-    return p0 - pti
+    return cells, p0 - pti
 
 def getRhoaByV(rhoa):
     mesh = rhoa.mesh

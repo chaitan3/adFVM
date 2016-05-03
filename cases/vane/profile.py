@@ -3,6 +3,7 @@ from scipy import interpolate, integrate
 from numpy import *
 
 c = 0.067647
+pitch = 0.0575
 def get_length(pat, coords):
     t = interpolate.UnivariateSpline(pat[0], pat[1], s=0)
     d = t.derivative()
