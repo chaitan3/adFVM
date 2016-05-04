@@ -29,13 +29,18 @@ for line in lines:
     else:
         if words[0] != 'orig':
             viscosity.append(float(words[0]))
-index = np.argsort(viscosity)
-viscosity = np.array(viscosity)[index]
-sens = np.array(sens)[index]
+#index = np.argsort(viscosity)
+#viscosity = np.array(viscosity)[index]
+#sens = np.array(sens)[index]
+viscosity = np.array(viscosity)
+sens = np.array(sens)
 Ah = {}
 for i in range(0, len(sens)):
     Ah[viscosity[i]] = sens[i]
 
+viscosity = viscosity[-8:]
+sens = sens[-8:]
+error = 100*(sens-perturb)/abs(perturb)
 
 def polynomial(h, t, Ah, n=None, k=None):
     if n is None:
@@ -69,16 +74,14 @@ def unknown(h, t, s, Ah):
 
 h = 3.84
 t = 2.
-print polynomial(h, t, Ah, 5)
+Ac = polynomial(h, t, Ah, 7)
+print Ac
 h = 3.84
 t = 2.**1
 s = 2.**2
 print unknown(h, t, s, Ah)
 
-viscosity = viscosity[3:]
-sens = sens[3:]
-error = 100*(sens-perturb)/abs(perturb)
-
+plt.semilogx(viscosity[:-1:][::-1], Ac, 'r.', markersize=20, label='richardson')
 
 from numpy import *
 from matplotlib.pyplot import *
@@ -87,11 +90,12 @@ from matplotlib.pyplot import *
 #plt.semilogx(viscosity, poly(viscosity))
 plt.xlabel('viscosity scaling factor')
 
-plt.semilogx(viscosity, perturb*np.ones_like(viscosity))
-plt.semilogx(viscosity, sens, 'b.',markersize=20)
+plt.semilogx(viscosity, perturb*np.ones_like(viscosity), label='true sensitivity')
+plt.semilogx(viscosity, sens, 'b.',markersize=20, label='samples')
 plt.ylabel('sensitivity')
 #plt.semilogx(viscosity, np.zeros_like(viscosity))
 #plt.semilogx(viscosity, error, 'b.',markersize=20)
 #plt.ylabel('percent error in sensitivity')
 
+plt.legend()
 plt.savefig('vane/error.png')
