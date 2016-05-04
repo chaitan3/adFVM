@@ -35,7 +35,7 @@ PL = 0.
 
 nTimes = len(user.time)
 for index, time in enumerate(user.time):
-    pprint('postprocessing', user.time)
+    pprint('postprocessing', time)
     rho, rhoU, rhoE = solver.initFields(time)
     U, T, p = solver.U, solver.T, solver.p
     
