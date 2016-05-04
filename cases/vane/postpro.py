@@ -2,7 +2,7 @@ from pyRCF import RCF
 from field import IOField
 from compute import getHTC, getIsentropicMa, getPressureLoss, getYPlus
 import config
-from config import pprint
+from parallel import pprint
 
 import numpy as np
 from match import *
