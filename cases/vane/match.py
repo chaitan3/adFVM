@@ -48,4 +48,7 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
 def match_wakes(pl, coords, saveFile):
     coords = (coords-coords.min())/pitch
     plt.scatter(coords, pl)
+    plt.xlabel('y (mm)')
+    plt.ylabel('pressure loss coeff')
+
     plt.savefig(saveFile)

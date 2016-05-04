@@ -16,6 +16,8 @@ def match_htc(hp, coordsp, hs, coordss, saveFile):
             alpha=fill,marker='+', label='pressure')
     plt.scatter(ss*1000, hs, c='b', s=10, 
             alpha=fill, marker='+', label='suction')
+    plt.xlabel('s/c (mm)')
+    plt.ylabel('HTC (W/m2 K)')
 
     plt.legend()
     plt.savefig(saveFile)
@@ -29,6 +31,8 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
 
     plt.scatter(sp/c, Map, c='r', s=10, alpha=fill, label='pressure')
     plt.scatter(ss/c, Mas, c='b', s=10, alpha=fill, label='suction')
+    plt.xlabel('s/c (mm)')
+    plt.ylabel('isentropic Ma')
 
     plt.legend()
     plt.savefig(saveFile)
@@ -37,5 +41,8 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
 def match_wakes(pl, coords, saveFile):
     coords = (coords-coords.min())/pitch
     plt.scatter(coords, pl)
+    plt.xlabel('y (mm)')
+    plt.ylabel('pressure loss coeff')
+
     plt.savefig(saveFile)
     plt.clf()

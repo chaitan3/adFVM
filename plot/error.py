@@ -32,6 +32,9 @@ for line in lines:
 index = np.argsort(viscosity)
 viscosity = np.array(viscosity)[index]
 sens = np.array(sens)[index]
+Ah = {}
+for i in range(0, len(sens)):
+    Ah[viscosity[i]] = sens[i]
 
 
 def polynomial(h, t, Ah, n=None, k=None):
@@ -44,7 +47,6 @@ def polynomial(h, t, Ah, n=None, k=None):
             return Ah[x]
         return (t**k[i-1]*Ar(x/t, i-1)-Ar(x, i-1))/(t**k[i-1]-1)
     Ac = []
-    print Ah
     for i in range(0, n):
         A = Ar(h, i+1)
         Ac.append(A)
@@ -52,21 +54,25 @@ def polynomial(h, t, Ah, n=None, k=None):
 
 from scipy.optimize import brentq
 def unknown(h, t, s, Ah):
-    print Ah
     def f(x):
         def A(h, t):
             return (t**x*Ah[h/t]-Ah[h])/(t**x-1)
-        return A(h, t)-A(h, s)
-    return brentq(f, 0.1, 5.)
+        v = A(h, t)-A(h, s)
+        return v
+    #x = np.linspace(-10, 10, 1000)
+    #y = []
+    #for i in x:
+    #    y.append(f(i))
+    #plt.plot(x, y)
+    #plt.show()
+    return brentq(f, -0.1, 0.1)
 
-h = 6e-2
-t = 6e-2/1e-1
-Ah = {6e-2: sens[-3], 1e-1:sens[-2]}
-print polynomial(h, t, Ah)
-h = 3e-2
-t = 3e-2/1e-1
-s = 3e-2/6e-2
-Ah = {3e-2:sens[-5], 6e-2: sens[-3], 1e-1:sens[-2]}
+h = 3.84
+t = 2.
+print polynomial(h, t, Ah, 5)
+h = 3.84
+t = 2.**1
+s = 2.**2
 print unknown(h, t, s, Ah)
 
 viscosity = viscosity[3:]

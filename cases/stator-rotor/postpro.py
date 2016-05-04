@@ -1,4 +1,5 @@
 from pyRCF import RCF
+from field import IOField
 from compute import getHTC, getIsentropicMa, getPressureLoss, getYPlus
 import config
 
