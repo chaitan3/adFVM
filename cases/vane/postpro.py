@@ -15,8 +15,8 @@ solver = RCF(user.case)
 mesh = solver.mesh.origMesh
 solver.initialize(user.time[0])
 
-nLayers = 1
-#nLayers = 200
+#nLayers = 1
+nLayers = 200
 
 for index, time in enumerate(user.time):
     rho, rhoU, rhoE = solver.initFields(time)
