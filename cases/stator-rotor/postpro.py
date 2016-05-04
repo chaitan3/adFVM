@@ -17,17 +17,19 @@ solver.initialize(user.time[0])
 
 #nLayers = 1
 nLayers = 200
+
 surface = 'blade'
 #surface = 'blade0'
+T0 = 365.
+p0 = 122300.
+#T0 = 409.
+#p0 = 184900.
 #surface = 'nozzle'
 
 for index, time in enumerate(user.time):
     rho, rhoU, rhoE = solver.initFields(time)
     U, T, p = solver.U, solver.T, solver.p
     
-    # p = 186147, U = 67.642, T = 420, c = 410, p0 = 189718
-    T0 = 409.
-    p0 = 184900.
     point = np.array([0.052641,-0.1,0.005])
     normal = np.array([1.,0.,0.])
     patches = [surface + '_pressure', surface + '_suction']
@@ -42,7 +44,8 @@ for index, time in enumerate(user.time):
     for patchID in patches:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        x = mesh.faceCentres[startFace:endFace, [0,1]]
+        #x = mesh.faceCentres[startFace:endFace, [0,1]]
+        x = mesh.faceCentres[startFace:endFace, 0]
         nFaces = x.shape[0]
         nFacesPerLayer = nFaces/nLayers
         x = x[:nFacesPerLayer]

@@ -52,3 +52,4 @@ def match_wakes(pl, coords, saveFile):
     plt.ylabel('pressure loss coeff')
 
     plt.savefig(saveFile)
+    plt.clf()
