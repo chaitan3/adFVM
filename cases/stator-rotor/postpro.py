@@ -23,18 +23,22 @@ surface = 'blade'
 #surface = 'blade0'
 T0 = 365.
 p0 = 122300.
+point = np.array([0.081,-0.06,0.005])
+normal = np.array([1.,0.,0.])
 #T0 = 409.
 #p0 = 184900.
 #surface = 'nozzle'
+# valid?
+#point = np.array([0.052641,-0.1,0.005])
+#normal = np.array([1.,0.,0.])
 get_profile(surface)
+
+patches = [surface + '_pressure', surface + '_suction']
 
 for index, time in enumerate(user.time):
     rho, rhoU, rhoE = solver.initFields(time)
     U, T, p = solver.U, solver.T, solver.p
     
-    point = np.array([0.052641,-0.1,0.005])
-    normal = np.array([1.,0.,0.])
-    patches = [surface + '_pressure', surface + '_suction']
 
     htc = getHTC(T, T0, patches)
     Ma = getIsentropicMa(p, p0, patches)

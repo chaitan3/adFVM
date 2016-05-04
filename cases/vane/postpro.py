@@ -34,7 +34,7 @@ PL = 0.
 
 nTimes = len(user.time)
 for index, time in enumerate(user.time):
-    pprint('postprocessing', user.time)
+    print('postprocessing', user.time)
     rho, rhoU, rhoE = solver.initFields(time)
     U, T, p = solver.U, solver.T, solver.p
     
@@ -63,7 +63,7 @@ for index, time in enumerate(user.time):
     yplus = IOField.boundaryField('yplus', yplus, (1,))
     yplus.write(time)
     IOField.closeHandle()
-    pprint()
+    print()
 
 htc_args = []
 Ma_args = []
