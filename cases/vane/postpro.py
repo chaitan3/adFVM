@@ -19,8 +19,8 @@ solver.initialize(user.time[0])
 nLayers = 200
 # p = 186147, U = 67.642, T = 420, c = 410, p0 = 189718
 T0 = 420.
-#p0 = 212431.
-p0 = 189718.8
+p0 = 212431.
+#p0 = 189718.8
 point = np.array([0.052641,-0.1,0.005])
 normal = np.array([1.,0.,0.])
 patches = ['pressure', 'suction']
@@ -34,6 +34,7 @@ PL = 0.
 
 nTimes = len(user.time)
 for index, time in enumerate(user.time):
+    pprint('postprocessing', user.time)
     rho, rhoU, rhoE = solver.initFields(time)
     U, T, p = solver.U, solver.T, solver.p
     
@@ -62,6 +63,7 @@ for index, time in enumerate(user.time):
     yplus = IOField.boundaryField('yplus', yplus, (1,))
     yplus.write(time)
     IOField.closeHandle()
+    pprint()
 
 htc_args = []
 Ma_args = []
@@ -84,9 +86,9 @@ y = PL/(p0*nTimes)
 x = mesh.cellCentres[wakeCells[:nCellsPerLayer], 1]
 wake_args = [y, x]
 
-htc_args.append('{}/htc_{:04d}.png'.format(user.case, index))
-Ma_args.append('{}/Ma_{:04d}.png'.format(user.case, index))
-wake_args.append('{}/wake_{:04d}.png'.format(user.case, index))
+htc_args.append('{}/htc.png'.format(user.case))
+Ma_args.append('{}/Ma.png'.format(user.case))
+wake_args.append('{}/wake.png'.format(user.case))
 
 match_wakes(*wake_args)
 match_htc(*htc_args) 
