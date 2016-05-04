@@ -5,6 +5,7 @@ import config
 
 import numpy as np
 from match import *
+
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('case')
@@ -25,6 +26,7 @@ p0 = 122300.
 #T0 = 409.
 #p0 = 184900.
 #surface = 'nozzle'
+get_profile(surface)
 
 for index, time in enumerate(user.time):
     rho, rhoU, rhoE = solver.initFields(time)
@@ -44,8 +46,7 @@ for index, time in enumerate(user.time):
     for patchID in patches:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
-        #x = mesh.faceCentres[startFace:endFace, [0,1]]
-        x = mesh.faceCentres[startFace:endFace, 0]
+        x = mesh.faceCentres[startFace:endFace, [0,1]]
         nFaces = x.shape[0]
         nFacesPerLayer = nFaces/nLayers
         x = x[:nFacesPerLayer]

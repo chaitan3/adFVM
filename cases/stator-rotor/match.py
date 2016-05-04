@@ -2,9 +2,19 @@
 from matplotlib import pyplot as plt, mlab
 from matplotlib import markers as mk
 import os
-from blade_profile import get_length, pressure, suction, c, pitch
-#from nozzle_profile import get_length, pressure, suction, c, pitch
+
+from profile import *
 from numpy import *
+
+pressure = suction = chord = pitch = None
+
+def get_profile(name):
+    global pressure, suction, chord, pitch
+    if name == 'nozzle':
+        var = import_nozzle_profile()
+    else:
+        var = import_blade_profile()
+    pressure, suction, chord, pitch = var
 
 def match_htc(hp, coordsp, hs, coordss, saveFile):
     sp = get_length(pressure, coordsp)
@@ -29,8 +39,8 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
 
     fill=1
 
-    plt.scatter(sp/c, Map, c='r', s=10, alpha=fill, label='pressure')
-    plt.scatter(ss/c, Mas, c='b', s=10, alpha=fill, label='suction')
+    plt.scatter(sp/chord, Map, c='r', s=10, alpha=fill, label='pressure')
+    plt.scatter(ss/chord, Mas, c='b', s=10, alpha=fill, label='suction')
     plt.xlabel('s/c (mm)')
     plt.ylabel('isentropic Ma')
 
