@@ -2,6 +2,7 @@ from pyRCF import RCF
 from field import IOField
 from compute import getHTC, getIsentropicMa, getPressureLoss, getYPlus
 import config
+from config import pprint
 
 import numpy as np
 from match import *
@@ -34,7 +35,7 @@ PL = 0.
 
 nTimes = len(user.time)
 for index, time in enumerate(user.time):
-    print('postprocessing', user.time)
+    pprint('postprocessing', user.time)
     rho, rhoU, rhoE = solver.initFields(time)
     U, T, p = solver.U, solver.T, solver.p
     
@@ -63,7 +64,7 @@ for index, time in enumerate(user.time):
     yplus = IOField.boundaryField('yplus', yplus, (1,))
     yplus.write(time)
     IOField.closeHandle()
-    print()
+    pprint()
 
 htc_args = []
 Ma_args = []
