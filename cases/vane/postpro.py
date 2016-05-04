@@ -24,6 +24,7 @@ for index, time in enumerate(user.time):
     
     # p = 186147, U = 67.642, T = 420, c = 410, p0 = 189718
     T0 = 420.
+    #p0 = 212431.
     p0 = 189718.8
     point = np.array([0.052641,-0.1,0.005])
     normal = np.array([1.,0.,0.])
