@@ -62,8 +62,8 @@ def getYPlus(U, T, rho, patches):
         Ui = U.field[internalIndices]
         Tw = T.field[faceIndices]
         rhow = rho.field[faceIndices]
-        nuw = solver.mu(Tw)*rhow
-        tauw = (Ui-Uw)/deltas
+        nuw = solver.mu(Tw)/rhow
+        tauw = nuw*(Ui-Uw)/deltas
         tauw = (tauw**2).sum(axis=1, keepdims=True)**0.5
         
         yplus[patchID] = tauw**0.5*deltas/nuw
