@@ -146,6 +146,7 @@ class RCF(Solver):
         U, T, p = self.primitive(rho, rhoU, rhoE)
         UB, TB, pB = self.getBCFields()
         UB.field, TB.field, pB.field = U.field, T.field, p.field
+
         ## face reconstruction
         #rhoLF, rhoRF = TVD_dual(rho, gradRho)
         #rhoULF, rhoURF = TVD_dual(rhoU, gradRhoU)
@@ -159,6 +160,7 @@ class RCF(Solver):
         gradp = grad(central(p, mesh), ghost=True)
         # for zeroGradient boundary
         UB.grad, TB.grad, pB.grad = gradU, gradT, gradp
+        #self.local = gradp.field[:mesh.nInternalCells]
 
         # face reconstruction
         #reconstuctor = Reconstruct(mesh, TVD)

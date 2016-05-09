@@ -178,6 +178,10 @@ class Solver(object):
             else:
                 dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
 
+            #local = IOField('local', local, (local.shape[1],))
+            #local.partialComplete()
+            #local.write(t)
+
             if (timeIndex % writeInterval == 0) and (mode != 'forward'):
                 # write mesh, fields, status
                 if self.dynamicMesh:

@@ -84,7 +84,6 @@ class Mesh(object):
         # uses neighbour
         self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
         
-
         # ghost cell modification
         self.nLocalCells = self.createGhostCells()
         self.deltas = self.getDeltas()           # nFaces 

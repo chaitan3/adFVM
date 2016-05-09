@@ -263,8 +263,11 @@ class IOField(Field):
                 endFace = startFace + nFaces
                 cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
                 cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
-                value = extractField(patch['value'], nFaces, self.dimensions)
-                self.field[cellStartFace:cellEndFace] = value
+                try:
+                    value = extractField(patch['value'], nFaces, self.dimensions)
+                    self.field[cellStartFace:cellEndFace] = value
+                except:
+                    pass
 
     @classmethod
     def boundaryField(self, name, boundary, dimensions):

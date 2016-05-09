@@ -6,8 +6,9 @@ from compat import norm
 import numpy as np
 
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
-primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
+#primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
+primal = RCF('cases/cylinder/', timeIntegrator='euler', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
@@ -35,7 +36,7 @@ def objectiveDrag(fields, mesh):
 
 def getPlane(solver):
     from compat import intersectPlane
-    point = np.array([0.00065,0.0,0.0])
+    point = np.array([0.00032,0.0,0.0])
     normal = np.array([1.,0.,0.])
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
     #print interCells.shape, interArea.sum()
@@ -77,10 +78,11 @@ def perturb(mesh):
 
 #nSteps = 100000
 #writeInterval = 5000
-nSteps = 20000 
-writeInterval = 1000
-startTime = 1.0
-dt = 4e-10
+#nSteps = 20000 
+#writeInterval = 1000
+nSteps = writeInterval = 1
+startTime = 2.0
+dt = 1e-8
 
 
 
