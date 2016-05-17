@@ -89,7 +89,7 @@ def laplacian(phi, DT):
 
     il, ih = snGradOp.getOwnershipRange()
     jl, jh = snGradOp.getOwnershipRangeColumn()
-    #data = (mesh.areas/mesh.deltas).flatten()
+    data = (mesh.areas/mesh.deltas).flatten()
     row = np.arange(0, l, dtype=np.int32)
     data = np.concatenate((-data, data[:m], data[o:]))
     row = np.concatenate((row, row[:m], row[o:]))
