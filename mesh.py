@@ -495,15 +495,18 @@ class Mesh(object):
                 neighbourEndFace = neighbourStartFace + nFaces
                 # apply transformation: single value
                 # append cell centres
+                patch['neighbourIndices'] = self.owner[neighbourStartFace:neighbourEndFace]
                 patch['transform'] = self.faceCentres[startFace]-self.faceCentres[neighbourStartFace]
-                self.cellCentres[cellStartFace:cellEndFace] = patch['transform'] + self.cellCentres[self.owner[neighbourStartFace:neighbourEndFace]]
-
+                self.cellCentres[cellStartFace:cellEndFace] = patch['transform'] + self.cellCentres[patch['neighbourIndices']]
             elif patch['type'] == 'processor':
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
                 local, remote, tag = self.getProcessorPatchInfo(patchID)
                 # exchange data
                 exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
+                tag += len(self.origPatches) + 1
+                patch['neighbourIndices'] = self.neighbour[startFace:endFace].copy()
+                exchanger.exchange(remote, self.owner[startFace:endFace], patch['neighbourIndices'], tag)
 
             elif patch['type'] == 'processorCyclic':
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
@@ -511,6 +514,9 @@ class Mesh(object):
                 local, remote, tag = self.getProcessorPatchInfo(patchID)
                 # apply transformation
                 exchanger.exchange(remote, -self.faceCentres[startFace:endFace] + self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
+                tag += len(self.origPatches) + 1
+                patch['neighbourIndices'] = self.neighbour[startFace:endFace].copy()
+                exchanger.exchange(remote, self.owner[startFace:endFace], patch['neighbourIndices'], tag)
             else:
                 # append cell centres
                 self.cellCentres[cellStartFace:cellEndFace] = self.faceCentres[startFace:endFace]

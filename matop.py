@@ -1,4 +1,4 @@
-from field import Field
+from field import Field, IOField
 import numpy as np
 import scipy.sparse as sp
 import time
@@ -48,7 +48,11 @@ class Matrix(object):
     def solve(self):
         m, n = self.A.shape
         assert m == n
-        return sp.linalg.spsolve(self.A, -self.b)
+        start = time.time()
+        x = sp.linalg.spsolve(self.A, -self.b)
+        end = time.time()
+        pprint('Time to solve linear system:', end-start)
+        return x
 
 def laplacian(phi, DT):
     dim = phi.dimensions
@@ -134,5 +138,19 @@ def hybrid(equation, boundary, fields, solver):
     end = time.time()
     pprint('Time for iteration:', end-start)
     return newFields
+
+
+if __name__ == "__main__":
+    from mesh import Mesh
+    mesh = Mesh.create('cases/cylinder/')
+    Field.setMesh(mesh)
+    T = IOField.read('T', mesh, 2.0)
+    T.partialComplete()
+    T.old = T.field
+    res = (ddt(T, 1.) + laplacian(T, 1)).solve()
+    TL = IOField('TL2', res.reshape(-1,1), (1,))
+    TL.partialComplete()
+    TL.write(2.0)
+
 
 

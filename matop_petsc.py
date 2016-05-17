@@ -1,5 +1,4 @@
 from field import Field, IOField
-from mesh import Mesh
 import parallel
 from parallel import pprint
 
@@ -17,14 +16,15 @@ class Matrix(object):
         self.b = b
 
     @classmethod
-    def create(self, m, n):
+    def create(self, m, n, nnz=(2,1)):
         A = PETSc.Mat()
         A.create(PETSc.COMM_WORLD)
         A.setSizes(((m, PETSc.DECIDE), (n, PETSc.DECIDE)))
         A.setType('aij')
-        A.setPreallocationNNZ(6) 
+        A.setPreallocationNNZ(nnz) 
 
-        x, b = A.createVecs()
+        b = A.createVecLeft()
+        b.set(0)
         return self(A, b)
 
     def __add__(self, b):
@@ -54,10 +54,26 @@ class Matrix(object):
         return self.__class__(b * self.A, b * self.b)
 
     def solve(self):
-        m, n = self.A.shape
-        assert m == n
-        return sp.linalg.spsolve(self.A, -self.b)
+        start = time.time()
+        ksp = PETSc.KSP()
+        ksp.create(PETSc.COMM_WORLD)
+        #ksp.setType('preonly')
+        #pc = ksp.getPC()
+        #pc.setType('lu')
+        #pc.setFactorSolverPackage('superlu')
+        ksp.setType('gmres')
+        ksp.getPC().setType('jacobi')
+        x = self.A.createVecRight()
+        x.set(0)
 
+        ksp.setOperators(self.A)
+        ksp.setFromOptions()
+        ksp.solve(-self.b, x)
+        end = time.time()
+        pprint('Time to solve linear system:', end-start)
+        return x.getArray()
+
+# cyclic patches support, and better BC support
 def laplacian(phi, DT):
     dim = phi.dimensions
     mesh = phi.mesh.origMesh
@@ -68,23 +84,23 @@ def laplacian(phi, DT):
     n = mesh.nInternalCells
     o = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
 
-    snGradM = Matrix.create(l, n)
+    snGradM = Matrix.create(l, n, 2)
     snGradOp, snGradb = snGradM.A, snGradM.b
 
     il, ih = snGradOp.getOwnershipRange()
     jl, jh = snGradOp.getOwnershipRangeColumn()
-    #data = (mesh.areas*DT.field/mesh.deltas).flatten()
-    data = (mesh.areas/mesh.deltas).flatten()
+    #data = (mesh.areas/mesh.deltas).flatten()
     row = np.arange(0, l, dtype=np.int32)
-    data = np.concatenate((-data, data[:m], data[l:]))
-    row = np.concatenate((row, row[:m], row[l:]))
-    procCols = mesh.neighbour[l:]
-    procRanges = snGradOp.getOwnershipRanges()
+    data = np.concatenate((-data, data[:m], data[o:]))
+    row = np.concatenate((row, row[:m], row[o:]))
+    procCols = mesh.neighbour[o:].copy()
+    procRanges = snGradOp.getOwnershipRangesColumn()
     for patchID in phi.mesh.remotePatches:
         patch = mesh.boundary[patchID]
-        startFace = patch['startFace']
+        startFace = patch['startFace']-o
         endFace = startFace + patch['nFaces']
         proc = patch['neighbProcNo']
+        procCols[startFace:endFace] = patch['neighbourIndices']
         procCols[startFace:endFace] += -jl + procRanges[proc]
     col = np.concatenate((mesh.owner, mesh.neighbour[:m], procCols))
     snGradOp.setValuesRCV(il + row.reshape(-1,1), jl + col.reshape(-1,1), data.reshape(-1,1))
@@ -95,22 +111,33 @@ def laplacian(phi, DT):
     snGradb.setValues(il + indices, data)
     snGradb.assemble()
     
-    sumOp = Matrix.create(n, l).A
+    sumOp = Matrix.create(n, l, 6).A
     il, ih = sumOp.getOwnershipRange()
     jl, jh = sumOp.getOwnershipRangeColumn()
     indices = mesh.sumOp.indices
     indptr = mesh.sumOp.indptr
     data = mesh.sumOp.data
-    sumOp.setValuesIJV(indptr, il + indices, data)
+    sumOp.setValuesIJV(indptr, jl + indices, data)
     sumOp.assemble()
-    M = sumOp * snGradM
+    M = snGradM.__rmul__(sumOp)
 
-    return (sp.diags(1./mesh.volumes.flatten(), 0)*mesh.sumOp)*snGradM
+    volOp = Matrix.create(n, n, 1).A
+    diag = volOp.createVecRight()
+    il, ih = diag.getOwnershipRange()
+    indices = np.arange(0, n).astype(np.int32)
+    data = 1./mesh.volumes.flatten()
+    diag.setValues(il + indices, data)
+    diag.assemble()
+    volOp.setDiagonal(diag)
+    volOp.assemble()
+    M = M.__rmul__(volOp)
+
+    return M
 
 def ddt(phi, dt):
     mesh = phi.mesh.origMesh
     n = mesh.nInternalCells
-    M = Matrix.create(n, n)
+    M = Matrix.create(n, n, 1)
     A, b = M.A, M.b
 
     il, ih = A.getOwnershipRange()
@@ -154,12 +181,15 @@ def BCs(phi, M):
     return M
 
 if __name__ == "__main__":
+    from mesh import Mesh
     mesh = Mesh.create('cases/cylinder/')
     Field.setMesh(mesh)
     T = IOField.read('T', mesh, 2.0)
     T.partialComplete()
     T.old = T.field
-    ddt(T, 1.)
-    laplacian(T, 1)
+    res = (ddt(T, 1.) + laplacian(T, 1)).solve()
+    TL = IOField('TL', res.reshape(-1,1), (1,))
+    TL.partialComplete()
+    TL.write(2.0)
 
 
