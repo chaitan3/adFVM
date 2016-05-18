@@ -16,22 +16,26 @@ class Matrix(object):
         self.b = b
 
     @classmethod
-    def create(self, m, n, nnz=(2,1)):
+    def create(self, m, n, nnz=(2,1), nrhs=1):
         A = PETSc.Mat()
         A.create(PETSc.COMM_WORLD)
         A.setSizes(((m, PETSc.DECIDE), (n, PETSc.DECIDE)))
         A.setType('aij')
         A.setPreallocationNNZ(nnz) 
 
-        b = A.createVecLeft()
-        b.set(0)
+        b = PETSc.Mat()
+        b.create(PETSc.COMM_WORLD)
+        b.setSizes(((m, PETSc.DECIDE), (PETSc.DECIDE, nrhs)))
+        b.setType('dense')
+        b.setUp()
+
+        #b = A.createVecLeft()
+        #b.set(0)
         return self(A, b)
 
     def __add__(self, b):
         if isinstance(b, Matrix):
             return self.__class__(self.A + b.A, self.b + b.b)
-        elif isinstance(b, Field):
-            return self.__class__(self.A, self.b + b.field)
         else:
             raise Exception("WTF")
 
@@ -64,14 +68,18 @@ class Matrix(object):
         ksp.setType('gmres')
         ksp.getPC().setType('jacobi')
         x = self.A.createVecRight()
-        x.set(0)
+        X = []
 
         ksp.setOperators(self.A)
         ksp.setFromOptions()
-        ksp.solve(-self.b, x)
+        for i in range(0, self.b.getSize()[1]):
+            x.set(0)
+            b = self.b.getColumnVector(i)
+            ksp.solve(-b, x)
+            X.append(x.getArray().copy().reshape(-1,1))
         end = time.time()
         pprint('Time to solve linear system:', end-start)
-        return x.getArray()
+        return np.hstack(X)
 
 # cyclic patches support, and better BC support
 def laplacian(phi, DT):
@@ -83,13 +91,15 @@ def laplacian(phi, DT):
     m = mesh.nInternalFaces
     n = mesh.nInternalCells
     o = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
+    nrhs = phi.dimensions[0]
 
-    snGradM = Matrix.create(l, n, 2)
+    snGradM = Matrix.create(l, n, 2, nrhs)
     snGradOp, snGradb = snGradM.A, snGradM.b
 
     il, ih = snGradOp.getOwnershipRange()
     jl, jh = snGradOp.getOwnershipRangeColumn()
-    data = (mesh.areas/mesh.deltas).flatten()
+    #data = (mesh.areas/mesh.deltas).flatten()
+    data = (mesh.areas*DT.field/mesh.deltas).flatten()
     row = np.arange(0, l, dtype=np.int32)
     data = np.concatenate((-data, data[:m], data[o:]))
     row = np.concatenate((row, row[:m], row[o:]))
@@ -108,7 +118,8 @@ def laplacian(phi, DT):
 
     indices = np.arange(m, o).astype(np.int32)
     data = data[m:o].reshape(-1,1)*phi.field[mesh.neighbour[m:o]]
-    snGradb.setValues(il + indices, data)
+    cols = np.arange(0, nrhs).astype(np.int32)
+    snGradb.setValues(il + indices, cols, data)
     snGradb.assemble()
     
     sumOp = Matrix.create(n, l, 6).A
@@ -137,7 +148,8 @@ def laplacian(phi, DT):
 def ddt(phi, dt):
     mesh = phi.mesh.origMesh
     n = mesh.nInternalCells
-    M = Matrix.create(n, n, 1)
+    nrhs = phi.dimensions[0]
+    M = Matrix.create(n, n, 1, nrhs)
     A, b = M.A, M.b
 
     il, ih = A.getOwnershipRange()
@@ -147,7 +159,8 @@ def ddt(phi, dt):
     A.assemble()
 
     oldPhi = phi.old[:n]
-    b.setValues(il + diag[:,0], -oldPhi/dt)
+    cols = np.arange(0, nrhs).astype(np.int32)
+    b.setValues(il + diag[:,0], cols, -oldPhi/dt)
     b.assemble()
 
     return M
@@ -184,7 +197,7 @@ if __name__ == "__main__":
     from mesh import Mesh
     mesh = Mesh.create('cases/cylinder/')
     Field.setMesh(mesh)
-    T = IOField.read('T', mesh, 2.0)
+    T = IOField.read('U', mesh, 2.0)
     T.partialComplete()
     T.old = T.field
     res = (ddt(T, 1.) + laplacian(T, 1)).solve()
