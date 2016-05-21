@@ -135,4 +135,3 @@ def getCells(object mesh):
             cellPoints[i,j] = firstFace[j]
 
     return cellPoints
-
