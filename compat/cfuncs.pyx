@@ -3,8 +3,12 @@ cimport cython
 from libcpp.vector cimport vector
 from libcpp.set cimport set
 from libcpp.map cimport map
+from libcpp.pair cimport pair
+from libcpp.string cimport string
+from libc.stdio cimport sprintf
 ctypedef double dtype
 
+import copy
 import numpy as np
 from cext import part_mesh
 
@@ -160,6 +164,7 @@ def decompose(object mesh, int nprocs):
     cdef np.ndarray[int, ndim=2] cells = mesh.cells
     cdef np.ndarray[dtype, ndim=2] points = mesh.points
     cdef np.ndarray[int, ndim=2] faces = mesh.faces
+    boundary = meshO.boundary
 
     cdef int nFaces = meshO.nFaces
     cdef int nInternalFaces = meshO.nInternalFaces
@@ -169,13 +174,22 @@ def decompose(object mesh, int nprocs):
     cdef vector[vector[int]] faceProc
     cdef vector[vector[int]] cellProc
     cdef vector[set[int]] pointProc
+    cdef vector[map[string, vector[int]]] boundaryProc
+
     cdef vector[int] temp
     cdef set[int] temp2
-    cdef vector[int] commonFaces
+    cdef map[string, vector[int]] temp3
+
+    cdef pair[string, vector[int]] p_patch
+    cdef string patch
+    cdef char[100] c_patch
+    cdef vector[int] internalFaceProc
+
     for i in range(0, nprocs):
         faceProc.push_back(temp)
         cellProc.push_back(temp)
         pointProc.push_back(temp2)
+        boundaryProc.push_back(temp3)
 
     for i in range(0, nInternalCells):
         cellProc[epart[i]].push_back(i)
@@ -186,19 +200,41 @@ def decompose(object mesh, int nprocs):
         if j == k:
             faceProc[j].push_back(i)
         else:
-            commonFaces.push_back(i)
+            sprintf(c_patch, "procBoundary%dto%d", j, k)
+            patch.assign(c_patch)
+            if boundaryProc[j].count(patch) == 0:
+                boundaryProc[j][patch] = temp
+            boundaryProc[j][patch].push_back(i)
 
-    for i in range(nInternalFaces, nFaces):
-        j = epart[owner[i]]
-        faceProc[j].push_back(i)
-    # do processor face stuff
+            sprintf(c_patch, "procBoundary%dto%d", k, j)
+            patch.assign(c_patch)
+            if boundaryProc[k].count(patch) == 0:
+                boundaryProc[k][patch] = temp
+            boundaryProc[k][patch].push_back(i)
+
+    for patchID in meshO.boundary:
+        meshPatch = meshO.boundary[patchID]
+        k = meshPatch['startFace']
+        l = k + meshPatch['nFaces']
+        patch = patchID
+        for i in range(k, l):
+            # do cyclic stuff
+            j = epart[owner[i]]
+            if boundaryProc[j].count(patch) == 0:
+                boundaryProc[j][patch] = temp
+            boundaryProc[j][patch].push_back(i)
+
+    for i in range(0, nprocs):
+        internalFaceProc.push_back(faceProc[i].size())
+        for p_patch in boundaryProc[i]:
+            for j in range(0, p_patch.second.size()):
+                faceProc[i].push_back(p_patch.second[j])
 
     for i in range(0, nprocs):
         temp = cellProc[i]
         for j in range(0, temp.size()):
             for k in range(0, 8):
                 pointProc[i].insert(cells[temp[j],k])
-                 
 
     decomposed = []
     cdef np.ndarray[double, ndim=2] procPoints
@@ -210,6 +246,8 @@ def decompose(object mesh, int nprocs):
     for i in range(0, nprocs):
         revPointProc.clear()
         revCellProc.clear()
+        procBoundary = copy.deepcopy(boundary)
+
         j = pointProc[i].size()
         procPoints = np.zeros((j, 3), np.float64)
         k = 0
@@ -234,12 +272,23 @@ def decompose(object mesh, int nprocs):
             for l in range(1, 5):
                 procFaces[k, l] = revPointProc[faces[it, l]]
             # correct commonFaces
-            procOwner[k] = revCellProc[owner[it]]
-            #if < :
-            #procNeighbour[k] = revCellProc[neighbour[it]]
+            #procOwner[k] = revCellProc[owner[it]]
+            #if it < internalFaceProc[i]:
+            #    procNeighbour[k] = revCellProc[neighbour[it]]
             k += 1
 
-        decomposed.append((procPoints, procFaces, procOwner, procNeighbour, {}))
+        j = internalFaceProc[i]
+        # pop neighbourIndices
+        for p_patch in boundaryProc[i]:
+            patch = p_patch.first
+            k = p_patch.second.size()
+            if str(patch) not in procBoundary:
+                procBoundary[patch] = {}
+            procBoundary[patch]['startFace'] = j
+            procBoundary[patch]['nFaces'] = k
+            j += k
+
+        decomposed.append((procPoints, procFaces, procOwner, procNeighbour, procBoundary))
     return decomposed
 
 

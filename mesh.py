@@ -250,17 +250,23 @@ class Mesh(object):
         handle.write(config.foamHeader)
         handle.write('FoamFile\n{\n')
         foamFile = config.foamFile.copy()
-        foamFile['class'] = 'List'
         foamFile['object'] = os.path.basename(fileName)
+        if foamFile['object'] == 'points':
+            foamFile['class'] = 'vectorField'
+        elif foamFile['object'] == 'faces':
+            foamFile['class'] = 'faceCompactList'
+        else:
+            foamFile['class'] = 'labelList'
+
         foamFile['location'] = 'constant/polyMesh'
         for key in foamFile:
             handle.write('\t' + key + ' ' + foamFile[key] + ';\n')
         handle.write('}\n')
-        handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
+        handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\n')
         
         handle.write('{0}\n('.format(len(data)))
         handle.write(data.tostring())
-        handle.write(')\n;\n')
+        handle.write(')\n\n')
 
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
         handle.close()
@@ -661,8 +667,12 @@ class Mesh(object):
         pprint('Time to update mesh:', end-start)
 
     def decompose(self, nprocs):
+        pprint('decomposing mesh')
         decomposed = decompose(self, nprocs)
+        pprint('decomposed')
+        pprint('metrics')
         for n in range(0, nprocs):
+            pprint('writing processor{}'.format(n))
             points, faces, owner, neighbour, boundary = decomposed[n]
             meshCase = self.case + 'processor{}/constant/polyMesh/'.format(n)
             if not os.path.exists(meshCase):
