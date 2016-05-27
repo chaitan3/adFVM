@@ -9,7 +9,7 @@ import os
 
 import config, parallel
 from config import ad, adsparse, T
-from compat import norm
+from compat import norm, decompose
 from parallel import pprint, Exchanger
 from compat import printMemUsage, getCells
 
@@ -169,6 +169,7 @@ class Mesh(object):
         except Exception as e: 
             config.exceptInfo(e, foamFile)
 
+
     def splitPatches(self, boundary):
         localPatches = []
         remotePatches = []
@@ -239,9 +240,32 @@ class Mesh(object):
         meshDir = timeDir + 'polyMesh/'
         if not os.path.exists(meshDir):
             os.makedirs(meshDir)
-        self.writeBoundary(meshDir + 'boundary')
+        self.writeFoamBoundary(meshDir + 'boundary', self.origMesh.boundary)
 
-    def writeBoundary(self, boundaryFile):
+    def writeFoamFile(self, fileName, data):
+        assert config.fileFormat == 'binary'
+
+        logger.info('writing {0}'.format(fileName))
+        handle = open(fileName, 'w')
+        handle.write(config.foamHeader)
+        handle.write('FoamFile\n{\n')
+        foamFile = config.foamFile.copy()
+        foamFile['class'] = 'List'
+        foamFile['object'] = os.path.basename(fileName)
+        foamFile['location'] = 'constant/polyMesh'
+        for key in foamFile:
+            handle.write('\t' + key + ' ' + foamFile[key] + ';\n')
+        handle.write('}\n')
+        handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
+        
+        handle.write('{0}\n('.format(len(data)))
+        handle.write(data.tostring())
+        handle.write(')\n;\n')
+
+        handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
+        handle.close()
+
+    def writeFoamBoundary(self, boundaryFile, boundary):
         logger.info('writing {0}'.format(boundaryFile))
         handle = open(boundaryFile, 'w')
         handle.write(config.foamHeader)
@@ -254,15 +278,14 @@ class Mesh(object):
             handle.write('\t' + key + ' ' + foamFile[key] + ';\n')
         handle.write('}\n')
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
-        nPatches = len(self.boundary)
+        nPatches = len(boundary)
         handle.write(str(nPatches) + '\n(\n')
-        patchIDs = self.boundary.keys()
-        boundary = self.origMesh.boundary
+        patchIDs = boundary.keys()
         patchIDs = sorted(patchIDs, key=lambda x: (boundary[x]['startFace'], boundary[x]['nFaces']))
         for patchID in patchIDs:
             handle.write('\t' + patchID + '\n')
             handle.write('\t{\n')
-            patch = self.origMesh.boundary[patchID]
+            patch = boundary[patchID]
             for attr in patch:
                 value = patch[attr]
                 if attr.startswith('loc_'):
@@ -636,7 +659,20 @@ class Mesh(object):
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Time to update mesh:', end-start)
-                
+
+    def decompose(self, nprocs):
+        decomposed = decompose(self, nprocs)
+        for n in range(0, nprocs):
+            points, faces, owner, neighbour, boundary = decomposed[n]
+            meshCase = self.case + 'processor{}/constant/polyMesh/'.format(n)
+            if not os.path.exists(meshCase):
+                os.makedirs(meshCase)
+            self.writeFoamFile(meshCase + 'points', points)
+            self.writeFoamFile(meshCase + 'faces', faces)
+            self.writeFoamFile(meshCase + 'owner', owner)
+            self.writeFoamFile(meshCase + 'neighbour', neighbour)
+            self.writeFoamBoundary(meshCase + 'boundary', boundary)
+        return 
 
 def removeCruft(content):
     header = re.search('FoamFile', content)
