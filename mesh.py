@@ -679,6 +679,7 @@ class Mesh(object):
         pprint('Time to update mesh:', end-start)
 
     def decompose(self, nprocs):
+        assert parallel.nProcessors == 1
         start = time.time()
         pprint('decomposing mesh')
         decomposed = decompose(self, nprocs)

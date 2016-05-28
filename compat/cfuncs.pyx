@@ -144,6 +144,12 @@ def getCells(object mesh):
 
     return cellPoints
 
+cdef string int_string(int val):
+    cdef char buff[6]
+    sprintf(buff, "%d", val)
+    cdef string s = string(buff)
+    return s
+
 @cython.boundscheck(False)
 def decompose(object mesh, int nprocs):
 
@@ -152,12 +158,12 @@ def decompose(object mesh, int nprocs):
     nn = mesh.points.shape[0]
     eptr = np.arange(0, ne*8+1, 8, dtype=np.int32)
     eind = mesh.cells.astype(np.int32)
-    part_mesh(ne, nn, eptr, eind, 4)
 
-    nprocs = 8
     cdef np.ndarray[int, ndim=1] epart = np.zeros(ne, np.int32)
     cdef np.ndarray[int, ndim=1] npart = np.zeros(nn, np.int32)
     part_mesh(ne, nn, eptr, eind, nprocs, epart, npart)
+
+    print 'metis completed'
 
     cdef np.ndarray[int, ndim=1] owner = meshO.owner
     cdef np.ndarray[int, ndim=1] neighbour = meshO.neighbour
@@ -234,8 +240,8 @@ def decompose(object mesh, int nprocs):
                 boundaryProcOrder[j].push_back(patch)
                 remoteBoundaryProc[j][patch] = temp5
                 remoteBoundaryProc[j][patch][buff[0]] = buff[1]
-                remoteBoundaryProc[j][patch][buff[2]] = str(j)
-                remoteBoundaryProc[j][patch][buff[3]] = str(k)
+                remoteBoundaryProc[j][patch][buff[2]] = int_string(j)
+                remoteBoundaryProc[j][patch][buff[3]] = int_string(k)
             boundaryProc[j][patch].push_back(i)
 
             sprintf(c_patch, "procBoundary%dto%d", k, j)
@@ -245,8 +251,8 @@ def decompose(object mesh, int nprocs):
                 boundaryProcOrder[k].push_back(patch)
                 remoteBoundaryProc[k][patch] = temp5
                 remoteBoundaryProc[k][patch][buff[0]] = buff[1]
-                remoteBoundaryProc[k][patch][buff[2]] = str(k)
-                remoteBoundaryProc[k][patch][buff[3]] = str(j)
+                remoteBoundaryProc[k][patch][buff[2]] = int_string(k)
+                remoteBoundaryProc[k][patch][buff[3]] = int_string(j)
             boundaryProc[k][patch].push_back(i)
 
     for i in range(0, nprocs):
@@ -260,6 +266,8 @@ def decompose(object mesh, int nprocs):
         for j in range(0, temp.size()):
             for k in range(0, 8):
                 pointProc[i].insert(cells[temp[j],k])
+
+    print 'mappings completed'
 
     decomposed = []
     cdef np.ndarray[double, ndim=2] procPoints
@@ -293,13 +301,11 @@ def decompose(object mesh, int nprocs):
         procNeighbour = np.zeros(internalFaceProc[i], np.int32)
         k = 0
         for it in faceProc[i]:
-            for l in range(0, 4):
-                procFaces[k, l] = revPointProc[faces[it, l+1]]
-            l = owner[it]
-            if epart[l] == i:
-                procOwner[k] = revCellProc[l]
+            if epart[owner[it]] == i:
+                procOwner[k] = revCellProc[owner[it]]
+                for l in range(0, 4):
+                    procFaces[k, l] = revPointProc[faces[it, l+1]]
             else:
-                # reversing
                 procOwner[k] = revCellProc[neighbour[it]]
                 for l in range(0, 4):
                     procFaces[k, l] = revPointProc[faces[it, 3-l+1]]
