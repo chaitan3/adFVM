@@ -57,13 +57,25 @@ class Mesh(object):
     @classmethod
     def create(cls, caseDir=None, currTime='constant'):
         start = time.time()
-        pprint('Reading mesh')
-        self = cls()
+        pprint('Reading mesh data')
 
         if config.hdf5:
-            self.readHDF5(caseDir)
+            meshData = self.readHDF5(caseDir)
         else:
-            self.readFoam(caseDir, currTime) 
+            meshData = self.readFoam(caseDir, currTime) 
+        parallel.mpi.Barrier()
+        pprint('Time for reading mesh:', time.time()-start)
+
+        return cls.build(meshData, currTime)
+
+    @classmethod
+    def build(self, meshData, currTime='constant'):
+        start = time.time()
+        pprint('Building mesh')
+
+        self = cls()
+        self.points, self.faces, self.owner \
+                self.neighbour, self.boundary = meshData
 
         # patches
         localPatches, self.remotePatches = self.splitPatches(self.boundary)
@@ -73,10 +85,7 @@ class Mesh(object):
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
 
-        start = time.time()
-
-        self.computeBeforeWrite()
-
+        self.buildBeforeWrite()
        
         self.normals = self.getNormals()
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()
@@ -99,8 +108,8 @@ class Mesh(object):
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
         pprint('nFaces:', parallel.sum(self.origMesh.nFaces))
         parallel.mpi.Barrier()
-        end = time.time()
-        pprint('Time for reading mesh:', end-start)
+
+        pprint('Time for building mesh:', time.time()-start)
         pprint()
 
         printMemUsage()
@@ -133,12 +142,13 @@ class Mesh(object):
             timeDir = self.case + currTime + '/'
 
         meshDir = timeDir + 'polyMesh/'
-        self.faces = self.readFoamFile(meshDir + 'faces', np.int32)
-        self.points = self.readFoamFile(meshDir + 'points', np.float64).astype(config.precision)
-        self.owner = self.readFoamFile(meshDir + 'owner', np.int32).ravel()
-        self.neighbour = self.readFoamFile(meshDir + 'neighbour', np.int32).ravel()
+        faces = self.readFoamFile(meshDir + 'faces', np.int32)
+        points = self.readFoamFile(meshDir + 'points', np.float64).astype(config.precision)
+        owner = self.readFoamFile(meshDir + 'owner', np.int32).ravel()
+        neighbour = self.readFoamFile(meshDir + 'neighbour', np.int32).ravel()
         
-        self.boundary = self.readFoamBoundary(meshDir + 'boundary')
+        boundary = self.readFoamBoundary(meshDir + 'boundary')
+        return points, faces, owner, neighbour, boundary
 
     def readFoamFile(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
@@ -217,13 +227,14 @@ class Mesh(object):
         rank = parallel.rank
         parallelStart = meshFile['parallel/start'][rank]
         parallelEnd = meshFile['parallel/end'][rank]
-        self.faces = np.array(meshFile['faces'][parallelStart[0]:parallelEnd[0]])
-        self.points = np.array(meshFile['points'][parallelStart[1]:parallelEnd[1]])
-        self.owner = np.array(meshFile['owner'][parallelStart[2]:parallelEnd[2]])
-        self.neighbour = np.array(meshFile['neighbour'][parallelStart[3]:parallelEnd[3]])
-        self.boundary = self.readHDF5Boundary(meshFile['boundary'][parallelStart[4]:parallelEnd[4]])
-        #import pdb;pdb.set_trace()
+        faces = np.array(meshFile['faces'][parallelStart[0]:parallelEnd[0]])
+        points = np.array(meshFile['points'][parallelStart[1]:parallelEnd[1]])
+        owner = np.array(meshFile['owner'][parallelStart[2]:parallelEnd[2]])
+        neighbour = np.array(meshFile['neighbour'][parallelStart[3]:parallelEnd[3]])
+        boundary = self.readHDF5Boundary(meshFile['boundary'][parallelStart[4]:parallelEnd[4]])
         meshFile.close()
+
+        return points, faces, owner, neighbour, boundary
 
     def readHDF5Boundary(self, boundaryData):
         boundary = {}
@@ -273,7 +284,7 @@ class Mesh(object):
             handle.write(')\n')
 
             handle.write('{0}\n('.format(np.prod(data.shape)))
-            handle.write(data.tostring())
+            handle.write(data[:,1:].tostring())
             handle.write(')\n')
         else:
             handle.write('{0}\n('.format(len(data)))
@@ -372,7 +383,7 @@ class Mesh(object):
 
         meshFile.close()
 
-    def computeBeforeWrite(self):
+    def buildBeforeWrite(self):
         self.populateSizes()
         # mesh computation
         # uses neighbour

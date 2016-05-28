@@ -296,7 +296,8 @@ def decompose(object mesh, int nprocs):
             k += 1 
 
         j = faceProc[i].size()
-        procFaces = np.zeros((j, 4), np.int32)
+        procFaces = np.zeros((j, 5), np.int32)
+        procFaces[:,0] = 4
         procOwner = np.zeros(j, np.int32)
         procNeighbour = np.zeros(internalFaceProc[i], np.int32)
         k = 0
@@ -304,11 +305,11 @@ def decompose(object mesh, int nprocs):
             if epart[owner[it]] == i:
                 procOwner[k] = revCellProc[owner[it]]
                 for l in range(0, 4):
-                    procFaces[k, l] = revPointProc[faces[it, l+1]]
+                    procFaces[k, l+1] = revPointProc[faces[it, l+1]]
             else:
                 procOwner[k] = revCellProc[neighbour[it]]
                 for l in range(0, 4):
-                    procFaces[k, l] = revPointProc[faces[it, 3-l+1]]
+                    procFaces[k, l+1] = revPointProc[faces[it, 3-l+1]]
             if k < internalFaceProc[i]:
                 procNeighbour[k] = revCellProc[neighbour[it]]
             k += 1
