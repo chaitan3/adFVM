@@ -59,6 +59,8 @@ class Mesh(object):
         start = time.time()
         pprint('Reading mesh data')
 
+        self = cls()
+
         if config.hdf5:
             meshData = self.readHDF5(caseDir)
         else:
@@ -66,15 +68,15 @@ class Mesh(object):
         parallel.mpi.Barrier()
         pprint('Time for reading mesh:', time.time()-start)
 
-        return cls.build(meshData, currTime)
+        self.build(meshData, currTime)
 
-    @classmethod
+        return self
+
     def build(self, meshData, currTime='constant'):
         start = time.time()
         pprint('Building mesh')
 
-        self = cls()
-        self.points, self.faces, self.owner \
+        self.points, self.faces, self.owner, \
                 self.neighbour, self.boundary = meshData
 
         # patches
@@ -100,7 +102,7 @@ class Mesh(object):
 
 
         # theano shared variables
-        self.origMesh = cls.copy(self, fields=True)
+        self.origMesh = Mesh.copy(self, fields=True)
         # update mesh initialization call
         self.update(currTime, 0.)
         self.makeTensor()
@@ -114,7 +116,7 @@ class Mesh(object):
 
         printMemUsage()
 
-        return self
+        return 
 
     def getTimeDir(self, time):
         if time.is_integer():

@@ -1,7 +1,7 @@
 from mesh import Mesh
 from field import IOField
 
-import sys
+import sys, os
 
 case = sys.argv[1]
 nprocs = int(sys.argv[2])
