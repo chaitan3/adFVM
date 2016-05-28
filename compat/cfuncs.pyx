@@ -175,13 +175,23 @@ def decompose(object mesh, int nprocs):
     cdef vector[vector[int]] cellProc
     cdef vector[set[int]] pointProc
     cdef vector[map[string, vector[int]]] boundaryProc
+    cdef vector[map[string, map[string, string]]] remoteBoundaryProc
 
     cdef vector[int] temp
     cdef set[int] temp2
     cdef map[string, vector[int]] temp3
+    cdef map[string, map[string, string]] temp4
+    cdef map[string, string] temp5
 
+    cdef pair[string, string] p_kv
     cdef pair[string, vector[int]] p_patch
+    cdef pair[string, map[string, string]] p_remote
     cdef string patch
+    cdef string* buff = [string("type"),
+                            string("processor"),
+                            string("myProcNo"),
+                            string("neighbProcNo")]
+
     cdef char[100] c_patch
     cdef vector[int] internalFaceProc
 
@@ -190,6 +200,7 @@ def decompose(object mesh, int nprocs):
         cellProc.push_back(temp)
         pointProc.push_back(temp2)
         boundaryProc.push_back(temp3)
+        remoteBoundaryProc.push_back(temp4)
 
     for i in range(0, nInternalCells):
         cellProc[epart[i]].push_back(i)
@@ -204,12 +215,20 @@ def decompose(object mesh, int nprocs):
             patch.assign(c_patch)
             if boundaryProc[j].count(patch) == 0:
                 boundaryProc[j][patch] = temp
+                remoteBoundaryProc[j][patch] = temp5
+                remoteBoundaryProc[j][patch][buff[0]] = buff[1]
+                remoteBoundaryProc[j][patch][buff[2]] = str(j)
+                remoteBoundaryProc[j][patch][buff[3]] = str(k)
             boundaryProc[j][patch].push_back(i)
 
             sprintf(c_patch, "procBoundary%dto%d", k, j)
             patch.assign(c_patch)
             if boundaryProc[k].count(patch) == 0:
                 boundaryProc[k][patch] = temp
+                remoteBoundaryProc[k][patch] = temp5
+                remoteBoundaryProc[k][patch][buff[0]] = buff[1]
+                remoteBoundaryProc[k][patch][buff[2]] = str(k)
+                remoteBoundaryProc[k][patch][buff[3]] = str(j)
             boundaryProc[k][patch].push_back(i)
 
     for patchID in meshO.boundary:
@@ -271,22 +290,31 @@ def decompose(object mesh, int nprocs):
         for it in faceProc[i]:
             for l in range(1, 5):
                 procFaces[k, l] = revPointProc[faces[it, l]]
-            # correct commonFaces
-            #procOwner[k] = revCellProc[owner[it]]
-            #if it < internalFaceProc[i]:
-            #    procNeighbour[k] = revCellProc[neighbour[it]]
+            l = owner[it]
+            if epart[l] == i:
+                procOwner[k] = revCellProc[l]
+            else:
+                procOwner[k] = revCellProc[neighbour[it]]
+            if it < internalFaceProc[i]:
+                procNeighbour[k] = revCellProc[neighbour[it]]
             k += 1
 
         j = internalFaceProc[i]
-        # pop neighbourIndices
         for p_patch in boundaryProc[i]:
             patch = p_patch.first
             k = p_patch.second.size()
             if str(patch) not in procBoundary:
                 procBoundary[patch] = {}
+
+            procBoundary[patch].pop("neighbourIndices", None)
             procBoundary[patch]['startFace'] = j
             procBoundary[patch]['nFaces'] = k
             j += k
+
+        for p_remote in remoteBoundaryProc[i]:
+            patch = p_remote.first
+            for p_kv in p_remote.second:
+                procBoundary[patch][p_kv.first] = p_kv.second
 
         decomposed.append((procPoints, procFaces, procOwner, procNeighbour, procBoundary))
     return decomposed
