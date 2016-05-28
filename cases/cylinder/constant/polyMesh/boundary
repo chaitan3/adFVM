@@ -43,23 +43,15 @@ FoamFile
     }
     z1
     {
-        type            cyclic;
-        inGroups        1(cyclic);
+        type            patch;
         nFaces          92500;
         startFace       185700;
-        matchTolerance  0.0001;
-        transform       unknown;
-        neighbourPatch  z2;
     }
     z2
     {
-        type            cyclic;
-        inGroups        1(cyclic);
+        type            patch;
         nFaces          92500;
         startFace       278200;
-        matchTolerance  0.0001;
-        transform       unknown;
-        neighbourPatch  z1;
     }
 )
 

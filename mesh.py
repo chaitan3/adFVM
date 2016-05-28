@@ -155,9 +155,10 @@ class Mesh(object):
                     faceIndices = np.fromstring(content[start:endIndices], dtype)
                     faceIndices = faceIndices[1:] - faceIndices[:-1]
                     startData = content.find('(', endIndices) + 1
+                    #print content[endIndices:startData+1]
                     data = np.fromstring(content[startData:end], dtype)
-                    nCellFaces = faceIndices[0] 
-                    return np.hstack((faceIndices.reshape(-1, 1), data.reshape(len(data)/nCellFaces, nCellFaces)))
+                    nFacePoints = faceIndices[0] 
+                    return np.hstack((faceIndices.reshape(-1, 1), data.reshape(len(data)/nFacePoints, nFacePoints)))
                 else:
                     data = np.fromstring(content[start:end], dtype)
                     if foamFile[-6:] == 'points':
@@ -264,9 +265,20 @@ class Mesh(object):
         handle.write('}\n')
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\n')
         
-        handle.write('{0}\n('.format(len(data)))
-        handle.write(data.tostring())
-        handle.write(')\n\n')
+        if foamFile['object'] == 'faces':
+            nFaces = len(data)
+            faceData = np.arange(0, nFaces*4 + 1, 4, np.int32)
+            handle.write('{0}\n('.format(len(faceData)))
+            handle.write(faceData.tostring())
+            handle.write(')\n')
+
+            handle.write('{0}\n('.format(np.prod(data.shape)))
+            handle.write(data.tostring())
+            handle.write(')\n')
+        else:
+            handle.write('{0}\n('.format(len(data)))
+            handle.write(data.tostring())
+            handle.write(')\n\n')
 
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
         handle.close()
@@ -667,10 +679,9 @@ class Mesh(object):
         pprint('Time to update mesh:', end-start)
 
     def decompose(self, nprocs):
+        start = time.time()
         pprint('decomposing mesh')
         decomposed = decompose(self, nprocs)
-        pprint('decomposed')
-        pprint('metrics')
         for n in range(0, nprocs):
             pprint('writing processor{}'.format(n))
             points, faces, owner, neighbour, boundary = decomposed[n]
@@ -682,6 +693,8 @@ class Mesh(object):
             self.writeFoamFile(meshCase + 'owner', owner)
             self.writeFoamFile(meshCase + 'neighbour', neighbour)
             self.writeFoamBoundary(meshCase + 'boundary', boundary)
+        pprint('Time for decomposing mesh:', time.time()-start)
+        pprint()
         return 
 
 def removeCruft(content):

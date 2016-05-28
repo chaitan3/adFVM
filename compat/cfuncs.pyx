@@ -176,12 +176,14 @@ def decompose(object mesh, int nprocs):
     cdef vector[set[int]] pointProc
     cdef vector[map[string, vector[int]]] boundaryProc
     cdef vector[map[string, map[string, string]]] remoteBoundaryProc
+    cdef vector[vector[string]] boundaryProcOrder
 
     cdef vector[int] temp
     cdef set[int] temp2
     cdef map[string, vector[int]] temp3
     cdef map[string, map[string, string]] temp4
     cdef map[string, string] temp5
+    cdef vector[string] temp6
 
     cdef pair[string, string] p_kv
     cdef pair[string, vector[int]] p_patch
@@ -201,9 +203,23 @@ def decompose(object mesh, int nprocs):
         pointProc.push_back(temp2)
         boundaryProc.push_back(temp3)
         remoteBoundaryProc.push_back(temp4)
+        boundaryProcOrder.push_back(temp6)
 
     for i in range(0, nInternalCells):
         cellProc[epart[i]].push_back(i)
+
+    for patchID in meshO.boundary:
+        meshPatch = meshO.boundary[patchID]
+        patch = patchID
+        k = meshPatch['startFace']
+        l = k + meshPatch['nFaces']
+        for i in range(0, nprocs):
+            boundaryProc[i][patch] = temp
+            boundaryProcOrder[i].push_back(patch)
+        for i in range(k, l):
+            # do cyclic stuff
+            j = epart[owner[i]]
+            boundaryProc[j][patch].push_back(i)
 
     for i in range(0, nInternalFaces):
         j = epart[owner[i]]  
@@ -215,6 +231,7 @@ def decompose(object mesh, int nprocs):
             patch.assign(c_patch)
             if boundaryProc[j].count(patch) == 0:
                 boundaryProc[j][patch] = temp
+                boundaryProcOrder[j].push_back(patch)
                 remoteBoundaryProc[j][patch] = temp5
                 remoteBoundaryProc[j][patch][buff[0]] = buff[1]
                 remoteBoundaryProc[j][patch][buff[2]] = str(j)
@@ -225,29 +242,18 @@ def decompose(object mesh, int nprocs):
             patch.assign(c_patch)
             if boundaryProc[k].count(patch) == 0:
                 boundaryProc[k][patch] = temp
+                boundaryProcOrder[k].push_back(patch)
                 remoteBoundaryProc[k][patch] = temp5
                 remoteBoundaryProc[k][patch][buff[0]] = buff[1]
                 remoteBoundaryProc[k][patch][buff[2]] = str(k)
                 remoteBoundaryProc[k][patch][buff[3]] = str(j)
             boundaryProc[k][patch].push_back(i)
 
-    for patchID in meshO.boundary:
-        meshPatch = meshO.boundary[patchID]
-        k = meshPatch['startFace']
-        l = k + meshPatch['nFaces']
-        patch = patchID
-        for i in range(k, l):
-            # do cyclic stuff
-            j = epart[owner[i]]
-            if boundaryProc[j].count(patch) == 0:
-                boundaryProc[j][patch] = temp
-            boundaryProc[j][patch].push_back(i)
-
     for i in range(0, nprocs):
         internalFaceProc.push_back(faceProc[i].size())
-        for p_patch in boundaryProc[i]:
-            for j in range(0, p_patch.second.size()):
-                faceProc[i].push_back(p_patch.second[j])
+        for patch in boundaryProcOrder[i]:
+            for j in range(0, boundaryProc[i][patch].size()):
+                faceProc[i].push_back(boundaryProc[i][patch][j])
 
     for i in range(0, nprocs):
         temp = cellProc[i]
@@ -278,31 +284,32 @@ def decompose(object mesh, int nprocs):
 
         k = 0
         for it in cellProc[i]:
-            revCellProc[it] = i
+            revCellProc[it] = k
             k += 1 
 
         j = faceProc[i].size()
-        procFaces = np.zeros((j, 5), np.int32)
-        procFaces[:, 0] = 4
+        procFaces = np.zeros((j, 4), np.int32)
         procOwner = np.zeros(j, np.int32)
-        procNeighbour = np.zeros(j, np.int32)
+        procNeighbour = np.zeros(internalFaceProc[i], np.int32)
         k = 0
         for it in faceProc[i]:
-            for l in range(1, 5):
-                procFaces[k, l] = revPointProc[faces[it, l]]
+            for l in range(0, 4):
+                procFaces[k, l] = revPointProc[faces[it, l+1]]
             l = owner[it]
             if epart[l] == i:
                 procOwner[k] = revCellProc[l]
             else:
+                # reversing
                 procOwner[k] = revCellProc[neighbour[it]]
-            if it < internalFaceProc[i]:
+                for l in range(0, 4):
+                    procFaces[k, l] = revPointProc[faces[it, 3-l+1]]
+            if k < internalFaceProc[i]:
                 procNeighbour[k] = revCellProc[neighbour[it]]
             k += 1
 
         j = internalFaceProc[i]
-        for p_patch in boundaryProc[i]:
-            patch = p_patch.first
-            k = p_patch.second.size()
+        for patch in boundaryProcOrder[i]:
+            k = boundaryProc[i][patch].size()
             if str(patch) not in procBoundary:
                 procBoundary[patch] = {}
 
