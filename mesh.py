@@ -681,7 +681,7 @@ class Mesh(object):
     def decompose(self, nprocs):
         assert parallel.nProcessors == 1
         start = time.time()
-        pprint('decomposing mesh')
+        pprint('decomposing mesh to', nprocs, 'processors')
         decomposed = decompose(self, nprocs)
         for n in range(0, nprocs):
             pprint('writing processor{}'.format(n))
