@@ -270,6 +270,7 @@ def decompose(object mesh, int nprocs):
     print 'mappings completed'
 
     decomposed = []
+    addressing = []
     cdef np.ndarray[double, ndim=2] procPoints
     cdef np.ndarray[int, ndim=2] procFaces
     cdef np.ndarray[int, ndim=1] procOwner
@@ -331,6 +332,7 @@ def decompose(object mesh, int nprocs):
                 procBoundary[patch][p_kv.first] = p_kv.second
 
         decomposed.append((procPoints, procFaces, procOwner, procNeighbour, procBoundary))
-    return decomposed
+        addressing.append((pointProc[i], faceProc[i], cellProc[i]))
+    return decomposed, addressing
 
 

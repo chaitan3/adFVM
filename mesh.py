@@ -695,10 +695,12 @@ class Mesh(object):
         assert parallel.nProcessors == 1
         start = time.time()
         pprint('decomposing mesh to', nprocs, 'processors')
-        decomposed = decompose(self, nprocs)
+        decomposed, addressing = decompose(self, nprocs)
         for n in range(0, nprocs):
             pprint('writing processor{}'.format(n))
             points, faces, owner, neighbour, boundary = decomposed[n]
+            addressing[n] = [np.array(list(x), dtype=np.int32) for x in addressing[n]]
+            pointProcAddressing, faceProcAddressing, cellProcAddressing = addressing[n]
             meshCase = self.case + 'processor{}/constant/polyMesh/'.format(n)
             if not os.path.exists(meshCase):
                 os.makedirs(meshCase)
@@ -707,9 +709,14 @@ class Mesh(object):
             self.writeFoamFile(meshCase + 'owner', owner)
             self.writeFoamFile(meshCase + 'neighbour', neighbour)
             self.writeFoamBoundary(meshCase + 'boundary', boundary)
+
+            self.writeFoamFile(meshCase + 'pointProcAddresing', pointProcAddressing)
+            self.writeFoamFile(meshCase + 'faceProcAddresing', faceProcAddressing)
+            self.writeFoamFile(meshCase + 'cellProcAddressing', cellProcAddressing)
+
         pprint('Time for decomposing mesh:', time.time()-start)
         pprint()
-        return 
+        return decomposed, addressing
 
 def removeCruft(content):
     header = re.search('FoamFile', content)

@@ -425,15 +425,32 @@ class IOField(Field):
 
     def writeFoam(self, case, time, skipProcessor=False):
         # mesh values required outside theano
-        name = self.name
-        field = self.field
-        boundary = self.boundary
-        # fetch processor information
         if not skipProcessor:
             field = parallel.getRemoteCells(field, self.mesh)
+
+        # fetch processor information
         assert len(field.shape) == 2
         np.set_printoptions(precision=16)
         pprint('writing field {0}, time {1}'.format(name, time))
+
+        mesh = self.mesh.origMesh
+        internalField = self.field[:mesh.nInternalCells]
+        boundary = self.boundary
+        for patchID in boundary:
+            patch = boundary[patchID]
+            # look into skipProcessor
+            if patch['type'] in BCs.valuePatches:
+                startFace = mesh.boundary[patchID]['startFace']
+                nFaces = mesh.boundary[patchID]['nFaces']
+                endFace = startFace + nFaces
+                cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
+                cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+                patch['value'] = field[cellStartFace:cellEndFace]
+
+        self.writeFoamField(case, time, internalField, boundary)
+
+    def writeFoamField(self, case, time, internalField, boundary):
+        name = self.name
         if time.is_integer():
             time = int(time)
         timeDir = '{0}/{1}/'.format(case, time)
@@ -444,7 +461,7 @@ class IOField(Field):
         handle.write('FoamFile\n{\n')
         foamFile = config.foamFile.copy()
         foamFile['object'] = name
-        if field.shape[1] == 3:
+        if internalField.shape[1] == 3:
             dtype = 'vector'
             foamFile['class'] = 'volVectorField'
         else:
@@ -455,23 +472,17 @@ class IOField(Field):
         handle.write('}\n')
         handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
         handle.write('dimensions      [0 1 -1 0 0 0 0];\n')
-        mesh = self.mesh.origMesh
-        writeField(handle, field[:mesh.nInternalCells], dtype, 'internalField')
+        writeField(handle, internalField, dtype, 'internalField')
         handle.write('boundaryField\n{\n')
         for patchID in boundary:
             handle.write('\t' + patchID + '\n\t{\n')
             patch = boundary[patchID]
-            if patch['type'] in BCs.valuePatches and not skipProcessor:
-                patch.pop('value', None)
             for attr in patch:
-                handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
-            if patch['type'] in BCs.valuePatches and not skipProcessor:
-                startFace = mesh.boundary[patchID]['startFace']
-                nFaces = mesh.boundary[patchID]['nFaces']
-                endFace = startFace + nFaces
-                cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-                cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
-                writeField(handle, field[cellStartFace:cellEndFace], dtype, 'value')
+                # look into skipProcessor
+                if attr == 'value' and patch['type'] in BCs.valuePatches:
+                    writeField(handle, patch[attr], dtype, 'value')
+                else:
+                    handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
             handle.write('\t}\n')
         handle.write('}\n')
         handle.close()
@@ -529,6 +540,45 @@ class IOField(Field):
 
         #fieldsFile.close()
 
+    def decompose(self, time, data):
+        mesh = self.mesh.origMesh
+        decomposed, addressing = data
+        nprocs = len(decomposed)
+        for i in range(0, nprocs):
+            _, _, owner, _, boundary = decomposed[i]
+            _, face, cell = addressing[i]
+            internalField = self.field[cell]
+            boundaryField = {}
+            for patchID in boundary:
+                patch = boundary[patchID]
+                boundaryField[patchID] = {}
+                if patchID in self.boundary:
+                    for key in self.boundary[patchID]:
+                        if (key == 'value') and (self.boundary[patchID]['type'] in BCs.valuePatches):
+                            startFace = patch['startFace']
+                            endFace = startFace + patch['nFaces']
+                            indices = face[startFace:endFace]
+                            cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
+                            boundaryField[patchID][key] = self.field[cellIndices]
+                        else:
+                            boundaryField[patchID][key] = self.boundary[patchID][key]
+                else:
+                    boundaryField[patchID]['type'] = patch['type']
+                    startFace = patch['startFace']
+                    endFace = startFace + patch['nFaces']
+                    localIndices = owner[startFace:endFace]
+                    indices = face[startFace:endFace]
+                    cellIndices = mesh.neighbour[indices]
+                    revIndices = np.where(cell[localIndices] == cellIndices)[0]
+                    cellIndices[revIndices] = mesh.owner[indices[revIndices]]
+                    boundaryField[patchID]['value'] = self.field[cellIndices]
+
+            case = self.mesh.case + 'processor{}/'.format(i)
+            self.writeFoamField(case, time, internalField, boundaryField)
+
+        pprint('decomposing', self.name, 'to', nprocs, 'processors')
+        return
+
 class ExchangerOp(T.Op):
     __props__ = ()
     def __init__(self):
@@ -539,7 +589,6 @@ class ExchangerOp(T.Op):
         assert hasattr(self, '_props')
         x = ad.as_tensor_variable(x)
         return T.Apply(self, [x], [x.type()])
-
     def perform(self, node, inputs, output_storage):
         field = np.ascontiguousarray(inputs[0])
         output_storage[0][0] = parallel.getRemoteCells(field, Field.mesh)

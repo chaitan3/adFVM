@@ -8,7 +8,7 @@ nprocs = int(sys.argv[2])
 times = [float(x) for x in sys.argv[3:]]
 
 mesh = Mesh.create(case)
-mesh.decompose(nprocs)
+data = mesh.decompose(nprocs)
 
 IOField.setMesh(mesh)
 for time in times:
@@ -17,5 +17,5 @@ for time in times:
     for name in fields:
         phi = IOField.readFoam(name, mesh, time)
         phi.partialComplete()
-        phi.decompose(case, time)
+        phi.decompose(time, data)
     IOField.closeHandle()
