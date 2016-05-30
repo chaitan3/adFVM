@@ -566,12 +566,20 @@ class IOField(Field):
                     boundaryField[patchID]['type'] = patch['type']
                     startFace = patch['startFace']
                     endFace = startFace + patch['nFaces']
-                    localIndices = owner[startFace:endFace]
                     indices = face[startFace:endFace]
-                    cellIndices = mesh.neighbour[indices]
-                    revIndices = np.where(cell[localIndices] == cellIndices)[0]
-                    cellIndices[revIndices] = mesh.owner[indices[revIndices]]
-                    boundaryField[patchID]['value'] = self.field[cellIndices]
+                    if patch['type'] == 'processor':
+                        cellIndices = mesh.neighbour[indices]
+                        localIndices = owner[startFace:endFace]
+                        revIndices = np.where(cell[localIndices] == cellIndices)[0]
+                        cellIndices[revIndices] = mesh.owner[indices[revIndices]]
+                        boundaryField[patchID]['value'] = self.field[cellIndices]
+                    elif patch['type'] == 'processorCyclic':
+                        referPatch = patch['referPatch']
+                        neighbourPatch = mesh.boundary[referPatch]['neighbourPatch']
+                        neighbourIndices = indices - mesh.boundary[referPatch]['startFace'] \
+                                                   + mesh.boundary[neighbourPatch]['startFace'] 
+                        neighbourIndices += - mesh.nInternalFaces + mesh.nInternalCells
+                        boundaryField[patchID]['value'] = self.field[neighbourIndices]
 
             case = self.mesh.case + 'processor{}/'.format(i)
             self.writeFoamField(case, time, internalField, boundaryField)
