@@ -585,6 +585,7 @@ class IOField(Field):
             self.writeFoamField(case, time, internalField, boundaryField)
 
         pprint('decomposing', self.name, 'to', nprocs, 'processors')
+        pprint()
         return
 
 class ExchangerOp(T.Op):

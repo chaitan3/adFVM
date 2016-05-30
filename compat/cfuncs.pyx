@@ -233,7 +233,7 @@ def decompose(object mesh, int nprocs):
             j = epart[owner[i]]
             if n:
                 n = m + i - k
-                o = epart[neighbour[i]]
+                o = epart[owner[n]]
                 if j == o:
                     boundaryProc[j][patch].push_back(i)
                 else:
