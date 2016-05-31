@@ -150,6 +150,22 @@ cdef string int_string(int val):
     cdef string s = string(buff)
     return s
 
+cdef vector_to_numpy(vector[int] &arr):
+    cdef int el, i = 0
+    cdef np.ndarray[int, ndim=1] np_arr = np.zeros(arr.size(), np.int32)
+    for el in arr:
+        np_arr[i] = el
+        i += 1
+    return np_arr
+
+cdef set_to_numpy(set[int] &arr):
+    cdef int el, i = 0
+    cdef np.ndarray[int] np_arr = np.zeros(arr.size(), np.int32)
+    for el in arr:
+        np_arr[i] = el
+        i += 1
+    return np_arr
+
 @cython.boundscheck(False)
 def decompose(object mesh, int nprocs):
 
@@ -358,7 +374,11 @@ def decompose(object mesh, int nprocs):
 
         decomposed.append((procPoints, procFaces, procOwner, procNeighbour, procBoundary))
         # convert to ndarray
-        addressing.append((pointProc[i], faceProc[i], cellProc[i]))
+        pyPointProc = set_to_numpy(pointProc[i])
+        pyFaceProc = vector_to_numpy(faceProc[i])
+        pyCellProc = vector_to_numpy(cellProc[i])
+
+        addressing.append((pyPointProc, pyFaceProc, pyCellProc))
     return decomposed, addressing
 
 

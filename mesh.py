@@ -699,7 +699,6 @@ class Mesh(object):
         for n in range(0, nprocs):
             pprint('writing processor{}'.format(n))
             points, faces, owner, neighbour, boundary = decomposed[n]
-            addressing[n] = [np.array(list(x), dtype=np.int32) for x in addressing[n]]
             pointProcAddressing, faceProcAddressing, cellProcAddressing = addressing[n]
             meshCase = self.case + 'processor{}/constant/polyMesh/'.format(n)
             if not os.path.exists(meshCase):
