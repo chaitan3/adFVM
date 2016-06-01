@@ -285,7 +285,7 @@ class Mesh(object):
             handle.write(faceData.tostring())
             handle.write(')\n')
 
-            handle.write('{0}\n('.format(np.prod(data.shape)))
+            handle.write('{0}\n('.format(data.shape[0]*4))
             handle.write(data[:,1:].tostring())
             handle.write(')\n')
         else:
