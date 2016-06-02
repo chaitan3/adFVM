@@ -31,7 +31,7 @@ class Reconstruct(object):
         indices = [ad.arange(0, mesh.nInternalFaces)]
         Cindices = []
         Bindices = []
-        for patchID in mesh.origPatches:
+        for patchID in mesh.localPatches:
             startFace = mesh.boundary[patchID]['startFace']
             endFace = startFace + mesh.boundary[patchID]['nFaces']
             patchType = mesh.boundary[patchID]['type']
@@ -223,7 +223,7 @@ def upwind(phi, U):
         faceField[negativeFlux] = phi.field[mesh.neighbour[negativeFlux]]
 
     update(0, mesh.nInternalFaces)
-    for patchID in mesh.origPatches:
+    for patchID in mesh.localPatches:
         startFace = mesh.boundary[patchID]['startFace']
         endFace = startFace + mesh.boundary[patchID]['nFaces']
         if phi.boundary[patchID]['type'] in config.cyclicPatches:

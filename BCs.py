@@ -55,7 +55,8 @@ class BoundaryCondition(object):
         self.inputs = []
 
     def createInput(self, key, dimensions):
-        nFaces = self.mesh.origMesh.boundary[self.patchID]['nFaces']
+        patch = self.mesh.origMesh.boundary[self.patchID]
+        nFaces = patch['nFaces']
         value = extractField(self.patch[key], nFaces, dimensions)
         symbolic = ad.matrix()
         self.inputs.append((symbolic, value))

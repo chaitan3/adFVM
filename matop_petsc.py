@@ -185,7 +185,7 @@ def BCs(phi, M):
     row = np.arange(0, m)
     row = np.concatenate((row, row))
     col = np.zeros(2*m)
-    for patchID in phi.mesh.origPatches:
+    for patchID in phi.mesh.localPatches:
         patch = mesh.boundary[patchID]
         startFace = patch['startFace']
         endFace = startFace + patch['nFaces']

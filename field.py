@@ -197,7 +197,7 @@ class CellField(Field):
 
         # why initialize the boundary for ghost=False cases
         self.BC = {}
-        for patchID in self.mesh.origPatches:
+        for patchID in self.mesh.localPatches:
             # skip processor patches
             patchType = self.boundary[patchID]['type']
             self.BC[patchID] = getattr(BCs, patchType)(self, patchID)

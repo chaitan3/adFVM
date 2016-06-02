@@ -4,8 +4,8 @@ from config import ad
 from compat import norm
 import numpy as np
 
-primal = RCF('/home/talnikar/foam/blade/les-turb/')
-#primal = RCF('/home/talnikar/foam/blade/laminar-lowRe/')#, timeIntegrator='euler')
+#primal = RCF('/home/talnikar/foam/blade/les-turb/')
+primal = RCF('/home/talnikar/foam/blade/laminar-lowRe/')#, timeIntegrator='euler')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 

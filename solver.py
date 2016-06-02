@@ -249,7 +249,7 @@ class SolverFunction(object):
         fields = solver.getBCFields()
         for phi in fields:
             if hasattr(phi, 'BC'):
-                for patchID in phi.BC:
+                for patchID in solver.mesh.localPatches:
                     inputs.extend([value[index] for value in phi.BC[patchID].inputs])
 
     def generate(self, inputs, outputs, caseDir, name):

@@ -80,7 +80,9 @@ class Mesh(object):
                 self.neighbour, self.boundary = meshData
 
         # patches
-        self.origPatches, self.remotePatches = self.splitPatches(self.boundary)
+        self.localPatches, self.remotePatches = self.splitPatches(self.boundary)
+        self.origPatches = copy.copy(self.localPatches)
+        self.origPatches.sort()
         self.boundaryTensor = {}
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
@@ -90,6 +92,7 @@ class Mesh(object):
         self.normals = self.getNormals()
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()
         self.cellCentres, self.volumes = self.getCellCentresAndVolumes() # nCells after ghost cell mod
+
         # uses neighbour
         self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
         
@@ -557,16 +560,17 @@ class Mesh(object):
                 local, remote, tag = self.getProcessorPatchInfo(patchID)
                 # exchange data
                 exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
+                #print local, remote, patchID, tag, tag+len(self.origPatches)+1
                 tag += len(self.origPatches) + 1
                 patch['neighbourIndices'] = self.neighbour[startFace:endFace].copy()
                 exchanger.exchange(remote, self.owner[startFace:endFace], patch['neighbourIndices'], tag)
-
             elif patch['type'] == 'processorCyclic':
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
                 local, remote, tag = self.getProcessorPatchInfo(patchID)
                 # apply transformation
                 exchanger.exchange(remote, -self.faceCentres[startFace:endFace] + self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
+                #print local, remote, patchID, tag, tag+len(self.origPatches)+1
                 tag += len(self.origPatches) + 1
                 patch['neighbourIndices'] = self.neighbour[startFace:endFace].copy()
                 exchanger.exchange(remote, self.owner[startFace:endFace], patch['neighbourIndices'], tag)
@@ -606,7 +610,7 @@ class Mesh(object):
             else:
                 setattr(self, attr, ad.matrix())
 
-        for patchID in self.origPatches:
+        for patchID in self.localPatches:
             for attr in self.getBoundaryTensor(patchID):
                 self.boundary[patchID][attr[0]] = attr[1]
 
@@ -619,7 +623,7 @@ class Mesh(object):
         logger.info('updating mesh')
         start = time.time()
         mesh = self.origMesh
-        for patchID in self.origPatches:
+        for patchID in self.localPatches:
             patch = mesh.boundary[patchID]
             startFace = patch['startFace']
             endFace = startFace + patch['nFaces']

@@ -380,7 +380,7 @@ def decompose(object mesh, int nprocs):
         pyBoundaryProc = []
         for patch in boundaryProcOrder[i]:
             try:
-                order = mesh.origPatches.index(patch)
+                order = mesh.localPatches.index(patch)
             except ValueError:
                 order = -1
             pyBoundaryProc.append(order)
