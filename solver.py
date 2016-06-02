@@ -241,7 +241,7 @@ class SolverFunction(object):
         attrs = Mesh.fields + Mesh.constants
         for attr in attrs:
             inputs.append(getattr(mesh, attr))
-        for patchID in solverMesh.origPatches:
+        for patchID in solverMesh.sortedPatches:
             for attr in solverMesh.getBoundaryTensor(patchID):
                 inputs.append(mesh.boundary[patchID][attr[0]])
 
@@ -249,7 +249,7 @@ class SolverFunction(object):
         fields = solver.getBCFields()
         for phi in fields:
             if hasattr(phi, 'BC'):
-                for patchID in solver.mesh.localPatches:
+                for patchID in solver.mesh.sortedPatches:
                     inputs.extend([value[index] for value in phi.BC[patchID].inputs])
 
     def generate(self, inputs, outputs, caseDir, name):

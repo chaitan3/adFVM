@@ -81,8 +81,9 @@ class Mesh(object):
 
         # patches
         self.localPatches, self.remotePatches = self.splitPatches(self.boundary)
-        self.origPatches = copy.copy(self.localPatches)
-        self.origPatches.sort()
+        self.nLocalPatches = len(self.localPatches)
+        self.sortedPatches = copy.copy(self.localPatches)
+        self.sortedPatches.sort()
         self.boundaryTensor = {}
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
@@ -520,7 +521,7 @@ class Mesh(object):
             commonPatch = patch['referPatch']
             if local > remote:
                 commonPatch = self.boundary[commonPatch]['neighbourPatch']
-            tag = 1 + self.origPatches.index(commonPatch)
+            tag = 1 + self.sortedPatches.index(commonPatch)
         return local, remote, tag
 
     def createGhostCells(self):
@@ -560,8 +561,7 @@ class Mesh(object):
                 local, remote, tag = self.getProcessorPatchInfo(patchID)
                 # exchange data
                 exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
-                #print local, remote, patchID, tag, tag+len(self.origPatches)+1
-                tag += len(self.origPatches) + 1
+                tag += self.nLocalPatches + 1
                 patch['neighbourIndices'] = self.neighbour[startFace:endFace].copy()
                 exchanger.exchange(remote, self.owner[startFace:endFace], patch['neighbourIndices'], tag)
             elif patch['type'] == 'processorCyclic':
@@ -570,8 +570,7 @@ class Mesh(object):
                 local, remote, tag = self.getProcessorPatchInfo(patchID)
                 # apply transformation
                 exchanger.exchange(remote, -self.faceCentres[startFace:endFace] + self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
-                #print local, remote, patchID, tag, tag+len(self.origPatches)+1
-                tag += len(self.origPatches) + 1
+                tag += self.nLocalPatches + 1
                 patch['neighbourIndices'] = self.neighbour[startFace:endFace].copy()
                 exchanger.exchange(remote, self.owner[startFace:endFace], patch['neighbourIndices'], tag)
             else:

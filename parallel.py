@@ -170,7 +170,7 @@ def scatterCells(totalField, mesh, axis=0):
 #        nBoundaryCells = len(meshP.remoteCells['boundary'][patchID])
 #        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
 #        exchanger.exchange(remote, stackedFields[meshP.localRemoteCells['internal'][patchID]], paddedStackedFields[internalCursor:internalCursor+nInternalCells], tag)
-#        tag += len(meshC.origPatches) + 1
+#        tag += meshC.nLocalPatches + 1
 #        exchanger.exchange(remote, stackedFields[meshP.localRemoteCells['boundary'][patchID]], paddedStackedFields[boundaryCursor:boundaryCursor+nBoundaryCells], tag)
 #        internalCursor += nInternalCells
 #        boundaryCursor += nBoundaryCells
@@ -224,13 +224,13 @@ def scatterCells(totalField, mesh, axis=0):
 #        adjointRemoteCells['internal'][patchID] = np.zeros(size, precision)
 #        exchanger.exchange(remote, paddedJacobian[internalCursor:internalCursor+nInternalCells], adjointRemoteCells['internal'][patchID], tag)
 #        internalCursor += nInternalCells
-#        tag += len(meshC.origPatches) + 1
+#        tag += meshC.nLocalPatches + 1
 #
 #        size = (len(meshP.localRemoteCells['boundary'][patchID]), ) + dimensions
 #        adjointRemoteCells['boundary'][patchID] = np.zeros(size, precision)
 #        exchanger.exchange(remote, paddedJacobian[boundaryCursor:boundaryCursor+nBoundaryCells], adjointRemoteCells['boundary'][patchID], tag)
 #        boundaryCursor += nBoundaryCells
-#        tag += len(meshC.origPatches) + 1
+#        tag += meshC.nLocalPatches + 1
 #
 #    exchanger.wait()
 #    for patchID in meshC.remotePatches:
