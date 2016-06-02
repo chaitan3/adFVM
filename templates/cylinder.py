@@ -7,8 +7,8 @@ import numpy as np
 
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
-#primal = RCF('cases/cylinder_chaos/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('cases/cylinder/', timeIntegrator='euler', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+#primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
+primal = RCF('cases/cylinder/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
@@ -80,8 +80,9 @@ def perturb(mesh):
 #writeInterval = 5000
 #nSteps = 20000 
 #writeInterval = 1000
-nSteps = writeInterval = 1
-startTime = 2.0
+nSteps = 100
+writeInterval = 100
+startTime = 1.0
 dt = 1e-8
 
 

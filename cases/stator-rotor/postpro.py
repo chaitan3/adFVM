@@ -34,6 +34,7 @@ normal = np.array([1.,0.,0.])
 get_profile(surface)
 
 patches = [surface + '_pressure', surface + '_suction']
+#patches = ['blade_pressure', 'blade_suction', 'blade0_pressure', 'blade0_suction', 'nozzle_pressure', 'nozzle_suction']
 
 for index, time in enumerate(user.time):
     rho, rhoU, rhoE = solver.initFields(time)

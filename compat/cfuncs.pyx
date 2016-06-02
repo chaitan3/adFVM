@@ -377,8 +377,16 @@ def decompose(object mesh, int nprocs):
         pyPointProc = set_to_numpy(pointProc[i])
         pyFaceProc = vector_to_numpy(faceProc[i])
         pyCellProc = vector_to_numpy(cellProc[i])
+        pyBoundaryProc = []
+        for patch in boundaryProcOrder[i]:
+            try:
+                order = mesh.origPatches.index(patch)
+            except ValueError:
+                order = -1
+            pyBoundaryProc.append(order)
+        pyBoundaryProc = np.array(pyBoundaryProc, np.int32)
 
-        addressing.append((pyPointProc, pyFaceProc, pyCellProc))
+        addressing.append((pyPointProc, pyFaceProc, pyCellProc, pyBoundaryProc))
     return decomposed, addressing
 
 

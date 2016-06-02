@@ -425,16 +425,17 @@ class IOField(Field):
 
     def writeFoam(self, case, time, skipProcessor=False):
         # mesh values required outside theano
+        field = self.field
         if not skipProcessor:
             field = parallel.getRemoteCells(field, self.mesh)
 
         # fetch processor information
         assert len(field.shape) == 2
         np.set_printoptions(precision=16)
-        pprint('writing field {0}, time {1}'.format(name, time))
+        pprint('writing field {0}, time {1}'.format(self.name, time))
 
         mesh = self.mesh.origMesh
-        internalField = self.field[:mesh.nInternalCells]
+        internalField = field[:mesh.nInternalCells]
         boundary = self.boundary
         for patchID in boundary:
             patch = boundary[patchID]
@@ -546,7 +547,7 @@ class IOField(Field):
         nprocs = len(decomposed)
         for i in range(0, nprocs):
             _, _, owner, _, boundary = decomposed[i]
-            _, face, cell = addressing[i]
+            _, face, cell, _ = addressing[i]
             internalField = self.field[cell]
             boundaryField = {}
             for patchID in boundary:

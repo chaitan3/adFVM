@@ -61,12 +61,12 @@ class Matrix(object):
         start = time.time()
         ksp = PETSc.KSP()
         ksp.create(PETSc.COMM_WORLD)
-        ksp.setType('preonly')
-        pc = ksp.getPC()
-        pc.setType('lu')
-        pc.setFactorSolverPackage('mumps')
-        #ksp.setType('gmres')
-        #ksp.getPC().setType('jacobi')
+        #ksp.setType('preonly')
+        #pc = ksp.getPC()
+        #pc.setType('lu')
+        #pc.setFactorSolverPackage('mumps')
+        ksp.setType('gmres')
+        ksp.getPC().setType('jacobi')
         x = self.A.createVecRight()
         X = []
 

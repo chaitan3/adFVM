@@ -39,7 +39,7 @@ class Mesh(object):
 
         #self.localRemoteCells = None
         #self.localRemoteFaces = None
-        #self.remoteCells = None
+        #nameself.remoteCells = None
         #self.remoteFaces = None
 
     @classmethod
@@ -80,10 +80,8 @@ class Mesh(object):
                 self.neighbour, self.boundary = meshData
 
         # patches
-        localPatches, self.remotePatches = self.splitPatches(self.boundary)
+        self.origPatches, self.remotePatches = self.splitPatches(self.boundary)
         self.boundaryTensor = {}
-        self.origPatches = copy.copy(localPatches)
-        self.origPatches.sort()
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
 
@@ -186,8 +184,9 @@ class Mesh(object):
     def splitPatches(self, boundary):
         localPatches = []
         remotePatches = []
-
-        for patchID in boundary.keys():
+        patchIDs = boundary.keys()
+        patchIDs = sorted(patchIDs, key=lambda x: (boundary[x]['startFace'], boundary[x]['nFaces']))
+        for patchID in patchIDs:
             if boundary[patchID]['type'] in config.processorPatches:
                 remotePatches.append(patchID)
             else:
@@ -699,7 +698,7 @@ class Mesh(object):
         for n in range(0, nprocs):
             pprint('writing processor{}'.format(n))
             points, faces, owner, neighbour, boundary = decomposed[n]
-            pointProcAddressing, faceProcAddressing, cellProcAddressing = addressing[n]
+            pointProcAddressing, faceProcAddressing, cellProcAddressing, boundaryProcAddressing = addressing[n]
             meshCase = self.case + 'processor{}/constant/polyMesh/'.format(n)
             if not os.path.exists(meshCase):
                 os.makedirs(meshCase)
@@ -709,9 +708,10 @@ class Mesh(object):
             self.writeFoamFile(meshCase + 'neighbour', neighbour)
             self.writeFoamBoundary(meshCase + 'boundary', boundary)
 
-            self.writeFoamFile(meshCase + 'pointProcAddresing', pointProcAddressing)
-            self.writeFoamFile(meshCase + 'faceProcAddresing', faceProcAddressing)
+            self.writeFoamFile(meshCase + 'pointProcAddressing', pointProcAddressing)
+            self.writeFoamFile(meshCase + 'faceProcAddressing', faceProcAddressing)
             self.writeFoamFile(meshCase + 'cellProcAddressing', cellProcAddressing)
+            self.writeFoamFile(meshCase + 'boundaryProcAddressing', boundaryProcAddressing)
 
         pprint('Time for decomposing mesh:', time.time()-start)
         pprint()

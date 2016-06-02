@@ -244,7 +244,7 @@ class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
             #    self.setValue(self.p0)
 
 # adjoint?
-class turbulentInletVelocity(BoundaryCondition):
+class turbulentInletVelocityN(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         self.Umean = self.createInput('Umean', (3,))
@@ -289,6 +289,15 @@ class turbulentInletVelocity(BoundaryCondition):
             #value = value + self.c*f*(2./self.N)**0.5*(p*phi).sum(axis=0)
             value = ad.sum(self.T.T*value[:,:,np.newaxis], axis=1)
         self.setValue(value)
+
+class turbulentInletVelocity(BoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        self.Umean = self.createInput('Umean', (3,))
+
+    def update(self):
+        self.setValue(self.Umean)
+
 
 slip = symmetryPlane
 empty = zeroGradient

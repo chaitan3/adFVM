@@ -6,7 +6,8 @@ from config import ad
 from parallel import pprint
 from field import IOField, Field
 #from op import laplacian
-from matop import laplacian, ddt, BCs
+from matop_petsc import laplacian, ddt, BCs
+#from matop import laplacian, ddt, BCs
 from interp import central
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
 from problem import nPerturb
