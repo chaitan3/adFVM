@@ -61,12 +61,21 @@ class Matrix(object):
         start = time.time()
         ksp = PETSc.KSP()
         ksp.create(PETSc.COMM_WORLD)
+
         #ksp.setType('preonly')
         #pc = ksp.getPC()
         #pc.setType('lu')
-        #pc.setFactorSolverPackage('mumps')
+        ##pc.setFactorSolverPackage('mumps')
+        #pc.setFactorSolverPackage('superlu_dist')
+
         ksp.setType('gmres')
-        ksp.getPC().setType('jacobi')
+        #ksp.getPC().setType('jacobi')
+        #ksp.getPC().setType('asm')
+        #ksp.getPC().setType('mg')
+        #ksp.getPC().setType('gamg')
+        # which one is used?
+        ksp.getPC().setType('hypre')
+
         x = self.A.createVecRight()
         X = []
 
@@ -197,7 +206,7 @@ if __name__ == "__main__":
     from mesh import Mesh
     mesh = Mesh.create('cases/cylinder/')
     Field.setMesh(mesh)
-    T = IOField.read('U', mesh, 2.0)
+    T = IOField.read('U', mesh, 1.0)
     T.partialComplete()
     T.old = T.field
     res = (ddt(T, 1.) + laplacian(T, 1)).solve()
