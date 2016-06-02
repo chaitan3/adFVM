@@ -68,7 +68,10 @@ class Matrix(object):
         ##pc.setFactorSolverPackage('mumps')
         #pc.setFactorSolverPackage('superlu_dist')
 
-        ksp.setType('gmres')
+        #ksp.setType('gmres')
+        #ksp.setType('gcr')
+        #ksp.setType('bcgs')
+        ksp.setType('tfqmr')
         #ksp.getPC().setType('jacobi')
         #ksp.getPC().setType('asm')
         #ksp.getPC().setType('mg')
