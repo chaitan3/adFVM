@@ -63,7 +63,7 @@ class Reconstruct(object):
     #faceFields = [faceField, faceField.copy()]
     #update(0, mesh.nInternalFaces, 0, faceFields, phi, gradPhi)
     #update(0, mesh.nInternalFaces, 1, faceFields, phi, gradPhi)
-    #for patchID in mesh.origPatches:
+    #for patchID in mesh.localPatches:
     #    startFace = mesh.boundary[patchID]['startFace']
     #    endFace = startFace + mesh.boundary[patchID]['nFaces']
     #    patchType = mesh.boundary[patchID]['type']
@@ -181,7 +181,7 @@ def TVD(indices, index, phi, gradPhi):
 #    # internal, then local patches and finally remote
 #    update(0, mesh.nInternalFaces, 0)
 #    update(0, mesh.nInternalFaces, 1)
-#    for patchID in mesh.origPatches:
+#    for patchID in mesh.localPatches:
 #        startFace = mesh.boundary[patchID]['startFace']
 #        endFace = startFace + mesh.boundary[patchID]['nFaces']
 #        patchType = mesh.boundary[patchID]['type']

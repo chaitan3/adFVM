@@ -331,24 +331,4 @@ inletOutlet = zeroGradient
 #        n = self.mesh.normals[self.startFace, self.endFace]
 #        self.field[self.cellStartFace:self.cellEndFace] = phi*n
 
-#class processor(BoundaryCondition):
-#    def __init__(self, phi, patchID):
-#        super(processor, self).__init__(phi, patchID)
-#        self.local = self.mesh.boundary[patchID]['myProcNo']
-#        self.remote = self.mesh.boundary[patchID]['neighbProcNo']
-#        self.patch.pop('value', None)
-#        self.tag = 0
-#
-#    def update(self, exchanger):
-#        logger.debug('processor BC for {0}'.format(self.patchID))
-#        exchanger.exchange(self.remote, self.field[self.internalIndices], self.value, self.tag)
-#
-#class processorCyclic(processor):
-#    def __init__(self, phi, patchID):
-#        super(processorCyclic, self).__init__(phi, patchID)
-#        commonPatch = self.mesh.boundary[patchID]['referPatch']
-#        if self.local > self.remote:
-#            commonPatch = self.mesh.boundary[commonPatch]['neighbourPatch']
-#        self.tag = 1 + self.mesh.origPatches.index(commonPatch)
-
 
