@@ -173,9 +173,13 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
             #stackedAdjointFields[:mesh.origMesh.nInternalCells] += dt*adjointSmoother(stackedAdjointFields, weight)
             stackedPhi = Field('a', stackedAdjointFields, (5,))
             stackedPhi.old = stackedAdjointFields
+            start2 = time.time() 
             weight = central(adjointViscosity(previousSolution), mesh.origMesh)
+            start3 = time.time()
             #stackedAdjointFields[:mesh.origMesh.nLocalCells] = BCs(stackedPhi, ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
             stackedAdjointFields[:mesh.origMesh.nInternalCells] = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
+            start4 = time.time()
+            pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
         # compute sensitivity using adjoint solution
         for index, perturbation in enumerate(perturb):

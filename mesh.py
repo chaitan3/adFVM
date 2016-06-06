@@ -392,7 +392,7 @@ class Mesh(object):
         self.populateSizes()
         # mesh computation
         # uses neighbour
-        self.cellFaces = self.getCellFaces()     # nInternalCells
+        self.cellFaces, self.cellNeighbours = self.getCellFacesAndNeighbours()     # nInternalCells
         # time consuming 
         self.cells = getCells(self)
 
@@ -414,13 +414,21 @@ class Mesh(object):
         normals = np.ascontiguousarray(normals)
         return normals / norm(normals, axis=1, keepdims=True)
 
-    def getCellFaces(self):
+    def getCellFacesAndNeighbours(self):
         logger.info('generated cell faces') 
         enum = lambda x: np.column_stack((np.indices(x.shape, np.int32)[0], x)) 
         combined = np.concatenate((enum(self.owner), enum(self.neighbour)))
         cellFaces = combined[combined[:,1].argsort(), 0]
         # todo: make it a list ( investigate np.diff )
-        return cellFaces.reshape(self.nInternalCells, len(cellFaces)/self.nInternalCells)
+        cellFaces = cellFaces.reshape(self.nInternalCells, len(cellFaces)/self.nInternalCells)
+
+        neighbour = -np.ones(self.nFaces, np.int32)
+        neighbour[:self.nInternalFaces] = self.neighbour
+        cellNeighbours = self.owner[cellFaces]
+        indices = np.arange(0, self.nInternalCells).reshape(-1,1)
+        indices = np.equal(cellNeighbours, indices)
+        cellNeighbours[indices] = neighbour[cellFaces][indices]
+        return cellFaces, cellNeighbours
 
     def getCellCentresAndVolumes(self):
         logger.info('generated cell centres and volumes')

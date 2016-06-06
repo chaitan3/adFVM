@@ -68,16 +68,16 @@ class Matrix(object):
         ##pc.setFactorSolverPackage('mumps')
         #pc.setFactorSolverPackage('superlu_dist')
 
-        #ksp.setType('gmres')
+        ksp.setType('gmres')
         #ksp.setType('gcr')
         #ksp.setType('bcgs')
-        ksp.setType('tfqmr')
+        #ksp.setType('tfqmr')
         #ksp.getPC().setType('jacobi')
-        #ksp.getPC().setType('asm')
+        ksp.getPC().setType('asm')
         #ksp.getPC().setType('mg')
         #ksp.getPC().setType('gamg')
         # which one is used?
-        ksp.getPC().setType('hypre')
+        #ksp.getPC().setType('hypre')
 
         x = self.A.createVecRight()
         X = []
@@ -93,8 +93,62 @@ class Matrix(object):
         pprint('Time to solve linear system:', end-start)
         return np.hstack(X)
 
-# cyclic patches support, and better BC support
+# cyclic and BC support
 def laplacian(phi, DT):
+    dim = phi.dimensions
+    mesh = phi.mesh.origMesh
+    meshC = phi.mesh
+    nrhs = phi.dimensions[0]
+    n = mesh.nInternalCells
+
+    start = time.time()
+
+    M = Matrix.create(n, n, 7, nrhs)
+    A, b = M.A, M.b
+
+    il, ih = A.getOwnershipRange()
+    jl, jh = A.getOwnershipRangeColumn()
+    faceData = (mesh.areas*DT.field/mesh.deltas).flatten()
+
+    neighbourData = faceData[meshC.cellFaces]
+    neighbourData /= mesh.volumes
+    row = np.arange(0, n, dtype=np.int32).reshape(-1,1)
+    col = meshC.cellNeighbours.copy()
+    A.setValuesRCV(il + row, jl + col, neighbourData)
+
+    cellData = -neighbourData.sum(axis=1, keepdims=1)
+    A.setValuesRCV(il + row, jl + row, cellData)
+
+    ranges = A.getOwnershipRangesColumn()
+    for patchID in phi.mesh.remotePatches:
+        patch = mesh.boundary[patchID]
+        startFace = patch['startFace']
+        endFace = startFace + patch['nFaces']
+        proc = patch['neighbProcNo']
+        indices = mesh.owner[startFace:endFace]
+        neighbourIndices = patch['neighbourIndices'].reshape(-1,1)
+        data = faceData[startFace:endFace].reshape(-1,1)/mesh.volumes[indices]
+        A.setValuesRCV(il + indices.reshape(-1,1),
+                       ranges[proc] + neighbourIndices,
+                       data)
+   
+    A.assemble()
+
+    start2 = time.time()
+
+    m = mesh.nInternalFaces
+    o = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
+    indices = mesh.owner[m:o]
+    data = faceData[m:o].reshape(-1,1)*phi.field[mesh.neighbour[m:o]]/mesh.volumes[indices]
+    cols = np.arange(0, nrhs).astype(np.int32)
+    b.setValues(il + indices, cols, data)
+    b.assemble()
+
+    return M
+
+
+
+def laplacian_old(phi, DT):
     dim = phi.dimensions
     mesh = phi.mesh.origMesh
     #n = mesh.nLocalCells
@@ -105,12 +159,13 @@ def laplacian(phi, DT):
     o = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
     nrhs = phi.dimensions[0]
 
+    start = time.time()
+
     snGradM = Matrix.create(l, n, 2, nrhs)
     snGradOp, snGradb = snGradM.A, snGradM.b
 
     il, ih = snGradOp.getOwnershipRange()
     jl, jh = snGradOp.getOwnershipRangeColumn()
-    #data = (mesh.areas/mesh.deltas).flatten()
     data = (mesh.areas*DT.field/mesh.deltas).flatten()
     row = np.arange(0, l, dtype=np.int32)
     data = np.concatenate((-data, data[:m], data[o:]))
@@ -128,32 +183,45 @@ def laplacian(phi, DT):
     snGradOp.setValuesRCV(il + row.reshape(-1,1), jl + col.reshape(-1,1), data.reshape(-1,1))
     snGradOp.assemble()
 
+    start2 = time.time()
+
     indices = np.arange(m, o).astype(np.int32)
     data = data[m:o].reshape(-1,1)*phi.field[mesh.neighbour[m:o]]
     cols = np.arange(0, nrhs).astype(np.int32)
     snGradb.setValues(il + indices, cols, data)
     snGradb.assemble()
-    
-    sumOp = Matrix.create(n, l, 6).A
-    il, ih = sumOp.getOwnershipRange()
-    jl, jh = sumOp.getOwnershipRangeColumn()
-    indices = mesh.sumOp.indices
-    indptr = mesh.sumOp.indptr
-    data = mesh.sumOp.data
-    sumOp.setValuesIJV(indptr, jl + indices, data)
-    sumOp.assemble()
-    M = snGradM.__rmul__(sumOp)
 
-    volOp = Matrix.create(n, n, 1).A
-    diag = volOp.createVecRight()
-    il, ih = diag.getOwnershipRange()
-    indices = np.arange(0, n).astype(np.int32)
-    data = 1./mesh.volumes.flatten()
-    diag.setValues(il + indices, data)
-    diag.assemble()
-    volOp.setDiagonal(diag)
-    volOp.assemble()
-    M = M.__rmul__(volOp)
+    start3 = time.time()
+    
+    if not hasattr(laplacian, "sumOp"):
+        sumOp = Matrix.create(n, l, 6).A
+        il, ih = sumOp.getOwnershipRange()
+        jl, jh = sumOp.getOwnershipRangeColumn()
+        indices = mesh.sumOp.indices
+        indptr = mesh.sumOp.indptr
+        data = mesh.sumOp.data
+        sumOp.setValuesIJV(indptr, jl + indices, data)
+        sumOp.assemble()
+        laplacian.sumOp = sumOp
+    M = snGradM.__rmul__(laplacian.sumOp)
+
+    start4 = time.time()
+
+    if not hasattr(laplacian, "volOp"):
+        volOp = Matrix.create(n, n, 1).A
+        diag = volOp.createVecRight()
+        il, ih = diag.getOwnershipRange()
+        indices = np.arange(0, n).astype(np.int32)
+        data = 1./mesh.volumes.flatten()
+        diag.setValues(il + indices, data)
+        diag.assemble()
+        volOp.setDiagonal(diag)
+        volOp.assemble()
+        laplacian.volOp = volOp
+    M = M.__rmul__(laplacian.volOp)
+
+    end = time.time()
+    pprint('Timers laplacian: {} {} {} {}', start2-start,start3-start2,start4-start3,end-start4)
 
     return M
 
@@ -209,10 +277,11 @@ if __name__ == "__main__":
     from mesh import Mesh
     mesh = Mesh.create('cases/cylinder/')
     Field.setMesh(mesh)
-    T = IOField.read('U', mesh, 1.0)
+    T = IOField.read('U', mesh, 2.0)
     T.partialComplete()
     T.old = T.field
-    res = (ddt(T, 1.) + laplacian(T, 1)).solve()
+    DT = Field('DT', 1., (1,))
+    res = (ddt(T, 1.) + laplacian(T, DT)).solve()
     TL = IOField('TL', res.reshape(-1,1), (1,))
     TL.partialComplete()
     TL.write(2.0)
