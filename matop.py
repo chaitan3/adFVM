@@ -144,13 +144,15 @@ if __name__ == "__main__":
     from mesh import Mesh
     mesh = Mesh.create('cases/cylinder/')
     Field.setMesh(mesh)
-    T = IOField.read('T', mesh, 2.0)
+    timer = 1.0
+    T = IOField.read('T', mesh, timer)
     T.partialComplete()
     T.old = T.field
-    res = (ddt(T, 1.) + laplacian(T, 1)).solve()
+    DT = Field('DT', 1., (1,))
+    res = (ddt(T, 1.) + laplacian(T, DT)).solve()
     TL = IOField('TL2', res.reshape(-1,1), (1,))
     TL.partialComplete()
-    TL.write(2.0)
+    TL.write(timer)
 
 
 

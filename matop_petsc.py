@@ -93,6 +93,7 @@ class Matrix(object):
         pprint('Time to solve linear system:', end-start)
         return np.hstack(X)
 
+# completely wrong
 # cyclic and BC support
 def laplacian(phi, DT):
     dim = phi.dimensions
@@ -159,8 +160,6 @@ def laplacian_old(phi, DT):
     o = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
     nrhs = phi.dimensions[0]
 
-    start = time.time()
-
     snGradM = Matrix.create(l, n, 2, nrhs)
     snGradOp, snGradb = snGradM.A, snGradM.b
 
@@ -183,16 +182,12 @@ def laplacian_old(phi, DT):
     snGradOp.setValuesRCV(il + row.reshape(-1,1), jl + col.reshape(-1,1), data.reshape(-1,1))
     snGradOp.assemble()
 
-    start2 = time.time()
-
     indices = np.arange(m, o).astype(np.int32)
     data = data[m:o].reshape(-1,1)*phi.field[mesh.neighbour[m:o]]
     cols = np.arange(0, nrhs).astype(np.int32)
     snGradb.setValues(il + indices, cols, data)
     snGradb.assemble()
 
-    start3 = time.time()
-    
     if not hasattr(laplacian, "sumOp"):
         sumOp = Matrix.create(n, l, 6).A
         il, ih = sumOp.getOwnershipRange()
@@ -204,8 +199,6 @@ def laplacian_old(phi, DT):
         sumOp.assemble()
         laplacian.sumOp = sumOp
     M = snGradM.__rmul__(laplacian.sumOp)
-
-    start4 = time.time()
 
     if not hasattr(laplacian, "volOp"):
         volOp = Matrix.create(n, n, 1).A
@@ -219,9 +212,6 @@ def laplacian_old(phi, DT):
         volOp.assemble()
         laplacian.volOp = volOp
     M = M.__rmul__(laplacian.volOp)
-
-    end = time.time()
-    pprint('Timers laplacian: {} {} {} {}', start2-start,start3-start2,start4-start3,end-start4)
 
     return M
 
@@ -277,13 +267,14 @@ if __name__ == "__main__":
     from mesh import Mesh
     mesh = Mesh.create('cases/cylinder/')
     Field.setMesh(mesh)
-    T = IOField.read('U', mesh, 2.0)
+    timer = 1.0
+    T = IOField.read('U', mesh, timer)
     T.partialComplete()
     T.old = T.field
     DT = Field('DT', 1., (1,))
-    res = (ddt(T, 1.) + laplacian(T, DT)).solve()
+    res = (ddt(T, 1.) + laplacian_old(T, DT)).solve()
     TL = IOField('TL', res.reshape(-1,1), (1,))
     TL.partialComplete()
-    TL.write(2.0)
+    TL.write(timer)
 
 
