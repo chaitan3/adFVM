@@ -102,8 +102,6 @@ def laplacian(phi, DT):
     nrhs = phi.dimensions[0]
     n = mesh.nInternalCells
 
-    start = time.time()
-
     M = Matrix.create(n, n, 7, nrhs)
     A, b = M.A, M.b
 
@@ -134,8 +132,6 @@ def laplacian(phi, DT):
                        data)
    
     A.assemble()
-
-    start2 = time.time()
 
     m = mesh.nInternalFaces
     o = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
@@ -265,15 +261,16 @@ def BCs(phi, M):
 
 if __name__ == "__main__":
     from mesh import Mesh
-    mesh = Mesh.create('cases/cylinder/')
+    mesh = Mesh.create('cases/laplacian/')
     Field.setMesh(mesh)
-    timer = 1.0
-    T = IOField.read('U', mesh, timer)
+    timer = 0.0
+    T = IOField.read('T', mesh, timer)
     T.partialComplete()
-    T.old = T.field
     DT = Field('DT', 1., (1,))
-    res = (ddt(T, 1.) + laplacian_old(T, DT)).solve()
-    TL = IOField('TL', res.reshape(-1,1), (1,))
+    #T.old = T.field
+    #res = (ddt(T, 1.) + laplacian(T, DT)).solve()
+    res = laplacian(T, DT).solve()
+    TL = IOField(T.name + 'L', res, res.shape[1:])
     TL.partialComplete()
     TL.write(timer)
 

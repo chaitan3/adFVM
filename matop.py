@@ -52,7 +52,7 @@ class Matrix(object):
         x = sp.linalg.spsolve(self.A, -self.b)
         end = time.time()
         pprint('Time to solve linear system:', end-start)
-        return x
+        return x.reshape(self.b.shape)
 
 def laplacian(phi, DT):
     dim = phi.dimensions
@@ -142,15 +142,16 @@ def hybrid(equation, boundary, fields, solver):
 
 if __name__ == "__main__":
     from mesh import Mesh
-    mesh = Mesh.create('cases/cylinder/')
+    mesh = Mesh.create('cases/laplacian/')
     Field.setMesh(mesh)
-    timer = 1.0
+    timer = 0.0
     T = IOField.read('T', mesh, timer)
     T.partialComplete()
-    T.old = T.field
     DT = Field('DT', 1., (1,))
-    res = (ddt(T, 1.) + laplacian(T, DT)).solve()
-    TL = IOField('TL2', res.reshape(-1,1), (1,))
+    #T.old = T.field
+    #res = (ddt(T, 1.) + laplacian(T, DT)).solve()
+    res = laplacian(T, DT).solve()
+    TL = IOField(T.name + 'L2', res, res.shape[1:])
     TL.partialComplete()
     TL.write(timer)
 
