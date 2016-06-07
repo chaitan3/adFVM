@@ -251,10 +251,10 @@ class IOField(Field):
         self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, ghost=True)
         return internalField
 
-    def partialComplete(self):
+    def partialComplete(self, value=0.):
         mesh = self.mesh.origMesh
         boundary = self.boundary
-        self.field = np.vstack((self.field, np.zeros((mesh.nGhostCells,) + self.dimensions)))
+        self.field = np.vstack((self.field, value*np.ones((mesh.nGhostCells,) + self.dimensions, config.precision)))
         for patchID in self.boundary:
             patch = boundary[patchID]
             if patch['type'] in BCs.valuePatches:

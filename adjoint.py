@@ -194,7 +194,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
 
     writeAdjointFields(stackedAdjointFields, t)
     with open(statusFile, 'wb') as status:
-        pkl.dump([firstCheckpoint + 1, result], status)
+        pkl.dump([checkpoint + 1, result], status)
 
 for index in range(0, nPerturb):
     writeResult('adjoint', result[index], '{} {}'.format(index, user.scaling))

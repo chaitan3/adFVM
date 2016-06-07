@@ -69,9 +69,14 @@ def laplacian(phi, DT):
     snGradOp = sp.csr_matrix((data, (row, col)), shape=(mesh.nFaces, n))
     b = np.zeros((mesh.nFaces,) + dim)
     if mesh.nFaces > m:
-        b[m:mesh.nFaces] += data[m:mesh.nFaces].reshape(-1,1)*phi.field[mesh.neighbour[m:]]
+        b[m:mesh.nFaces] += -data[m:mesh.nFaces].reshape(-1,1)*phi.field[mesh.neighbour[m:]]
     snGradM = Matrix(snGradOp, b)
-    return (sp.diags(1./mesh.volumes.flatten(), 0)*mesh.sumOp)*snGradM
+    M = (sp.diags(1./mesh.volumes.flatten(), 0)*mesh.sumOp)*snGradM
+    #TESTING
+    #M.b += 1e10
+    #print M.A.toarray(), M.b
+
+    return M
 
 def ddt(phi, dt):
     mesh = phi.mesh.origMesh
@@ -142,15 +147,16 @@ def hybrid(equation, boundary, fields, solver):
 
 if __name__ == "__main__":
     from mesh import Mesh
-    mesh = Mesh.create('cases/laplacian/')
+    mesh = Mesh.create('cases/cylinder/')
+    #mesh = Mesh.create('cases/laplacian/')
     Field.setMesh(mesh)
-    timer = 0.0
+    timer = 1.0
     T = IOField.read('T', mesh, timer)
-    T.partialComplete()
+    T.partialComplete(300.)
     DT = Field('DT', 1., (1,))
-    #T.old = T.field
-    #res = (ddt(T, 1.) + laplacian(T, DT)).solve()
-    res = laplacian(T, DT).solve()
+    T.old = T.field
+    res = (ddt(T, 1.) + laplacian(T, DT)).solve()
+    #res = laplacian(T, DT).solve()
     TL = IOField(T.name + 'L2', res, res.shape[1:])
     TL.partialComplete()
     TL.write(timer)
