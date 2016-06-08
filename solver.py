@@ -189,8 +189,7 @@ class Solver(object):
                 dtc = IOField('dtc', dtc, (1,))
                 dtc.partialComplete()
                 self.writeFields(fields + [dtc], t)
-                with open(self.statusFile, 'wb') as status:
-                    pkl.dump([timeIndex, t, dt, result], status)
+                self.writeStatusFile([timeIndex, t, dt, result])
 
                 # write timeSeries if in orig mode (problem.py)
                 if mode == 'orig' and parallel.rank == 0 and not self.localTimeStep:
@@ -209,6 +208,25 @@ class Solver(object):
             dtc.partialComplete()
             self.writeFields(fields + [dtc], t)
         return result
+
+    def readStatusFile(self):
+        data = None
+        scatterData = None
+        if parallel.rank == 0:
+            with open(self.statusFile, 'rb') as status:
+                readData = pkl.load(status)
+            data = readData[:-1]
+            scatterData = readData[-1]
+        data = parallel.mpi.bcast(data, root=0)
+        data.append(parallel.mpi.scatter(scatterData, root=0))
+        return data
+
+    def writeStatusFile(self, data):
+        data[-1] = parallel.mpi.gather(data[-1], root=0)
+        if parallel.rank == 0:
+            with open(self.statusFile, 'wb') as status:
+                pkl.dump(data, status)
+        return
 
     def function(self, inputs, outputs, name, **kwargs):
         return SolverFunction(inputs, outputs, self, name, **kwargs)
@@ -278,8 +296,8 @@ class SolverFunction(object):
         if not config.compile:
             start = time.time()
             pklData = parallel.mpi.bcast(pklData, root=0)
-            if parallel.mpi.bcast(fn is not None, root=0) and parallel.nProcessors > 1:
-                T.gof.cc.get_module_cache().refresh(cleanup=False)
+            #if parallel.mpi.bcast(fn is not None, root=0) and parallel.nProcessors > 1:
+            #    T.gof.cc.get_module_cache().refresh(cleanup=False)
             end = time.time()
             pprint('Transfer time: {0:.2f}'.format(end-start))
 

@@ -55,20 +55,17 @@ def writeResult(option, result, info=''):
 if __name__ == "__main__":
     mesh = primal.mesh.origMesh
     timeStepFile = primal.timeStepFile
-    statusFile = primal.statusFile
 
     parser = argparse.ArgumentParser()
     parser.add_argument('option')
     user = parser.parse_args(args)
 
-    try:
-        with open(statusFile, 'rb') as status:
-            startIndex, startTime, dt, initResult = pkl.load(status)
+    if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
+        startIndex, startTime, dt, initResult = primal.readStatusFile()
         pprint('Read status file, index =', startIndex)
-    except:
+    else:
         startIndex = 0
         initResult = 0.
-    # WTF is this?
     if 'source' in locals():
         primal.sourceTerm = source
     
@@ -134,4 +131,5 @@ if __name__ == "__main__":
                 primal.sourceTerm[index][:] = phi
         result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex)
         writeResult(user.option, result/(nSteps + 1), '{}'.format(sim))
-        os.remove(statusFile)
+        if parallel.rank == 0:
+            os.remove(primal.statusFile)

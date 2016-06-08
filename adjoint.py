@@ -28,12 +28,10 @@ user, args = parser.parse_known_args()
 
 primal.adjoint = True
 mesh = primal.mesh
-statusFile = primal.statusFile
-try:
-    with open(statusFile, 'rb') as status:
-        firstCheckpoint, result = pkl.load(status)
+if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
+    firstCheckpoint, result  = primal.readStatusFile()
     pprint('Read status file, checkpoint =', firstCheckpoint)
-except:
+else:
     firstCheckpoint = 0
     result = [0.]*nPerturb
 if parallel.rank == 0:
@@ -193,9 +191,9 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
     writeAdjointFields(stackedAdjointFields, t)
-    with open(statusFile, 'wb') as status:
-        pkl.dump([checkpoint + 1, result], status)
+    primal.writeStatusFile([checkpoint + 1, result])
 
 for index in range(0, nPerturb):
     writeResult('adjoint', result[index], '{} {}'.format(index, user.scaling))
-os.remove(statusFile)
+if parallel.rank == 0:
+    os.remove(primal.statusFile)
