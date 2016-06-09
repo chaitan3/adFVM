@@ -5,7 +5,7 @@ from compat import norm
 import numpy as np
 
 #primal = RCF('/home/talnikar/foam/blade/les-turb/')
-primal = RCF('/home/talnikar/foam/blade/laminar-lowRe/')#, timeIntegrator='euler')
+primal = RCF('/home/talnikar/foam/vane/laminar-lowRe/')#, timeIntegrator='euler')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 
@@ -83,10 +83,10 @@ def perturb(mesh):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-#nSteps = 2000
-#writeInterval = 500
-nSteps = 1
-writeInterval = 1
+nSteps = 20000
+writeInterval = 500
+#nSteps = 1
+#writeInterval = 1
 startTime = 3.0
 dt = 1e-8
 

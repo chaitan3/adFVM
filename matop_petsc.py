@@ -63,18 +63,18 @@ class Matrix(object):
         ksp = PETSc.KSP()
         ksp.create(PETSc.COMM_WORLD)
 
-        #ksp.setType('preonly')
-        #pc = ksp.getPC()
-        #pc.setType('lu')
-        #pc.setFactorSolverPackage('mumps')
+        ksp.setType('preonly')
+        pc = ksp.getPC()
+        pc.setType('lu')
+        pc.setFactorSolverPackage('mumps')
         #pc.setFactorSolverPackage('superlu_dist')
 
         #ksp.setType('gmres')
-        ksp.setType('gcr')
+        #ksp.setType('gcr')
         #ksp.setType('bcgs')
         #ksp.setType('tfqmr')
         #ksp.getPC().setType('jacobi')
-        ksp.getPC().setType('asm')
+        #ksp.getPC().setType('asm')
         #ksp.getPC().setType('mg')
         #ksp.getPC().setType('gamg')
         # which one is used?
@@ -102,6 +102,8 @@ def laplacian(phi, DT):
     meshC = phi.mesh
     nrhs = phi.dimensions[0]
     n = mesh.nInternalCells
+    m = mesh.nInternalFaces
+    o = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
 
     M = Matrix.create(n, n, 7, nrhs)
     A, b = M.A, M.b
@@ -134,24 +136,31 @@ def laplacian(phi, DT):
                        ranges[proc] + neighbourIndices,
                        data)
    
-    A.assemble()
+    # dirichlet
+    #indices = mesh.owner[m:o]
+    #data = faceData[m:o].reshape(-1,1)*phi.field[mesh.neighbour[m:o]]/mesh.volumes[indices]
+    #cols = np.arange(0, nrhs).astype(np.int32)
+    #indices, inverse = np.unique(indices, return_inverse=True)
+    #uniqData = np.zeros((indices.shape[0], data.shape[1]))
+    #add_at(uniqData, inverse, data)
+    #b.setValues(il + indices, cols, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
 
-    m = mesh.nInternalFaces
-    o = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
+    # neumann
     indices = mesh.owner[m:o]
-    data = faceData[m:o].reshape(-1,1)*phi.field[mesh.neighbour[m:o]]/mesh.volumes[indices]
-    cols = np.arange(0, nrhs).astype(np.int32)
-    # cut repeat indices
+    data = faceData[m:o].reshape(-1,1)/mesh.volumes[indices]
     indices, inverse = np.unique(indices, return_inverse=True)
-    uniqData = np.zeros((indices.shape[0], data.shape[1]))
+    uniqData = np.zeros((indices.shape[0], 1))
     add_at(uniqData, inverse, data)
-    b.setValues(il + indices, cols, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
+    indices = indices.reshape(-1,1)
+    A.setValuesRCV(il + indices, jl + indices, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
+
     # TESTING
     #indices = np.arange(0, mesh.nInternalCells).astype(np.int32)
     #cols = np.arange(0, nrhs).astype(np.int32)
     #data = 1e10*np.ones((mesh.nInternalCells, nrhs), np.int32)
     #b.setValues(il + indices, cols, data, addv=PETSc.InsertMode.ADD_VALUES)
 
+    A.assemble()
     b.assemble()
 
     #A.convert("dense")
@@ -271,15 +280,15 @@ if __name__ == "__main__":
     T = IOField.read('T', mesh, timer)
     T.partialComplete(300.)
     DT = Field('DT', 1., (1,))
-    #T.old = T.field
-    #res = (ddt(T, 1.) + laplacian(T, DT)).solve()
+    T.old = T.field
+    #res = laplacian(T, DT).solve()
 
-    res = laplacian(T, DT).solve()
+    res = (ddt(T, 1e-9) + laplacian(T, DT)).solve()
     TL = IOField(T.name + 'L', res, res.shape[1:])
     TL.partialComplete()
     TL.write(timer)
 
-    res = laplacian_old(T, DT).solve()
+    res = (ddt(T, 1e-9) + laplacian_old(T, DT)).solve()
     TL = IOField(T.name + 'L2', res, res.shape[1:])
     TL.partialComplete()
     TL.write(timer)
