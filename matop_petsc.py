@@ -70,15 +70,15 @@ class Matrix(object):
         #pc.setFactorSolverPackage('superlu_dist')
 
         #ksp.setType('gmres')
-        #ksp.setType('gcr')
+        ksp.setType('gcr')
         #ksp.setType('bcgs')
-        ksp.setType('tfqmr')
+        #ksp.setType('tfqmr')
         #ksp.getPC().setType('jacobi')
-        #ksp.getPC().setType('asm')
+        ksp.getPC().setType('asm')
         #ksp.getPC().setType('mg')
         #ksp.getPC().setType('gamg')
         # which one is used?
-        ksp.getPC().setType('hypre')
+        #ksp.getPC().setType('hypre')
 
         x = self.A.createVecRight()
         X = []
@@ -128,6 +128,7 @@ def laplacian_new(phi, DT):
         indices = mesh.owner[startFace:endFace]
         neighbourIndices = patch['neighbourIndices'].reshape(-1,1)
         data = faceData[startFace:endFace].reshape(-1,1)/mesh.volumes[indices]
+        #print patchID, il, ranges[proc], indices, neighbourIndices
         A.setValuesRCV(il + indices.reshape(-1,1),
                        ranges[proc] + neighbourIndices,
                        data)
@@ -140,18 +141,22 @@ def laplacian_new(phi, DT):
     data = faceData[m:o].reshape(-1,1)*phi.field[mesh.neighbour[m:o]]/mesh.volumes[indices]
     cols = np.arange(0, nrhs).astype(np.int32)
     # cut repeat indices
-    indices, inverse = np.unique(indices, return_inverse=True)
+    indices, inverse = np.uneique(indices, return_inverse=True)
     uniqData = np.zeros((indices.shape[0], data.shape[1]))
     add_at(uniqData, inverse, data)
-    b.setValues(il + indices, cols, uniqData)
+    b.setValues(il + indices, cols, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
     # TESTING
-    #indices = np.arange(0, mesh.nInternalCells).astype(np.int32)
-    #cols = np.arange(0, nrhs).astype(np.int32)
-    #data = 1e10*np.ones((mesh.nInternalCells, nrhs), np.int32)
-    #b.setValues(il + indices, cols, data, addv=PETSc.InsertMode.ADD_VALUES)
+    indices = np.arange(0, mesh.nInternalCells).astype(np.int32)
+    cols = np.arange(0, nrhs).astype(np.int32)
+    data = 1e10*np.ones((mesh.nInternalCells, nrhs), np.int32)
+    b.setValues(il + indices, cols, data, addv=PETSc.InsertMode.ADD_VALUES)
 
     b.assemble()
-    #print A.convert("dense").getDenseArray(), b.getDenseArray()
+
+    #A.convert("dense")
+    #if parallel.rank == 0:
+        #np.savetxt('Ab.txt', A.getDenseArray())
+        #np.savetxt('Ab.txt', b.getDenseArray())
 
     return M
 
@@ -221,13 +226,17 @@ def laplacian(phi, DT):
         laplacian.volOp = volOp
     M = M.__rmul__(laplacian.volOp)
 
-    #indices = np.arange(0, mesh.nInternalCells).astype(np.int32)
-    #cols = np.arange(0, nrhs).astype(np.int32)
-    #data = 1e10*np.ones((mesh.nInternalCells, nrhs), np.int32)
-    #M.b.setValues(il + indices, cols, data, addv=PETSc.InsertMode.ADD_VALUES)
+    indices = np.arange(0, mesh.nInternalCells).astype(np.int32)
+    cols = np.arange(0, nrhs).astype(np.int32)
+    data = 1e10*np.ones((mesh.nInternalCells, nrhs), np.int32)
+    M.b.setValues(il + indices, cols, data, addv=PETSc.InsertMode.ADD_VALUES)
 
     M.b.assemble()
-    #print M.A.convert("dense").getDenseArray(), M.b.getDenseArray()
+
+    #M.A.convert("dense")
+    #if parallel.rank == 0:
+    #    np.savetxt('Ab2.txt', M.A.getDenseArray())
+    #    np.savetxt('Ab2.txt', M.b.getDenseArray())
 
     return M
 
@@ -256,14 +265,21 @@ if __name__ == "__main__":
     mesh = Mesh.create('cases/cylinder/')
     #mesh = Mesh.create('cases/laplacian/')
     Field.setMesh(mesh)
-    timer = 1.0
+    timer = 2.0
+
     T = IOField.read('T', mesh, timer)
     T.partialComplete(300.)
     DT = Field('DT', 1., (1,))
-    T.old = T.field
-    res = (ddt(T, 1.) + laplacian(T, DT)).solve()
-    #res = laplacian(T, DT).solve()
+    #T.old = T.field
+    #res = (ddt(T, 1.) + laplacian(T, DT)).solve()
+
+    res = laplacian_new(T, DT).solve()
     TL = IOField(T.name + 'L', res, res.shape[1:])
+    TL.partialComplete()
+    TL.write(timer)
+
+    res = laplacian(T, DT).solve()
+    TL = IOField(T.name + 'L2', res, res.shape[1:])
     TL.partialComplete()
     TL.write(timer)
 
