@@ -95,8 +95,8 @@ class Matrix(object):
         return np.hstack(X)
 
 # cyclic and BC support
-#def laplacian(phi, DT):
-def laplacian_new(phi, DT):
+def laplacian(phi, DT):
+#def laplacian_new(phi, DT):
     dim = phi.dimensions
     mesh = phi.mesh.origMesh
     meshC = phi.mesh
@@ -147,10 +147,10 @@ def laplacian_new(phi, DT):
     add_at(uniqData, inverse, data)
     b.setValues(il + indices, cols, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
     # TESTING
-    indices = np.arange(0, mesh.nInternalCells).astype(np.int32)
-    cols = np.arange(0, nrhs).astype(np.int32)
-    data = 1e10*np.ones((mesh.nInternalCells, nrhs), np.int32)
-    b.setValues(il + indices, cols, data, addv=PETSc.InsertMode.ADD_VALUES)
+    #indices = np.arange(0, mesh.nInternalCells).astype(np.int32)
+    #cols = np.arange(0, nrhs).astype(np.int32)
+    #data = 1e10*np.ones((mesh.nInternalCells, nrhs), np.int32)
+    #b.setValues(il + indices, cols, data, addv=PETSc.InsertMode.ADD_VALUES)
 
     b.assemble()
 
@@ -162,8 +162,8 @@ def laplacian_new(phi, DT):
     return M
 
 
-def laplacian(phi, DT):
-#def laplacian_old(phi, DT):
+#def laplacian(phi, DT):
+def laplacian_old(phi, DT):
     dim = phi.dimensions
     mesh = phi.mesh.origMesh
     #n = mesh.nLocalCells
@@ -227,10 +227,10 @@ def laplacian(phi, DT):
         laplacian.volOp = volOp
     M = M.__rmul__(laplacian.volOp)
 
-    indices = np.arange(0, mesh.nInternalCells).astype(np.int32)
-    cols = np.arange(0, nrhs).astype(np.int32)
-    data = 1e10*np.ones((mesh.nInternalCells, nrhs), np.int32)
-    M.b.setValues(il + indices, cols, data, addv=PETSc.InsertMode.ADD_VALUES)
+    #indices = np.arange(0, mesh.nInternalCells).astype(np.int32)
+    #cols = np.arange(0, nrhs).astype(np.int32)
+    #data = 1e10*np.ones((mesh.nInternalCells, nrhs), np.int32)
+    #M.b.setValues(il + indices, cols, data, addv=PETSc.InsertMode.ADD_VALUES)
 
     M.b.assemble()
 
@@ -274,12 +274,12 @@ if __name__ == "__main__":
     #T.old = T.field
     #res = (ddt(T, 1.) + laplacian(T, DT)).solve()
 
-    res = laplacian_new(T, DT).solve()
+    res = laplacian(T, DT).solve()
     TL = IOField(T.name + 'L', res, res.shape[1:])
     TL.partialComplete()
     TL.write(timer)
 
-    res = laplacian(T, DT).solve()
+    res = laplacian_old(T, DT).solve()
     TL = IOField(T.name + 'L2', res, res.shape[1:])
     TL.partialComplete()
     TL.write(timer)
