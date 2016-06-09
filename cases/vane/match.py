@@ -8,6 +8,7 @@ from numpy import *
 def match_htc(hp, coordsp, hs, coordss, saveFile):
     im = plt.imread('/home/talnikar/Dropbox/Research/results/2014/turbine_blade_verification/blade-htc1.png')
     plt.imshow(im)
+    plt.axis('off')
 
     def transx(a):
         return 43 + (373-43)*((a+100)/200)
@@ -28,6 +29,7 @@ def match_htc(hp, coordsp, hs, coordss, saveFile):
 def match_velocity(Map, coordsp, Mas, coordss, saveFile):
     im = plt.imread('/home/talnikar/Dropbox/Research/results/2014/turbine_blade_verification/blade-velocity.png')
     plt.imshow(im)
+    plt.axis('off')
 
     def transx(a):
         return 77 + (684-77)*(a/1.4)

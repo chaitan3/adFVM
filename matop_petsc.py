@@ -114,7 +114,8 @@ def laplacian_new(phi, DT):
     neighbourData /= mesh.volumes
     row = np.arange(0, n, dtype=np.int32).reshape(-1,1)
     col = meshC.cellNeighbours.copy()
-    A.setValuesRCV(il + row, jl + col, neighbourData)
+    col[col > -1] += jl
+    A.setValuesRCV(il + row, col, neighbourData)
 
     cellData = -neighbourData.sum(axis=1, keepdims=1)
     A.setValuesRCV(il + row, jl + row, cellData)
@@ -141,7 +142,7 @@ def laplacian_new(phi, DT):
     data = faceData[m:o].reshape(-1,1)*phi.field[mesh.neighbour[m:o]]/mesh.volumes[indices]
     cols = np.arange(0, nrhs).astype(np.int32)
     # cut repeat indices
-    indices, inverse = np.uneique(indices, return_inverse=True)
+    indices, inverse = np.unique(indices, return_inverse=True)
     uniqData = np.zeros((indices.shape[0], data.shape[1]))
     add_at(uniqData, inverse, data)
     b.setValues(il + indices, cols, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
@@ -155,8 +156,8 @@ def laplacian_new(phi, DT):
 
     #A.convert("dense")
     #if parallel.rank == 0:
-        #np.savetxt('Ab.txt', A.getDenseArray())
-        #np.savetxt('Ab.txt', b.getDenseArray())
+    #    np.savetxt('Ab.txt', Ad)
+    #    #np.savetxt('Ab.txt', b.getDenseArray())
 
     return M
 
@@ -265,7 +266,7 @@ if __name__ == "__main__":
     mesh = Mesh.create('cases/cylinder/')
     #mesh = Mesh.create('cases/laplacian/')
     Field.setMesh(mesh)
-    timer = 2.0
+    timer = 1.0
 
     T = IOField.read('T', mesh, timer)
     T.partialComplete(300.)

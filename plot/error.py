@@ -29,18 +29,19 @@ for line in lines:
     else:
         if words[0] != 'orig':
             viscosity.append(float(words[0]))
-#index = np.argsort(viscosity)
-#viscosity = np.array(viscosity)[index]
-#sens = np.array(sens)[index]
+index = np.argsort(viscosity)
+viscosity = np.array(viscosity)[index]
+sens = np.array(sens)[index]
 viscosity = np.array(viscosity)
 sens = np.array(sens)
+
 Ah = {}
 for i in range(0, len(sens)):
     Ah[viscosity[i]] = sens[i]
 
-viscosity = viscosity[-8:]
-sens = sens[-8:]
-error = 100*(sens-perturb)/abs(perturb)
+#viscosity = viscosity[-8:]
+#sens = sens[-8:]
+#error = 100*(sens-perturb)/abs(perturb)
 
 def polynomial(h, t, Ah, n=None, k=None):
     if n is None:
@@ -72,16 +73,15 @@ def unknown(h, t, s, Ah):
     #plt.show()
     return brentq(f, -0.1, 0.1)
 
-h = 3.84
-t = 2.
-Ac = polynomial(h, t, Ah, 7)
-print Ac
-h = 3.84
-t = 2.**1
-s = 2.**2
-print unknown(h, t, s, Ah)
-
-plt.semilogx(viscosity[:-1:][::-1], Ac, 'r.', markersize=20, label='richardson')
+#h = 3.84
+#t = 2.
+#Ac = polynomial(h, t, Ah, 7)
+#print Ac
+#h = 3.84
+#t = 2.**1
+#s = 2.**2
+#print unknown(h, t, s, Ah)
+#plt.semilogx(viscosity[:-1:][::-1], Ac, 'r.', markersize=20, label='richardson')
 
 from numpy import *
 from matplotlib.pyplot import *
@@ -89,9 +89,8 @@ from matplotlib.pyplot import *
 #poly = poly1d(coeff)
 #plt.semilogx(viscosity, poly(viscosity))
 plt.xlabel('viscosity scaling factor')
-
 plt.semilogx(viscosity, perturb*np.ones_like(viscosity), label='true sensitivity')
-plt.semilogx(viscosity, sens, 'b.',markersize=20, label='samples')
+plt.semilogx(viscosity, sens, '.', color=colors,markersize=20, label='samples')
 plt.ylabel('sensitivity')
 #plt.semilogx(viscosity, np.zeros_like(viscosity))
 #plt.semilogx(viscosity, error, 'b.',markersize=20)
