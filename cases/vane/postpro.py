@@ -42,7 +42,7 @@ for index, time in enumerate(user.time):
     htc = getHTC(T, T0, patches)
     Ma = getIsentropicMa(p, p0, patches)
     wakeCells, pl = getPressureLoss(p, T, U, p0, point, normal)
-    yplus = getYPlus(U, T, rho, patches)
+    uplus, yplus = getYPlus(U, T, rho, patches)
 
     for patchID in patches:
         nFacesPerLayer = mesh.boundary[patchID]['nFaces']/nLayers
@@ -61,6 +61,8 @@ for index, time in enumerate(user.time):
     PL += pl
    
     IOField.openHandle(solver.mesh.case, time)
+    uplus = IOField.boundaryField('uplus', uplus, (3,))
+    uplus.write(time)
     yplus = IOField.boundaryField('yplus', yplus, (1,))
     yplus.write(time)
     IOField.closeHandle()

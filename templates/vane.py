@@ -87,6 +87,6 @@ nSteps = 20000
 writeInterval = 500
 #nSteps = 1
 #writeInterval = 1
-startTime = 3.0
+startTime = 4.0
 dt = 1e-8
 
