@@ -79,6 +79,8 @@ class Mesh(object):
         self.points, self.faces, self.owner, \
                 self.neighbour, self.boundary = meshData
 
+        self.buildBeforeWrite()
+
         # patches
         self.localPatches, self.remotePatches = self.splitPatches(self.boundary)
         self.nLocalPatches = len(self.localPatches)
@@ -87,8 +89,6 @@ class Mesh(object):
         self.boundaryTensor = {}
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
-
-        self.buildBeforeWrite()
        
         self.normals = self.getNormals()
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()

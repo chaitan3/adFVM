@@ -147,8 +147,10 @@ for rank, processor in enumerate(processorDirs):
     config.hdf5 = False
     print processor
     mesh = Mesh()
-    mesh.readFoam(processor, 'constant')
-    mesh.computeBeforeWrite()
+    mesh.points, mesh.faces, mesh.owner, \
+            mesh.neighbour, mesh.boundary = mesh.readFoam(processor, 'constant')
+    mesh.buildBeforeWrite()
+
     mesh.origMesh = mesh
     meshWriteHDF5(mesh, rank, len(processorDirs))
 
