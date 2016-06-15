@@ -123,15 +123,18 @@ class Mesh(object):
     def getTimeDir(self, time):
         if time.is_integer():
             time = int(time)
-        return '{0}/{1}/'.format(self.case, time)
+        return '{0}/{1}'.format(self.case, time)
 
     # re-reading after mesh creation
-    def read(self, time):
+    def read(self, timeDir):
         pprint('Re-reading mesh, time', time)
-        timeDir = self.getTimeDir(time) 
-        meshDir = timeDir + 'polyMesh/'
-        # HACK correct updating
-        boundary = self.readFoamBoundary(meshDir + 'boundary')
+        if config.hdf5:
+            boundary = self.readHDF5Boundary(timeDir)
+        else:
+            meshDir = timeDir + '/polyMesh/'
+            # HACK correct updating
+            boundary = self.readFoamBoundary(meshDir + 'boundary')
+
         for patchID in boundary:
             if boundary[patchID]['type'] == 'slidingPeriodic1D':
                 self.origMesh.boundary[patchID].update(boundary[patchID])
@@ -141,7 +144,7 @@ class Mesh(object):
         pprint('reading foam mesh')
         self.case = caseDir + parallel.processorDirectory
         if isinstance(currTime, float):
-            timeDir = self.getTimeDir(currTime)
+            timeDir = self.getTimeDir(currTime) + '/'
         else:
             timeDir = self.case + currTime + '/'
 
@@ -251,13 +254,15 @@ class Mesh(object):
             boundary[patchID][key] = value
         return boundary
 
-    def write(self, time):
+    def write(self, timeDir):
         pprint('writing mesh, time', time)
-        timeDir = self.getTimeDir(time) 
-        meshDir = timeDir + 'polyMesh/'
-        if not os.path.exists(meshDir):
-            os.makedirs(meshDir)
-        self.writeFoamBoundary(meshDir + 'boundary', self.origMesh.boundary)
+        if config.hdf5:
+            self.writeHDF5Boundary(timeDir)
+        else:
+            meshDir = timeDir + '/polyMesh/'
+            if not os.path.exists(meshDir):
+                os.makedirs(meshDir)
+            self.writeFoamBoundary(meshDir + 'boundary', self.origMesh.boundary)
 
     def writeFoamFile(self, fileName, data):
         assert config.fileFormat == 'binary'
@@ -342,11 +347,6 @@ class Mesh(object):
         nProcs = parallel.nProcessors
 
         mesh = self.origMesh
-        boundary = []
-        for patchID in mesh.boundary.keys():
-            for key, value in mesh.boundary[patchID].iteritems():
-                boundary.append([patchID, key, str(value)])
-        boundary = np.array(boundary, dtype='S100')
         faces, points, owner, neighbour = self.faces, self.points, mesh.owner, mesh.neighbour
         cells = self.cells
 
@@ -355,9 +355,29 @@ class Mesh(object):
 
         parallelInfo = np.array([faces.shape[0], points.shape[0], \
                                  owner.shape[0], neighbour.shape[0],
-                                 boundary.shape[0],
                                  cells.shape[0]
                                 ])
+
+        parallelStart, parallelEnd, parallelSize = self.writeHDF5Parallel(parallelInfo)
+
+                
+        facesData = meshFile.create_dataset('faces', (parallelSize[0],) + faces.shape[1:], faces.dtype)
+        facesData[parallelStart[0]:parallelEnd[0]] = faces
+        pointsData = meshFile.create_dataset('points', (parallelSize[1],) + points.shape[1:], np.float64)
+        pointsData[parallelStart[1]:parallelEnd[1]] = points.astype(np.float64)
+        ownerData = meshFile.create_dataset('owner', (parallelSize[2],) + owner.shape[1:], owner.dtype)
+        ownerData[parallelStart[2]:parallelEnd[2]] = owner
+        neighbourData = meshFile.create_dataset('neighbour', (parallelSize[3],) + neighbour.shape[1:], neighbour.dtype)
+        neighbourData[parallelStart[3]:parallelEnd[3]] = neighbour
+
+        cellsData = meshFile.create_dataset('cells', (parallelSize[4],) + cells.shape[1:], cells.dtype)
+        cellsData[parallelStart[4]:parallelEnd[4]] = cells
+
+        self.writeHDF5Boundary(meshFile)
+
+        meshFile.close()
+
+    def writeHDF5Parallel(self, meshFile, parallelInfo):
         parallelStart = np.zeros_like(parallelInfo)
         parallelEnd = np.zeros_like(parallelInfo)
         parallel.mpi.Exscan(parallelInfo, parallelStart)
@@ -370,23 +390,22 @@ class Mesh(object):
         parallelStartData[rank] = parallelStart
         parallelEndData = parallelGroup.create_dataset('end', (nProcs, len(parallelInfo)), np.int64)
         parallelEndData[rank] = parallelEnd
-        
-        facesData = meshFile.create_dataset('faces', (parallelSize[0],) + faces.shape[1:], faces.dtype)
-        facesData[parallelStart[0]:parallelEnd[0]] = faces
-        pointsData = meshFile.create_dataset('points', (parallelSize[1],) + points.shape[1:], np.float64)
-        pointsData[parallelStart[1]:parallelEnd[1]] = points.astype(np.float64)
-        ownerData = meshFile.create_dataset('owner', (parallelSize[2],) + owner.shape[1:], owner.dtype)
-        ownerData[parallelStart[2]:parallelEnd[2]] = owner
-        neighbourData = meshFile.create_dataset('neighbour', (parallelSize[3],) + neighbour.shape[1:], neighbour.dtype)
-        neighbourData[parallelStart[3]:parallelEnd[3]] = neighbour
+        return parallelStart, parallelEnd, parallelInfo
 
-        boundaryData = meshFile.create_dataset('boundary', (parallelSize[4], 3), 'S100') 
-        boundaryData[parallelStart[4]:parallelEnd[4]] = boundary
+    def writeHDF5Boundary(self, meshFile):
+        boundary = []
+        for patchID in mesh.boundary.keys():
+            for key, value in mesh.boundary[patchID].iteritems():
+                boundary.append([patchID, key, str(value)])
+        boundary = np.array(boundary, dtype='S100')
 
-        cellsData = meshFile.create_dataset('cells', (parallelSize[5],) + cells.shape[1:], cells.dtype)
-        cellsData[parallelStart[5]:parallelEnd[5]] = cells
+        parallelInfo = np.array([boundary.shape[0]])
 
-        meshFile.close()
+        parallelStart, parallelEnd, parallelSize = self.writeHDF5Parallel(parallelInfo)
+
+        boundaryGroup = meshFile.create_group('boundary')
+        boundaryData = boundaryGroup.create_dataset('value', (parallelSize[0], 3), 'S100') 
+        boundaryData[parallelStart[0]:parallelEnd[0]] = boundary
 
     def buildBeforeWrite(self):
         self.populateSizes()

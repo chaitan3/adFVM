@@ -104,12 +104,14 @@ class RCF(Solver):
         self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
         start = time.time()
 
-        IOField.openHandle(self.mesh.case, t)
+        IOField.openHandle(t)
         for phi in fields:
-            phi.write(t)
-        self.U.write(t)
-        self.T.write(t)
-        self.p.write(t)
+            phi.write()
+        self.U.write()
+        self.T.write()
+        self.p.write()
+        if self.dynamicMesh:
+            self.mesh.write(IOField.handle)
         IOField.closeHandle()
 
         parallel.mpi.Barrier()
@@ -120,10 +122,12 @@ class RCF(Solver):
     def initialize(self, t):
         # IO Fields, with phi attribute as a CellField
         start = time.time()
-        IOField.openHandle(self.mesh.case, t)
-        self.U = IOField.read('U', self.mesh, t)
-        self.T = IOField.read('T', self.mesh, t)
-        self.p = IOField.read('p', self.mesh, t)
+        IOField.openHandle(t)
+        self.U = IOField.read('U')
+        self.T = IOField.read('T')
+        self.p = IOField.read('p')
+        if self.dynamicMesh:
+            self.mesh.read(IOField.handle)
         IOField.closeHandle()
         parallel.mpi.Barrier()
         end = time.time()

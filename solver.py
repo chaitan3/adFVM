@@ -90,8 +90,6 @@ class Solver(object):
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
         #initialize
-        if self.dynamicMesh:
-            mesh.read(startTime)
         fields = self.initFields(startTime)
         pprint()
 
@@ -184,8 +182,6 @@ class Solver(object):
 
             if (timeIndex % writeInterval == 0) and (mode != 'forward'):
                 # write mesh, fields, status
-                if self.dynamicMesh:
-                    mesh.write(t)
                 dtc = IOField('dtc', dtc, (1,))
                 dtc.partialComplete()
                 self.writeFields(fields + [dtc], t)

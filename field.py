@@ -289,18 +289,18 @@ class IOField(Field):
         return self.field[:self.mesh.origMesh.nInternalCells]
 
     @classmethod
-    def openHandle(self, case, time):
+    def openHandle(self, time):
+        timeDir = Field.mesh.getTimeDir(time)
         if config.hdf5:
-            if time.is_integer():
-                time = int(time)
-            fieldsFile = case + str(time) + '.hdf5'
-            IOField.readWriteHandle = h5py.File(fieldsFile, 'a', driver='mpio', comm=parallel.mpi)
+            self.handle = h5py.File(timeDir + '.hdf5', 'a', driver='mpio', comm=parallel.mpi)
+        else:
+            self.handle = timeDir + '/'
 
     @classmethod
     def closeHandle(self):
         if config.hdf5:
-            self.readWriteHandle.close()
-            self.readWriteHandle = None
+            self.handle.close()
+        self.handle = None
 
     @classmethod
     def read(self, name, mesh, time):
@@ -310,11 +310,11 @@ class IOField(Field):
             return self.readFoam(name, mesh, time)
 
     @classmethod
-    def readFoam(self, name, mesh, time):
+    def readFoam(self, name, time):
         # mesh values required outside theano
         pprint('reading foam field {0}, time {1}'.format(name, time))
-        timeDir = mesh.getTimeDir(time)
-        mesh = mesh.origMesh
+        timeDir = self.handle
+        mesh = self.mesh.origMesh
         try: 
             content = open(timeDir + name).read()
             foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
@@ -368,7 +368,7 @@ class IOField(Field):
         return self(name, internalField, dimensions, boundary)
 
     @classmethod
-    def readHDF5(self, name, mesh, time):
+    def readHDF5(self, name, time):
 
         pprint('reading hdf5 field {0}, time {1}'.format(name, time))
 
@@ -386,7 +386,7 @@ class IOField(Field):
         with parallelEndData.collective:
             parallelEnd = parallelEndData[rank]
 
-        mesh = mesh.origMesh
+        mesh = self.mesh.origMesh
         fieldData = fieldGroup['field']
         with fieldData.collective:
             field = fieldData[parallelStart[0]:parallelEnd[0]]
@@ -417,11 +417,11 @@ class IOField(Field):
 
         return self(name, internalField, dimensions, boundary)
     
-    def write(self, time, skipProcessor=False):
+    def write(self, skipProcessor=False):
         if config.hdf5:
-            return self.writeHDF5(self.mesh.case, time, skipProcessor)
+            return self.writeHDF5(skipProcessor)
         else:
-            return self.writeFoam(self.mesh.case, time, skipProcessor)
+            return self.writeFoam(skipProcessor)
 
     def writeFoam(self, case, time, skipProcessor=False):
         # mesh values required outside theano
@@ -450,11 +450,9 @@ class IOField(Field):
 
         self.writeFoamField(case, time, internalField, boundary)
 
-    def writeFoamField(self, case, time, internalField, boundary):
+    def writeFoamField(self, internalField, boundary):
         name = self.name
-        if time.is_integer():
-            time = int(time)
-        timeDir = '{0}/{1}/'.format(case, time)
+        timeDir = IOField.handle
         if not os.path.exists(timeDir):
             os.makedirs(timeDir)
         handle = open(timeDir + name, 'w')
@@ -489,7 +487,7 @@ class IOField(Field):
         handle.close()
 
     # nonuniform non-value inputs not supported (and fixedValue value)
-    def writeHDF5(self, case, time, skipProcessor=False):
+    def writeHDF5(self, skipProcessor=False):
         # mesh values required outside theano
         pprint('writing hdf5 field {0}, time {1}'.format(self.name, time))
         nProcs = parallel.nProcessors
