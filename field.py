@@ -230,7 +230,7 @@ class CellField(Field):
         self.field = exchange(self.field)
 
 class IOField(Field):
-    readWriteHandle = None
+    handle = None
 
     def __init__(self, name, field, dimensions, boundary={}):
         super(self.__class__, self).__init__(name, field, dimensions)
@@ -295,24 +295,26 @@ class IOField(Field):
             self.handle = h5py.File(timeDir + '.hdf5', 'a', driver='mpio', comm=parallel.mpi)
         else:
             self.handle = timeDir + '/'
+        self.time = time
 
     @classmethod
     def closeHandle(self):
         if config.hdf5:
             self.handle.close()
         self.handle = None
+        self.time = None
 
     @classmethod
-    def read(self, name, mesh, time):
+    def read(self, name):
         if config.hdf5:
-            return self.readHDF5(name, mesh, time)
+            return self.readHDF5(name)
         else:
-            return self.readFoam(name, mesh, time)
+            return self.readFoam(name)
 
     @classmethod
-    def readFoam(self, name, time):
+    def readFoam(self, name):
         # mesh values required outside theano
-        pprint('reading foam field {0}, time {1}'.format(name, time))
+        pprint('reading foam field {0}, time {1}'.format(name, self.time))
         timeDir = self.handle
         mesh = self.mesh.origMesh
         try: 
@@ -368,12 +370,11 @@ class IOField(Field):
         return self(name, internalField, dimensions, boundary)
 
     @classmethod
-    def readHDF5(self, name, time):
+    def readHDF5(self, name):
+        pprint('reading hdf5 field {0}, time {1}'.format(name, self.time))
 
-        pprint('reading hdf5 field {0}, time {1}'.format(name, time))
-
-        assert IOField.readWriteHandle is not None
-        fieldsFile = IOField.readWriteHandle
+        assert self.handle is not None
+        fieldsFile = self.handle
         fieldGroup = fieldsFile[name]
         parallelGroup = fieldGroup['parallel']
 
@@ -423,7 +424,7 @@ class IOField(Field):
         else:
             return self.writeFoam(skipProcessor)
 
-    def writeFoam(self, case, time, skipProcessor=False):
+    def writeFoam(self, skipProcessor=False):
         # mesh values required outside theano
         field = self.field
         if not skipProcessor:
@@ -432,7 +433,7 @@ class IOField(Field):
         # fetch processor information
         assert len(field.shape) == 2
         np.set_printoptions(precision=16)
-        pprint('writing field {0}, time {1}'.format(self.name, time))
+        pprint('writing field {0}, time {1}'.format(self.name, self.time))
 
         mesh = self.mesh.origMesh
         internalField = field[:mesh.nInternalCells]
@@ -448,11 +449,11 @@ class IOField(Field):
                 cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
                 patch['value'] = field[cellStartFace:cellEndFace]
 
-        self.writeFoamField(case, time, internalField, boundary)
+        self.writeFoamField(internalField, boundary)
 
     def writeFoamField(self, internalField, boundary):
         name = self.name
-        timeDir = IOField.handle
+        timeDir = self.handle
         if not os.path.exists(timeDir):
             os.makedirs(timeDir)
         handle = open(timeDir + name, 'w')
@@ -489,7 +490,7 @@ class IOField(Field):
     # nonuniform non-value inputs not supported (and fixedValue value)
     def writeHDF5(self, skipProcessor=False):
         # mesh values required outside theano
-        pprint('writing hdf5 field {0}, time {1}'.format(self.name, time))
+        pprint('writing hdf5 field {0}, time {1}'.format(self.name, self.time))
         nProcs = parallel.nProcessors
         rank = parallel.rank
 
@@ -507,9 +508,9 @@ class IOField(Field):
         if not skipProcessor:
             field = parallel.getRemoteCells(field, self.mesh)
 
-        assert IOField.readWriteHandle is not None
+        assert self.handle is not None
             
-        fieldsFile = IOField.readWriteHandle
+        fieldsFile = self.handle
         fieldGroup = fieldsFile.require_group(self.name)
 
         parallelInfo = np.array([field.shape[0], boundary.shape[0]])

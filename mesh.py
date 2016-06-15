@@ -252,7 +252,7 @@ class Mesh(object):
                 boundary[patchID] = {}
             if key in ['nFaces', 'startFace']:
                 value = int(value)
-            if type(value) = np.ndarray:
+            if isinstance(value, np.ndarray):
                 continue
             boundary[patchID][key] = value
         return boundary
