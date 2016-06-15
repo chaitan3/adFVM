@@ -289,8 +289,8 @@ class IOField(Field):
         return self.field[:self.mesh.origMesh.nInternalCells]
 
     @classmethod
-    def openHandle(self, time):
-        timeDir = Field.mesh.getTimeDir(time)
+    def openHandle(self, time, case=None):
+        timeDir = self.mesh.getTimeDir(time, case)
         if config.hdf5:
             self.handle = h5py.File(timeDir + '.hdf5', 'a', driver='mpio', comm=parallel.mpi)
         else:
@@ -328,7 +328,7 @@ class IOField(Field):
             data = re.search(re.compile('internalField[\s\r\n]+(.*)', re.DOTALL), content[:startBoundary]).group(1)
             internalField = extractField(data, mesh.nInternalCells, (dimensions,))
         except Exception as e:
-            config.exceptInfo(e, timeDir + name)
+            config.exceptInfo(e, (timeDir, name))
 
         content = content[startBoundary:]
         boundary = {}

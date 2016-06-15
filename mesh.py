@@ -121,10 +121,12 @@ class Mesh(object):
 
         return 
 
-    def getTimeDir(self, time):
+    def getTimeDir(self, time, case=None):
+        if case is None:
+            case = self.case
         if time.is_integer():
             time = int(time)
-        return '{0}/{1}'.format(self.case, time)
+        return '{0}/{1}'.format(case, time)
 
     # re-reading after mesh creation
     def read(self, timeDir):
@@ -257,7 +259,7 @@ class Mesh(object):
         index = 1
         for pair in fieldGroup:
             # how to ensure order?
-            patchID, key = pair.split('...')
+            patchID, key = pair.split('__')
             value = boundaryGroup['fields'][parallelStart[index]:parallelEnd[index]]
             boundary[patchID][key] = value
             index += 1
@@ -346,8 +348,6 @@ class Mesh(object):
                 value = patch[attr]
                 if attr.startswith('loc_'):
                     continue
-                elif attr == 'transform':
-                    value = 'unknown'
                 if isinstance(value, np.ndarray):
                     writeField(handle, value, 'vector', '\t\t' + attr)
                 else:
@@ -360,8 +360,6 @@ class Mesh(object):
     def writeHDF5(self, case):
         pprint('writing hdf5 mesh')
         meshFile = h5py.File(case + 'mesh.hdf5', 'w', driver='mpio', comm=parallel.mpi)
-        rank = parallel.rank
-        nProcs = parallel.nProcessors
 
         mesh = self.origMesh
         faces, points, owner, neighbour = self.faces, self.points, mesh.owner, mesh.neighbour
@@ -375,9 +373,8 @@ class Mesh(object):
                                  cells.shape[0]
                                 ])
 
-        parallelStart, parallelEnd, parallelSize = self.writeHDF5Parallel(parallelInfo)
+        parallelStart, parallelEnd, parallelSize = self.writeHDF5Parallel(meshFile, parallelInfo)
 
-                
         facesData = meshFile.create_dataset('faces', (parallelSize[0],) + faces.shape[1:], faces.dtype)
         facesData[parallelStart[0]:parallelEnd[0]] = faces
         pointsData = meshFile.create_dataset('points', (parallelSize[1],) + points.shape[1:], np.float64)
@@ -395,6 +392,8 @@ class Mesh(object):
         meshFile.close()
 
     def writeHDF5Parallel(self, meshFile, parallelInfo):
+        rank = parallel.rank
+        nProcs = parallel.nProcessors
         parallelStart = np.zeros_like(parallelInfo)
         parallelEnd = np.zeros_like(parallelInfo)
         parallel.mpi.Exscan(parallelInfo, parallelStart)
@@ -407,16 +406,19 @@ class Mesh(object):
         parallelStartData[rank] = parallelStart
         parallelEndData = parallelGroup.create_dataset('end', (nProcs, len(parallelInfo)), np.int64)
         parallelEndData[rank] = parallelEnd
-        return parallelStart, parallelEnd, parallelInfo
+        return parallelStart, parallelEnd, parallelSize
 
     def writeHDF5Boundary(self, meshFile):
         boundary = []
         boundaryField = []
         for patchID in self.patches:
             for key, value in self.origMesh.boundary[patchID].iteritems():
-                if isinstance(value, np.ndarray):
+                if key.startswith('loc_'):
+                    continue
+                elif isinstance(value, np.ndarray):
                     boundaryField.append((patchID, key, value))
-                boundary.append([patchID, key, value])
+                else:
+                    boundary.append([patchID, key, value])
         boundary = np.array(boundary, dtype='S100')
 
         parallelInfo = [boundary.shape[0]]
@@ -424,16 +426,18 @@ class Mesh(object):
             parallelInfo.append(value.shape[0])
         parallelInfo = np.array(parallelInfo)
 
-        parallelStart, parallelEnd, parallelSize = self.writeHDF5Parallel(parallelInfo)
-
         boundaryGroup = meshFile.create_group('boundary')
+        parallelStart, parallelEnd, parallelSize = self.writeHDF5Parallel(boundaryGroup, parallelInfo)
         boundaryData = boundaryGroup.create_dataset('values', (parallelSize[0], 3), 'S100') 
         boundaryData[parallelStart[0]:parallelEnd[0]] = boundary
 
         fieldGroup = boundaryGroup.create_group('fields')
         index = 1
         for patchID, key, value in boundaryField:
-            fieldData = fieldGroup.create_dataset('{}...{}'.format(patchID, key), (parallelSize[index], value.shape[1]), np.float64)
+            print parallelSize[index]
+            print patchID, key, value
+            print value.shape[1]
+            fieldData = fieldGroup.create_dataset('{}__{}'.format(patchID, key), (parallelSize[index], value.shape[1]), np.float64)
             fieldData[parallelStart[index]:parallelEnd[index]] = value
             index += 1
 
@@ -609,9 +613,9 @@ class Mesh(object):
                 neighbourEndFace = neighbourStartFace + nFaces
                 # apply transformation: single value
                 # append cell centres
-                patch['neighbourIndices'] = self.owner[neighbourStartFace:neighbourEndFace]
-                patch['transform'] = self.faceCentres[startFace]-self.faceCentres[neighbourStartFace]
-                self.cellCentres[cellStartFace:cellEndFace] = patch['transform'] + self.cellCentres[patch['neighbourIndices']]
+                patch['loc_neighbourIndices'] = self.owner[neighbourStartFace:neighbourEndFace]
+                patch['loc_transform'] = self.faceCentres[startFace]-self.faceCentres[neighbourStartFace]
+                self.cellCentres[cellStartFace:cellEndFace] = patch['loc_transform'] + self.cellCentres[patch['loc_neighbourIndices']]
             elif patch['type'] == 'processor':
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
@@ -619,8 +623,8 @@ class Mesh(object):
                 # exchange data
                 exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
                 tag += self.nLocalPatches + 1
-                patch['neighbourIndices'] = self.neighbour[startFace:endFace].copy()
-                exchanger.exchange(remote, self.owner[startFace:endFace], patch['neighbourIndices'], tag)
+                patch['loc_neighbourIndices'] = self.neighbour[startFace:endFace].copy()
+                exchanger.exchange(remote, self.owner[startFace:endFace], patch['loc_neighbourIndices'], tag)
             elif patch['type'] == 'processorCyclic':
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
@@ -628,8 +632,8 @@ class Mesh(object):
                 # apply transformation
                 exchanger.exchange(remote, -self.faceCentres[startFace:endFace] + self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
                 tag += self.nLocalPatches + 1
-                patch['neighbourIndices'] = self.neighbour[startFace:endFace].copy()
-                exchanger.exchange(remote, self.owner[startFace:endFace], patch['neighbourIndices'], tag)
+                patch['loc_neighbourIndices'] = self.neighbour[startFace:endFace].copy()
+                exchanger.exchange(remote, self.owner[startFace:endFace], patch['loc_neighbourIndices'], tag)
             else:
                 # append cell centres
                 self.cellCentres[cellStartFace:cellEndFace] = self.faceCentres[startFace:endFace]
@@ -705,10 +709,10 @@ class Mesh(object):
                     index1, index2 = np.unravel_index(np.argmax(dists), dists.shape)
                     patch1 = mesh.boundary[patch['periodicPatch']]
                     patch2 = mesh.boundary[patch1['neighbourPatch']]
-                    if np.linalg.norm(patch['loc_fixedCellCentres'][index1] + patch2['transform'] - patch['loc_fixedCellCentres'][index2]) > np.max(dists):
+                    if np.linalg.norm(patch['loc_fixedCellCentres'][index1] + patch2['loc_transform'] - patch['loc_fixedCellCentres'][index2]) > np.max(dists):
                         index2, index1 = index1, index2
-                    point1 = patch['loc_fixedCellCentres'][index2] + patch1['transform']
-                    point2 = patch['loc_fixedCellCentres'][index1] + patch2['transform']
+                    point1 = patch['loc_fixedCellCentres'][index2] + patch1['loc_transform']
+                    point2 = patch['loc_fixedCellCentres'][index1] + patch2['loc_transform']
                     #print patchID, mesh.cellCentres[mesh.owner[startFace:endFace]][0], point1, patch['velocity']
                     # reread
                     if 'movingCellCentres' in patch:
@@ -722,7 +726,7 @@ class Mesh(object):
                 # only supports low enough velocities
                 transformIndices = (patch['movingCellCentres']-patch['loc_periodicLimit']).dot(patch['loc_velocity']) > 1e-6
                 #print patchID, patch['movingCellCentres'][0], patch['loc_periodicLimit'], patch['loc_velocity']
-                patch['movingCellCentres'][transformIndices] += mesh.boundary[mesh.boundary[patch['periodicPatch']]['neighbourPatch']]['transform']
+                patch['movingCellCentres'][transformIndices] += mesh.boundary[mesh.boundary[patch['periodicPatch']]['neighbourPatch']]['loc_transform']
                 dists = sp.spatial.distance.cdist(patch['loc_fixedCellCentres'], patch['movingCellCentres'])
                 n, m = dists.shape
                 sortedDists = np.argsort(dists, axis=1)[:,:2]

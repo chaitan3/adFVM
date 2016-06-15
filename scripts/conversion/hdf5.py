@@ -6,19 +6,26 @@ import os
 case = sys.argv[1]
 times = [float(x) for x in sys.argv[2:]]
 
-config.hdf5 = False
+from field import IOField
 from mesh import Mesh
+
+config.hdf5 = False
 mesh = Mesh.create(case)
 mesh.writeHDF5(case)
-
-config.hdf5 = True
-from field import IOField
 IOField.setMesh(mesh)
+
 for time in times:
-    fields = os.listdir(mesh.getTimeDir(time))
-    IOField.openHandle(case, time)
-    for name in fields:
-        phi = IOField.readFoam(name, mesh, time)
+    config.hdf5 = False
+    fields = []
+    IOField.openHandle(time)
+    for name in os.listdir(mesh.getTimeDir(time)):
+        phi = IOField.readFoam(name)
         phi.partialComplete()
-        phi.writeHDF5(case, time)
+        fields.append(phi)
+    IOField.closeHandle()
+
+    config.hdf5 = True
+    IOField.openHandle(time, case=case)
+    for phi in fields:
+        phi.writeHDF5()
     IOField.closeHandle()

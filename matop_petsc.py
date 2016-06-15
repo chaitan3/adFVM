@@ -129,7 +129,7 @@ def laplacian(phi, DT):
         endFace = startFace + patch['nFaces']
         proc = patch['neighbProcNo']
         indices = mesh.owner[startFace:endFace]
-        neighbourIndices = patch['neighbourIndices'].reshape(-1,1)
+        neighbourIndices = patch['loc_neighbourIndices'].reshape(-1,1)
         data = faceData[startFace:endFace].reshape(-1,1)/mesh.volumes[indices]
         #print patchID, il, ranges[proc], indices, neighbourIndices
         A.setValuesRCV(il + indices.reshape(-1,1),
@@ -199,7 +199,7 @@ def laplacian_old(phi, DT):
         startFace = patch['startFace']-o
         endFace = startFace + patch['nFaces']
         proc = patch['neighbProcNo']
-        procCols[startFace:endFace] = patch['neighbourIndices']
+        procCols[startFace:endFace] = patch['loc_neighbourIndices']
         procCols[startFace:endFace] += -jl + procRanges[proc]
     col = np.concatenate((mesh.owner, mesh.neighbour[:m], procCols))
     snGradOp.setValuesRCV(il + row.reshape(-1,1), jl + col.reshape(-1,1), data.reshape(-1,1))
