@@ -130,7 +130,7 @@ class Mesh(object):
     def read(self, timeDir):
         pprint('Re-reading mesh, time', time)
         if config.hdf5:
-            boundary = self.readHDF5Boundary(timeDir)
+            boundary = self.readHDF5Boundary(timeDir['mesh'])
         else:
             meshDir = timeDir + '/polyMesh/'
             # HACK correct updating
@@ -240,27 +240,41 @@ class Mesh(object):
         points = np.array(meshFile['points'][parallelStart[1]:parallelEnd[1]])
         owner = np.array(meshFile['owner'][parallelStart[2]:parallelEnd[2]])
         neighbour = np.array(meshFile['neighbour'][parallelStart[3]:parallelEnd[3]])
-        boundary = self.readHDF5Boundary(meshFile['boundary'][parallelStart[4]:parallelEnd[4]])
+        boundary = self.readHDF5Boundary(meshFile)
         meshFile.close()
 
         return points, faces, owner, neighbour, boundary
 
-    def readHDF5Boundary(self, boundaryData):
+    def readHDF5Boundary(self, meshFile):
         boundary = {}
+        rank = parallel.rank
+        boundaryGroup = meshFile['boundary']
+        parallelStart = boundaryGroup['parallel/start'][rank]
+        parallelEnd = boundaryGroup['parallel/end'][rank]
+        boundaryData = boundaryGroup['values'][parallelStart[0]:parallelEnd[0]]
+
+        fieldGroup = boundaryGroup['fields']
+        index = 1
+        for pair in fieldGroup:
+            # how to ensure order?
+            patchID, key = pair.split('...')
+            value = boundaryGroup['fields'][parallelStart[index]:parallelEnd[index]]
+            boundary[patchID][key] = value
+            index += 1
+
         for patchID, key, value in boundaryData:
             if patchID not in boundary:
                 boundary[patchID] = {}
             if key in ['nFaces', 'startFace']:
                 value = int(value)
-            if isinstance(value, np.ndarray):
-                continue
             boundary[patchID][key] = value
         return boundary
 
     def write(self, timeDir):
         pprint('writing mesh, time', time)
         if config.hdf5:
-            self.writeHDF5Boundary(timeDir)
+            meshDir = timeDir.create_group('mesh')
+            self.writeHDF5Boundary(meshDir)
         else:
             meshDir = timeDir + '/polyMesh/'
             if not os.path.exists(meshDir):
@@ -414,14 +428,14 @@ class Mesh(object):
 
         boundaryGroup = meshFile.create_group('boundary')
         boundaryData = boundaryGroup.create_dataset('values', (parallelSize[0], 3), 'S100') 
+        boundaryData[parallelStart[0]:parallelEnd[0]] = boundary
+
         fieldGroup = boundaryGroup.create_group('fields')
         index = 1
         for patchID, key, value in boundaryField:
             fieldData = fieldGroup.create_dataset('{}...{}'.format(patchID, key), (parallelSize[index], value.shape[1]), np.float64)
             fieldData[parallelStart[index]:parallelEnd[index]] = value
             index += 1
-            
-        boundaryData[parallelStart[0]:parallelEnd[0]] = boundary
 
     def buildBeforeWrite(self):
         self.populateSizes()
