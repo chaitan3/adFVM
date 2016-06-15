@@ -83,6 +83,7 @@ class Mesh(object):
 
         # patches
         self.localPatches, self.remotePatches = self.splitPatches(self.boundary)
+        self.patches = self.localPatches + self.remotePatches
         self.nLocalPatches = len(self.localPatches)
         self.sortedPatches = copy.copy(self.localPatches)
         self.sortedPatches.sort()
@@ -251,6 +252,8 @@ class Mesh(object):
                 boundary[patchID] = {}
             if key in ['nFaces', 'startFace']:
                 value = int(value)
+            if type(value) = np.ndarray:
+                continue
             boundary[patchID][key] = value
         return boundary
 
@@ -394,17 +397,30 @@ class Mesh(object):
 
     def writeHDF5Boundary(self, meshFile):
         boundary = []
-        for patchID in mesh.boundary.keys():
-            for key, value in mesh.boundary[patchID].iteritems():
-                boundary.append([patchID, key, str(value)])
+        boundaryField = []
+        for patchID in self.patches:
+            for key, value in self.origMesh.boundary[patchID].iteritems():
+                if isinstance(value, np.ndarray):
+                    boundaryField.append((patchID, key, value))
+                boundary.append([patchID, key, value])
         boundary = np.array(boundary, dtype='S100')
 
-        parallelInfo = np.array([boundary.shape[0]])
+        parallelInfo = [boundary.shape[0]]
+        for _, _, value in boundaryField:
+            parallelInfo.append(value.shape[0])
+        parallelInfo = np.array(parallelInfo)
 
         parallelStart, parallelEnd, parallelSize = self.writeHDF5Parallel(parallelInfo)
 
         boundaryGroup = meshFile.create_group('boundary')
-        boundaryData = boundaryGroup.create_dataset('value', (parallelSize[0], 3), 'S100') 
+        boundaryData = boundaryGroup.create_dataset('values', (parallelSize[0], 3), 'S100') 
+        fieldGroup = boundaryGroup.create_group('fields')
+        index = 1
+        for patchID, key, value in boundaryField:
+            fieldData = fieldGroup.create_dataset('{}.{}'.format(patchID, key), (parallelSize[index], value.shape[1]), np.float64)
+            fieldData[parallelStart[index]:parallelEnd[index]] = value
+            index += 1
+            
         boundaryData[parallelStart[0]:parallelEnd[0]] = boundary
 
     def buildBeforeWrite(self):
@@ -658,6 +674,7 @@ class Mesh(object):
                 if patch['nFaces'] == 0:
                     if dt == 0.:
                         self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
+                    patch['movingCellCentres'] = np.zeros((0, 3), config.precision)
                     patch['loc_multiplier'] = sparse.csr_matrix((0,0), dtype=config.precision)
                     patch['loc_velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
                     continue
