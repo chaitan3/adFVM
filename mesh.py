@@ -417,7 +417,7 @@ class Mesh(object):
         fieldGroup = boundaryGroup.create_group('fields')
         index = 1
         for patchID, key, value in boundaryField:
-            fieldData = fieldGroup.create_dataset('{}.{}'.format(patchID, key), (parallelSize[index], value.shape[1]), np.float64)
+            fieldData = fieldGroup.create_dataset('{}...{}'.format(patchID, key), (parallelSize[index], value.shape[1]), np.float64)
             fieldData[parallelStart[index]:parallelEnd[index]] = value
             index += 1
             
