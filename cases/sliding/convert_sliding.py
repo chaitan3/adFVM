@@ -35,13 +35,15 @@ for boundaryDir in [mesh.case + '/constant/polyMesh/']:#, timeDir + 'polyMesh/']
     #patch['nLayers'] = '1'
     patch['nLayers'] = '10'
     patch.pop('movingCellCentres', None)
-    mesh.writeBoundary(boundaryFile)
+    mesh.writeFoamBoundary(boundaryFile, mesh.origMesh.boundary)
 
 fields = os.listdir(timeDir)
 for phi in fields:
     if phi == 'polyMesh':
         continue
-    field = IOField.read(phi, mesh, user.time)
+    IOField.openHandle(user.time)
+    field = IOField.read(phi)
     field.boundary['intersection_master']['type'] = 'slidingPeriodic1D'
     field.boundary['intersection_slave']['type'] = 'slidingPeriodic1D'
-    field.write(user.time, skipProcessor=True)
+    field.write(skipProcessor=True)
+    IOField.closeHandle()

@@ -233,18 +233,18 @@ if __name__ == "__main__":
         #        IO.write(time)
         #pprint()
 
-        IOField.openHandle(mesh.case, time)
+        IOField.openHandle(time)
 
         # rhoaByV
         try:
-            rhoa = IOField.read('rhoa', mesh, time)
+            rhoa = IOField.read('rhoa')
             rhoaByV = getRhoaByV(rhoa)
-            rhoaByV.write(time)
+            rhoaByV.write()
             pprint()
 
             # adjoint energy
-            rhoUa = IOField.read('rhoUa', mesh, time)
-            rhoEa = IOField.read('rhoEa', mesh, time)
+            rhoUa = IOField.read('rhoUa')
+            rhoEa = IOField.read('rhoEa')
             adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
             pprint('L2 norm adjoint', time, adjEnergy)
             pprint()

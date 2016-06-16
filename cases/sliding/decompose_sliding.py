@@ -5,8 +5,7 @@ n = 20
 x = np.linspace(0,0.01,n+1)
 f = open('system/setSetCommands', 'w')
 for i in range(0, n):
-    #f.write('faceSet intersection{2} new boxToFace (0.04477 -0.1 {0}) (0.04478 0 {1})\n'.format(x[i],x[i+1], i+1))
-    f.write('faceSet intersection{2} new boxToFace (0.04477 -0.1 {0}) (0.04478 0 {1})\n'.format(x[i]+0.01/200,x[i+1]-0.01/200, i+1))
+    f.write('faceSet intersection{2} new boxToFace (0.04799 -0.1 {0}) (0.04801 0 {1})\n'.format(x[i]+0.01/200,x[i+1]-0.01/200, i+1))
 f.close()
 
 import re

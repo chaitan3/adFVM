@@ -22,7 +22,9 @@ meshO = mesh.origMesh
 # time avg: no dt
 avg = 0.
 for time in times:
-    phi = IOField.read(field, mesh, time)
+    IOField.openHandle(time)
+    phi = IOField.read(field)
+    IOField.closeHandle()
     phi.partialComplete()
     avg += phi.field
 avg /= len(times)
@@ -45,4 +47,6 @@ for patchID in mesh.localPatches:
 
 phi.name = field + '_avg'
 phi.field = avg
-phi.write(times[0])
+IOField.openHandle(times[0])
+phi.write()
+IOField.closeHandle()
