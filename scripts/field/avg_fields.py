@@ -14,12 +14,12 @@ def isfloat(s):
 
 case, field = sys.argv[1:3]
 #times = sys.argv[3:]
-times = sorted([float(x) for x in os.listdir(case) if isfloat(x) ])
 mesh = Mesh.create(case)
 Field.setMesh(mesh)
 meshO = mesh.origMesh
 
 # time avg: no dt
+times = sorted([float(x) for x in os.listdir(mesh.case) if isfloat(x) ])
 avg = 0.
 for time in times:
     IOField.openHandle(time)
@@ -30,7 +30,8 @@ for time in times:
 avg /= len(times)
 
 # spanwise avg: structured
-nLayers = 200
+#nLayers = 200
+nLayers = 1
 def average(start, end):
     nCellsPerLayer = (end-start)/nLayers
     spanAvg = avg[start:end].reshape((nLayers, nCellsPerLayer)).sum(axis=0)/nLayers

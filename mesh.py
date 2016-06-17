@@ -130,14 +130,19 @@ class Mesh(object):
 
     # re-reading after mesh creation
     def read(self, timeDir):
-        pprint('Re-reading mesh, time', time)
         if config.hdf5:
-            boundary = self.readHDF5Boundary(timeDir['mesh'])
+            try:
+                timeDir = timeDir['mesh']
+            except KeyError:
+                return
+            boundary = self.readHDF5Boundary(timeDir)
         else:
-            meshDir = timeDir + '/polyMesh/'
-            # HACK correct updating
-            boundary = self.readFoamBoundary(meshDir + 'boundary')
-
+            timeDir = timeDir + '/polyMesh/boundary'
+            if os.path.exists(timeDir):
+                boundary = self.readFoamBoundary(timeDir)
+            else:
+                return
+        pprint('Re-reading mesh, time', timeDir)
         for patchID in boundary:
             if boundary[patchID]['type'] == 'slidingPeriodic1D':
                 self.origMesh.boundary[patchID].update(boundary[patchID])
@@ -255,21 +260,22 @@ class Mesh(object):
         parallelEnd = boundaryGroup['parallel/end'][rank]
         boundaryData = boundaryGroup['values'][parallelStart[0]:parallelEnd[0]]
 
-        fieldGroup = boundaryGroup['fields']
-        index = 1
-        for pair in fieldGroup:
-            # how to ensure order?
-            patchID, key = pair.split('__')
-            value = boundaryGroup['fields'][parallelStart[index]:parallelEnd[index]]
-            boundary[patchID][key] = value
-            index += 1
-
         for patchID, key, value in boundaryData:
             if patchID not in boundary:
                 boundary[patchID] = {}
             if key in ['nFaces', 'startFace']:
                 value = int(value)
             boundary[patchID][key] = value
+
+        fieldGroup = boundaryGroup['fields']
+        index = 1
+        for pair in fieldGroup:
+            # how to ensure order?
+            patchID, key = pair.split('__')
+            value = boundaryGroup['fields'][pair][parallelStart[index]:parallelEnd[index]]
+            boundary[patchID][key] = value
+            index += 1
+
         return boundary
 
     def write(self, timeDir):
@@ -434,9 +440,6 @@ class Mesh(object):
         fieldGroup = boundaryGroup.create_group('fields')
         index = 1
         for patchID, key, value in boundaryField:
-            print parallelSize[index]
-            print patchID, key, value
-            print value.shape[1]
             fieldData = fieldGroup.create_dataset('{}__{}'.format(patchID, key), (parallelSize[index], value.shape[1]), np.float64)
             fieldData[parallelStart[index]:parallelEnd[index]] = value
             index += 1

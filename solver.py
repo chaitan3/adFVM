@@ -91,6 +91,9 @@ class Solver(object):
         mesh = self.mesh
         #initialize
         fields = self.initFields(startTime)
+        self.p.info()
+        self.T.info()
+        fields[0].info()
         pprint()
 
         t = startTime

@@ -102,6 +102,11 @@ class slidingPeriodic1D(BoundaryCondition):
 
     def update(self):
         logger.debug('slidingPeriodic1D BC for {0}'.format(self.patchID))
+        #m = self.mesh.origMesh
+        #patch = m.boundary[self.patchID]
+        #cellStartFace = patch['startFace']  + m.nInternalCells-m.nInternalFaces
+        #cellEndFace  = cellStartFace + patch['nFaces']
+        #print(cellStartFace, cellEndFace, self.phi.name, self.patchID)
         neighbourPhi = self.phi.field[self.neighbourIndices]
         if len(self.phi.dimensions) == 2:
             neighbourPhi = neighbourPhi.reshape((self.nFaces, 9))

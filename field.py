@@ -51,7 +51,8 @@ class Field(object):
         field = self.field[:mesh.nLocalCells]
         nanCheck = np.isnan(field)
         if nanCheck.any():
-            print(parallel.rank, mesh.nInternalCells, mesh.nLocalCells, np.where(nanCheck)[0])
+            indices = np.where(nanCheck)[0]
+            print(parallel.rank, mesh.nInternalCells, mesh.nLocalCells, indices)
             raise FloatingPointError('nan found')
         fieldMin = parallel.min(field)
         fieldMax = parallel.max(field)
@@ -267,6 +268,7 @@ class IOField(Field):
                     value = extractField(patch['value'], nFaces, self.dimensions)
                     self.field[cellStartFace:cellEndFace] = value
                 except:
+                    print('fail', patchID)
                     pass
 
     @classmethod
