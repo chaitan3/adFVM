@@ -268,7 +268,6 @@ class IOField(Field):
                     value = extractField(patch['value'], nFaces, self.dimensions)
                     self.field[cellStartFace:cellEndFace] = value
                 except:
-                    print('fail', patchID)
                     pass
 
     @classmethod
