@@ -21,6 +21,7 @@ parser.add_argument('-s', '--python', action='store_true')
 parser.add_argument('--voyager', action='store_true')
 parser.add_argument('--titan', action='store_true')
 parser.add_argument('--bw', action='store_true')
+parser.add_argument('--hdf5', action='store_true')
 parser.add_argument('--coresPerNode', required=False, default=16, type=int)
 parser.add_argument('--unloadingStages', required=False, default=1, type=int)
 user, args = parser.parse_known_args()
@@ -150,8 +151,10 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 '''
+hdf5 = False
+if user.hdf5:
+    hdf5 = True
 
-hdf5 = True
 fileFormat = 'binary'
 #fileFormat = 'ascii'
 foamFile = {'version':'2.0', 'format': fileFormat, 'class': 'volScalarField', 'object': ''}
