@@ -151,9 +151,7 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 '''
-hdf5 = False
-if user.hdf5:
-    hdf5 = True
+hdf5 = user.hdf5
 
 fileFormat = 'binary'
 #fileFormat = 'ascii'

@@ -30,8 +30,8 @@ for time in times:
 avg /= len(times)
 
 # spanwise avg: structured
-#nLayers = 200
-nLayers = 1
+nLayers = 200
+#nLayers = 1
 def average(start, end):
     nCellsPerLayer = (end-start)/nLayers
     spanAvg = avg[start:end].reshape((nLayers, nCellsPerLayer)).sum(axis=0)/nLayers
