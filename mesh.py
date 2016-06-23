@@ -57,8 +57,6 @@ class Mesh(object):
     @classmethod
     def create(cls, caseDir=None, currTime='constant'):
         start = time.time()
-        pprint('Reading mesh data')
-
         self = cls()
 
         if config.hdf5:
@@ -156,7 +154,7 @@ class Mesh(object):
         self.update(time, 0.)
 
     def readFoam(self, caseDir, currTime):
-        pprint('reading foam mesh')
+        pprint('Reading foam mesh')
         self.case = caseDir + parallel.processorDirectory
         if isinstance(currTime, float):
             timeDir = self.getTimeDir(currTime) + '/'
@@ -241,7 +239,7 @@ class Mesh(object):
         return boundary
 
     def readHDF5(self, caseDir):
-        pprint('reading hdf5 mesh')
+        pprint('Reading hdf5 mesh')
 
         self.case = caseDir 
         meshFile = h5py.File(self.case + 'mesh.hdf5', 'r', driver='mpio', comm=parallel.mpi)

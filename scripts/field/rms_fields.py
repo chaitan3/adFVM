@@ -13,24 +13,28 @@ meshO = mesh.origMesh
 
 # time avg: no dt
 times = mesh.getTimes()
-avg = 0.
+IOField.openHandle(times[0])
+phiAvg = IOField.read(field + '_avg')
+phiAvg.partialComplete()
+IOField.closeHandle()
+
+std = 0.
 for time in times:
     IOField.openHandle(time)
     phi = IOField.read(field)
-    IOField.closeHandle()
     phi.partialComplete()
-    avg += phi.field
-avg /= len(times)
+    IOField.closeHandle()
+    std += (phiAvg.field-phi.field)**2
 
 # spanwise avg: structured
 nLayers = 200
-nDims = avg.shape[1]
+nDims = std.shape[1]
 #nLayers = 1
 def average(start, end):
     nCellsPerLayer = (end-start)/nLayers
-    spanAvg = avg[start:end].reshape((nLayers, nCellsPerLayer, nDims)).sum(axis=0)/nLayers
+    spanAvg = std[start:end].reshape((nLayers, nCellsPerLayer, nDims)).sum(axis=0)/nLayers
     spanAvg = np.tile(spanAvg, (nLayers,1))
-    avg[start:end] = spanAvg
+    std[start:end] = spanAvg
 
 average(0, meshO.nInternalCells)
 for patchID in mesh.localPatches:
@@ -40,8 +44,11 @@ for patchID in mesh.localPatches:
         cellEndFace = cellStartFace + patch['nFaces']
         average(cellStartFace, cellEndFace)
 
-phi.name = field + '_avg'
-phi.field = avg
+
+std = np.sqrt(std/len(times))
+
+phi.name = field + '_std'
+phi.field = std
 IOField.openHandle(times[0])
 phi.write()
 IOField.closeHandle()
