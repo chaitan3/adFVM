@@ -72,16 +72,19 @@ def objectivePressureLoss(fields, mesh):
 #objective = objectiveHeatTransfer
 objective = objectivePressureLoss
 
-def perturb(mesh):
-    #mid = np.array([-0.08, 0.014, 0.005])
-    mid = np.array([0.03, -0.03, 0.005])
-    G = 10*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    #rho
-    rho = G
-    rhoU = np.zeros((mesh.nInternalCells, 3))
-    rhoU[:, 0] = G.flatten()*100
-    rhoE = G*2e5
-    return rho, rhoU, rhoE
+def makePerturb(mid):
+    def perturb(mesh):
+        G = 10*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+        #rho
+        rho = G
+        rhoU = np.zeros((mesh.nInternalCells, 3))
+        rhoU[:, 0] = G.flatten()*100
+        rhoE = G*2e5
+        return rho, rhoU, rhoE
+    return perturb
+
+perturb = [makePerturb(np.array([-0.08, 0.014, 0.005])),
+           makePerturb(np.array([0.03, -0.03, 0.005]))]
 
 nSteps = 20000
 writeInterval = 500

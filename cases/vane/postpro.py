@@ -16,8 +16,8 @@ solver = RCF(user.case)
 mesh = solver.mesh.origMesh
 solver.initialize(user.time[0])
 
-#nLayers = 1
-nLayers = 200
+nLayers = 1
+#nLayers = 200
 # p = 186147, U = 67.642, T = 420, c = 410, p0 = 189718
 T0 = 420.
 p0 = 212431.
@@ -60,11 +60,11 @@ for index, time in enumerate(user.time):
     pl = pl.sum(axis=0)/nLayers
     PL += pl
    
-    IOField.openHandle(solver.mesh.case, time)
+    IOField.openHandle(time)
     uplus = IOField.boundaryField('uplus', uplus, (3,))
-    uplus.write(time)
+    uplus.write()
     yplus = IOField.boundaryField('yplus', yplus, (1,))
-    yplus.write(time)
+    yplus.write()
     IOField.closeHandle()
     pprint()
 

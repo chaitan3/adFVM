@@ -4,45 +4,45 @@ from matplotlib import markers as mk
 import os
 from profile import get_length, pressure, suction, c, pitch
 from numpy import *
+import csv
+currdir = os.path.dirname(os.path.realpath(__file__))
+
+def read_data(name):
+    with open(currdir + '/' + name) as f:
+        expe = array(list(csv.reader(f)))[:,:-1].astype(float)
+    return expe
 
 def match_htc(hp, coordsp, hs, coordss, saveFile):
-    im = plt.imread('/home/talnikar/Dropbox/Research/results/2014/turbine_blade_verification/blade-htc1.png')
-    plt.imshow(im)
-    plt.axis('off')
-
-    def transx(a):
-        return 43 + (373-43)*((a+100)/200)
-    def transy(a):
-        return 283 - (283-15)*(a/1600)
-
     sp = get_length(pressure, coordsp)
     ss = get_length(suction, coordss)
 
+    expe = read_data('data/htc_1.csv')
+
     fill = 1
 
-    plt.scatter(transx(-sp*1000), transy(hp), c='r', s=10, alpha=fill,marker='+')
-    plt.scatter(transx(ss*1000), transy(hs), c='b', s=10, alpha=fill, marker='+')
+    plt.scatter(expe[:,0], expe[:,1], c='k', alpha=fill,marker='o')
+    plt.scatter(-sp*1000, hp, c='r', s=10, alpha=fill,marker='+')
+    plt.scatter(ss*1000, hs, c='b', s=10, alpha=fill, marker='+')
 
     plt.savefig(saveFile)
     plt.clf()
 
 def match_velocity(Map, coordsp, Mas, coordss, saveFile):
-    im = plt.imread('/home/talnikar/Dropbox/Research/results/2014/turbine_blade_verification/blade-velocity.png')
-    plt.imshow(im)
-    plt.axis('off')
-
-    def transx(a):
-        return 77 + (684-77)*(a/1.4)
-    def transy(a):
-        return 461 - (461-32)*(a/2.0)
 
     sp = get_length(pressure, coordsp)
     ss = get_length(suction, coordss)
 
-    fill=1
+    expp = read_data('data/Ma_pressure_0.875.csv')
+    exps = read_data('data/Ma_suction_0.875.csv')
 
-    plt.scatter(transx(sp/c), transy(Map), c='r', s=10, alpha=fill)
-    plt.scatter(transx(ss/c), transy(Mas), c='b', s=10, alpha=fill)
+    fill=1
+    
+    plt.scatter(expp[:,0], expp[:,1], c='r', marker='+')
+    plt.scatter(exps[:,0], exps[:,1], c='b', marker='+')
+    plt.scatter(sp/c, Map, c='r', s=10, alpha=fill, marker='o')
+    plt.scatter(ss/c, Mas, c='b', s=10, alpha=fill, marker='o')
+    plt.xlabel('s/c (mm)')
+    plt.ylabel('Ma')
 
     plt.savefig(saveFile)
     plt.clf()
