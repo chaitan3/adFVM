@@ -141,6 +141,13 @@ else:
     VSMALL = 1e-30
     LARGE = 1e30
 
+def isfloat(s):
+    try:
+        f = float(s)
+        return True
+    except ValueError:
+        return False
+
 # FILE READING
 
 foamHeader = '''/*--------------------------------*- C++ -*----------------------------------*\

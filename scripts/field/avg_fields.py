@@ -5,13 +5,6 @@ import os
 import numpy as np
 import config
 
-def isfloat(s):
-    try:
-        f = float(s)
-        return True
-    except ValueError:
-        return False
-
 case, field = sys.argv[1:3]
 #times = sys.argv[3:]
 mesh = Mesh.create(case)
@@ -19,7 +12,7 @@ Field.setMesh(mesh)
 meshO = mesh.origMesh
 
 # time avg: no dt
-times = sorted([float(x) for x in os.listdir(mesh.case) if isfloat(x) ])
+times = mesh.getTimes()
 avg = 0.
 for time in times:
     IOField.openHandle(time)

@@ -6,18 +6,17 @@ from parallel import pprint
 
 import numpy as np
 from match import *
-import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('case')
-parser.add_argument('time', nargs='+', type=float)
-user = parser.parse_args(config.args)
+case = sys.argv[1]
+times = sys.argv[2:]
 
-solver = RCF(user.case)
+solver = RCF(case)
+if len(times == 0):
+    times = solver.mesh.getTimes()
 mesh = solver.mesh.origMesh
-solver.initialize(user.time[0])
+solver.initialize(times[0])
 
-nLayers = 1
-#nLayers = 200
+#nLayers = 1
+nLayers = 200
 # p = 186147, U = 67.642, T = 420, c = 410, p0 = 189718
 T0 = 420.
 p0 = 212431.
@@ -33,8 +32,8 @@ for patchID in patches:
     MA[patchID] = 0.
 PL = 0.
 
-nTimes = len(user.time)
-for index, time in enumerate(user.time):
+nTimes = len(times)
+for index, time in enumerate(times):
     pprint('postprocessing', time)
     rho, rhoU, rhoE = solver.initFields(time)
     U, T, p = solver.U, solver.T, solver.p
@@ -89,9 +88,9 @@ y = PL/(p0*nTimes)
 x = mesh.cellCentres[wakeCells[:nCellsPerLayer], 1]
 wake_args = [y, x]
 
-htc_args.append('{}/htc.png'.format(user.case))
-Ma_args.append('{}/Ma.png'.format(user.case))
-wake_args.append('{}/wake.png'.format(user.case))
+htc_args.append('{}/htc.png'.format(case))
+Ma_args.append('{}/Ma.png'.format(case))
+wake_args.append('{}/wake.png'.format(case))
 
 match_wakes(*wake_args)
 match_htc(*htc_args) 

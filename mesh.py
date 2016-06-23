@@ -128,6 +128,13 @@ class Mesh(object):
             time = int(time)
         return '{0}/{1}'.format(case, time)
 
+    def getTimes(self):
+        if config.hdf5:
+            times = [float(x) for x in os.listdir(self.case) if config.isfloat(x[:-5]) and x.endswith('.hdf5')]
+        else:
+            times = [float(x) for x in os.listdir(self.case) if config.isfloat(x) ]
+        return sorted(times)
+
     # re-reading after mesh creation
     def read(self, timeDir):
         if config.hdf5:

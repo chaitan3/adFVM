@@ -206,21 +206,26 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('case')
-    parser.add_argument('time', nargs='+', type=float)
+    parser.add_argument('-t', '--times', nargs='+', type=float)
     user = parser.parse_args(config.args)
+    times = user.times
+
 
     names = ['gradrho', 'gradU', 'gradp', 'gradc', 'divU', 'enstrophy', 'Q']
     dimensions = [(3,), (3,3), (3,),(3,),(1,), (1,), (1,)]
 
     solver = RCF(user.case)
     mesh = solver.mesh
-    solver.initialize(user.time[0])
+    if not times:
+        times = mesh.getTimes()
+
+    solver.initialize(times[0])
     computer = computeFields(solver)
 
     if config.compile:
         exit()
 
-    for index, time in enumerate(user.time):
+    for index, time in enumerate(times):
         pprint('Time:', time)
         start = timer.time()
         #rho, rhoU, rhoE = solver.initFields(time)

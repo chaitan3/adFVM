@@ -14,6 +14,9 @@ mesh = Mesh.create(case)
 mesh.writeHDF5(case)
 IOField.setMesh(mesh)
 
+if len(times) == 0:
+    times = mesh.getTimes()
+
 for time in times:
     config.hdf5 = False
     fields = []
