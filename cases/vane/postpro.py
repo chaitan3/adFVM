@@ -3,14 +3,15 @@ from field import IOField
 from compute import getHTC, getIsentropicMa, getPressureLoss, getYPlus
 import config
 from parallel import pprint
+import sys
 
 import numpy as np
 from match import *
 case = sys.argv[1]
-times = sys.argv[2:]
+times = [float(x) for x in sys.argv[2:]]
 
 solver = RCF(case)
-if len(times == 0):
+if len(times) == 0:
     times = solver.mesh.getTimes()
 mesh = solver.mesh.origMesh
 solver.initialize(times[0])
@@ -85,8 +86,8 @@ for patchID in patches:
     Ma_args.extend([y, x])
 
 y = PL/(p0*nTimes)
-x = mesh.cellCentres[wakeCells[:nCellsPerLayer], 1]
-wake_args = [y, x]
+x = 1000*mesh.cellCentres[wakeCells[:nCellsPerLayer], 1]
+wake_args = [p0, y, x]
 
 htc_args.append('{}/htc.png'.format(case))
 Ma_args.append('{}/Ma.png'.format(case))

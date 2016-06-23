@@ -20,9 +20,11 @@ def match_htc(hp, coordsp, hs, coordss, saveFile):
 
     fill = 1
 
-    plt.scatter(expe[:,0], expe[:,1], c='k', alpha=fill,marker='o')
-    plt.scatter(-sp*1000, hp, c='r', s=10, alpha=fill,marker='+')
-    plt.scatter(ss*1000, hs, c='b', s=10, alpha=fill, marker='+')
+    plt.scatter(expe[:,0], expe[:,1], c='k', alpha=fill,marker='o', label='Experiment')
+    plt.scatter(-sp*1000, hp, c='r', s=10, alpha=fill,marker='+', label='Simulation')
+    plt.scatter(ss*1000, hs, c='r', s=10, alpha=fill, marker='+')
+    plt.xlabel('s/c (mm)')
+    plt.ylabel('HTC (W/m2K)')
 
     plt.savefig(saveFile)
     plt.clf()
@@ -37,21 +39,29 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
 
     fill=1
     
-    plt.scatter(expp[:,0], expp[:,1], c='r', marker='+')
-    plt.scatter(exps[:,0], exps[:,1], c='b', marker='+')
-    plt.scatter(sp/c, Map, c='r', s=10, alpha=fill, marker='o')
-    plt.scatter(ss/c, Mas, c='b', s=10, alpha=fill, marker='o')
+    plt.scatter(expp[:,0], expp[:,1], c='r', marker='+', label='Exp. pressure')
+    plt.scatter(exps[:,0], exps[:,1], c='b', marker='+', label='Exp. suction')
+    plt.scatter(sp/c, Map, c='r', s=10, alpha=fill, marker='o', label='Sim. pressure')
+    plt.scatter(ss/c, Mas, c='b', s=10, alpha=fill, marker='o', label='Sim. suction')
     plt.xlabel('s/c (mm)')
     plt.ylabel('Ma')
+    plt.legend()
 
     plt.savefig(saveFile)
     plt.clf()
 
-def match_wakes(pl, coords, saveFile):
-    coords = (coords-coords.min())/pitch
-    plt.scatter(coords, pl)
+def match_wakes(p0, pl, coords, saveFile):
+    p0 = p0*0.0075
+    expe = read_data('data/wake_0.85.csv')
+    expe[:,1] = expe[:,1]/p0
+    plt.scatter(expe[:,0], expe[:,1], c='r', label='Experimental')
+
+    #coords = (coords-coords.min())/pitch
+
+    plt.scatter(coords, pl, c='b', label='Simulation')
     plt.xlabel('y (mm)')
     plt.ylabel('pressure loss coeff')
+    plt.legend()
 
     plt.savefig(saveFile)
     plt.clf()
