@@ -132,4 +132,7 @@ if __name__ == "__main__":
         result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex)
         writeResult(user.option, result/(nSteps + 1), '{}'.format(sim))
         if parallel.rank == 0:
-            os.remove(primal.statusFile)
+            try:
+                os.remove(primal.statusFile)
+            except OSError:
+                pass
