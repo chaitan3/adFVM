@@ -229,17 +229,18 @@ if __name__ == "__main__":
     for index, time in enumerate(times):
         pprint('Time:', time)
         start = timer.time()
-        #rho, rhoU, rhoE = solver.initFields(time)
-        #U, T, p = solver.U, solver.T, solver.p
-        #SF = solver.stackFields([p, U, T], np)
-        #outputs = computer(SF)
-        #for field, name, dim in zip(outputs, names, dimensions):
-        #    IO = IOField(name, field, dim)
-        #    if len(dim) != 2:
-        #        IO.write(time)
-        #pprint()
+        rho, rhoU, rhoE = solver.initFields(time)
+        U, T, p = solver.U, solver.T, solver.p
+        SF = solver.stackFields([p, U, T], np)
+        outputs = computer(SF)
 
         IOField.openHandle(time)
+
+        for field, name, dim in zip(outputs, names, dimensions):
+            IO = IOField(name, field, dim)
+            if len(dim) != 2:
+                IO.write()
+        pprint()
 
         # rhoaByV
         try:
@@ -263,7 +264,9 @@ if __name__ == "__main__":
         #fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
         #for phi in fields:
         #    phi.write(time)#, skipProcessor=True)
+
         IOField.closeHandle()
+
         end = timer.time()
         pprint('Time for computing: {0}'.format(end-start))
 
