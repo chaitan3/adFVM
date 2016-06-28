@@ -24,13 +24,6 @@ point = np.array([0.052641,-0.1,0.005])
 normal = np.array([1.,0.,0.])
 patches = ['pressure', 'suction']
 
-HTC = {}
-MA = {}
-for patchID in patches:
-    HTC[patchID] = 0.
-    MA[patchID] = 0.
-PL = 0.
-
 nTimes = len(times)
 for index, time in enumerate(times):
     pprint('postprocessing', time)
@@ -40,19 +33,7 @@ for index, time in enumerate(times):
     htc = getHTC(T, T0, patches)
     Ma = getIsentropicMa(p, p0, patches)
     wakeCells, pl = getPressureLoss(p, T, U, p0, point, normal)
-    uplus, yplus, ustar, yplus1 = getYPlus(U, T, rho, patches)
-
-    for patchID in patches:
-        startFace = mesh.boundary[patchID]['startFace']
-        endFace = startFace + mesh.boundary[patchID]['nFaces']
-        index = 0
-        mult = np.logspace(0, 2, 100)
-        points = mesh.faceCentres[startFace + index] \
-               - mesh.normals[startFace + index]*yplus1[patchID][index]*mult.reshape(-1,1)
-        field = U.interpolate(points)/ustar[patchID][index]
-        field = ((field**2).sum(axis=1))**0.5
-        plt.plot(mult, field)
-        plt.show()
+    uplus, yplus, _, _ = getYPlus(U, T, rho, patches)
 
     IOField.openHandle(time)
     htc = IOField.boundaryField('htc', htc, (1,))

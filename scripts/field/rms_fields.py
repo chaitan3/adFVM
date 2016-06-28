@@ -39,7 +39,7 @@ def average(start, end):
 average(0, meshO.nInternalCells)
 for patchID in mesh.localPatches:
     patch = meshO.boundary[patchID]
-    if patch['type'] != 'cyclic':
+    if patch['type'] in BCs.valuePatches:
         cellStartFace = patch['startFace']-meshO.nInternalFaces + meshO.nInternalCells
         cellEndFace = cellStartFace + patch['nFaces']
         average(cellStartFace, cellEndFace)

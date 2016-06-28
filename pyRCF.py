@@ -94,8 +94,8 @@ class RCF(Solver):
         return self.U.phi, self.T.phi, self.p.phi
 
     # reads and updates ghost cells
-    def initFields(self, t):
-        self.initialize(t)
+    def initFields(self, t, **kwargs):
+        self.initialize(t, **kwargs)
         self.U.field, self.T.field, self.p.field = self.init(self.U.field, self.T.field, self.p.field)
         return self.conservative(self.U, self.T, self.p)
     
@@ -119,13 +119,13 @@ class RCF(Solver):
         pprint('Time for writing fields: {0}'.format(end-start))
 
     # only reads fields
-    def initialize(self, t):
+    def initialize(self, t, suffix=''):
         # IO Fields, with phi attribute as a CellField
         start = time.time()
         IOField.openHandle(t)
-        self.U = IOField.read('U')
-        self.T = IOField.read('T')
-        self.p = IOField.read('p')
+        self.U = IOField.read('U' + suffix)
+        self.T = IOField.read('T' + suffix)
+        self.p = IOField.read('p' + suffix)
         if self.dynamicMesh:
             self.mesh.read(IOField.handle)
         IOField.closeHandle()
