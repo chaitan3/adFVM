@@ -15,6 +15,10 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('caseFile')
 user, args = parser.parse_known_args(config.args)
+
+source = None
+perturb = []
+
 caseDir, caseFile = os.path.split(user.caseFile)
 sys.path.append(os.path.abspath(caseDir))
 caseFile = __import__(caseFile.split('.')[0])
@@ -22,6 +26,7 @@ for attr in dir(caseFile):
     if not attr.startswith('_'):
         # defines primal, objective and perturb, nSteps, writeInterval, startTime, dt
         locals()[attr] = getattr(caseFile, attr)
+
 if not isinstance(perturb, list):
     perturb = [perturb]
 nPerturb = len(perturb)
@@ -66,8 +71,6 @@ if __name__ == "__main__":
     else:
         startIndex = 0
         initResult = 0.
-    if 'source' in locals():
-        primal.sourceTerm = source
     
     if user.option == 'orig':
         dts = dt
@@ -126,10 +129,8 @@ if __name__ == "__main__":
     # restarting perturb not fully supported
     for sim in range(0, nSims):
         if user.option == 'perturb':
-            perturbation = perturb[sim](mesh)
-            for index, phi in enumerate(perturbation):
-                primal.sourceTerm[index][:] = phi
-        result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex)
+            source = perturb[sim]
+        result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex, source=source)
         writeResult(user.option, result/(nSteps + 1), '{}'.format(sim))
         if parallel.rank == 0:
             try:

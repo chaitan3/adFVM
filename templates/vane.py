@@ -74,7 +74,7 @@ def objectivePressureLoss(fields, mesh):
 objective = objectivePressureLoss
 
 def makePerturb(mid):
-    def perturb(mesh):
+    def perturb(fields, mesh, t):
         G = 10*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
         #rho
         rho = G

@@ -21,7 +21,6 @@ class Solver(object):
                         'objective': lambda x: 0,
                         'adjoint': False,
                         'dynamicMesh': False,
-                        'sourceTerm': None,
                         'localTimeStep': False,
                         'postpro': []
                     }
@@ -59,7 +58,7 @@ class Solver(object):
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
             scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
-            gradientInputs = [stackedFields] + self.sourceVariables
+            gradientInputs = [stackedFields] + self.sourceSymbolics
             gradients = ad.grad(scalarFields, gradientInputs)
             #meshGradient = ad.grad(scalarFields, mesh)
             self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt, self.t], \
@@ -85,17 +84,15 @@ class Solver(object):
         return fields
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
-            startIndex=0, result=0., mode='simulation'):
+            startIndex=0, result=0., mode='simulation', source=None):
 
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
         #initialize
         fields = self.initFields(startTime)
-        self.p.info()
-        self.T.info()
-        fields[0].info()
         pprint()
 
+        # time management
         t = startTime
         dts = dt
         timeIndex = startIndex
@@ -105,6 +102,11 @@ class Solver(object):
         elif isinstance(dts, np.ndarray):
             dt = dts[timeIndex]
         stackedFields = self.stackFields(fields, np)
+
+        if source:
+            values = source(fields, mesh, t)
+            for index, value in enumerate(values):
+                self.sourceValues[index][:] = value
 
         # objective is local
         result += self.objective(stackedFields)
@@ -118,6 +120,7 @@ class Solver(object):
                 solutions = [(instMesh, stackedFields)]
             else:
                 solutions = [stackedFields]
+
 
         pprint('Time marching for', ' '.join(self.names))
 
@@ -151,9 +154,27 @@ class Solver(object):
             pprint('Time since beginning:', end-config.runtime)
             pprint('cumulative objective: ', parallel.sum(result))
 
-            mesh.update(t, dt)
-            
             timeSteps.append([t, dt])
+            timeIndex += 1
+            if self.localTimeStep:
+                pprint('Simulation Time:', t, 'Time step: min', parallel.min(dt), 'max', parallel.max(dt))
+                t += 1
+            else:
+                pprint('Simulation Time:', t, 'Time step:', dt)
+                t = round(t+dt, 9)
+            if self.localTimeStep:
+                dt = dtc
+            elif isinstance(dts, np.ndarray):
+                dt = dts[timeIndex]
+            else:
+                dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
+
+            mesh.update(t, dt)
+            if source:
+                values = source(fields, mesh, t)
+                for index, value in enumerate(values):
+                    self.sourceValues[index][:] = value
+
             instObjective = self.objective(stackedFields)
             result += instObjective
             timeSeries.append(parallel.sum(instObjective)/(nSteps + 1))
@@ -164,24 +185,6 @@ class Solver(object):
                     solutions.append((instMesh, stackedFields))
                 else:
                     solutions.append(stackedFields)
-            timeIndex += 1
-            if self.localTimeStep:
-                pprint('Simulation Time:', t, 'Time step: min', parallel.min(dt), 'max', parallel.max(dt))
-                t += 1
-            else:
-                pprint('Simulation Time:', t, 'Time step:', dt)
-                t = round(t+dt, 9)
-            # compute dt for next time step
-            if self.localTimeStep:
-                dt = dtc
-            elif isinstance(dts, np.ndarray):
-                dt = dts[timeIndex]
-            else:
-                dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
-
-            #local = IOField('local', local, (local.shape[1],))
-            #local.partialComplete()
-            #local.write(t)
 
             if (timeIndex % writeInterval == 0) and (mode != 'forward'):
                 # write mesh, fields, status
@@ -244,8 +247,8 @@ class SolverFunction(object):
             self.populate_BCs(self.values, solver, 1)
         # source terms
         if source:
-            self.symbolic.extend(solver.sourceVariables)
-            self.values.extend(solver.sourceTerm)
+            self.symbolic.extend(solver.sourceSymbolics)
+            self.values.extend(solver.sourceValues)
         # postpro variables
         if postpro and len(solver.postpro) > 0:
             symbolic, values = zip(*solver.postpro)
