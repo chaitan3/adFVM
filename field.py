@@ -589,12 +589,12 @@ class IOField(Field):
         pprint()
         return
 
-    def interpolate(points):
+    def interpolate(self, points):
         from scipy.interpolate import griddata
         mesh = self.mesh.origMesh
         cellCentres = mesh.cellCentres[:mesh.nInternalCells]
         internalField = self.getInternalField()
-        field = griddata(cellCentres, internalField, points)
+        field = griddata(cellCentres[:,:2], internalField, points[:,:2])
         return field
 
 class ExchangerOp(T.Op):

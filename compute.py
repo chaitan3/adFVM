@@ -51,6 +51,8 @@ def getYPlus(U, T, rho, patches):
     solver = U.solver
     yplus = {}
     uplus = {}
+    ustar = {}
+    yplus1 = {}
     for patchID in patches:
         startFace = mesh.boundary[patchID]['startFace']
         nFaces = mesh.boundary[patchID]['nFaces']
@@ -66,11 +68,12 @@ def getYPlus(U, T, rho, patches):
         nuw = solver.mu(Tw)/rhow
         tauw = nuw*(Ui-Uw)/deltas
         tauw = (tauw**2).sum(axis=1, keepdims=True)**0.5
-        yplus[patchID] = tauw**0.5*deltas/nuw
-        uplus[patchID] = Ui/tauw**0.5 
-        #uplus[patchID] /= yplus[patchID]
+        ustar[patchID] = tauw**0.5
+        yplus1[patchID] = nuw/ustar[patchID]
+        yplus[patchID] = deltas/yplus1[patchID]
+        uplus[patchID] = Ui/ustar[patchID]
  
-    return uplus, yplus
+    return uplus, yplus, ustar, yplus1
 
 def getHTC(T, T0, patches):
     mesh = T.mesh.origMesh
