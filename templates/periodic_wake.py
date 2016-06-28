@@ -19,7 +19,21 @@ def source(fields, mesh, t):
     rho = np.zeros((n, 1))
     rhoE = np.zeros((n, 1))
 
-    rhoU = U*(1-np.sin(20*x))*(1-np.sin(20*y))
+    def blasius(x):
+        a = 0.33
+        m = 4.2
+        c = a*x
+        b = (c**m/(1+c**m))**(1/m)
+        return b
+
+    B = ((x-0.025)/0.025)**6
+    up = y <= 0.005
+    down = y >= 0.015
+    w = 100*np.ones_like(y)
+    w[up] = 100*blasius(6*(0.005-y[up])/0.005)
+    w[down] = 100*blasius(6*(y[down]-0.015)/0.005)
+
+    rhoU = B*(w-U)
 
     return rho, rhoU, rhoE
 
