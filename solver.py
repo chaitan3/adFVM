@@ -43,6 +43,33 @@ class Solver(object):
         self.stage = 0
         self.init = None
 
+    def symbolicFields(self, field=True):
+        names = self.names
+        fields = []
+        for index, dim in enumerate(self.dimensions):
+            if dim == (1,):
+                fields.append(ad.bcmatrix())
+            else:
+                fields.append(ad.matrix())
+            if field:
+                fields[-1] = CellField(names[index], fields[-1], dim)
+            
+        return fields
+
+    def stackFields(self, fields, mod): 
+        return mod.concatenate([phi.field for phi in fields], axis=1)
+
+    def unstackFields(self, stackedFields, mod, names=None, **kwargs):
+        if names is None:
+            names = self.names
+        fields = []
+        nDimensions = np.concatenate(([0], np.cumsum(np.array(self.dimensions))))
+        nDimensions = zip(nDimensions[:-1], nDimensions[1:])
+        for name, dim, dimRange in zip(names, self.dimensions, nDimensions):
+            phi = stackedFields[:, range(*dimRange)]
+            fields.append(mod(name, phi, dim, **kwargs))
+        return fields
+
     def compile(self):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         if self.localTimeStep:
@@ -69,19 +96,7 @@ class Solver(object):
             exit()
         pprint()
 
-    def stackFields(self, fields, mod): 
-        return mod.concatenate([phi.field for phi in fields], axis=1)
 
-    def unstackFields(self, stackedFields, mod, names=None, **kwargs):
-        if names is None:
-            names = self.names
-        fields = []
-        nDimensions = np.concatenate(([0], np.cumsum(np.array(self.dimensions))))
-        nDimensions = zip(nDimensions[:-1], nDimensions[1:])
-        for name, dim, dimRange in zip(names, self.dimensions, nDimensions):
-            phi = stackedFields[:, range(*dimRange)]
-            fields.append(mod(name, phi, dim, **kwargs))
-        return fields
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
             startIndex=0, result=0., mode='simulation', source=None):

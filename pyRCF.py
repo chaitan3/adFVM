@@ -45,8 +45,7 @@ class RCF(Solver):
         self.dimensions = [(1,), (3,), (1,)]
 
         # source term stuff, separate func, bcmatrix cases?
-        self.sourceSymbolics = [ad.bcmatrix() for name in self.names]
-        self.sourceSymbolics[1] = ad.matrix()
+        self.sourceSymbolics = self.symbolicFields(field=False)
         self.sourceValues = [np.zeros((self.mesh.origMesh.nInternalCells, nDims[0])) for nDims in self.dimensions]
         self.sourceF = [Field('S' + name, variable, dim) for name, variable, dim in zip(self.names, self.sourceSymbolics, self.dimensions)]
 

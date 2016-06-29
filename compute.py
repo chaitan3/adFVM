@@ -13,8 +13,7 @@ from interp import central
 def computeFields(solver):
     mesh = solver.mesh
     g = solver.gamma
-    SF = ad.matrix()
-    p, U, T = solver.unstackFields(SF, CellField)
+    p, U, T = solver.symbolicFields()
     c = (g*T*solver.R).sqrt()
 
     #divU
@@ -37,7 +36,7 @@ def computeFields(solver):
     S = 0.5*(gradU + gradUT)
     Q = 0.5*(omega.norm()**2 - S.norm()**2)
 
-    computer = solver.function([SF], [gradrho.field, 
+    computer = solver.function([U.field, T.field, p.field], [gradrho.field, 
                                       gradU.field, 
                                       gradp.field, 
                                       gradc.field, 
@@ -245,8 +244,7 @@ if __name__ == "__main__":
 
         IOField.openHandle(time)
 
-        #SF = solver.stackFields([p, U, T], np)
-        #outputs = computer(SF)
+        #outputs = computer(U.field, T.field, p.field)
         #for field, name, dim in zip(outputs, names, dimensions):
         #    IO = IOField(name, field, dim)
         #    if len(dim) != 2:
