@@ -230,7 +230,7 @@ if __name__ == "__main__":
     if not times:
         times = mesh.getTimes()
 
-    solver.initialize(times[0])
+    solver.readFields(times[0])
     computer = computeFields(solver)
 
     if config.compile:

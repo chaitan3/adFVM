@@ -44,16 +44,14 @@ class RCF(Solver):
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
 
-        # source term stuff, separate func, bcmatrix cases?
-        self.sourceSymbolics = self.symbolicFields(field=False)
-        self.sourceValues = [np.zeros((self.mesh.origMesh.nInternalCells, nDims[0])) for nDims in self.dimensions]
-        self.sourceF = [Field('S' + name, variable, dim) for name, variable, dim in zip(self.names, self.sourceSymbolics, self.dimensions)]
+        self.initSource()
 
         self.Uref = 33.
         self.Tref = 300.
         self.pref = 1e5
         self.tref = 1.
         self.Jref = 1.
+        return
 
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
@@ -88,12 +86,36 @@ class RCF(Solver):
         rho = p/(e*(self.gamma-1))
         return rho
 
+    # only reads fields
+    def readFields(self, t, suffix=''):
+        # IO Fields, with phi attribute as a CellField
+        start = time.time()
+        IOField.openHandle(t)
+        self.U = IOField.read('U' + suffix)
+        self.T = IOField.read('T' + suffix)
+        self.p = IOField.read('p' + suffix)
+        if self.dynamicMesh:
+            self.mesh.read(IOField.handle)
+        IOField.closeHandle()
+        parallel.mpi.Barrier()
+        end = time.time()
+        pprint('Time for reading fields: {0}'.format(end-start))
+
+        if self.init is None:
+            UI = self.U.complete()
+            TI = self.T.complete()
+            pI = self.p.complete()
+            UN, TN, pN = self.U.phi.field, self.T.phi.field, self.p.phi.field 
+            self.init = self.function([UI, TI, pI], [UN, TN, pN], 'init')
+            self.reconstructor = Reconstruct(self.mesh, TVD)
+        return
+
     def getBCFields(self):
         return self.U.phi, self.T.phi, self.p.phi
 
     # reads and updates ghost cells
     def initFields(self, t, **kwargs):
-        self.initialize(t, **kwargs)
+        self.readFields(t, **kwargs)
         self.U.field, self.T.field, self.p.field = self.init(self.U.field, self.T.field, self.p.field)
         return self.conservative(self.U, self.T, self.p)
     
@@ -115,29 +137,8 @@ class RCF(Solver):
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Time for writing fields: {0}'.format(end-start))
-
-    # only reads fields
-    def initialize(self, t, suffix=''):
-        # IO Fields, with phi attribute as a CellField
-        start = time.time()
-        IOField.openHandle(t)
-        self.U = IOField.read('U' + suffix)
-        self.T = IOField.read('T' + suffix)
-        self.p = IOField.read('p' + suffix)
-        if self.dynamicMesh:
-            self.mesh.read(IOField.handle)
-        IOField.closeHandle()
-        parallel.mpi.Barrier()
-        end = time.time()
-        pprint('Time for reading fields: {0}'.format(end-start))
-        if self.init is None:
-            UI = self.U.complete()
-            TI = self.T.complete()
-            pI = self.p.complete()
-            UN, TN, pN = self.U.phi.field, self.T.phi.field, self.p.phi.field 
-            self.init = self.function([UI, TI, pI], [UN, TN, pN], 'init')
-            self.reconstructor = Reconstruct(self.mesh, TVD)
-           
+        return
+          
     def equation(self, rho, rhoU, rhoE, exit=False):
         logger.info('computing RHS/LHS')
         mesh = self.mesh

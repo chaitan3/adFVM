@@ -60,7 +60,7 @@ adjointInitFunc = primal.function(adjointInternalFields, adjointNewFields, 'adjo
 primal.getBCFields = oldFunc
 
 # dummy initialize
-primal.initialize(timeSteps[nSteps-writeInterval][0])
+primal.readFields(timeSteps[nSteps-writeInterval][0])
 if user.smooth:
     computer = computeFields(primal)
 primal.compile()

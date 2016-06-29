@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     elif user.option == 'test':
         #primal.adjoint = True
-        primal.initialize(startTime)
+        primal.readFields(startTime)
         primal.compile()
         #primal.initFields(startTime)
         #rho, rhoU, rhoE = perturb(mesh)

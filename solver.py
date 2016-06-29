@@ -48,12 +48,10 @@ class Solver(object):
         fields = []
         for index, dim in enumerate(self.dimensions):
             if dim == (1,):
-                fields.append(ad.bcmatrix())
+                field = ad.bcmatrix()
             else:
-                fields.append(ad.matrix())
-            if field:
-                fields[-1] = CellField(names[index], fields[-1], dim)
-            
+                field = ad.matrix()
+            fields.append(CellField(names[index], field, dim))
         return fields
 
     def stackFields(self, fields, mod): 
@@ -69,6 +67,12 @@ class Solver(object):
             phi = stackedFields[:, range(*dimRange)]
             fields.append(mod(name, phi, dim, **kwargs))
         return fields
+
+    def initSource():
+        self.sourceF = self.symbolicFields()
+        self.sourceSymbolics = [phi.field for phi in self.sourceF]
+        self.sourceValues = [np.zeros((self.mesh.origMesh.nInternalCells, nDims[0])) for nDims in self.dimensions]
+        return
 
     def compile(self):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
