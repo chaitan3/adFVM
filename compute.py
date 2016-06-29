@@ -30,6 +30,7 @@ def computeFields(solver):
     gradp = grad(central(p, mesh), ghost=True)
     gradrho = g*(gradp-c*p)/(c*c)
 
+    # SKIP FOR ADJOINT
     enstrophy =  gradU.norm()
     gradUT = gradU.transpose()
     omega = 0.5*(gradU - gradUT)
@@ -106,6 +107,13 @@ def getIsentropicMa(p, p0, patches):
         pw = p.field[mesh.neighbour[startFace:endFace]]
         Ma[patchID] = (2.0/(g-1)*((1./p0*pw)**((1-g)/g)-1))**0.5
     return Ma
+
+def getTotalPressure(p, T, U, solver):
+    g = solver.gamma
+    c = (g*solver.R*T).sqrt()
+    M = U.mag()/c
+    pt = p*(1+0.5*(g-1)*M**2)**(g/(g-1))
+    return c, M, pt
 
 from compat import intersectPlane
 def getPressureLoss(p, T, U, p0, point, normal):
@@ -234,15 +242,21 @@ if __name__ == "__main__":
         start = timer.time()
         rho, rhoU, rhoE = solver.initFields(time)
         U, T, p = solver.U, solver.T, solver.p
-        SF = solver.stackFields([p, U, T], np)
-        outputs = computer(SF)
 
         IOField.openHandle(time)
 
-        for field, name, dim in zip(outputs, names, dimensions):
-            IO = IOField(name, field, dim)
-            if len(dim) != 2:
-                IO.write()
+        #SF = solver.stackFields([p, U, T], np)
+        #outputs = computer(SF)
+        #for field, name, dim in zip(outputs, names, dimensions):
+        #    IO = IOField(name, field, dim)
+        #    if len(dim) != 2:
+        #        IO.write()
+        #pprint()
+
+        c, M, pt = getTotalPressure(p, T, U, solver)
+        c.write(name='c') 
+        M.write(name='Ma')
+        pt.write(name='pt')
         pprint()
 
         # rhoaByV

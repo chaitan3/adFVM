@@ -78,17 +78,24 @@ def match_wakes(pl, coords, p0, saveFile):
 
 if __name__ == '__main__':
     from mesh import Mesh
+    from field import Field, IOField
+    import sys
 
     case, time = sys.argv[1:3]
     mesh = Mesh.create(case)
     Field.setMesh(mesh)
 
     IOField.openHandle(float(time))
-    htc = IOField.read('htc_avg')
-    Ma = IOField.read('Ma_avg')
+    htc = IOField.read('htc')
+    htc.partialComplete()
+    Ma = IOField.read('Ma')
+    Ma.partialComplete()
+    #htc = IOField.read('htc_avg')
+    #Ma = IOField.read('Ma_avg')
     IOField.closeHandle()
 
-    nLayers = 200
+    nLayers = 1
+    #nLayers = 200
     patches = ['pressure', 'suction']
    
     htc_args = []
@@ -96,17 +103,20 @@ if __name__ == '__main__':
 
     mesh = mesh.origMesh
     for patchID in patches:
+        delta = -mesh.nInternalFaces + mesh.nInternalCells
         startFace = mesh.boundary[patchID]['startFace']
         nFaces = mesh.boundary[patchID]['nFaces']
         endFace = startFace + nFaces
+        cellStartFace = startFace + delta
+        cellEndFace = endFace + delta
         nFacesPerLayer = nFaces/nLayers
 
         x = mesh.faceCentres[startFace:endFace, 0]
         x = x[:nFacesPerLayer]
 
-        y = htc.boundary[patchID]['value']
+        y = htc.field[cellStartFace:cellEndFace]
         htc_args.extend([y, x])
-        y = Ma.boundary[patchID]['value']
+        y = Ma.field[cellStartFace:cellEndFace]
         Ma_args.extend([y, x])
 
     htc_args += [case + 'htc.png']

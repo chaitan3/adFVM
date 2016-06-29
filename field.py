@@ -44,7 +44,6 @@ class Field(object):
 
 
     def info(self):
-        assert isinstance(self.field, np.ndarray)
         mesh = self.mesh.origMesh
         pprint(self.name + ':', end='')
         # mesh values required outside theano
@@ -57,6 +56,18 @@ class Field(object):
         fieldMin = parallel.min(field)
         fieldMax = parallel.max(field)
         pprint(' min:', fieldMin, 'max:', fieldMax)
+
+    def _getType(self):
+        if isinstance(self.field, np.ndarray):
+            return np
+        else:
+            return ad
+
+    def _getMesh(self):
+        if isinstance(self.field, np.ndarray):
+            return self.mesh.origMesh
+        else:
+            return self.mesh
 
     def getField(self, indices):
         if isinstance(indices, tuple):
@@ -79,16 +90,15 @@ class Field(object):
 
     def magSqr(self):
         assert self.dimensions == (3,)
-        if isinstance(self.field, np.ndarray):
-            return self.__class__('magSqr({0})'.format(self.name), np.sum(self.field*self.field, axis=1, keepdims=True), (1,))
-        else:
-            return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field*self.field, axis=1, keepdims=True), (1,))
+        ad = self._getType()
+        return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field*self.field, axis=1, keepdims=True), (1,))
+
+    def sqrt(self):
+        ad = self._getType()
+        return self.__class__('abs({0})'.format(self.name), ad.sqrt(self.field), self.dimensions)
 
     def mag(self):
         return self.magSqr().sqrt()
-
-    def sqrt(self):
-        return self.__class__('abs({0})'.format(self.name), ad.sqrt(self.field), self.dimensions)
 
     def sqr(self):
         return self.__class__('abs({0})'.format(self.name), self.field*self.field, self.dimensions)
@@ -102,9 +112,9 @@ class Field(object):
     def sign(self):
         return self.__class__('abs({0})'.format(self.name), ad.sgn(self.field), self.dimensions)
 
-
     def dot(self, phi):
         assert self.dimensions[0] == 3
+        ad = self._getType()
         # if tensor
         if len(self.dimensions) > 1:
             phi = self.__class__(phi.name, phi.field[:,np.newaxis,:], (1,3))
@@ -118,12 +128,11 @@ class Field(object):
         return self.__class__('dot({0},{1})'.format(self.name, phi.name), product, dimensions)
 
     def dotN(self):
-        return self.dot(self.mesh.Normals)
+        return self.dot(self._getMesh().Normals)
 
     def cross(self, phi):
         assert self.dimensions == (3,)
         assert phi.dimensions == (3,)
-        assert isinstance(self.field, np.ndarray)
         product = np.cross(self.field, phi.field) 
         return self.__class__('cross({0},{1})'.format(self.name, phi.name), product, phi.dimensions)
 
@@ -143,6 +152,7 @@ class Field(object):
 
     def norm(self):
         assert len(self.dimensions) == 2
+        ad = self._getType()
         phi = self.field
         normPhi = ad.sqrt(ad.sum(ad.sum(phi*phi, axis=2), axis=1, keepdims=True))
         return self.__class__('norm({0})'.format(self.name), normPhi, (1,))
@@ -419,7 +429,9 @@ class IOField(Field):
 
         return self(name, internalField, dimensions, boundary)
     
-    def write(self, skipProcessor=False):
+    def write(self, name=None, skipProcessor=False):
+        if name:
+            self.name = name  
         if config.hdf5:
             return self.writeHDF5(skipProcessor)
         else:
