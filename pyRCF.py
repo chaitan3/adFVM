@@ -260,10 +260,10 @@ class RCF(Solver):
         maxaF = (UF.dotN()).abs() + self.aF
         self.dtc = 2*self.CFL/internal_sum(maxaF, mesh, absolute=True)
 
-        return [div(rhoFlux) - self.sourceF[0], \
+        return [div(rhoFlux) - self.sourceFields[0], \
                 #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
-                div(rhoUFlux - sigmaF) - self.sourceF[1], \
-                div(rhoEFlux - qF - sigmadotUF) - self.sourceF[2]]
+                div(rhoUFlux - sigmaF) - self.sourceFields[1], \
+                div(rhoEFlux - qF - sigmadotUF) - self.sourceFields[2]]
 
     def boundary(self, rhoN, rhoUN, rhoEN):
         logger.info('correcting boundary')

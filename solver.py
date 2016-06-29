@@ -68,10 +68,11 @@ class Solver(object):
             fields.append(mod(name, phi, dim, **kwargs))
         return fields
 
-    def initSource():
-        self.sourceF = self.symbolicFields()
-        self.sourceSymbolics = [phi.field for phi in self.sourceF]
-        self.sourceValues = [np.zeros((self.mesh.origMesh.nInternalCells, nDims[0])) for nDims in self.dimensions]
+    def initSource(self):
+        self.sourceFields = self.symbolicFields()
+        symbolics = [phi.field for phi in self.sourceFields]
+        values = [np.zeros((self.mesh.origMesh.nInternalCells, nDims[0])) for nDims in self.dimensions]
+        self.source = zip(symbolics, values)
         return
 
     def compile(self):
@@ -89,7 +90,7 @@ class Solver(object):
         if self.adjoint:
             stackedAdjointFields = ad.matrix()
             scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
-            gradientInputs = [stackedFields] + self.sourceSymbolics
+            gradientInputs = [stackedFields] + list(zip(*self.source)[0])
             gradients = ad.grad(scalarFields, gradientInputs)
             #meshGradient = ad.grad(scalarFields, mesh)
             self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt, self.t], \
@@ -103,7 +104,7 @@ class Solver(object):
 
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
-            startIndex=0, result=0., mode='simulation', source=None):
+            startIndex=0, result=0., mode='simulation', source=lambda *args: []):
 
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
@@ -122,10 +123,8 @@ class Solver(object):
             dt = dts[timeIndex]
         stackedFields = self.stackFields(fields, np)
 
-        if source:
-            values = source(fields, mesh, t)
-            for index, value in enumerate(values):
-                self.sourceValues[index][:] = value
+        for index, value in enumerate(source(fields, mesh, t)):
+            self.source[index][1][:] = value
 
         # objective is local
         result += self.objective(stackedFields)
@@ -189,10 +188,8 @@ class Solver(object):
                 dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
 
             mesh.update(t, dt)
-            if source:
-                values = source(fields, mesh, t)
-                for index, value in enumerate(values):
-                    self.sourceValues[index][:] = value
+            for index, value in enumerate(source(fields, mesh, t)):
+                self.source[index][1][:] = value
 
             instObjective = self.objective(stackedFields)
             result += instObjective
@@ -266,8 +263,9 @@ class SolverFunction(object):
             self.populate_BCs(self.values, solver, 1)
         # source terms
         if source:
-            self.symbolic.extend(solver.sourceSymbolics)
-            self.values.extend(solver.sourceValues)
+            symbolic, values = zip(*solver.source)
+            self.symbolic.extend(symbolic)
+            self.values.extend(values)
         # postpro variables
         if postpro and len(solver.postpro) > 0:
             symbolic, values = zip(*solver.postpro)

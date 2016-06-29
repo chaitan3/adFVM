@@ -181,7 +181,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
 
         # compute sensitivity using adjoint solution
         for index, perturbation in enumerate(perturb):
-            for derivative, delphi in zip(sourceGradient, perturbation(mesh.origMesh)):
+            for derivative, delphi in zip(sourceGradient, perturbation(None, mesh.origMesh, t)):
                 result[index] += np.sum(np.ascontiguousarray(derivative) * delphi)
 
         parallel.mpi.Barrier()
