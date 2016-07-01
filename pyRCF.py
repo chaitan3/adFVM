@@ -295,6 +295,6 @@ if __name__ == "__main__":
     if user.inviscid:
         mu = lambda T: config.VSMALL*T
     solver = RCF(user.case, mu=mu, timeIntegrator=user.timeIntegrator, CFL=user.CFL, Cp=user.Cp, riemannSolver=user.riemann, dynamicMesh=user.dynamic, localTimeStep=user.lts)
-    solver.initialize(user.time)
+    solver.readFields(user.time)
     solver.compile()
     solver.run(startTime=user.time, dt=user.dt, nSteps=user.nSteps, writeInterval=user.writeInterval)

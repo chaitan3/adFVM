@@ -1,10 +1,11 @@
 from pyRCF import RCF 
+import config
 from config import ad
 from compat import norm
 import numpy as np
 
 #primal = RCF('cases/convection/')
-primal = RCF('cases/cyclic/')
+primal = RCF('cases/convection/', mu=lambda T: config.VSMALL*T)
 
 def objective(fields, mesh):
     rho, rhoU, rhoE = fields
@@ -12,19 +13,25 @@ def objective(fields, mesh):
     G = ad.exp(-100*ad.sum((mid-mesh.cellCentres[:mesh.nInternalCells])**2, axis=1)).reshape((-1,1))*mesh.volumes[:mesh.nInternalCells]
     return ad.sum(rho.field[:mesh.nInternalCells]*G)
 
-def source(mesh):
-    #eps = 1e-3
-    #mid = np.array([0.5, 0.5, 0.5])
-    #G = 1e-4*np.exp(-1e2*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    x = mesh.cellCentres[:mesh.nInternalCells, 0]
-    y = mesh.cellCentres[:mesh.nInternalCells, 1]
+def source(fields, mesh, t):
+    mesh = mesh.origMesh
     rho = np.zeros((mesh.nInternalCells, 1))
     rhoU = np.zeros((mesh.nInternalCells, 3))
-    rhoU[:,0] = 300.*(1-np.sin(20*x))*(1-np.sin(20*y))
     rhoE = np.zeros((mesh.nInternalCells, 1))
+    x = mesh.cellCentres[:mesh.nInternalCells, 0]
+    y = mesh.cellCentres[:mesh.nInternalCells, 1]
+
+    eps = 1e2
+    G = eps*np.exp(-1e1*((x-0.5)**2+(y-0.5)**2))
+    #G = eps*(1-np.sin(20*x))*(1-np.sin(20*y))
+    rho[:,0] = 1.3*G
+    rhoU[:,0] = 100*G
+    rhoE[:,0] = 2e5*G
     return rho, rhoU, rhoE
 
 nSteps = 20000
 writeInterval = 500
+#nSteps = 10
+#writeInterval = 2
 startTime = 0.0
 dt = 1e-8

@@ -31,32 +31,6 @@ class Field(object):
         self.field = field
         self.dimensions = dimensions
 
-    @classmethod
-    def max(self, a, b):
-        return self('max({0},{1})'.format(a.name, b.name), ad.maximum(a.field, b.field), a.dimensions)
-    @classmethod
-    def min(self, a, b):
-        return self('min({0},{1})'.format(a.name, b.name), ad.minimum(a.field, b.field), a.dimensions)
-
-    @classmethod
-    def switch(self, condition, a, b):
-        return self('switch({0},{1})'.format(a.name, b.name), ad.switch(condition, a.field, b.field), a.dimensions)
-
-
-    def info(self):
-        mesh = self.mesh.origMesh
-        pprint(self.name + ':', end='')
-        # mesh values required outside theano
-        field = self.field[:mesh.nLocalCells]
-        nanCheck = np.isnan(field)
-        if nanCheck.any():
-            indices = np.where(nanCheck)[0]
-            print(parallel.rank, mesh.nInternalCells, mesh.nLocalCells, indices)
-            raise FloatingPointError('nan found')
-        fieldMin = parallel.min(field)
-        fieldMax = parallel.max(field)
-        pprint(' min:', fieldMin, 'max:', fieldMax)
-
     def _getType(self):
         if isinstance(self.field, np.ndarray):
             return np
@@ -68,6 +42,18 @@ class Field(object):
             return self.mesh.origMesh
         else:
             return self.mesh
+
+    # apply to ad
+    @classmethod
+    def max(self, a, b):
+        return self('max({0},{1})'.format(a.name, b.name), ad.maximum(a.field, b.field), a.dimensions)
+    @classmethod
+    def min(self, a, b):
+        return self('min({0},{1})'.format(a.name, b.name), ad.minimum(a.field, b.field), a.dimensions)
+
+    @classmethod
+    def switch(self, condition, a, b):
+        return self('switch({0},{1})'.format(a.name, b.name), ad.switch(condition, a.field, b.field), a.dimensions)
 
     def getField(self, indices):
         if isinstance(indices, tuple):
@@ -82,6 +68,35 @@ class Field(object):
             self.field = ad.set_subtensor(self.field[indices[0]:indices[1]], field)
         else:
             self.field = ad.set_subtensor(self.field[indices], field)
+
+    def stabilise(self, num):
+        return self.__class__('stabilise({0})'.format(self.name), ad.switch(ad.lt(self.field, 0.), self.field - num, self.field + num), self.dimensions)
+
+    def sign(self):
+        return self.__class__('abs({0})'.format(self.name), ad.sgn(self.field), self.dimensions)
+
+    # apply to np
+    def info(self):
+        mesh = self.mesh.origMesh
+        pprint(self.name + ':', end='')
+        # mesh values required outside theano
+        field = self.field[:mesh.nLocalCells]
+        nanCheck = np.isnan(field)
+        if nanCheck.any():
+            indices = np.where(nanCheck)[0]
+            print(parallel.rank, mesh.nInternalCells, mesh.nLocalCells, indices)
+            raise FloatingPointError('nan found')
+        fieldMin = parallel.min(field)
+        fieldMax = parallel.max(field)
+        pprint(' min:', fieldMin, 'max:', fieldMax)
+
+    def cross(self, phi):
+        assert self.dimensions == (3,)
+        assert phi.dimensions == (3,)
+        product = np.cross(self.field, phi.field) 
+        return self.__class__('cross({0},{1})'.format(self.name, phi.name), product, phi.dimensions)
+
+    # apply to both np and ad
 
     # creates a view
     def component(self, component): 
@@ -103,14 +118,12 @@ class Field(object):
     def sqr(self):
         return self.__class__('abs({0})'.format(self.name), self.field*self.field, self.dimensions)
 
+    def log(self):
+        ad = self._getType()
+        return self.__class__('log({0})'.format(self.name), ad.log(self.field), self.dimensions)
+
     def abs(self):
         return self.__class__('abs({0})'.format(self.name), ad.abs_(self.field), self.dimensions)
-
-    def stabilise(self, num):
-        return self.__class__('stabilise({0})'.format(self.name), ad.switch(ad.lt(self.field, 0.), self.field - num, self.field + num), self.dimensions)
-
-    def sign(self):
-        return self.__class__('abs({0})'.format(self.name), ad.sgn(self.field), self.dimensions)
 
     def dot(self, phi):
         assert self.dimensions[0] == 3
@@ -129,12 +142,6 @@ class Field(object):
 
     def dotN(self):
         return self.dot(self._getMesh().Normals)
-
-    def cross(self, phi):
-        assert self.dimensions == (3,)
-        assert phi.dimensions == (3,)
-        product = np.cross(self.field, phi.field) 
-        return self.__class__('cross({0},{1})'.format(self.name, phi.name), product, phi.dimensions)
 
     # represents self * phi
     def outer(self, phi):
@@ -208,7 +215,7 @@ class CellField(Field):
 
         # why initialize the boundary for ghost=False cases
         self.BC = {}
-        for patchID in self.mesh.localPatches:
+        for patchID in mesh.localPatches:
             # skip processor patches
             patchType = self.boundary[patchID]['type']
             self.BC[patchID] = getattr(BCs, patchType)(self, patchID)

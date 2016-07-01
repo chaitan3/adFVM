@@ -123,7 +123,7 @@ if __name__ == "__main__":
         print('WTF')
         exit()
 
-    primal.initialize(startTime)
+    primal.readFields(startTime)
     primal.compile()
 
     # restarting perturb not fully supported

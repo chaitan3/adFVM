@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  2.2.2                                 |
+|  \\    /   O peration     | Version:  2.3.1                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -31,22 +31,11 @@ boundaryField
     }
     patch1_half0
     {
-        type            turbulentInletVelocity;
-        Umean           uniform (100 0 0);
-        r11   4;
-        r22   4;
-        r33   4;
-        r12   0;
-        r13   0;
-        r23   0;
-        x0    (0 0.5 0.5);
-        lengthScale     0.03;
-        timeScale       0.001;
-        value           uniform (100 0 0);
+        type            cyclic;
     }
     patch1_half1
     {
-        type            zeroGradient;
+        type            cyclic;
     }
     patch2_half0
     {

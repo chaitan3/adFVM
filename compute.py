@@ -107,12 +107,14 @@ def getIsentropicMa(p, p0, patches):
         Ma[patchID] = (2.0/(g-1)*((1./p0*pw)**((1-g)/g)-1))**0.5
     return Ma
 
-def getTotalPressure(p, T, U, solver):
+def getTotalPressureAndEntropy(p, T, U, solver):
     g = solver.gamma
     c = (g*solver.R*T).sqrt()
+    rho = p/(solver.R*T)
     M = U.mag()/c
     pt = p*(1+0.5*(g-1)*M**2)**(g/(g-1))
-    return c, M, pt
+    s = solver.Cv*(p*rho**-g).log()
+    return c, M, pt, s
 
 from compat import intersectPlane
 def getPressureLoss(p, T, U, p0, point, normal):
@@ -129,13 +131,13 @@ def getPressureLoss(p, T, U, p0, point, normal):
     pti = pi*(1 + 0.5*(g-1)*Mi*Mi)**(g/(g-1))
     return cells, p0 - pti
 
-def getRhoaByV(rhoa):
-    mesh = rhoa.mesh
-    rhoaByV = np.zeros((mesh.origMesh.nCells, 1))
+def getFieldByVolume(phi):
+    mesh = phi.mesh
+    phiByV = np.zeros((mesh.origMesh.nCells,) + phi.dimensions)
     nInternalCells = mesh.origMesh.nInternalCells
-    rhoaByV[:nInternalCells] = rhoa.field[:nInternalCells]/mesh.origMesh.volumes
-    rhoaByV = IOField('rhoaByV', rhoaByV, (1,), boundary=mesh.calculatedBoundary)
-    return rhoaByV
+    phiByV[:nInternalCells] = phi.field[:nInternalCells]/mesh.origMesh.volumes
+    phiByV = IOField(phi.name + 'ByV', phiByV, (1,), boundary=mesh.calculatedBoundary)
+    return phiByV
 
 def getAdjointEnergy(solver, rhoa, rhoUa, rhoEa):
     mesh = rhoa.mesh
@@ -251,16 +253,17 @@ if __name__ == "__main__":
         #        IO.write()
         #pprint()
 
-        c, M, pt = getTotalPressure(p, T, U, solver)
+        c, M, pt, s = getTotalPressureAndEntropy(p, T, U, solver)
         c.write(name='c') 
         M.write(name='Ma')
         pt.write(name='pt')
+        s.write(name='s')
         pprint()
 
         # rhoaByV
         try:
             rhoa = IOField.read('rhoa')
-            rhoaByV = getRhoaByV(rhoa)
+            rhoaByV = getFieldByVolume(rhoa)
             rhoaByV.write()
             pprint()
 
