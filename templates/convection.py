@@ -21,8 +21,8 @@ def source(fields, mesh, t):
     x = mesh.cellCentres[:mesh.nInternalCells, 0]
     y = mesh.cellCentres[:mesh.nInternalCells, 1]
 
-    eps = 1e2
-    G = eps*np.exp(-1e1*((x-0.5)**2+(y-0.5)**2))
+    eps = 1e1
+    G = eps*np.exp(-1e3*((x-0.5)**2+(y-0.5)**2))
     #G = eps*(1-np.sin(20*x))*(1-np.sin(20*y))
     rho[:,0] = 1.3*G
     rhoU[:,0] = 100*G

@@ -26,6 +26,7 @@ time = endTime-startTime
 rhoS, rhoUS, rhoES = source([rho, rhoU, rhoE], mesh, startTime)
 added = getSystem(rhoS*time, rhoUS*time, rhoES*time)
 
+print 'source:', added
 res = end-start
 absDiff = np.abs(res-added)
 relDiff = absDiff/maxF
