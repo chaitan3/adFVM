@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('caseFile')
 user, args = parser.parse_known_args(config.args)
 
-source = None
+source = lambda *args: []
 perturb = []
 
 caseDir, caseFile = os.path.split(user.caseFile)

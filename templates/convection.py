@@ -5,7 +5,7 @@ from compat import norm
 import numpy as np
 
 #primal = RCF('cases/convection/')
-primal = RCF('cases/convection/', mu=lambda T: config.VSMALL*T)
+primal = RCF('cases/convection/', mu=lambda T: 0.*T)
 
 def objective(fields, mesh):
     rho, rhoU, rhoE = fields
