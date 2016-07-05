@@ -20,15 +20,13 @@ if len(times) == 0:
 for time in times:
     config.hdf5 = False
     fields = []
-    IOField.openHandle(time)
-    for name in os.listdir(mesh.getTimeDir(time)):
-        phi = IOField.readFoam(name)
-        phi.partialComplete()
-        fields.append(phi)
-    IOField.closeHandle()
+    with IOField.handle(time):
+        for name in os.listdir(mesh.getTimeDir(time)):
+            phi = IOField.readFoam(name)
+            phi.partialComplete()
+            fields.append(phi)
 
     config.hdf5 = True
-    IOField.openHandle(time, case=case)
-    for phi in fields:
-        phi.writeHDF5()
-    IOField.closeHandle()
+    with IOField.handle(time, case=case)
+        for phi in fields:
+            phi.writeHDF5()

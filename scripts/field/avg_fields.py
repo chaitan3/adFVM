@@ -17,9 +17,8 @@ for field in fields:
     # time avg: no dt
     avg = 0.
     for time in times:
-        IOField.openHandle(time)
-        phi = IOField.read(field)
-        IOField.closeHandle()
+        with IOField.handle(time):
+            phi = IOField.read(field)
         phi.partialComplete()
         avg += phi.field
     avg /= len(times)
@@ -44,6 +43,5 @@ for field in fields:
 
     phi.name = field + '_avg'
     phi.field = avg
-    IOField.openHandle(times[0])
-    phi.write()
-    IOField.closeHandle()
+    with IOField.handle(times[0]):
+        phi.write()

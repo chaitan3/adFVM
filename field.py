@@ -249,7 +249,7 @@ class CellField(Field):
         self.field = exchange(self.field)
 
 class IOField(Field):
-    handle = None
+    _handle = None
 
     def __init__(self, name, field, dimensions, boundary={}):
         super(self.__class__, self).__init__(name, field, dimensions)
@@ -325,8 +325,8 @@ class IOField(Field):
 
     @classmethod
     @contextmanager
-    def handle(self, time):
-        self.openHandle(time)
+    def handle(self, time, case=None):
+        self.openHandle(time, case=case)
         yield
         self.closeHandle()
 

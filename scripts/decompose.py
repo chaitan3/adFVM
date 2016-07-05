@@ -14,8 +14,8 @@ IOField.setMesh(mesh)
 for time in times:
     fields = os.listdir(mesh.getTimeDir(time))
     IOField.openHandle(case, time)
-    for name in fields:
-        phi = IOField.readFoam(name, mesh, time)
-        phi.partialComplete()
-        phi.decompose(time, data)
-    IOField.closeHandle()
+    with IOField.handle(time)
+        for name in fields:
+            phi = IOField.readFoam(name, mesh, time)
+            phi.partialComplete()
+            phi.decompose(time, data)

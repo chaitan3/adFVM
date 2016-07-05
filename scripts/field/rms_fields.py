@@ -13,17 +13,15 @@ meshO = mesh.origMesh
 
 # time avg: no dt
 times = mesh.getTimes()
-IOField.openHandle(times[0])
-phiAvg = IOField.read(field + '_avg')
-phiAvg.partialComplete()
-IOField.closeHandle()
+with IOField.handle(times[0]):
+    phiAvg = IOField.read(field + '_avg')
+    phiAvg.partialComplete()
 
 std = 0.
 for time in times:
-    IOField.openHandle(time)
-    phi = IOField.read(field)
-    phi.partialComplete()
-    IOField.closeHandle()
+    with IOField.handle(time):
+        phi = IOField.read(field)
+        phi.partialComplete()
     std += (phiAvg.field-phi.field)**2
 
 # spanwise avg: structured
@@ -49,6 +47,5 @@ std = np.sqrt(std/len(times))
 
 phi.name = field + '_std'
 phi.field = std
-IOField.openHandle(times[0])
-phi.write()
-IOField.closeHandle()
+with IOField.handle(times[0])
+    phi.write()

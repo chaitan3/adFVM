@@ -15,20 +15,19 @@ def getSystem(rho, rhoU, rhoE, s):
 
 primal.readFields(startTime)
 rho, rhoU, rhoE = primal.conservative(primal.U, primal.T, primal.p)
-_, _, _, s = getTotalPressureAndEntropy(primal.U, primal.T, primal.p)
+_, _, _, s = getTotalPressureAndEntropy(primal.U, primal.T, primal.p, primal)
 start = getSystem(rho.field, rhoU.field, rhoE.field, s.field)
-maxF = np.hstack((rho.field, rhoU.field, rhoE.field, s.max())).max(axis=0) 
+maxF = np.hstack((rho.field, rhoU.field, rhoE.field, s.field)).max(axis=0) 
 
 primal.readFields(endTime)
 rho, rhoU, rhoE = primal.conservative(primal.U, primal.T, primal.p)
-_, _, _, s = getTotalPressureAndEntropy(primal.U, primal.T, primal.p)
-end = getSystem(rho.field, rhoU.field, rhoE.field, s)
-_, _, _, sEnd = getTotalPressureAndEntropy(primal.U, primal.T, primal.p)
+_, _, _, s = getTotalPressureAndEntropy(primal.U, primal.T, primal.p, primal)
+end = getSystem(rho.field, rhoU.field, rhoE.field, s.field)
 
 # constant source
 time = endTime-startTime
 rhoS, rhoUS, rhoES = source([rho, rhoU, rhoE], mesh, startTime)
-added = getSystem(rhoS*time, rhoUS*time, rhoES*time, 0)
+added = getSystem(rhoS*time, rhoUS*time, rhoES*time, rhoS*0.)
 
 print 'CONSERVATION'
 print 'source:', added
@@ -38,9 +37,3 @@ relDiff = absDiff/maxF
 print 'absolute diff:', absDiff
 print 'relative diff:', relDiff
 print
-
-print 'ENTROPY'
-res = sEnd-sStart
-absDiff = np.abs(res-added)
-relDiff = absDiff/maxF
-print ''
