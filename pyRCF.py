@@ -90,13 +90,12 @@ class RCF(Solver):
     def readFields(self, t, suffix=''):
         # IO Fields, with phi attribute as a CellField
         start = time.time()
-        IOField.openHandle(t)
-        self.U = IOField.read('U' + suffix)
-        self.T = IOField.read('T' + suffix)
-        self.p = IOField.read('p' + suffix)
-        if self.dynamicMesh:
-            self.mesh.read(IOField.handle)
-        IOField.closeHandle()
+        with IOField.handle(t):
+            self.U = IOField.read('U' + suffix)
+            self.T = IOField.read('T' + suffix)
+            self.p = IOField.read('p' + suffix)
+            if self.dynamicMesh:
+                self.mesh.read(IOField._handle)
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Time for reading fields: {0}'.format(end-start))

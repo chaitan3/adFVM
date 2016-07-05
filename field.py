@@ -4,6 +4,7 @@ from numbers import Number
 import re
 import os
 import copy
+from contextlib import contextmanager
 
 import config, parallel
 from config import ad, T
@@ -310,17 +311,24 @@ class IOField(Field):
     def openHandle(self, time, case=None):
         timeDir = self.mesh.getTimeDir(time, case)
         if config.hdf5:
-            self.handle = h5py.File(timeDir + '.hdf5', 'a', driver='mpio', comm=parallel.mpi)
+            self._handle = h5py.File(timeDir + '.hdf5', 'a', driver='mpio', comm=parallel.mpi)
         else:
-            self.handle = timeDir + '/'
+            self._handle = timeDir + '/'
         self.time = time
 
     @classmethod
     def closeHandle(self):
         if config.hdf5:
-            self.handle.close()
-        self.handle = None
+            self._handle.close()
+        self._handle = None
         self.time = None
+
+    @classmethod
+    @contextmanager
+    def handle(self, time):
+        self.openHandle(time)
+        yield
+        self.closeHandle()
 
     @classmethod
     def read(self, name):
@@ -333,7 +341,7 @@ class IOField(Field):
     def readFoam(self, name):
         # mesh values required outside theano
         pprint('reading foam field {0}, time {1}'.format(name, self.time))
-        timeDir = self.handle
+        timeDir = self._handle
         mesh = self.mesh.origMesh
         try: 
             content = open(timeDir + name).read()
@@ -391,8 +399,8 @@ class IOField(Field):
     def readHDF5(self, name):
         pprint('reading hdf5 field {0}, time {1}'.format(name, self.time))
 
-        assert self.handle is not None
-        fieldsFile = self.handle
+        assert self._handle is not None
+        fieldsFile = self._handle
         fieldGroup = fieldsFile[name]
         parallelGroup = fieldGroup['parallel']
 
@@ -473,7 +481,7 @@ class IOField(Field):
 
     def writeFoamField(self, internalField, boundary):
         name = self.name
-        timeDir = self.handle
+        timeDir = self._handle
         if not os.path.exists(timeDir):
             os.makedirs(timeDir)
         handle = open(timeDir + name, 'w')
@@ -528,9 +536,9 @@ class IOField(Field):
         if not skipProcessor:
             field = parallel.getRemoteCells(field, self.mesh)
 
-        assert self.handle is not None
+        assert self._handle is not None
             
-        fieldsFile = self.handle
+        fieldsFile = self._handle
         fieldGroup = fieldsFile.require_group(self.name)
 
         parallelInfo = np.array([field.shape[0], boundary.shape[0]])
@@ -615,6 +623,7 @@ class IOField(Field):
         internalField = self.getInternalField()
         field = griddata(cellCentres[:,:2], internalField, points[:,:2])
         return field
+
 
 class ExchangerOp(T.Op):
     __props__ = ()

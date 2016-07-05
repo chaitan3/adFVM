@@ -131,6 +131,17 @@ logging.basicConfig(level=logging.WARNING)
 def Logger(name):
     return logging.getLogger('processor{0}:{1}'.format(parallel.rank, name))
 
+from contextlib import contextmanager
+@contextmanager
+def suppressOutput():
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:  
+            yield
+        finally:
+            sys.stdout = old_stdout
+
 # CONSTANTS
 if precision == np.float64:
     SMALL = 1e-15

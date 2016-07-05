@@ -47,9 +47,8 @@ if firstCheckpoint == 0:
     adjointFields = [IOField(name, np.zeros((mesh.origMesh.nInternalCells, dimensions[0]), config.precision), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(adjointNames, primal.dimensions)]
 else:
     t = timeSteps[nSteps - firstCheckpoint*writeInterval][0]
-    IOField.openHandle(t)
-    adjointFields = [IOField.read(name) for name in adjointNames]
-    IOField.closeHandle()
+    with IOField.handle(t):
+        adjointFields = [IOField.read(name) for name in adjointNames]
 
 adjointInternalFields = [phi.complete() for phi in adjointFields]
 adjointNewFields = [phi.phi.field for phi in adjointFields]
