@@ -128,7 +128,7 @@ class Mesh(object):
 
     def getTimes(self):
         if config.hdf5:
-            times = [float(x) for x in os.listdir(self.case) if config.isfloat(x[:-5]) and x.endswith('.hdf5')]
+            times = [float(x[:-5]) for x in os.listdir(self.case) if config.isfloat(x[:-5]) and x.endswith('.hdf5')]
         else:
             times = [float(x) for x in os.listdir(self.case) if config.isfloat(x) ]
         return sorted(times)
