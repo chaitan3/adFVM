@@ -1,9 +1,9 @@
 import numpy as np
 
-import config
-from config import ad, adsparse, T
-from parallel import pprint
-from mesh import extractField, extractVector
+from . import config
+from .config import ad, adsparse, T
+from .parallel import pprint
+from .mesh import extractField, extractVector
 logger = config.Logger(__name__)
 
 # from charles

@@ -1,8 +1,8 @@
 import numpy as np
 
-from config import ad
-from field import Field, CellField
-import config
+from . import config
+from .config import ad
+from .field import Field, CellField
 
 createFields = lambda internalFields, solver : [Field(solver.names[index], phi, solver.dimensions[index]) for index, phi in enumerate(internalFields)]
 

@@ -1,18 +1,16 @@
 #!/usr/bin/python2
 from __future__ import print_function
 
-import config, parallel
-from config import ad
-from parallel import pprint
-from field import IOField, Field
-#from op import laplacian
-from matop_petsc import laplacian, ddt
-#from matop import laplacian, ddt
-from interp import central
-from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult
-from problem import nPerturb
-from compat import printMemUsage
+from adFVM import config, parallel
+from adFVM.config import ad
+from adFVM.parallel import pprint
+from adFVM.field import IOField, Field
+from adFVM.matop_petsc import laplacian, ddt
+from adFVM.interp import central
+from adFVM.memory import printMemUsage
+
 from compute import getAdjointNorm, computeFields, getAdjointEnergy
+from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult, nPerturb
 
 import numpy as np
 import time

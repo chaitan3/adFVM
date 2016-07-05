@@ -4,7 +4,7 @@ import numpy as np
 import subprocess
 import time
 
-from compat import add_at
+from .compat import add_at
 
 mpi = MPI.COMM_WORLD
 nProcessors = mpi.Get_size()

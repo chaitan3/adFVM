@@ -2,9 +2,9 @@ from __future__ import print_function
 import numpy as np
 import time
 
-import config
-from config import ad, adsparse
-from field import Field, CellField
+from . import config
+from .config import ad, adsparse
+from .field import Field, CellField
 
 logger = config.Logger(__name__)
 

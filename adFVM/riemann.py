@@ -1,6 +1,6 @@
-import config
-from config import ad
-from field import Field
+from . import config
+from .config import ad
+from .field import Field
 
 def eulerLaxFriedrichs(gamma, pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, Normals):

@@ -6,10 +6,10 @@ import os
 case = sys.argv[1]
 times = [float(x) for x in sys.argv[2:]]
 
+config.hdf5 = False
 from field import IOField
 from mesh import Mesh
 
-config.hdf5 = False
 mesh = Mesh.create(case)
 mesh.writeHDF5(case)
 IOField.setMesh(mesh)
@@ -27,6 +27,6 @@ for time in times:
             fields.append(phi)
 
     config.hdf5 = True
-    with IOField.handle(time, case=case)
+    with IOField.handle(time, case=case):
         for phi in fields:
             phi.writeHDF5()

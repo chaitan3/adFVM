@@ -1,7 +1,7 @@
-from field import Field, IOField
-import parallel
-from parallel import pprint
-from compat import add_at
+from . import parallel
+from .parallel import pprint
+from .field import Field, IOField
+from .compat import add_at
 
 import numpy as np
 import scipy.sparse as sp

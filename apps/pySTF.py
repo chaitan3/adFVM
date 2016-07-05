@@ -1,19 +1,17 @@
 #!/usr/bin/python2
 from __future__ import print_function
-
-from mesh import Mesh
-from field import Field, CellField
-#from op import div, ddt, laplacian
-from matop import div, ddt, laplacian, hybrid
-from solver import implicit, forget
-
-from config import ad, Logger
-from parallel import pprint
-import config
-logger = Logger(__name__)
-
 import numpy as np
 import time
+
+from adFVM import config
+from adFVM.mesh import Mesh
+from adFVM.field import Field, CellField
+from adFVM.matop import div, ddt, laplacian, hybrid
+from adFVM.solver import implicit, forget
+from adFVM.config import ad, Logger
+from adFVM.parallel import pprint
+
+logger = Logger(__name__)
 
 case = 'tests/cyclic/'
 mesh = Mesh(case)

@@ -7,11 +7,11 @@ import time
 import copy
 import os
 
-import config, parallel
-from config import ad, adsparse, T
-from compat import norm, decompose
-from parallel import pprint, Exchanger
-from compat import printMemUsage, getCells
+from . import config, parallel
+from .config import ad, adsparse, T
+from .compat import norm, decompose, getCells
+from .memory import printMemUsage
+from .parallel import pprint, Exchanger
 
 logger = config.Logger(__name__)
 
@@ -74,8 +74,8 @@ class Mesh(object):
         start = time.time()
         pprint('Building mesh')
 
-        self.points, self.faces, self.owner, \
-                self.neighbour, self.boundary = meshData
+        self.points, self.faces, self.owner, self.neighbour, \
+                self.addressing, self.boundary = meshData
 
         self.buildBeforeWrite()
 
@@ -166,9 +166,14 @@ class Mesh(object):
         points = self.readFoamFile(meshDir + 'points', np.float64).astype(config.precision)
         owner = self.readFoamFile(meshDir + 'owner', np.int32).ravel()
         neighbour = self.readFoamFile(meshDir + 'neighbour', np.int32).ravel()
+        addressing = []
+        if parallel.nProcessors > 1:
+            addressing.append(self.readFoamFile(meshDir + 'pointProcAddressing', np.int32).ravel())
+            addressing.append(self.readFoamFile(meshDir + 'faceProcAddressing', np.int32).ravel())
+            addressing.append(self.readFoamFile(meshDir + 'cellProcAddressing', np.int32).ravel())
         
         boundary = self.readFoamBoundary(meshDir + 'boundary')
-        return points, faces, owner, neighbour, boundary
+        return points, faces, owner, neighbour, addressing, boundary
 
     def readFoamFile(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
@@ -252,10 +257,15 @@ class Mesh(object):
         points = np.array(meshFile['points'][parallelStart[1]:parallelEnd[1]])
         owner = np.array(meshFile['owner'][parallelStart[2]:parallelEnd[2]])
         neighbour = np.array(meshFile['neighbour'][parallelStart[3]:parallelEnd[3]])
+        addressing = []
+        if parallel.nProcessors > 1:
+            addressing.append(np.array(meshFile['pointProcAddressing'][parallelStart[5]:parallelEnd[5]]))
+            addressing.append(np.array(meshFile['faceProcAddressing'][parallelStart[6]:parallelEnd[6]]))
+            addressing.append(np.array(meshFile['cellProcAddressing'][parallelStart[7]:parallelEnd[7]]))
         boundary = self.readHDF5Boundary(meshFile)
         meshFile.close()
 
-        return points, faces, owner, neighbour, boundary
+        return points, faces, owner, neighbour, addressing, boundary
 
     def readHDF5Boundary(self, meshFile):
         boundary = {}
@@ -383,6 +393,8 @@ class Mesh(object):
                                  owner.shape[0], neighbour.shape[0],
                                  cells.shape[0]
                                 ])
+        if parallel.nProcessors > 1:
+            parallelInfo = np.concatenate((parallelInfo, [x.shape[0] for x in self.addressing]))
 
         parallelStart, parallelEnd, parallelSize = self.writeHDF5Parallel(meshFile, parallelInfo)
 
@@ -397,6 +409,13 @@ class Mesh(object):
 
         cellsData = meshFile.create_dataset('cells', (parallelSize[4],) + cells.shape[1:], cells.dtype)
         cellsData[parallelStart[4]:parallelEnd[4]] = cells
+        if parallel.nProcessors > 1:
+            names = ['pointProcAddressing', 'faceProcAddressing', 'cellProcAddressing']
+            for index in range(0, len(names)):
+                parI = index + 5
+                data = self.addressing[index]
+                cellsData = meshFile.create_dataset(names[index], (parallelSize[parI],) + data.shape[1:], data.dtype)
+                cellsData[parallelStart[parI]:parallelEnd[parI]] = data
 
         self.writeHDF5Boundary(meshFile)
 

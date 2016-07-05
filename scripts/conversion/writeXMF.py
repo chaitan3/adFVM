@@ -5,10 +5,12 @@ import sys
 import h5py
 import re
 
+import config
+
 case = sys.argv[1]
 name = os.path.basename(case.rstrip('/'))
 
-serial = ''
+#serial = ''
 serial = '_serial'
 offset = 5 + len(serial)
 
@@ -22,13 +24,10 @@ xmf.write("""<?xml version="1.0" ?>
 <Domain>
 """)
 
-timeFiles = os.listdir(case)
-regex = re.compile('[-+]?(\d*[.])?\d+' + serial + '.hdf5')
-timeFiles = [case + timeFile for timeFile in filter(regex.match, timeFiles)]
 meshFile = case + 'mesh{}.hdf5'.format(serial)
-times = [os.path.basename(timeFile[:-offset]) for timeFile in timeFiles]
-times = sorted(times, key=lambda x: float(x))
-timeFiles = sorted(timeFiles, key=lambda x: float(os.path.basename(x[:-offset])))
+timeFiles = [x for x in os.listdir(case) if config.isfloat(x[:-5]) and x.endswith('.hdf5')]
+times = [x[:-5] for x in timeFiles]
+timeFiles = [case + x for x in timeFiles]
 
 mesh = h5py.File(meshFile, 'a')
 parallelStart = mesh['parallel/start']
@@ -86,9 +85,9 @@ for index, timeFile in enumerate(timeFiles):
         <Grid GridType="Collection" CollectionType="Spatial">
     """)
     for proc in range(0, nProcs):
-        nCells = parallelEnd[proc,5]-parallelStart[proc,5]
+        nCells = parallelEnd[proc,4]-parallelStart[proc,4]
         meshName = os.path.basename(meshFile)
-        topologyString = getDataString(meshName + ':/cells', mesh['cells'], parallelStart[proc,5], parallelEnd[proc,5])
+        topologyString = getDataString(meshName + ':/cells', mesh['cells'], parallelStart[proc,4], parallelEnd[proc,4])
         geometryString = getDataString(meshName + ':/points', mesh['points'], parallelStart[proc,1], parallelEnd[proc,1])
         xmf.write("""
             <Grid Name="{0}">
@@ -99,7 +98,6 @@ for index, timeFile in enumerate(timeFiles):
                     {3}
                 </Geometry>
         """.format('{}_{}_{}'.format(name, index, proc), nCells, topologyString, geometryString))
-
 
         for fieldName in time.keys():
             phi = time[fieldName]['field']

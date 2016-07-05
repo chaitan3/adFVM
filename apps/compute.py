@@ -1,14 +1,15 @@
 #!/usr/bin/python2
-import config, parallel
-from config import ad
-from parallel import pprint
-
 import numpy as np
 
+from adFVM import config, parallel
+from adFVM.config import ad
+from adFVM.parallel import pprint
+from adFVM.field import IOField, CellField
+from adFVM.op import div, grad
+from adFVM.interp import central
+from adFVM.compat import intersectPlane
+
 from pyRCF import RCF
-from field import IOField, CellField
-from op import div, grad
-from interp import central
 
 def computeFields(solver):
     mesh = solver.mesh
@@ -116,7 +117,6 @@ def getTotalPressureAndEntropy(U, T, p, solver):
     s = solver.Cv*(p*rho**-g).log()
     return c, M, pt, s
 
-from compat import intersectPlane
 def getPressureLoss(p, T, U, p0, point, normal):
     solver = p.solver
     mesh = p.mesh.origMesh

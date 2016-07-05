@@ -44,7 +44,7 @@ def stacksize(since=0.0):
     return _VmB('VmStk:') - since
 
 import resource
-import parallel, config
+from . import parallel, config
 def printMemUsage():
     if not config.user.profile_mem:
         return

@@ -1,8 +1,8 @@
 from field import Field, CellField
 import numpy as np
 
-import config
-from config import ad, T
+from . import config
+from .config import ad, T
 
 logger = config.Logger(__name__)
 

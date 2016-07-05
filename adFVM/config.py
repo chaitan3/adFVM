@@ -31,7 +31,7 @@ if user.titan:
 
 import numpy as np
 np.random.seed(3)
-import parallel
+from . import parallel
 
 def exceptInfo(e, info=''):
     rank = parallel.rank

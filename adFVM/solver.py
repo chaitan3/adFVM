@@ -4,14 +4,13 @@ import cPickle as pkl
 import os
 import copy
 
-import config, parallel
-from config import ad, T
-from parallel import pprint
-from compat import printMemUsage
+from . import config, parallel, timestep
+from .config import ad, T
+from .parallel import pprint
+from .memory import printMemUsage
 
-from field import Field, CellField, IOField
-from mesh import Mesh
-import timestep
+from .field import Field, CellField, IOField
+from .mesh import Mesh
 
 logger = config.Logger(__name__)
 

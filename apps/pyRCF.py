@@ -1,14 +1,14 @@
 #!/usr/bin/python2
 
-import config, parallel
-from config import ad
-from parallel import pprint
+from adFVM import config, parallel
+from adFVM.config import ad
+from adFVM.parallel import pprint
 
-from field import Field, CellField, IOField
-from op import  div, snGrad, grad, laplacian, internal_sum
-from solver import Solver
-from interp import central, Reconstruct, TVD
-import riemann
+from adFVM.field import Field, CellField, IOField
+from adFVM.op import  div, snGrad, grad, laplacian, internal_sum
+from adFVM.solver import Solver
+from adFVM.interp import central, Reconstruct, TVD
+import adFVM.riemann
 
 import numpy as np
 import sys

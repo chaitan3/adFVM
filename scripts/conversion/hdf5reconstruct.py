@@ -5,20 +5,14 @@ import os
 import h5py
 import numpy as np
 
+import config
+config.hdf5 = True
 from mesh import Mesh
 
 case = sys.argv[1]
-times = sys.argv[2:]
-
-def getAddressing(proc):
-    mesh = Mesh()
-
-    foamCase = case + 'processor' + str(proc) + '/constant/polyMesh/'
-    print 'processing ' + foamCase
-    cellAddressing = mesh.readFoamFile(foamCase + 'cellProcAddressing', np.int32)
-    pointAddressing = mesh.readFoamFile(foamCase + 'pointProcAddressing', np.int32)
-
-    return cellAddressing, pointAddressing
+times = [float(x) for x in sys.argv[2:]]
+if len(times) == 0:
+    times = mesh.getTimes()
 
 print 'reading hdf5 mesh'
 mesh = h5py.File(case + '/mesh.hdf5', 'r')
@@ -36,10 +30,11 @@ nPoints = 0
 cellAddressingAll = []
 nCells = []
 for proc in range(0, nProcs):
-    cellAddressing, pointAddressing = getAddressing(proc)
+    cellAddressing = mesh['cellProcAddressing'][parallelStart[proc,7]:parallelEnd[proc,7]]
+    pointAddressing = mesh['pointProcAddressing'][parallelStart[proc,5]:parallelEnd[proc,5]]
 
     points = pointsData[parallelStart[proc,1]:parallelEnd[proc,1]]
-    cells = cellsData[parallelStart[proc,5]:parallelEnd[proc,5]]
+    cells = cellsData[parallelStart[proc,4]:parallelEnd[proc,4]]
     cells = pointAddressing[cells]
     nCells.append(cells.shape[0])
     
@@ -55,11 +50,14 @@ meshSerial = h5py.File(case + '/mesh_serial.hdf5', 'w')
 meshSerial.create_dataset('cells', data=cellSerial)
 meshSerial.create_dataset('points', data=pointSerial)
 parallelGroup = meshSerial.create_group('parallel')
-parallelGroup.create_dataset('start', data=np.zeros((1,6), np.int64))
-parallelGroup.create_dataset('end', data=np.array([[0,pointSerial.shape[0],0,0,0,cellSerial.shape[0]]], np.int64))
+parallelGroup.create_dataset('start', data=np.zeros((1,5), np.int64))
+parallelGroup.create_dataset('end', data=np.array([[0,pointSerial.shape[0],0,0,cellSerial.shape[0]]], np.int64))
 meshSerial.close()
 
 for time in times:
+    if time.is_integer():
+        time = int(time)
+    time = str(time)
     print 'reading hdf5 fields ' + time
     field = h5py.File(case + '/{}.hdf5'.format(time), 'r')
     fieldSerial = h5py.File(case + '/{}_serial.hdf5'.format(time), 'w')

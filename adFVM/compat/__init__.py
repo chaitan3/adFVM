@@ -24,6 +24,5 @@ def add_at(a, indices, b):
         cfuncs.add_at(a, indices, b)
 
 
-from cfuncs import intersectPlane, getCells, decompose
+from .cfuncs import intersectPlane, getCells, decompose
 #from cext import part_mesh
-from memory import printMemUsage

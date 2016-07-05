@@ -1,8 +1,9 @@
-from field import Field, IOField
 import numpy as np
 import scipy.sparse as sp
 import time
-from parallel import pprint
+
+from .parallel import pprint
+from .field import Field, IOField
 
 class Matrix(object):
     def __init__(self, A, b=None):

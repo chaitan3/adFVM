@@ -6,11 +6,10 @@ import os
 import copy
 from contextlib import contextmanager
 
-import config, parallel
-from config import ad, T
-from parallel import pprint
-import BCs
-from mesh import extractField, writeField
+from . import config, parallel, BCs
+from .config import ad, T
+from .parallel import pprint
+from .mesh import extractField, writeField
 logger = config.Logger(__name__)
 
 class Field(object):
@@ -536,27 +535,11 @@ class IOField(Field):
         if not skipProcessor:
             field = parallel.getRemoteCells(field, self.mesh)
 
-        assert self._handle is not None
-            
         fieldsFile = self._handle
         fieldGroup = fieldsFile.require_group(self.name)
 
         parallelInfo = np.array([field.shape[0], boundary.shape[0]])
-        nInfo = len(parallelInfo)
-        parallelStart = np.zeros_like(parallelInfo)
-        parallelEnd = np.zeros_like(parallelInfo)
-        parallel.mpi.Exscan(parallelInfo, parallelStart)
-        parallel.mpi.Scan(parallelInfo, parallelEnd)
-        parallelSize = parallelEnd.copy()
-        parallel.mpi.Bcast(parallelSize, nProcs-1)
-
-        parallelGroup = fieldGroup.require_group('parallel')
-        parallelStartData = parallelGroup.require_dataset('start', (nProcs, nInfo), np.int64)
-        parallelEndData = parallelGroup.require_dataset('end', (nProcs, nInfo), np.int64)
-        with parallelStartData.collective:
-            parallelStartData[rank] = parallelStart
-        with parallelEndData.collective:
-            parallelEndData[rank] = parallelEnd
+        parallelStart, parallelEnd, parallelSize = self.mesh.writeHDF5Parallel(fieldGroup, parallelInfo)
 
         fieldData = fieldGroup.require_dataset('field', (parallelSize[0],) + self.dimensions, np.float64)
         with fieldData.collective:
@@ -569,6 +552,7 @@ class IOField(Field):
         #fieldsFile.close()
 
     def decompose(self, time, data):
+        assert parallel.nProcessors == 1
         mesh = self.mesh.origMesh
         decomposed, addressing = data
         nprocs = len(decomposed)
