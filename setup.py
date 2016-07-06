@@ -11,7 +11,7 @@ class CleanCommand(Command):
     def finalize_options(self):
         pass
     def run(self):
-        os.system('rm -vrf ./build ./dist ./*.so ./*.pyc ./*.tgz ./*.egg-info')
+        os.system('rm -vrf ./build ./dist ./*.pyc ./*.tgz ./*.egg-info')
 
 
 compatDir = 'adFVM/compat/'
@@ -33,9 +33,9 @@ setup(name='adFVM',
           'scipy >= 0.13.3',
           'mpi4py >= 0.13.1',
           'cython >= 0.24',
-          'theano',
           'h5py >= 2.6.0',
-          'matplotlib'
+          'theano >= 0.7.0',
+          'matplotlib >= 1.3.1'
       ],
       cmdclass={
         'clean': CleanCommand,
