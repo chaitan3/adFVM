@@ -431,10 +431,10 @@ class Mesh(object):
         parallelSize = parallelEnd.copy()
         parallel.mpi.Bcast(parallelSize, nProcs-1)
 
-        parallelGroup = meshFile.create_group('parallel')
-        parallelStartData = parallelGroup.create_dataset('start', (nProcs, len(parallelInfo)), np.int64)
+        parallelGroup = meshFile.require_group('parallel')
+        parallelStartData = parallelGroup.require_dataset('start', (nProcs, len(parallelInfo)), np.int64)
         parallelStartData[rank] = parallelStart
-        parallelEndData = parallelGroup.create_dataset('end', (nProcs, len(parallelInfo)), np.int64)
+        parallelEndData = parallelGroup.require_dataset('end', (nProcs, len(parallelInfo)), np.int64)
         parallelEndData[rank] = parallelEnd
         return parallelStart, parallelEnd, parallelSize
 

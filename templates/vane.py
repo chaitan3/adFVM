@@ -1,8 +1,10 @@
-from pyRCF import RCF 
-import config
-from config import ad
-from compat import norm
 import numpy as np
+
+from adFVM import config
+from adFVM.config import ad
+from compat import norm, intersectPlane
+
+from pyRCF import RCF 
 
 #primal = RCF('/home/talnikar/foam/blade/les-turb/')
 primal = RCF('/home/talnikar/foam/vane/laminar-lowRe/')#, timeIntegrator='euler')
@@ -42,7 +44,6 @@ def objectiveHeatTransfer(fields, mesh):
 
 # pressure loss
 def getPlane(solver):
-    from compat import intersectPlane
     point = np.array([0.052641,-0.1,0.005])
     normal = np.array([1.,0.,0.])
     interCells, interArea = intersectPlane(solver.mesh, point, normal)

@@ -1,14 +1,15 @@
-from pyRCF import RCF 
-from field import Field
-from config import ad
-import config
-from compat import norm
 import numpy as np
+
+from adFVM import config
+from adFVM.config import ad
+from compat import norm, intersectPlane
+
+from pyRCF import RCF 
 
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('cases/cylinder/', timeIntegrator='euler', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+primal = RCF('cases/cylinder/', timeIntegrator='euler', CFL=1.2, mu=lambda T: T/T*2.5e-5)
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
