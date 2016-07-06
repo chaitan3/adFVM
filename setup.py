@@ -6,7 +6,7 @@ from Cython.Build import cythonize
 compatDir = 'adFVM/compat/'
 
 cfuncs = cythonize(
-        [Extension('cfuncs', [compatDir + 'cfuncs.pyx'], 
+        [Extension(compatDir + 'cfuncs', [compatDir + 'cfuncs.pyx'], 
         libraries=['metis'], language='c++')])
 
 setup(name='adFVM',
