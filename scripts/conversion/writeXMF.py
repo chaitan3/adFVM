@@ -5,7 +5,7 @@ import sys
 import h5py
 import re
 
-import config
+from adFVM import config
 
 case = sys.argv[1]
 name = os.path.basename(case.rstrip('/'))

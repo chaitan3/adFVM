@@ -1,17 +1,17 @@
 #!/usr/bin/python2
-import parallel
-import config
 import sys
 import glob
 import h5py
+
+from adFVM import parallel, config
+from adFVM.mesh import Mesh
+from adFVM.field import IOField
 config.hdf5 = True
 case = sys.argv[1]
 
-from mesh import Mesh
 mesh = Mesh.create(case)
 #mesh.writeFoam(case)
 
-from field import IOField
 IOField.setMesh(mesh)
 times = glob.glob(mesh.case + '*.hdf5')
 for timeF in times:

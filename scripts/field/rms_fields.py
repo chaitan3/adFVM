@@ -1,9 +1,10 @@
-from field import Field, IOField
-from mesh import Mesh
 import sys
 import os
 import numpy as np
-import config
+
+from adFVM import config
+from adFVM.field import Field, IOField
+from adFVM.mesh import Mesh
 
 case, field = sys.argv[1:3]
 #times = sys.argv[3:]

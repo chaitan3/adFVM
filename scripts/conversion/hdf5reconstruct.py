@@ -5,9 +5,9 @@ import os
 import h5py
 import numpy as np
 
-import config
+from adFVM import config
 config.hdf5 = True
-from mesh import Mesh
+from adFVM.mesh import Mesh
 
 case = sys.argv[1]
 times = [float(x) for x in sys.argv[2:]]

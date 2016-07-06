@@ -1,8 +1,7 @@
-from mesh import Mesh
-from field import IOField
-
 import sys, os
 
+from adFVM.mesh import Mesh
+from adFVM.field import IOField
 case = sys.argv[1]
 nprocs = int(sys.argv[2])
 times = [float(x) for x in sys.argv[3:]]

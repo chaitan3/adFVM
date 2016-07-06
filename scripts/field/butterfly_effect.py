@@ -1,8 +1,9 @@
-from field import Field, IOField
-from mesh import Mesh
 import sys, os
 import numpy as np
-import config
+
+from adFVM import config
+from adFVM.field import Field, IOField
+from adFVM.mesh import Mesh
 
 case1, case2 = sys.argv[1:]
 mesh = Mesh.create(case1)

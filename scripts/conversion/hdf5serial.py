@@ -6,12 +6,9 @@ import h5py
 import numpy as np
 import re
 
-import parallel
-import config
-
-from mesh import Mesh
-from field import IOField
-import BCs
+from adFVM import parallel, config, BCs
+from adFVM.mesh import Mesh
+from adFVM.field import IOField
 
 case = sys.argv[1]
 times = [float(x) for x in sys.argv[2:]]

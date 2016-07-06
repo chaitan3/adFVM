@@ -1,8 +1,9 @@
-from field import Field, IOField
-from mesh import Mesh
 import sys, os, copy
 import numpy as np
-import config
+
+from adFVM import config
+from adFVM.field import Field, IOField
+from adFVM.mesh import Mesh
 
 case1, case2, time1, time2 = sys.argv[1:]
 time1 = float(time1)
