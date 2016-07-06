@@ -1,9 +1,5 @@
 # custom norm for numpy 1.7
 import numpy as np
-try:
-    import cfuncs
-except:
-    pass
 
 def norm(a, axis, **kwuser):
     try:
@@ -23,6 +19,4 @@ def add_at(a, indices, b):
         assert b.dtype == np.float64
         cfuncs.add_at(a, indices, b)
 
-
-from .cfuncs import intersectPlane, getCells, decompose
-#from cext import part_mesh
+from cfuncs import intersectPlane, getCells, decompose

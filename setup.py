@@ -1,7 +1,18 @@
 import numpy as np
-#from distutils.core import setup, Extension
-from setuptools import setup, Extension
+import os
+from setuptools import setup, Extension, Command
 from Cython.Build import cythonize
+
+class CleanCommand(Command):
+    """Custom clean command to tidy up the project root."""
+    user_options = []
+    def initialize_options(self):
+        pass
+    def finalize_options(self):
+        pass
+    def run(self):
+        os.system('rm -vrf ./build ./dist ./*.so ./*.pyc ./*.tgz ./*.egg-info')
+
 
 compatDir = 'adFVM/compat/'
 
@@ -25,5 +36,8 @@ setup(name='adFVM',
           'theano',
           'h5py >= 2.6.0',
           'matplotlib'
-      ]
+      ],
+      cmdclass={
+        'clean': CleanCommand,
+      }
     )
