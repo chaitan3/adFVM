@@ -1,7 +1,7 @@
 import numpy as np
-from distutils.core import setup, Extension
+#from distutils.core import setup, Extension
+from setuptools import setup, Extension
 from Cython.Build import cythonize
-#import setuptools
 
 compatDir = 'adFVM/compat/'
 
@@ -16,5 +16,14 @@ setup(name='adFVM',
       author_email='talnikar@mit.edu',
       packages=['adFVM', 'adFVM.compat'],
       ext_modules = cfuncs,
-      include_dirs=[np.get_include()]
+      include_dirs=[np.get_include()],
+      install_requires=[ 
+          'numpy >= 1.8.2',
+          'scipy >= 0.13.3',
+          'mpi4py >= 0.13.1',
+          'cython >= 0.24',
+          'theano',
+          'h5py >= 2.6.0',
+          'matplotlib'
+      ]
     )
