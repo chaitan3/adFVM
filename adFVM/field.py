@@ -258,34 +258,13 @@ class IOField(Field):
             self.boundary = self.mesh.defaultBoundary
         else:
             self.boundary = boundary
-        self.func = None
         self.phi = None
 
-    def complete(self):
-        logger.debug('completing field {0}'.format(self.name))
-        internalField = ad.matrix()
-        #X.tag.test_value = self.field
-        # CellField for later use
-        self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, ghost=True)
-        return internalField
-
-    def partialComplete(self, value=0.):
-        mesh = self.mesh.origMesh
-        boundary = self.boundary
-        self.field = np.vstack((self.field, value*np.ones((mesh.nGhostCells,) + self.dimensions, config.precision)))
-        for patchID in self.boundary:
-            patch = boundary[patchID]
-            if patch['type'] in BCs.valuePatches:
-                startFace = mesh.boundary[patchID]['startFace']
-                nFaces = mesh.boundary[patchID]['nFaces']
-                endFace = startFace + nFaces
-                cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-                cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
-                try:
-                    value = extractField(patch['value'], nFaces, self.dimensions)
-                    self.field[cellStartFace:cellEndFace] = value
-                except:
-                    pass
+    @classmethod
+    def internalField(self, name, field, dimensions):
+        phi = self(name, field, dimensions)  
+        phi.partialComplete()
+        return phi
 
     @classmethod
     def boundaryField(self, name, boundary, dimensions):
@@ -302,32 +281,6 @@ class IOField(Field):
             field[cellStartFace:cellEndFace] = boundary[patchID]
 
         return self(name, field, dimensions, meshBoundary)
-
-    def getInternalField(self):
-        return self.field[:self.mesh.origMesh.nInternalCells]
-
-    @classmethod
-    def openHandle(self, time, case=None):
-        timeDir = self.mesh.getTimeDir(time, case)
-        if config.hdf5:
-            self._handle = h5py.File(timeDir + '.hdf5', 'a', driver='mpio', comm=parallel.mpi)
-        else:
-            self._handle = timeDir + '/'
-        self.time = time
-
-    @classmethod
-    def closeHandle(self):
-        if config.hdf5:
-            self._handle.close()
-        self._handle = None
-        self.time = None
-
-    @classmethod
-    @contextmanager
-    def handle(self, time, case=None):
-        self.openHandle(time, case=case)
-        yield
-        self.closeHandle()
 
     @classmethod
     def read(self, name):
@@ -442,7 +395,62 @@ class IOField(Field):
         #fieldsFile.close()
 
         return self(name, internalField, dimensions, boundary)
-    
+ 
+
+    @classmethod
+    def openHandle(self, time, case=None):
+        timeDir = self.mesh.getTimeDir(time, case)
+        if config.hdf5:
+            self._handle = h5py.File(timeDir + '.hdf5', 'a', driver='mpio', comm=parallel.mpi)
+        else:
+            self._handle = timeDir + '/'
+        self.time = time
+
+    @classmethod
+    def closeHandle(self):
+        if config.hdf5:
+            self._handle.close()
+        self._handle = None
+        self.time = None
+
+    @classmethod
+    @contextmanager
+    def handle(self, time, case=None):
+        self.openHandle(time, case=case)
+        yield
+        self.closeHandle()
+
+
+    def getInternalField(self):
+        return self.field[:self.mesh.origMesh.nInternalCells]
+
+
+    def complete(self):
+        logger.debug('completing field {0}'.format(self.name))
+        internalField = ad.matrix()
+        #X.tag.test_value = self.field
+        # CellField for later use
+        self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, ghost=True)
+        return internalField
+
+    def partialComplete(self, value=0.):
+        mesh = self.mesh.origMesh
+        boundary = self.boundary
+        self.field = np.vstack((self.field, value*np.ones((mesh.nGhostCells,) + self.dimensions, config.precision)))
+        for patchID in self.boundary:
+            patch = boundary[patchID]
+            if patch['type'] in BCs.valuePatches:
+                startFace = mesh.boundary[patchID]['startFace']
+                nFaces = mesh.boundary[patchID]['nFaces']
+                endFace = startFace + nFaces
+                cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
+                cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+                try:
+                    value = extractField(patch['value'], nFaces, self.dimensions)
+                    self.field[cellStartFace:cellEndFace] = value
+                except:
+                    pass
+   
     def write(self, name=None, skipProcessor=False):
         if name:
             self.name = name  

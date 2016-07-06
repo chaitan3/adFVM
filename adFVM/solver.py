@@ -123,6 +123,10 @@ class Solver(object):
         stackedFields = self.stackFields(fields, np)
 
         for index, value in enumerate(source(fields, mesh, t)):
+            if index == 1:
+                phi = IOField.internalField('rhoUS', value, (3,))
+                with IOField.handle(startTime):
+                    phi.write()
             self.source[index][1][:] = value
 
         # objective is local
@@ -198,8 +202,7 @@ class Solver(object):
 
             if (timeIndex % writeInterval == 0) and (mode != 'forward'):
                 # write mesh, fields, status
-                dtc = IOField('dtc', dtc, (1,))
-                dtc.partialComplete()
+                dtc = IOField.internalField('dtc', dtc, (1,))
                 self.writeFields(fields + [dtc], t)
                 #self.writeStatusFile([timeIndex, t, dt, result])
 

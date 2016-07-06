@@ -16,8 +16,8 @@ def source(fields, mesh, t):
     mesh = mesh.origMesh
     n = mesh.nInternalCells
     U = fields[1].field[:n]/fields[0].field[:n]
-    x = mesh.cellCentres[:n, [0]]
-    y = mesh.cellCentres[:n, [1]]
+    x = mesh.cellCentres[:n, 0]
+    y = mesh.cellCentres[:n, 1]
     rho = np.zeros((n, 1))
     rhoE = np.zeros((n, 1))
 
@@ -28,20 +28,33 @@ def source(fields, mesh, t):
         b = (c**m/(1+c**m))**(1/m)
         return b
 
-    B = ((x-0.025)/0.025)**6
-    up = y <= 0.005
-    down = y >= 0.015
-    w = 100*np.ones_like(y)
-    w[up] = 100*blasius(6*(0.005-y[up])/0.005)
-    w[down] = 100*blasius(6*(y[down]-0.015)/0.005)
+    lx = 0.03
+    ly = 0.02
+    Bx = (0.003, 0.027)
+    wy = (0.0095, 0.0105)
+    ux = 100
 
-    rhoU = B*(w-U)
+    B = np.zeros_like(x)
+    left = x <= Bx[0]
+    right = x >= Bx[1]
+    B[left] = np.exp(-1/(1-(x[left]/Bx[0])**2))
+    B[right] = np.exp(-1/(1-((x[right]-lx)/(lx-Bx[1]))**2))
+    B = B.reshape((-1,1))
+
+    down = y <= wy[0]
+    up = y >= wy[1]
+    w = np.zeros_like(U)
+    w[:, 0] = ux
+    w[down, 0] = ux*(1+blasius(100*(wy[0]-y[down])/wy[0]))
+    w[up, 0] = ux*(1+blasius(100*(y[up]-wy[1])/(ly-wy[1])))
+
+    rhoU = 1e4*B*(w-U)
 
     return rho, rhoU, rhoE
 
 #Steps = 20000
 #riteInterval = 500
-nSteps = 100000
+nSteps = 200000
 writeInterval = 5000
 startTime = 0.0
-dt = 1e-8
+dt = 1e-7
