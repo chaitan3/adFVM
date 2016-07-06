@@ -1,16 +1,16 @@
 cimport numpy as np
 cimport cython
+cimport part_mesh
 from libcpp.vector cimport vector
 from libcpp.set cimport set
 from libcpp.map cimport map
 from libcpp.pair cimport pair
 from libcpp.string cimport string
 from libc.stdio cimport sprintf
-ctypedef double dtype
 
 import copy
 import numpy as np
-from cext import part_mesh
+ctypedef double dtype
 
 def add_at(np.ndarray[dtype, ndim=2] a, np.ndarray[int] indices, np.ndarray[dtype,ndim=2] b):
     cdef int n = indices.shape[0]
@@ -172,12 +172,16 @@ def decompose(object mesh, int nprocs):
     meshO = mesh.origMesh
     ne = meshO.nInternalCells
     nn = mesh.points.shape[0]
-    eptr = np.arange(0, ne*8+1, 8, dtype=np.int32)
-    eind = mesh.cells.astype(np.int32)
+    cdef np.ndarray[int, ndim=1] eptr = np.arange(0, ne*8+1, 8, dtype=np.int32)
+    cdef np.ndarray[int, ndim=2] eind = mesh.cells.astype(np.int32)
 
     cdef np.ndarray[int, ndim=1] epart = np.zeros(ne, np.int32)
     cdef np.ndarray[int, ndim=1] npart = np.zeros(nn, np.int32)
-    part_mesh(ne, nn, eptr, eind, nprocs, epart, npart)
+    cdef int ncommon = 4
+    cdef int c_ne = ne
+    cdef int c_nn = nn
+    cdef int objval
+    part_mesh.METIS_PartMeshDual(&c_ne, &c_nn, &eptr[0], &eind[0,0], NULL, NULL, &ncommon, &nprocs, NULL, NULL, &objval, &epart[0], &npart[0])
 
     print 'metis completed'
 
