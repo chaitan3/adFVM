@@ -30,8 +30,10 @@ def source(fields, mesh, t):
 
     lx = 0.03
     ly = 0.02
+    mid = ly/2
+    dw = 0.001
     Bx = (0.003, 0.027)
-    wy = (0.0095, 0.0105)
+    wy = (mid-dw/2, mid+dw/2)
     ux = 100
 
     B = np.zeros_like(x)

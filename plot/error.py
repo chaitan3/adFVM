@@ -18,22 +18,28 @@ viscosity = []
 sens = []
 perturb = 0.
 
-f = open('vane/objective.txt')
+f = open('vane2/objective.txt')
 lines =  f.readlines()
+#for line in lines:
+#    words = line.split(' ')
+#    if words[0] == 'perturb':
+#        perturb = float(words[1])
+#    elif words[0] == 'adjoint':
+#        sens.append(float(words[1]))
+#    else:
+#        if words[0] != 'orig':
+#            viscosity.append(float(words[0]))
 for line in lines:
     words = line.split(' ')
     if words[0] == 'perturb':
-        perturb = float(words[1])
+        perturb = float(words[2])
     elif words[0] == 'adjoint':
-        sens.append(float(words[1]))
-    else:
-        if words[0] != 'orig':
-            viscosity.append(float(words[0]))
-index = np.argsort(viscosity)
+        viscosity.append(float(words[2]))
+        sens.append(float(words[3]))
+
+index = np.argsort(viscosity)[2:-2]
 viscosity = np.array(viscosity)[index]
 sens = np.array(sens)[index]
-viscosity = np.array(viscosity)
-sens = np.array(sens)
 
 Ah = {}
 for i in range(0, len(sens)):
@@ -90,11 +96,13 @@ from matplotlib.pyplot import *
 #plt.semilogx(viscosity, poly(viscosity))
 plt.xlabel('viscosity scaling factor')
 plt.semilogx(viscosity, perturb*np.ones_like(viscosity), label='true sensitivity')
-plt.semilogx(viscosity, sens, '.', color=colors,markersize=20, label='samples')
+#plt.semilogx(viscosity, sens, '.', color=colors,markersize=20, label='samples')
+plt.semilogx(viscosity, sens, '.', markersize=20, label='samples')
+print sens
 plt.ylabel('sensitivity')
 #plt.semilogx(viscosity, np.zeros_like(viscosity))
 #plt.semilogx(viscosity, error, 'b.',markersize=20)
 #plt.ylabel('percent error in sensitivity')
 
 plt.legend()
-plt.savefig('vane/error.png')
+plt.savefig('vane2/error.png')

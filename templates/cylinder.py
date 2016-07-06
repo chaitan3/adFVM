@@ -2,7 +2,7 @@ import numpy as np
 
 from adFVM import config
 from adFVM.config import ad
-from compat import norm, intersectPlane
+from adFVM.compat import norm, intersectPlane
 
 from pyRCF import RCF 
 
