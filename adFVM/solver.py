@@ -201,10 +201,10 @@ class Solver(object):
                 dtc = IOField('dtc', dtc, (1,))
                 dtc.partialComplete()
                 self.writeFields(fields + [dtc], t)
-                self.writeStatusFile([timeIndex, t, dt, result])
+                #self.writeStatusFile([timeIndex, t, dt, result])
 
                 # write timeSeries if in orig mode (problem.py)
-                if mode == 'orig' and parallel.rank == 0 and not self.localTimeStep:
+                if mode == 'orig' and parallel.rank == 0:
                     with open(self.timeStepFile, 'a') as f:
                         np.savetxt(f, timeSteps[lastIndex:])
                     with open(self.timeSeriesFile, 'a') as f:
@@ -215,10 +215,16 @@ class Solver(object):
 
         if mode == 'forward':
             return solutions
-        if (timeIndex % writeInterval != 0) and (timeIndex >= writeInterval):
+        if (timeIndex % writeInterval != 0) and (timeIndex > writeInterval):
             dtc = IOField('dtc', dtc, (1,))
             dtc.partialComplete()
             self.writeFields(fields + [dtc], t)
+            if mode == 'orig' and parallel.rank == 0:
+                with open(self.timeStepFile, 'a') as f:
+                    np.savetxt(f, timeSteps[lastIndex:])
+                with open(self.timeSeriesFile, 'a') as f:
+                    np.savetxt(f, timeSeries[lastIndex:])
+                lastIndex = len(timeSteps)
         return result
 
     def readStatusFile(self):
