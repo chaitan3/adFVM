@@ -42,8 +42,9 @@ for patchID in meshO1.boundary:
 for field in os.listdir(mesh1.getTimeDir(time1)):
     print 'interpolating', field
     Field.setMesh(mesh1)
-    phi1 = IOField.read(field, mesh1, time1)
-    phi1.partialComplete()
+    with IOField.handle(time1):
+        phi1 = IOField.read(field)
+        phi1.partialComplete()
     dims = phi1.dimensions
 
     phi2 = np.zeros((meshO2.nCells, ) + dims)
@@ -57,5 +58,6 @@ for field in os.listdir(mesh1.getTimeDir(time1)):
     phi2.boundary = copy.deepcopy(phi1.boundary)
 
     Field.setMesh(mesh2)
-    phi2.write(time2)
+    with IOField.handle(time2):
+        phi2.write()
     print

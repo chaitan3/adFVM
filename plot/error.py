@@ -94,15 +94,27 @@ from matplotlib.pyplot import *
 #coeff = polyfit(viscosity, error, 1)
 #poly = poly1d(coeff)
 #plt.semilogx(viscosity, poly(viscosity))
+
+import cPickle
+cmcd = cPickle.load(open('colors.pkl'))
+colors = [cmcd.get(i,(0.,0.,0.,1.)) for i in viscosity]
+
+sens = (100-sens)/100
+perturb = (100-perturb)/100
 plt.xlabel('viscosity scaling factor')
-plt.semilogx(viscosity, perturb*np.ones_like(viscosity), label='true sensitivity')
-#plt.semilogx(viscosity, sens, '.', color=colors,markersize=20, label='samples')
-plt.semilogx(viscosity, sens, '.', markersize=20, label='samples')
-print sens
 plt.ylabel('sensitivity')
+plt.semilogx(viscosity, perturb*np.ones_like(viscosity), label='true sensitivity')
+#for i in range(0, len(viscosity)):
+#    plt.loglog(viscosity[i], sens[i], '.', color=colors[i],markersize=20)
+plt.semilogx(viscosity, sens, '.',markersize=20, label='samples')
+#sens = np.abs(sens-perturb)/np.abs(perturb)
+#plt.ylabel('relative error in sensitivity')
+#plt.loglog(viscosity, sens, '.', markersize=20, label='samples')
+print viscosity
+print sens
 #plt.semilogx(viscosity, np.zeros_like(viscosity))
 #plt.semilogx(viscosity, error, 'b.',markersize=20)
 #plt.ylabel('percent error in sensitivity')
 
 plt.legend()
-plt.savefig('vane2/error.png')
+plt.savefig('vane2/error2.png')
