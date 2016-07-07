@@ -15,6 +15,9 @@ meshO = mesh.origMesh
 
 times = mesh.getTimes()
 
+#nLayers = 200
+nLayers = 1
+
 for field in fields:
     # time avg: no dt
     avg = 0.
@@ -26,8 +29,6 @@ for field in fields:
     avg /= len(times)
 
     # spanwise avg: structured
-    #nLayers = 200
-    nLayers = 1
     nDims = avg.shape[1]
     #nLayers = 1
     def average(start, end):

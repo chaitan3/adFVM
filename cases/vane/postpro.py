@@ -5,8 +5,8 @@ from match import *
 from adFVM import config
 from adFVM.field import IOField
 from adFVM.parallel import pprint
+from adFVM.postpro import getHTC, getIsentropicMa, getPressureLoss, getYPlus
 from pyRCF import RCF
-from compute import getHTC, getIsentropicMa, getPressureLoss, getYPlus
 
 def postprocess(solver, time, suffix=''):
     mesh = solver.mesh.origMesh

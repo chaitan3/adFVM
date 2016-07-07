@@ -8,8 +8,8 @@ from adFVM.field import IOField, Field
 from adFVM.matop_petsc import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
+from adFVM.postpro import getAdjointNorm, computeFields, getAdjointEnergy
 
-from compute import getAdjointNorm, computeFields, getAdjointEnergy
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult, nPerturb
 
 import numpy as np
