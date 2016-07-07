@@ -3,7 +3,7 @@ import sys
 import os
 import numpy as np
 
-from adFVM import config
+from adFVM import config, BCs
 from adFVM.field import Field, IOField
 from adFVM.mesh import Mesh
 
@@ -26,7 +26,8 @@ for field in fields:
     avg /= len(times)
 
     # spanwise avg: structured
-    nLayers = 200
+    #nLayers = 200
+    nLayers = 1
     nDims = avg.shape[1]
     #nLayers = 1
     def average(start, end):

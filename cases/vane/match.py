@@ -77,22 +77,20 @@ def match_wakes(pl, coords, p0, saveFile):
 
 
 if __name__ == '__main__':
-    from mesh import Mesh
-    from field import Field, IOField
+    from adFVM.mesh import Mesh
+    from adFVM.field import Field, IOField
     import sys
 
     case, time = sys.argv[1:3]
+    time = float(time)
     mesh = Mesh.create(case)
     Field.setMesh(mesh)
 
-    IOField.openHandle(float(time))
-    htc = IOField.read('htc')
-    htc.partialComplete()
-    Ma = IOField.read('Ma')
-    Ma.partialComplete()
-    #htc = IOField.read('htc_avg')
-    #Ma = IOField.read('Ma_avg')
-    IOField.closeHandle()
+    with IOField.handle(time):
+        htc = IOField.read('htc_avg')
+        htc.partialComplete()
+        Ma = IOField.read('Ma_avg')
+        Ma.partialComplete()
 
     nLayers = 1
     #nLayers = 200
