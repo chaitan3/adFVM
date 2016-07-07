@@ -3,8 +3,7 @@ import numpy as np
 from adFVM import config
 from adFVM.config import ad
 from adFVM.compat import norm
-
-from pyRCF import RCF 
+from adFVM.density import RCF 
 
 primal = RCF('/home/talnikar/adFVM/cases/periodic_wake/')#, timeIntegrator='euler')
 

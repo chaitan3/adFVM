@@ -3,8 +3,7 @@ import numpy as np
 from adFVM import config
 from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
-
-from pyRCF import RCF 
+from adFVM.density import RCF 
 
 #primal = RCF('.')
 primal = RCF('/home/talnikar/foam/stator-rotor/laminar-test/', timeIntegrator='euler')

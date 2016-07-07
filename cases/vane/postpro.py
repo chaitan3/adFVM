@@ -6,7 +6,7 @@ from adFVM import config
 from adFVM.field import IOField
 from adFVM.parallel import pprint
 from adFVM.postpro import getHTC, getIsentropicMa, getPressureLoss, getYPlus
-from pyRCF import RCF
+from adFVM.density import RCF
 
 def postprocess(solver, time, suffix=''):
     mesh = solver.mesh.origMesh

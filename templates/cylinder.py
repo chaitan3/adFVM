@@ -3,8 +3,7 @@ import numpy as np
 from adFVM import config
 from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
-
-from pyRCF import RCF 
+from adFVM.density import RCF 
 
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
