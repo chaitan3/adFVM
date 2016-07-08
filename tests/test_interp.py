@@ -1,10 +1,9 @@
 from __future__ import print_function
 from test import *
 
-from field import Field, CellField
-from mesh import Mesh
-
-from interp import central, TVD_dual
+from adFVM.field import Field, CellField
+from adFVM.mesh import Mesh
+from adFVM.interp import central, TVD_dual
 
 class TestInterp(unittest.TestCase):
     @classmethod

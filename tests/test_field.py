@@ -1,9 +1,9 @@
 from __future__ import print_function
 from test import *
-import config
 
-from field import Field, CellField
-from mesh import Mesh
+from adFVM import config
+from adFVM.field import Field, CellField
+from adFVM.mesh import Mesh
 
 class TestField(unittest.TestCase):
     @classmethod

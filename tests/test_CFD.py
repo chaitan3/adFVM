@@ -1,9 +1,9 @@
 from __future__ import print_function
 from test import *
-import config
 
-from field import CellField, IOField
-from pyRCF import RCF
+from adFVM import config
+from adFVM.field import CellField, IOField
+from adFVM.density import RCF
 #from mms import source, solution
 
 class TestCases(unittest.TestCase):

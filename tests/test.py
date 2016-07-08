@@ -1,13 +1,11 @@
-import sys
-sys.path.append('../')
 import unittest
 import numpy as np
-import config
-from config import ad, T
+
+from adFVM import config
+from adFVM.config import ad, T
 config.unpickleFunction = False
 config.pickleFunction = False
-
-from solver import SolverFunction
+from adFVM.solver import SolverFunction
 
 def evaluate(output, inputs, value, self):
     if not isinstance(inputs, list):

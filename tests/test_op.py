@@ -1,10 +1,9 @@
 from __future__ import print_function
 from test import *
 
-from field import Field, CellField
-from mesh import Mesh
-
-from op import grad, div, laplacian, snGrad
+from adFVM.field import Field, CellField
+from adFVM.mesh import Mesh
+from adFVM.op import grad, div, laplacian, snGrad
 
 class TestOp(unittest.TestCase):
     @classmethod
