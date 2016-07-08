@@ -21,7 +21,7 @@ cfuncs = cythonize(
         libraries=['metis'], language='c++')])
 
 setup(name='adFVM',
-      version='0.1',
+      version='0.1.1',
       description='finite volume method flow solver',
       author='Chaitanya Talnikar',
       author_email='talnikar@mit.edu',
