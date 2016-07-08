@@ -123,10 +123,10 @@ class Solver(object):
         stackedFields = self.stackFields(fields, np)
 
         for index, value in enumerate(source(fields, mesh, t)):
-            if index == 1:
-                phi = IOField.internalField('rhoUS', value, (3,))
-                with IOField.handle(startTime):
-                    phi.write()
+            #if index == 1:
+            #    phi = IOField.internalField('rhoUS', value, (3,))
+            #    with IOField.handle(startTime):
+            #        phi.write()
             self.source[index][1][:] = value
 
         # objective is local

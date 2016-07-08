@@ -1,6 +1,6 @@
 import numpy as np
 
-from adFVM import config
+from adFVM import config, parallel
 from adFVM.config import ad
 from adFVM.compat import norm
 from adFVM.density import RCF 
@@ -8,8 +8,19 @@ from adFVM.density import RCF
 primal = RCF('/home/talnikar/adFVM/cases/periodic_wake/')#, timeIntegrator='euler')
 
 def objective(fields, mesh):
-    res = fields[0].field.sum()
-    return res
+    rho, rhoU, rhoE = fields
+    solver = rho.solver
+    mesh = mesh.origMesh
+
+    center = np.array([0.015, 0.01, 0.01])
+    dist = (mesh.cellCentres-center)**2
+    dist = dist.sum(axis=1)
+    index = parallel.argmin(dist)
+    indices = ad.ivector()
+    solver.postpro.append((indices, index))
+
+    U = rhoU.field[indices]/rho.field[indices]
+    return (U[:,1]**2).sum()/2
 
 def source(fields, mesh, t):
     mesh = mesh.origMesh
