@@ -64,7 +64,7 @@ def source(fields, mesh, t):
 
     return rho, rhoU, rhoE
 
-Steps = 20000
+nSteps = 20000
 riteInterval = 500
 startTime = 1.0
 dt = 1e-7
