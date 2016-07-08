@@ -130,9 +130,10 @@ class Solver(object):
             self.source[index][1][:] = value
 
         # objective is local
-        result += self.objective(stackedFields)
+        instObjective = self.objective(stackedFields)
+        result += instObjective
+        timeSeries = [parallel.sum(instObjective)]
         timeSteps = []
-        timeSeries = []
         # writing and returning local solutions
         if mode == 'forward':
             if self.dynamicMesh:
@@ -168,7 +169,7 @@ class Solver(object):
             end = time.time()
             pprint('Time for iteration:', end-start)
             pprint('Time since beginning:', end-config.runtime)
-            pprint('cumulative objective: ', parallel.sum(result))
+            pprint('running average objective: ', parallel.sum(result)/(timeIndex + 1))
 
             timeSteps.append([t, dt])
             timeIndex += 1
@@ -191,7 +192,7 @@ class Solver(object):
 
             instObjective = self.objective(stackedFields)
             result += instObjective
-            timeSeries.append(parallel.sum(instObjective)/(nSteps + 1))
+            timeSeries.append(parallel.sum(instObjective))
             if mode == 'forward':
                 if self.dynamicMesh:
                     instMesh = Mesh()
