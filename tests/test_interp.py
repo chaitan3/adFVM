@@ -3,7 +3,7 @@ from test import *
 
 from adFVM.field import Field, CellField
 from adFVM.mesh import Mesh
-from adFVM.interp import central, TVD_dual
+from adFVM.interp import central, TVD
 
 class TestInterp(unittest.TestCase):
     @classmethod
