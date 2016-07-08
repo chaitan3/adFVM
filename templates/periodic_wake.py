@@ -66,7 +66,7 @@ def source(fields, mesh, t):
 
 #Steps = 20000
 #riteInterval = 500
-nSteps = 200000
-writeInterval = 5000
-startTime = 0.0
+nSteps = 1000
+writeInterval = 100
+startTime = 1.0
 dt = 1e-7

@@ -91,16 +91,15 @@ class Mesh(object):
        
         self.normals = self.getNormals()
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()
-        self.cellCentres, self.volumes = self.getCellCentresAndVolumes() # nCells after ghost cell mod
+        self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 
 
         # uses neighbour
         self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
         
-        # ghost cell modification
+        # ghost cell modification: neighbour and cellCentres
         self.nLocalCells = self.createGhostCells()
         self.deltas = self.getDeltas()           # nFaces 
         self.weights = self.getWeights()   # nFaces
-
 
         # theano shared variables
         self.origMesh = Mesh.copy(self, fields=True)
@@ -484,16 +483,7 @@ class Mesh(object):
         self.nGhostCells = self.nBoundaryFaces
         self.nCells = self.nInternalCells + self.nGhostCells
 
-    def getNormals(self):
-        logger.info('generated normals')
-        v1 = self.points[self.faces[:,1]]-self.points[self.faces[:,2]]
-        v2 = self.points[self.faces[:,2]]-self.points[self.faces[:,3]]
-        # CROSS product makes it F_CONTIGUOUS even if normals is not
-        normals = np.cross(v1, v2)
-        # change back to contiguous
-        normals = np.ascontiguousarray(normals)
-        return normals / norm(normals, axis=1, keepdims=True)
-
+    # start: need to convert to ad
     def getCellFacesAndNeighbours(self):
         logger.info('generated cell faces') 
         enum = lambda x: np.column_stack((np.indices(x.shape, np.int32)[0], x)) 
@@ -510,22 +500,15 @@ class Mesh(object):
         cellNeighbours[indices] = neighbour[cellFaces][indices]
         return cellFaces, cellNeighbours
 
-    def getCellCentresAndVolumes(self):
-        logger.info('generated cell centres and volumes')
-        nCellFaces = self.cellFaces.shape[1]
-        cellCentres = np.mean(self.faceCentres[self.cellFaces], axis=1)
-        sumCentres = cellCentres*0
-        sumVolumes = np.sum(sumCentres, axis=1, keepdims=True)
-        areaNormals = self.areas * self.normals
-        for index in range(0, nCellFaces):
-            indices = self.cellFaces[:,index]
-            height = cellCentres-self.faceCentres[indices]
-            volumes = np.abs(np.sum(areaNormals[indices]*height, axis=1, keepdims=True))/3
-            centres = (3./4)*self.faceCentres[indices] + (1./4)*cellCentres
-            sumCentres += volumes * centres
-            sumVolumes += volumes
-        cellCentres = sumCentres/sumVolumes
-        return cellCentres, sumVolumes
+    def getNormals(self):
+        logger.info('generated normals')
+        v1 = self.points[self.faces[:,1]]-self.points[self.faces[:,2]]
+        v2 = self.points[self.faces[:,2]]-self.points[self.faces[:,3]]
+        # CROSS product makes it F_CONTIGUOUS even if normals is not
+        normals = np.cross(v1, v2)
+        # change back to contiguous
+        normals = np.ascontiguousarray(normals)
+        return normals / norm(normals, axis=1, keepdims=True)
 
     def getFaceCentresAndAreas(self):
         logger.info('generated face centres and areas')
@@ -544,6 +527,23 @@ class Mesh(object):
         faceCentres = sumCentres/sumAreas
         return faceCentres, sumAreas
 
+    def getCellCentresAndVolumes(self):
+        logger.info('generated cell centres and volumes')
+        nCellFaces = self.cellFaces.shape[1]
+        cellCentres = np.mean(self.faceCentres[self.cellFaces], axis=1)
+        sumCentres = cellCentres*0
+        sumVolumes = np.sum(sumCentres, axis=1, keepdims=True)
+        areaNormals = self.areas * self.normals
+        for index in range(0, nCellFaces):
+            indices = self.cellFaces[:,index]
+            height = cellCentres-self.faceCentres[indices]
+            volumes = np.abs(np.sum(areaNormals[indices]*height, axis=1, keepdims=True))/3
+            centres = (3./4)*self.faceCentres[indices] + (1./4)*cellCentres
+            sumCentres += volumes * centres
+            sumVolumes += volumes
+        cellCentres = sumCentres/sumVolumes
+        return cellCentres, sumVolumes
+
     def getDeltas(self):
         logger.info('generated deltas')
         P = self.cellCentres[self.owner]
@@ -559,6 +559,7 @@ class Mesh(object):
         ownerDist = np.abs(np.sum((F-P)*self.normals, axis=1, keepdims=True))
         weights = neighbourDist/(neighbourDist + ownerDist)
         return weights
+    # end: need to convert to ad
 
     def getSumOp(self, mesh, ghost=False):
         logger.info('generated sum op')
