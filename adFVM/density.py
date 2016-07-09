@@ -25,7 +25,8 @@ class RCF(Solver):
                              'timeIntegrator': 'SSPRK', 'nStages': 3,
                              'riemannSolver': 'eulerRoe',
                              #'boundaryRiemannSolver': 'eulerLaxFriedrichs',
-                             'boundaryRiemannSolver': 'eulerRoe'
+                             'boundaryRiemannSolver': 'eulerRoe',
+                             'readConservative': False
                         })
 
     def __init__(self, case, **userConfig):
@@ -90,6 +91,12 @@ class RCF(Solver):
             self.U = IOField.read('U' + suffix)
             self.T = IOField.read('T' + suffix)
             self.p = IOField.read('p' + suffix)
+            if self.readConservative:
+                rho = IOField.read('rho' + suffix)
+                rhoU = IOField.read('rhoU' + suffix)
+                rhoE = IOField.read('rhoE' + suffix)
+                U, T, p = self.primitive(rho, rhoU, rhoE)
+                self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
             if self.dynamicMesh:
                 self.mesh.read(IOField._handle)
         parallel.mpi.Barrier()

@@ -44,16 +44,14 @@ def min(data):
         return mpi.allreduce(minData, op=MPI.MIN)
     else:
         return minData
+
 def argmin(data):
     minData, index = np.min(data), np.argmin(data)
-    if nProcessors > 1:
-        proc = mpi.allreduce(minData, op=MPI.MINLOC) 
-        if rank == proc[1]:
-            return [index]
-        else:
-            return []
-    else:
+    proc = mpi.allreduce(minData, op=MPI.MINLOC) 
+    if rank == proc[1]:
         return [index]
+    else:
+        return []
 
 def sum(data):
     sumData = np.sum(data)
