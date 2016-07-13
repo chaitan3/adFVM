@@ -8,7 +8,7 @@ from adFVM.parallel import pprint
 from adFVM.postpro import getHTC, getIsentropicMa, getPressureLoss, getYPlus
 from adFVM.density import RCF
 
-def postpro(solver, time, suffix=''):
+def postprocess(solver, time, suffix=''):
 
     #nLayers = 1
     nLayers = 200
@@ -77,7 +77,12 @@ if __name__ == '__main__':
     #pprint()
 
     # instantaneous
-    for index, time in enumerate(times):
-        postprocess(solver, time)
-        pprint()
+    #for index, time in enumerate(times):
+    #    postprocess(solver, time)
+    #    pprint()
+
+    # last time
+    time = times[0]
+    postprocess(solver, time, suffix='')
+    pprint()
 

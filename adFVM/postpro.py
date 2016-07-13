@@ -165,46 +165,23 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     grada = gradc*sg1/sg
     Z = np.zeros_like(divU)
     Z3 = np.zeros_like(gradU)
-    #print np.hstack((divU, gradb, Z)).shape,np.hstack((gradb[:,[0]], divU, Z, Z, grada[:,[0]])).shape,np.hstack((Z, grada, divU)).shape
+    
     M1 = np.dstack((np.hstack((divU, gradb, Z)),
-               np.hstack((gradb[:,[0]], divU, Z, Z, grada[:,[0]])),
-               np.hstack((gradb[:,[1]], Z, divU, Z, grada[:,[1]])),
-               np.hstack((gradb[:,[2]], Z, Z, divU, grada[:,[2]])),
+               np.hstack((gradb[:,[0]], divU, Z, Z, dica[:,[0]])),
+               np.hstack((gradb[:,[1]], Z, divU, Z, dica[:,[1]])),
+               np.hstack((gradb[:,[2]], Z, Z, divU, dica[:,[2]])),
                np.hstack((Z, grada, divU))))
 
     M2 = np.dstack((np.hstack((Z, b*gradrho/rho, sg1*divU/2)),
                     np.hstack((np.dstack((Z,Z,Z)), gradU, (a*gradp/(2*p)).reshape(-1, 1, 3))),
                     np.hstack((Z, 2*grada/g1, g1*divU/2))))
     M = M1-M2
-    U, S, V = np.linalg.svd(M)
-    #V = np.ascontiguousarray(V.transpose((0, 2, 1)))
-    #A = (((U*V).sum(axis=1)*S) > 0.)
-    #A = A*1.
-    #Smax = (A*S).max(axis=1, keepdims=True)
-    #Imax = (A*S).argmax(axis=1)
-    #idx = np.arange(0, mesh.origMesh.nCells)
-    #Umax = U[idx, Imax]*Smax
-    #Vmax = V[idx, Imax]*Smax
-    ## transform, U, V
-    #names = [name + '_A' for name in solver.names]
-    #F = solver.unstackFields(A, IOField, names, boundary=mesh.calculatedBoundary)
-    #names = [name + '_S' for name in solver.names]
-    #F += solver.unstackFields(S, IOField, names, boundary=mesh.calculatedBoundary)
-    #for index in range(0, U.shape[2]):
-    #    names = [name + '_U' + str(index + 1) for name in solver.names]
-    #    F += solver.unstackFields(U[:,:,index], IOField, names, boundary=mesh.calculatedBoundary)
-    #    names = [name + '_V' + str(index + 1) for name in solver.names]
-    #    F += solver.unstackFields(V[:,:,index], IOField, names, boundary=mesh.calculatedBoundary)
-    #Smax = IOField('Smax', Smax, (1,), boundary=mesh.calculatedBoundary)
-    #F.append(Smax)
-    #names = [name + '_Umax' for name in solver.names]
-    #F += solver.unstackFields(Umax, IOField, names, boundary=mesh.calculatedBoundary)
-    #names = [name + '_Vmax' for name in solver.names]
-    #F += solver.unstackFields(Vmax, IOField, names, boundary=mesh.calculatedBoundary)
-    #for phi in F:
-    #    phi.field = np.ascontiguousarray(phi.field)
-    #return F
 
-    M_2norm = np.ascontiguousarray(S[:, [0]])
+    #U, S, V = np.linalg.svd(M)
+    #M_2norm = np.ascontiguousarray(S[:, [0]])
+    MS = (M + M.transpose((0, 2, 1)))/2
+    M_2norm2 = np.linalg.eigvalsh(MS)[:,[-1]]
+    #M_2norm2 = np.linalg.eigh(MS, eigvals=(4), eigvals_only=True).reshape(-1,1)
+
     M_2norm = IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary)
     return [M_2norm]
