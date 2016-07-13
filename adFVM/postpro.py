@@ -5,8 +5,9 @@ from adFVM.field import IOField, CellField
 from adFVM.op import div, grad
 from adFVM.interp import central
 from adFVM.compat import intersectPlane
+from adFVM.config import ad
 
-def computeFields(solver):
+def computeGradients(solver):
     mesh = solver.mesh
     g = solver.gamma
     p, U, T = solver.symbolicFields()
@@ -25,22 +26,21 @@ def computeFields(solver):
     gradp = grad(central(p, mesh), ghost=True)
     gradrho = g*(gradp-c*p)/(c*c)
 
-    # SKIP FOR ADJOINT
+    computer = solver.function([U.field, T.field, p.field], [gradrho.field, 
+                                      gradU.field, 
+                                      gradp.field, 
+                                      gradc.field, 
+                                      divU.field
+                                     ], 'compute')
+    return computer
+
+def getEnstrophyAndQ(gradU):
     enstrophy =  gradU.norm()
     gradUT = gradU.transpose()
     omega = 0.5*(gradU - gradUT)
     S = 0.5*(gradU + gradUT)
     Q = 0.5*(omega.norm()**2 - S.norm()**2)
-
-    computer = solver.function([U.field, T.field, p.field], [gradrho.field, 
-                                      gradU.field, 
-                                      gradp.field, 
-                                      gradc.field, 
-                                      divU.field,
-                                      enstrophy.field,
-                                      Q.field
-                                     ], 'compute')
-    return computer
+    return enstrophy, Q
 
 def getYPlus(U, T, rho, patches):
     mesh = U.mesh.origMesh
@@ -155,7 +155,7 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     g1 = g-1
     sg1 = np.sqrt(g1)
 
-    gradrho, gradU, gradp, gradc, divU = outputs[:5]
+    gradrho, gradU, gradp, gradc, divU = outputs
     rho = rho.field
     p = p.field
     c = np.sqrt(g*p/rho)

@@ -22,7 +22,7 @@ if not times:
     times = mesh.getTimes()
 
 solver.readFields(times[0])
-computer = computeFields(solver)
+computer = computeGradients(solver)
 
 if config.compile:
     exit()
@@ -41,6 +41,14 @@ for index, time in enumerate(times):
     #    if len(dim) != 2:
     #        IO.write()
     #pprint()
+    # adjoint blowup
+    #fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+    #for phi in fields:
+    #    phi.write(time)#, skipProcessor=True)
+    #pprint()
+    #enstrophy, Q = getEnstrophyAndQ(outputs[1])
+    #enstrophy.write(name='enstrophy') 
+    #Q.write(name='Q')
 
     c, M, pt, s = getTotalPressureAndEntropy(U, T, p, solver)
     c.write(name='c') 
@@ -50,27 +58,17 @@ for index, time in enumerate(times):
     pprint()
 
     # rhoaByV
-    try:
-        rhoa = IOField.read('rhoa')
-        rhoaByV = getFieldByVolume(rhoa)
-        rhoaByV.write()
-        pprint()
+    rhoa = IOField.read('rhoa')
+    rhoaByV = getFieldByVolume(rhoa)
+    rhoaByV.write()
+    pprint()
 
-        # adjoint energy
-        rhoUa = IOField.read('rhoUa')
-        rhoEa = IOField.read('rhoEa')
-        adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
-        pprint('L2 norm adjoint', time, adjEnergy)
-        pprint()
-    except:
-        pprint('Adjoint computation failed')
-        pprint()
-        pass
-
-    # adjoint blowup
-    #fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
-    #for phi in fields:
-    #    phi.write(time)#, skipProcessor=True)
+    # adjoint energy
+    rhoUa = IOField.read('rhoUa')
+    rhoEa = IOField.read('rhoEa')
+    adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
+    pprint('L2 norm adjoint', time, adjEnergy)
+    pprint()
 
     IOField.closeHandle()
 

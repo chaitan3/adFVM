@@ -63,14 +63,14 @@ class Matrix(object):
         ksp = PETSc.KSP()
         ksp.create(PETSc.COMM_WORLD)
 
-        ksp.setType('preonly')
-        pc = ksp.getPC()
-        pc.setType('lu')
-        pc.setFactorSolverPackage('mumps')
+        #ksp.setType('preonly')
+        #pc = ksp.getPC()
+        #pc.setType('lu')
+        #pc.setFactorSolverPackage('mumps')
         #pc.setFactorSolverPackage('superlu_dist')
 
         #ksp.setType('gmres')
-        #ksp.setType('gcr')
+        ksp.setType('gcr')
         #ksp.setType('bcgs')
         #ksp.setType('tfqmr')
         #ksp.getPC().setType('jacobi')
@@ -78,7 +78,7 @@ class Matrix(object):
         #ksp.getPC().setType('mg')
         #ksp.getPC().setType('gamg')
         # which one is used?
-        #ksp.getPC().setType('hypre')
+        ksp.getPC().setType('hypre')
 
         x = self.A.createVecRight()
         X = []
@@ -88,7 +88,9 @@ class Matrix(object):
         for i in range(0, self.b.getSize()[1]):
             x.set(0)
             b = self.b.getColumnVector(i)
+            ksp.setConvergenceHistory()
             ksp.solve(-b, x)
+            pprint('convergence:', ksp.getConvergenceHistory())
             X.append(x.getArray().copy().reshape(-1,1))
         end = time.time()
         pprint('Time to solve linear system:', end-start)
@@ -269,28 +271,4 @@ def ddt(phi, dt):
     b.assemble()
 
     return M
-
-if __name__ == "__main__":
-    from mesh import Mesh
-    mesh = Mesh.create('cases/cylinder/')
-    #mesh = Mesh.create('cases/laplacian/')
-    Field.setMesh(mesh)
-    timer = 1.0
-
-    T = IOField.read('T', mesh, timer)
-    T.partialComplete(300.)
-    DT = Field('DT', 1., (1,))
-    T.old = T.field
-    #res = laplacian(T, DT).solve()
-
-    res = (ddt(T, 1e-9) + laplacian(T, DT)).solve()
-    TL = IOField(T.name + 'L', res, res.shape[1:])
-    TL.partialComplete()
-    TL.write(timer)
-
-    res = (ddt(T, 1e-9) + laplacian_old(T, DT)).solve()
-    TL = IOField(T.name + 'L2', res, res.shape[1:])
-    TL.partialComplete()
-    TL.write(timer)
-
 
