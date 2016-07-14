@@ -14,7 +14,7 @@ Field.setMesh(mesh)
 meshO = mesh.origMesh
 
 times = mesh.getTimes()
-times = filter(lambda x: x > 1.002, times)
+#times = filter(lambda x: x > 1.002, times)
 print times
 
 nLayers = 200
