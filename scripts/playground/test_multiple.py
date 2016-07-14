@@ -14,4 +14,4 @@ for i in range(0, nCalls):
     #p = subprocess.Popen(['srun', '-N', '1', '-n', str(nProcessors), '--resv-ports', program, str(i)])
     a.append(p)
 for i in range(0, nCalls):
-    p.wait()
+    a[i].wait()
