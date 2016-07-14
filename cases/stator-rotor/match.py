@@ -36,12 +36,9 @@ def match_htc(hp, coordsp, hs, coordss, saveFile):
 def match_velocity(Map, coordsp, Mas, coordss, saveFile):
     sp = get_length(pressure, coordsp)
     ss = get_length(suction, coordss)
-    #plt.scatter(coordsp[:,0], coordsp[:,1], label='pressure', c='r')
-    #plt.scatter(coordss[:,0], coordss[:,1], label='suction', c='b')
-    plt.scatter(pressure[0], pressure[1], label='pressure', c='r')
-    plt.scatter(suction[0], suction[1], label='suction', c='b')
-    plt.legend()
-    plt.show()
+    i = coordsp[:,0].argmin()
+    j = coordss[:,0].argmin()
+    print coordsp[i], coordss[j]
 
     fill=1
 
@@ -79,8 +76,8 @@ if __name__ == '__main__':
         Ma = IOField.read('Ma')
         Ma.partialComplete()
 
-    nLayers = 1
-    #nLayers = 200
+    #nLayers = 1
+    nLayers = 200
     from postpro import surface
     patches = [surface + '_pressure', surface+'_suction']
     get_profile(surface)
@@ -108,8 +105,8 @@ if __name__ == '__main__':
         y = spanwise_average(Ma.field[cellStartFace:cellEndFace])
         Ma_args.extend([y, x])
 
-    htc_args += [case + 'htc.png']
-    Ma_args += [case + 'Ma.png']
+    htc_args += [case + surface + '_htc.png']
+    Ma_args += [case + surface + '_Ma.png']
     match_velocity(*Ma_args)
     match_htc(*htc_args)
 

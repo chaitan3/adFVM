@@ -92,8 +92,8 @@ if __name__ == '__main__':
         Ma = IOField.read('Ma_avg')
         Ma.partialComplete()
 
-    nLayers = 1
-    #nLayers = 200
+    #nLayers = 1
+    nLayers = 200
     patches = ['pressure', 'suction']
    
     htc_args = []
@@ -112,9 +112,10 @@ if __name__ == '__main__':
         x = mesh.faceCentres[startFace:endFace, 0]
         x = x[:nFacesPerLayer]
 
-        y = htc.field[cellStartFace:cellEndFace]
+        spanwise_average = lambda x: x.reshape((nLayers, nFacesPerLayer)).sum(axis=0)/nLayers
+        y = spanwise_average(htc.field[cellStartFace:cellEndFace])
         htc_args.extend([y, x])
-        y = Ma.field[cellStartFace:cellEndFace]
+        y = spanwise_average(Ma.field[cellStartFace:cellEndFace])
         Ma_args.extend([y, x])
 
     htc_args += [case + 'htc.png']

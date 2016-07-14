@@ -32,8 +32,10 @@ def import_nozzle_profile():
     return pressure, suction, chord, pitch
 
 def import_blade_profile():
-    delta = -0.04
-    #delta = -0.04 - 0.0288
+    # coords y = -0.0332019 for min x = 0.050433
+    # blade y = -0.1110658 for min x = 0.0604564
+    # blade0 y = -0.1110658 for min x = 0.0604564
+    delta = (0.01002, -0.077864)
     chord = 0.03973
     pitch = 0.0575
     f = open('/home/talnikar/adFVM/cases/stator-rotor/mesh/blade_coords.txt', 'r')
@@ -47,8 +49,8 @@ def import_blade_profile():
         v1.append(t[0])
         v2.append(t[1])
     f.close()
-    v1 = array(v1, dtype=float)/1000
-    v2 = array(v2, dtype=float)/1000  + delta
+    v1 = array(v1, dtype=float)/1000 + delta[0]
+    v2 = array(v2, dtype=float)/1000  + delta[1]
     pressure = [v1[:n][::-1], v2[:n][::-1]]
     suction = [v1[n:], v2[n:]]
     return pressure, suction, chord, pitch

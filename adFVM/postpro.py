@@ -167,9 +167,9 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     Z3 = np.zeros_like(gradU)
     
     M1 = np.dstack((np.hstack((divU, gradb, Z)),
-               np.hstack((gradb[:,[0]], divU, Z, Z, dica[:,[0]])),
-               np.hstack((gradb[:,[1]], Z, divU, Z, dica[:,[1]])),
-               np.hstack((gradb[:,[2]], Z, Z, divU, dica[:,[2]])),
+               np.hstack((gradb[:,[0]], divU, Z, Z, grada[:,[0]])),
+               np.hstack((gradb[:,[1]], Z, divU, Z, grada[:,[1]])),
+               np.hstack((gradb[:,[2]], Z, Z, divU, grada[:,[2]])),
                np.hstack((Z, grada, divU))))
 
     M2 = np.dstack((np.hstack((Z, b*gradrho/rho, sg1*divU/2)),
@@ -180,8 +180,8 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     #U, S, V = np.linalg.svd(M)
     #M_2norm = np.ascontiguousarray(S[:, [0]])
     MS = (M + M.transpose((0, 2, 1)))/2
-    M_2norm2 = np.linalg.eigvalsh(MS)[:,[-1]]
-    #M_2norm2 = np.linalg.eigh(MS, eigvals=(4), eigvals_only=True).reshape(-1,1)
+    M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
+    #M_2norm = np.linalg.eigh(MS, eigvals=(4), eigvals_only=True).reshape(-1,1)
 
     M_2norm = IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary)
     return [M_2norm]

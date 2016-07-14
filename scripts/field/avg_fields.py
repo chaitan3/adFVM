@@ -14,9 +14,11 @@ Field.setMesh(mesh)
 meshO = mesh.origMesh
 
 times = mesh.getTimes()
+times = filter(lambda x: x > 1.002, times)
+print times
 
-#nLayers = 200
-nLayers = 1
+nLayers = 200
+#nLayers = 1
 
 for field in fields:
     # time avg: no dt
