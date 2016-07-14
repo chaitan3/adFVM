@@ -8,7 +8,7 @@ from adFVM.field import IOField, Field
 from adFVM.matop_petsc import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
-from adFVM.postpro import getAdjointNorm, computeFields, getAdjointEnergy
+from adFVM.postpro import getAdjointNorm, computeGradients, getAdjointEnergy
 
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult, nPerturb
 
@@ -20,8 +20,7 @@ import cPickle as pkl
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--smooth', action='store_true')
-parser.add_argument('--scaling', required=False, default=0.0)
+parser.add_argument('--scaling', required=False)
 user, args = parser.parse_known_args()
 
 primal.adjoint = True
@@ -58,8 +57,8 @@ primal.getBCFields = oldFunc
 
 # dummy initialize
 primal.readFields(timeSteps[nSteps-writeInterval][0])
-if user.smooth:
-    computer = computeFields(primal)
+if user.scaling:
+    computer = computeGradients(primal)
 primal.compile()
 
 newFields = adjointInitFunc(*[phi.field for phi in adjointFields])
@@ -87,21 +86,12 @@ def adjointViscosity(solution):
     rhoU = Field('rhoU', solution[:,1:4], (3,))
     rhoE = Field('rhoE', solution[:,[4]], (1,))
     U, T, p = primal.primitive(rho, rhoU, rhoE)
-    SF = primal.stackFields([p, U, T], np)
-    outputs = computer(SF)
+    outputs = computer(U.field, T.field, p.field)
     M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)[0]
     M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
     viscosityScale = float(user.scaling)
-    #print(parallel.rank, M_2normScale)
+    pprint('M_2norm: ' +  str(M_2normScale))
     return M_2norm*(viscosityScale/M_2normScale)
-
-# adjont field smoothing,
-#if user.smooth:
-#    adjointField = Field('a', ad.matrix(), (5,))
-#    weight = Field('w', ad.bcmatrix(), (1,))
-#    smoother = laplacian(adjointField, central(weight, primal.mesh))
-#    adjointSmoother = primal.function([adjointField.field, weight.field], smoother.field, 'smoother', BCs=False)
-#    pprint()
 
 # local adjoint fields
 stackedAdjointFields = primal.stackFields(adjointFields, np)
@@ -162,7 +152,7 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         sourceGradient = gradients[1:]
         stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
 
-        if user.smooth:
+        if user.scaling:
             pprint('Smoothing adjoint field')
             #weight = adjointViscosity(previousSolution).field
             #stackedAdjointFields[:mesh.origMesh.nInternalCells] += dt*adjointSmoother(stackedAdjointFields, weight)
@@ -186,6 +176,8 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
         pprint('Time for adjoint iteration: {0}'.format(end-start))
         pprint('Time since beginning:', end-config.runtime)
         pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
+
+    #exit(1)
 
     writeAdjointFields(stackedAdjointFields, t)
     primal.writeStatusFile([checkpoint + 1, result])

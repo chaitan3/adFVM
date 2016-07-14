@@ -56,3 +56,55 @@ def match_wakes(pl, coords, saveFile):
 
     plt.savefig(saveFile)
     plt.clf()
+
+if __name__ == '__main__':
+    from adFVM.mesh import Mesh
+    from adFVM.field import Field, IOField
+    import sys
+
+    case, time = sys.argv[1:3]
+    time = float(time)
+    mesh = Mesh.create(case)
+    Field.setMesh(mesh)
+
+    with IOField.handle(time):
+        htc = IOField.read('htc_avg')
+        htc.partialComplete()
+        Ma = IOField.read('Ma_avg')
+        Ma.partialComplete()
+
+    nLayers = 1
+    #nLayers = 200
+    patches = ['pressure', 'suction']
+   
+    htc_args = []
+    Ma_args = []
+
+    mesh = mesh.origMesh
+    for patchID in patches:
+        delta = -mesh.nInternalFaces + mesh.nInternalCells
+        startFace = mesh.boundary[patchID]['startFace']
+        nFaces = mesh.boundary[patchID]['nFaces']
+        endFace = startFace + nFaces
+        cellStartFace = startFace + delta
+        cellEndFace = endFace + delta
+        nFacesPerLayer = nFaces/nLayers
+
+        x = mesh.faceCentres[startFace:endFace, 0]
+        x = x[:nFacesPerLayer]
+
+        y = htc.field[cellStartFace:cellEndFace]
+        htc_args.extend([y, x])
+        y = Ma.field[cellStartFace:cellEndFace]
+        Ma_args.extend([y, x])
+
+    htc_args += [case + 'htc.png']
+    Ma_args += [case + 'Ma.png']
+    match_velocity(*Ma_args)
+    match_htc(*htc_args)
+
+    #y = PL/(p0*nTimes)
+    #x = 1000*mesh.cellCentres[wakeCells[:nCellsPerLayer], 1]
+    #wake_args = [y, x, p0]
+    #match_wakes(*wake_args)
+

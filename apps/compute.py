@@ -5,7 +5,7 @@ import argparse
 from adFVM import config
 from adFVM.parallel import pprint
 from adFVM.postpro import *
-from pyRCF import RCF
+from adFVM.density import RCF
 
 parser = argparse.ArgumentParser()
 parser.add_argument('case')
@@ -22,7 +22,7 @@ if not times:
     times = mesh.getTimes()
 
 solver.readFields(times[0])
-computer = computeFields(solver)
+computer = computeGradients(solver)
 
 if config.compile:
     exit()
@@ -35,12 +35,21 @@ for index, time in enumerate(times):
 
     IOField.openHandle(time)
 
-    #outputs = computer(U.field, T.field, p.field)
-    #for field, name, dim in zip(outputs, names, dimensions):
-    #    IO = IOField(name, field, dim)
-    #    if len(dim) != 2:
-    #        IO.write()
-    #pprint()
+    outputs = computer(U.field, T.field, p.field)
+    outputsF = []
+    for field, name, dim in zip(outputs, names, dimensions):
+        outputsF.append(IOField(name, field, dim))
+        if len(dim) != 2:
+            outputsF[-1].write()
+    pprint()
+    # adjoint blowup
+    fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+    for phi in fields:
+        phi.write()#, skipProcessor=True)
+    pprint()
+    enstrophy, Q = getEnstrophyAndQ(outputsF[1])
+    enstrophy.write(name='enstrophy') 
+    Q.write(name='Q')
 
     c, M, pt, s = getTotalPressureAndEntropy(U, T, p, solver)
     c.write(name='c') 
@@ -49,28 +58,18 @@ for index, time in enumerate(times):
     s.write(name='s')
     pprint()
 
-    # rhoaByV
-    try:
-        rhoa = IOField.read('rhoa')
-        rhoaByV = getFieldByVolume(rhoa)
-        rhoaByV.write()
-        pprint()
+    ## rhoaByV
+    #rhoa = IOField.read('rhoa')
+    #rhoaByV = getFieldByVolume(rhoa)
+    #rhoaByV.write()
+    #pprint()
 
-        # adjoint energy
-        rhoUa = IOField.read('rhoUa')
-        rhoEa = IOField.read('rhoEa')
-        adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
-        pprint('L2 norm adjoint', time, adjEnergy)
-        pprint()
-    except:
-        pprint('Adjoint computation failed')
-        pprint()
-        pass
-
-    # adjoint blowup
-    #fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
-    #for phi in fields:
-    #    phi.write(time)#, skipProcessor=True)
+    ## adjoint energy
+    #rhoUa = IOField.read('rhoUa')
+    #rhoEa = IOField.read('rhoEa')
+    #adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
+    #pprint('L2 norm adjoint', time, adjEnergy)
+    #pprint()
 
     IOField.closeHandle()
 
