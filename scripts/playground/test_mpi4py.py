@@ -1,13 +1,14 @@
 #!/usr/bin/python2
 import numpy as np
 from mpi4py import MPI
+import sys
 
 mpi = MPI.COMM_WORLD
 rank = mpi.rank
 n = mpi.Get_size()
 hostname = MPI.Get_processor_name()
 
-print 'I\'m at', rank, 'of', n, 'processors on', hostname
+print 'I\'m call', sys.argv[1], 'at', rank, 'of', n, 'processors on', hostname
 
 #a = np.ones((10, 3))
 ##b = np.zeros((20, 3))
