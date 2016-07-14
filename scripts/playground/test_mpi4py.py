@@ -1,7 +1,13 @@
+#!/usr/bin/python2
 import numpy as np
 from mpi4py import MPI
 
 mpi = MPI.COMM_WORLD
+rank = mpi.rank
+n = mpi.Get_size()
+hostname = MPI.Get_processor_name()
+
+print 'I\'m at', rank, 'of', n, 'processors on', hostname
 
 #a = np.ones((10, 3))
 ##b = np.zeros((20, 3))
@@ -11,8 +17,6 @@ mpi = MPI.COMM_WORLD
 ##print b, mpi.rank
 #b = mpi.gather(a, root=0)
 #print b
-rank = mpi.rank
-n = mpi.Get_size()
 
 #a = np.array([rank])
 #b = np.array([0])
@@ -22,9 +26,9 @@ n = mpi.Get_size()
 #mpi.Scan(a, b)
 #print rank, a, b
 
-a = np.array([rank], dtype=np.int64)
-b = None
-if rank == 0:
-    b = np.zeros((n, 1), np.int64)
-mpi.Gather(a, b)
-print a, b
+#a = np.array([rank], dtype=np.int64)
+#b = None
+#if rank == 0:
+#    b = np.zeros((n, 1), np.int64)
+#mpi.Gather(a, b)
+#print a, b
