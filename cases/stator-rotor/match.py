@@ -36,6 +36,12 @@ def match_htc(hp, coordsp, hs, coordss, saveFile):
 def match_velocity(Map, coordsp, Mas, coordss, saveFile):
     sp = get_length(pressure, coordsp)
     ss = get_length(suction, coordss)
+    #plt.scatter(coordsp[:,0], coordsp[:,1], label='pressure', c='r')
+    #plt.scatter(coordss[:,0], coordss[:,1], label='suction', c='b')
+    plt.scatter(pressure[0], pressure[1], label='pressure', c='r')
+    plt.scatter(suction[0], suction[1], label='suction', c='b')
+    plt.legend()
+    plt.show()
 
     fill=1
 
@@ -68,14 +74,16 @@ if __name__ == '__main__':
     Field.setMesh(mesh)
 
     with IOField.handle(time):
-        htc = IOField.read('htc_avg')
+        htc = IOField.read('htc')
         htc.partialComplete()
-        Ma = IOField.read('Ma_avg')
+        Ma = IOField.read('Ma')
         Ma.partialComplete()
 
     nLayers = 1
     #nLayers = 200
-    patches = ['pressure', 'suction']
+    from postpro import surface
+    patches = [surface + '_pressure', surface+'_suction']
+    get_profile(surface)
    
     htc_args = []
     Ma_args = []
@@ -90,12 +98,14 @@ if __name__ == '__main__':
         cellEndFace = endFace + delta
         nFacesPerLayer = nFaces/nLayers
 
-        x = mesh.faceCentres[startFace:endFace, 0]
+        x = mesh.faceCentres[startFace:endFace, [0,1]]
         x = x[:nFacesPerLayer]
 
-        y = htc.field[cellStartFace:cellEndFace]
+        spanwise_average = lambda x: x.reshape((nLayers, nFacesPerLayer)).sum(axis=0)/nLayers
+
+        y = spanwise_average(htc.field[cellStartFace:cellEndFace])
         htc_args.extend([y, x])
-        y = Ma.field[cellStartFace:cellEndFace]
+        y = spanwise_average(Ma.field[cellStartFace:cellEndFace])
         Ma_args.extend([y, x])
 
     htc_args += [case + 'htc.png']

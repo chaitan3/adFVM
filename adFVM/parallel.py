@@ -47,7 +47,7 @@ def min(data):
 
 def argmin(data):
     minData, index = np.min(data), np.argmin(data)
-    proc = mpi.allreduce(minData, op=MPI.MINLOC) 
+    proc = mpi.allreduce([minData, rank], op=MPI.MINLOC) 
     if rank == proc[1]:
         return [index]
     else:

@@ -29,7 +29,7 @@ def import_nozzle_profile():
     v2 = array(v2, dtype=float)/1000
     suction = [v1[:n], v2[:n]]
     pressure = [v1[n:], v2[n:]]
-    return suction, pressure, chord, pitch
+    return pressure, suction, chord, pitch
 
 def import_blade_profile():
     delta = -0.04
@@ -51,4 +51,4 @@ def import_blade_profile():
     v2 = array(v2, dtype=float)/1000  + delta
     pressure = [v1[:n][::-1], v2[:n][::-1]]
     suction = [v1[n:], v2[n:]]
-    return suction, pressure, chord, pitch
+    return pressure, suction, chord, pitch

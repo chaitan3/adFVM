@@ -8,25 +8,24 @@ from adFVM.parallel import pprint
 from adFVM.postpro import getHTC, getIsentropicMa, getPressureLoss, getYPlus
 from adFVM.density import RCF
 
+#surface = 'blade'
+##surface = 'blade0'
+surface = 'blade'
+
 def postprocess(solver, time, suffix=''):
 
-    #nLayers = 1
-    nLayers = 200
-
-    surface = 'blade'
-    #surface = 'blade0'
-    T0 = 365.
-    p0 = 122300.
-    point = np.array([0.081 + 0.023*0.03973,-0.06,0.005])
-    normal = np.array([1.,0.,0.])
-    #T0 = 409.
-    #p0 = 184900.
-    #surface = 'nozzle'
-    # valid?
-    #point = np.array([0.052641,-0.1,0.005])
+    #T0 = 365.
+    #p0 = 122300.
+    #point = np.array([0.081 + 0.023*0.03973,-0.06,0.005])
     #normal = np.array([1.,0.,0.])
-    get_profile(surface)
 
+    T0 = 409.
+    p0 = 184900.
+    # valid?
+    point = np.array([0.052641,-0.1,0.005])
+    normal = np.array([1.,0.,0.])
+
+    get_profile(surface)
     patches = [surface + '_pressure', surface + '_suction']
     #patches = ['blade_pressure', 'blade_suction', 'blade0_pressure', 'blade0_suction', 'nozzle_pressure', 'nozzle_suction']
 
@@ -82,7 +81,7 @@ if __name__ == '__main__':
     #    pprint()
 
     # last time
-    time = times[0]
+    time = times[-1]
     postprocess(solver, time, suffix='')
     pprint()
 
