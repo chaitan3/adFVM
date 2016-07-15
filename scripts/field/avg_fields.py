@@ -43,8 +43,7 @@ for field in fields:
     for patchID in mesh.localPatches:
         patch = meshO.boundary[patchID]
         if patch['type'] in BCs.valuePatches:
-            cellStartFace = patch['startFace']-meshO.nInternalFaces + meshO.nInternalCells
-            cellEndFace = cellStartFace + patch['nFaces']
+            cellStartFace, cellEndFace, _ = meshO.getPatchCellRange(patchID)
             average(cellStartFace, cellEndFace)
 
     phi.name = field + '_avg'

@@ -10,20 +10,14 @@ primal = RCF('cases/forwardStep/', riemannSolver='eulerLaxFriedrichs', timeInteg
 def objective(fields, mesh):
     rho, rhoU, rhoE = fields
     patchID = 'obstacle'
-    startFace = mesh.boundary[patchID]['startFace']
-    endFace = startFace + mesh.boundary[patchID]['nFaces']
-    cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-    cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+    startFace, endFace, cellStartFace, cellEndFace, _ = mesh.getPatchFaceCellRange(patchID)
     areas = mesh.areas[startFace:endFace]
     field = rhoE.field[cellStartFace:cellEndFace]
     return ad.sum(field*areas)
 
 def perturb(mesh):
     patchID = 'inlet'
-    startFace = mesh.boundary[patchID]['startFace']
-    endFace = startFace + mesh.boundary[patchID]['nFaces']
-    cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-    cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+    cellStartFace, cellEndFace, _ = mesh.getPatchCellRange(patchID)
     stackedFields[cellStartFace:cellEndFace][:,1] += 0.1
 
 nSteps = 20000

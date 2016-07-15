@@ -22,9 +22,7 @@ def objectiveHeatTransfer(fields, mesh):
 
     res = 0
     for patchID in ['suction', 'pressure']:
-        startFace = mesh.boundary[patchID]['startFace']
-        nFaces = mesh.boundary[patchID]['nFaces']
-        endFace = startFace + nFaces
+        startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
         internalIndices = mesh.owner[startFace:endFace]
 
         areas = mesh.areas[startFace:endFace]

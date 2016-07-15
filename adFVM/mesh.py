@@ -601,6 +601,28 @@ class Mesh(object):
                 boundary[patchID]['type'] = 'calculated'
         return boundary
 
+    def getPatchFaceRange(self, patchID):
+        patch = self.boundary[patchID]
+        startFace = patch['startFace']
+        nFaces = patch['nFaces']
+        endFace = startFace + nFaces
+        return startFace, endFace, nFaces
+
+    def getPatchCellRange(self, patchID, faceRange=None):
+        if faceRange:
+            startFace, endFace, nFaces = faceRange
+        else:
+            startFace, endFace, nFaces = self.getPatchFaceRange(patchID)
+        delta = self.nInternalCells - self.nInternalFaces
+        cellStartFace = startFace + delta
+        cellEndFace = endFace + delta
+        return cellStartFace, cellEndFace, nFaces
+
+    def getPatchFaceCellRange(self, patchID):
+        startFace, endFace, nFaces = self.getPatchFaceRange(patchID)
+        cellStartFace, cellEndFace, _ = self.getPatchCellRange(patchID, (startFace, endFace, nFaces))
+        return startFace, endFace, cellStartFace, cellEndFace, nFaces
+
     def getProcessorPatchInfo(self, patchID):
         patch = self.boundary[patchID]
         local = patch['myProcNo']
@@ -622,16 +644,12 @@ class Mesh(object):
         exchanger = Exchanger()
         for patchID in self.boundary:
             patch = self.boundary[patchID]
-            startFace = patch['startFace']
-            nFaces = patch['nFaces']
+            startFace, endFace, cellStartFace, cellEndFace, nFaces = self.getPatchFaceCellRange(patchID)
             # empty patches
             if nFaces == 0:
                 continue
             elif patch['type'] not in config.processorPatches:
                 nLocalCells += nFaces
-            endFace = startFace + nFaces
-            cellStartFace = self.nInternalCells + startFace - self.nInternalFaces
-            cellEndFace = self.nInternalCells + endFace - self.nInternalFaces
             # append neighbour
             self.neighbour[startFace:endFace] = range(cellStartFace, cellEndFace)
             if patch['type'] in config.cyclicPatches:
@@ -668,15 +686,11 @@ class Mesh(object):
         exchanger.wait()
         for patchID in self.boundary:
             patch = self.boundary[patchID]
-            startFace = patch['startFace']
             nFaces = patch['nFaces']
             # empty patches
             if nFaces == 0:
                 continue
-            endFace = startFace + nFaces
-            cellStartFace = self.nInternalCells + startFace - self.nInternalFaces
-            cellEndFace = self.nInternalCells + endFace - self.nInternalFaces
-
+            startFace, endFace, cellStartFace, cellEndFace, _ = self.getPatchFaceCellRange(patchID)
             if patch['type'] == 'processorCyclic':
                 self.cellCentres[cellStartFace:cellEndFace] += self.faceCentres[startFace:endFace]
 
@@ -713,11 +727,10 @@ class Mesh(object):
         mesh = self.origMesh
         for patchID in self.localPatches:
             patch = mesh.boundary[patchID]
-            startFace = patch['startFace']
-            endFace = startFace + patch['nFaces']
+            startFace, endFace, nFaces = self.getPatchFaceRange(patchID)
             if patch['type'] == 'slidingPeriodic1D':
                 # single processor has everything
-                if patch['nFaces'] == 0:
+                if nFaces == 0:
                     if dt == 0.:
                         self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
                     patch['movingCellCentres'] = np.zeros((0, 3), config.precision)
@@ -726,7 +739,7 @@ class Mesh(object):
                     continue
                 if dt == 0.:
                     patch['nLayers'] = int(patch['nLayers'])
-                    patch['nFacesPerLayer'] = patch['nFaces']/patch['nLayers']
+                    patch['nFacesPerLayer'] = nFaces/patch['nLayers']
                     neighbourPatch = mesh.boundary[patch['neighbourPatch']]   
                     neighbourStartFace = neighbourPatch['startFace']
                     neighbourEndFace = neighbourStartFace + patch['nFacesPerLayer']
@@ -770,7 +783,7 @@ class Mesh(object):
                 repeater = np.repeat(np.arange(patch['nLayers']), 2*patch['nFacesPerLayer'])*patch['nFacesPerLayer']
                 indices = np.tile(indices, patch['nLayers']) + repeater
                 sortedDists = np.tile(sortedDists, patch['nLayers']) + repeater
-                loc_multiplier = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(patch['nFaces'], patch['nFaces'])).tocsr()
+                loc_multiplier = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(nFaces, nFaces)).tocsr()
                 if 'loc_multiplier' not in patch:
                     patch['loc_multiplier'] = loc_multiplier
                 else:

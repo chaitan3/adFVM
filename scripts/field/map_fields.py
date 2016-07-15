@@ -23,8 +23,7 @@ def mapNearest(centres1, centres2):
     return indices
 
 def getPatchInfo(mesh, patchID):
-    startFace = mesh.boundary[patchID]['startFace']
-    endFace = startFace + mesh.boundary[patchID]['nFaces']
+    startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
     indices = mesh.neighbour[startFace:endFace]
     return startFace, endFace, indices
 

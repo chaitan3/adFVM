@@ -18,8 +18,7 @@ def objectiveDrag(fields, mesh):
     rho, rhoU, rhoE = fields
     patchID = 'cylinder'
     patch = mesh.boundary[patchID]
-    nF = patch['nFaces']
-    start, end = patch['startFace'], patch['startFace'] + nF
+    start, end, nF = mesh.getPatchFaceRange(patchID)
     areas = mesh.areas[start:end]
     nx = mesh.normals[start:end, 0].reshape((-1, 1))
     cellStartFace = mesh.nInternalCells + start - mesh.nInternalFaces

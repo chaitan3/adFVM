@@ -50,9 +50,7 @@ def getYPlus(U, T, rho, patches):
     ustar = {}
     yplus1 = {}
     for patchID in patches:
-        startFace = mesh.boundary[patchID]['startFace']
-        nFaces = mesh.boundary[patchID]['nFaces']
-        endFace = startFace + nFaces
+        startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
         internalIndices = mesh.owner[startFace:endFace]
         faceIndices = mesh.neighbour[startFace:endFace]
         deltas = mesh.deltas[startFace:endFace]
@@ -76,9 +74,7 @@ def getHTC(T, T0, patches):
     solver = T.solver
     htc = {}
     for patchID in patches:
-        startFace = mesh.boundary[patchID]['startFace']
-        nFaces = mesh.boundary[patchID]['nFaces']
-        endFace = startFace + nFaces
+        startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
         internalIndices = mesh.owner[startFace:endFace]
         deltas = mesh.deltas[startFace:endFace]
 
@@ -96,9 +92,7 @@ def getIsentropicMa(p, p0, patches):
     g = solver.gamma
     Ma = {}
     for patchID in patches:
-        startFace = mesh.boundary[patchID]['startFace']
-        nFaces = mesh.boundary[patchID]['nFaces']
-        endFace = startFace + nFaces
+        startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
         pw = p.field[mesh.neighbour[startFace:endFace]]
         Ma[patchID] = (2.0/(g-1)*((1./p0*pw)**((1-g)/g)-1))**0.5
     return Ma

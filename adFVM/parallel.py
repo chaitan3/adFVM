@@ -87,12 +87,8 @@ def getRemoteCells(field, meshC):
     exchanger = Exchanger()
     mesh = meshC.origMesh
     for patchID in meshC.remotePatches:
-        patch = mesh.boundary[patchID]
         local, remote, tag = meshC.getProcessorPatchInfo(patchID)
-        startFace = patch['startFace']
-        endFace = startFace + patch['nFaces']
-        cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-        cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+        startFace, endFace, cellStartFace, cellEndFace, _ = mesh.getPatchFaceCellRange(patchID)
         exchanger.exchange(remote, field[mesh.owner[startFace:endFace]], field[cellStartFace:cellEndFace], tag)
     exchanger.wait()
     return field
@@ -110,17 +106,12 @@ def getAdjointRemoteCells(field, meshC):
     for patchID in meshC.remotePatches:
         patch = mesh.boundary[patchID]
         local, remote, tag = meshC.getProcessorPatchInfo(patchID)
-        startFace = patch['startFace']
-        endFace = startFace + patch['nFaces']
-        cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-        cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
-        adjointRemoteCells[patchID] = np.zeros((patch['nFaces'],) + dimensions, precision)
+        startFace, endFace, cellStartFace, cellEndFace, nFaces = mesh.getPatchFaceCellRange(patchID)
+        adjointRemoteCells[patchID] = np.zeros((nFaces,) + dimensions, precision)
         exchanger.exchange(remote, field[mesh.neighbour[startFace:endFace]], adjointRemoteCells[patchID], tag)
     exchanger.wait()
     for patchID in meshC.remotePatches:
-        patch = mesh.boundary[patchID]
-        startFace = patch['startFace']
-        endFace = startFace + patch['nFaces']
+        startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
         add_at(jacobian, mesh.owner[startFace:endFace], adjointRemoteCells[patchID])
     return jacobian
 

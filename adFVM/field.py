@@ -273,11 +273,7 @@ class IOField(Field):
         meshBoundary = copy.deepcopy(self.mesh.defaultBoundary)
         for patchID in boundary.keys():
             meshBoundary[patchID]['type'] = 'calculated'
-            startFace = mesh.boundary[patchID]['startFace']
-            nFaces = mesh.boundary[patchID]['nFaces']
-            endFace = startFace + nFaces
-            cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-            cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+            cellStartFace, cellEndFace, _ = mesh.getPatchCellRange(patchID)
             field[cellStartFace:cellEndFace] = boundary[patchID]
 
         return self(name, field, dimensions, meshBoundary)
@@ -385,11 +381,7 @@ class IOField(Field):
         for patchID in boundary:
             patch = boundary[patchID]
             if patch['type'] in BCs.valuePatches:
-                startFace = mesh.boundary[patchID]['startFace']
-                nFaces = mesh.boundary[patchID]['nFaces']
-                endFace = startFace + nFaces
-                cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-                cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+                cellStartFace, cellEndFace, _ = mesh.getPatchCellRange(patchID)
                 patch['value'] = field[cellStartFace:cellEndFace]
 
         #fieldsFile.close()
@@ -440,11 +432,7 @@ class IOField(Field):
         for patchID in self.boundary:
             patch = boundary[patchID]
             if patch['type'] in BCs.valuePatches:
-                startFace = mesh.boundary[patchID]['startFace']
-                nFaces = mesh.boundary[patchID]['nFaces']
-                endFace = startFace + nFaces
-                cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-                cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+                cellStartFace, cellEndFace, nFaces = mesh.getPatchCellRange(patchID)
                 try:
                     value = extractField(patch['value'], nFaces, self.dimensions)
                     self.field[cellStartFace:cellEndFace] = value
@@ -477,11 +465,7 @@ class IOField(Field):
             patch = boundary[patchID]
             # look into skipProcessor
             if patch['type'] in BCs.valuePatches:
-                startFace = mesh.boundary[patchID]['startFace']
-                nFaces = mesh.boundary[patchID]['nFaces']
-                endFace = startFace + nFaces
-                cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces
-                cellEndFace = mesh.nInternalCells + endFace - mesh.nInternalFaces
+                cellStartFace, cellEndFace, _ = mesh.getPatchCellRange(patchID)
                 patch['value'] = field[cellStartFace:cellEndFace]
 
         self.writeFoamField(internalField, boundary)

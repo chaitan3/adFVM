@@ -43,11 +43,8 @@ class BoundaryCondition(object):
         self.solver = phi.solver
         self.mesh = phi.mesh
         self.patch = phi.boundary[patchID]
-        self.startFace = self.mesh.boundary[patchID]['startFace']
-        self.nFaces = self.mesh.boundary[patchID]['nFaces']
-        self.endFace = self.startFace + self.nFaces
-        self.cellStartFace = self.mesh.nInternalCells + self.startFace - self.mesh.nInternalFaces
-        self.cellEndFace = self.mesh.nInternalCells + self.endFace - self.mesh.nInternalFaces
+        self.startFace, self.endFace, self.cellStartFace, self.cellEndFace, \
+            self.nFaces = self.mesh.getPatchFaceCellRange(patchID)
         self.internalIndices = self.mesh.owner[self.startFace:self.endFace]
         self.normals = self.mesh.normals[self.startFace:self.endFace]
         # used by field writer

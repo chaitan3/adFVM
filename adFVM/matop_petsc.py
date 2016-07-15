@@ -129,8 +129,7 @@ def laplacian(phi, DT):
     ranges = A.getOwnershipRangesColumn()
     for patchID in phi.mesh.remotePatches:
         patch = mesh.boundary[patchID]
-        startFace = patch['startFace']
-        endFace = startFace + patch['nFaces']
+        startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
         proc = patch['neighbProcNo']
         indices = mesh.owner[startFace:endFace]
         neighbourIndices = patch['loc_neighbourIndices'].reshape(-1,1)
