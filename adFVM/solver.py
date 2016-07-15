@@ -122,7 +122,7 @@ class Solver(object):
             dt = dts[timeIndex]
         stackedFields = self.stackFields(fields, np)
 
-        for index, value in enumerate(source(fields, mesh, t)):
+        for index, value in enumerate(source(fields, mesh.origMesh, t)):
             #if index == 1:
             #    phi = IOField.internalField('rhoUS', value, (3,))
             #    with IOField.handle(startTime):
@@ -187,7 +187,7 @@ class Solver(object):
                 dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
 
             mesh.update(t, dt)
-            for index, value in enumerate(source(fields, mesh, t)):
+            for index, value in enumerate(source(fields, mesh.origMesh, t)):
                 self.source[index][1][:] = value
 
             instObjective = self.objective(stackedFields)
