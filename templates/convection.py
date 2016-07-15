@@ -15,7 +15,6 @@ def objective(fields, mesh):
     return ad.sum(rho.field[:mesh.nInternalCells]*G)
 
 def source(fields, mesh, t):
-    mesh = mesh.origMesh
     rho = np.zeros((mesh.nInternalCells, 1))
     rhoU = np.zeros((mesh.nInternalCells, 3))
     rhoE = np.zeros((mesh.nInternalCells, 1))

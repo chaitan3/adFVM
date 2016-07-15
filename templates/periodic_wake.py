@@ -23,7 +23,6 @@ def objective(fields, mesh):
     return (U[:,1]**2).sum()/2
 
 def source(fields, mesh, t):
-    mesh = mesh.origMesh
     n = mesh.nInternalCells
     U = fields[1].field[:n]/fields[0].field[:n]
     x = mesh.cellCentres[:n, 0]
