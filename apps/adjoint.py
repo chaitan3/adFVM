@@ -47,6 +47,7 @@ else:
     with IOField.handle(t):
         adjointFields = [IOField.read(name) for name in adjointNames]
 
+# TODO: FIX THIS
 adjointInternalFields = [phi.complete() for phi in adjointFields]
 adjointNewFields = [phi.phi.field for phi in adjointFields]
 # UGLY HACK
@@ -184,5 +185,4 @@ for checkpoint in range(firstCheckpoint, totalCheckpoints):
 
 for index in range(0, nPerturb):
     writeResult('adjoint', result[index], '{} {}'.format(index, user.scaling))
-if parallel.rank == 0:
-    os.remove(primal.statusFile)
+primal.removeStatusFile()

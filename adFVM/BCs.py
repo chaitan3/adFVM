@@ -49,6 +49,7 @@ class BoundaryCondition(object):
         self.normals = self.mesh.normals[self.startFace:self.endFace]
         # used by field writer
         self.getValue = lambda: self.field[self.cellStartFace:self.cellEndFace]
+        self.keys = []
         self.inputs = []
 
     def createInput(self, key, dimensions):
@@ -56,6 +57,7 @@ class BoundaryCondition(object):
         nFaces = patch['nFaces']
         value = extractField(self.patch[key], nFaces, dimensions)
         symbolic = ad.matrix()
+        self.keys.append(key)
         self.inputs.append((symbolic, value))
         return symbolic
 

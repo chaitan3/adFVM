@@ -9,6 +9,7 @@ from adFVM.field import Field, IOField
 from adFVM.op import  div, snGrad, grad, laplacian, internal_sum
 from adFVM.solver import Solver
 from adFVM.interp import central, Reconstruct, TVD
+from adFVM.mesh import extractField
 
 logger = config.Logger(__name__)
 
@@ -88,15 +89,14 @@ class RCF(Solver):
         # IO Fields, with phi attribute as a CellField
         start = time.time()
         with IOField.handle(t):
-            self.U = IOField.read('U' + suffix)
-            self.T = IOField.read('T' + suffix)
-            self.p = IOField.read('p' + suffix)
+            U = IOField.read('U' + suffix)
+            T = IOField.read('T' + suffix)
+            p = IOField.read('p' + suffix)
             if self.readConservative:
                 rho = IOField.read('rho' + suffix)
                 rhoU = IOField.read('rhoU' + suffix)
                 rhoE = IOField.read('rhoE' + suffix)
-                U, T, p = self.primitive(rho, rhoU, rhoE)
-                self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
+                U.field, T.field, p.field = [phi.field for phi in self.primitive(rho, rhoU, rhoE)]
             if self.dynamicMesh:
                 self.mesh.read(IOField._handle)
         parallel.mpi.Barrier()
@@ -104,12 +104,22 @@ class RCF(Solver):
         pprint('Time for reading fields: {0}'.format(end-start))
 
         if self.init is None:
-            UI = self.U.complete()
-            TI = self.T.complete()
-            pI = self.p.complete()
-            UN, TN, pN = self.U.phi.field, self.T.phi.field, self.p.phi.field 
+            self.U, self.T, self.p = U, T, p
+            UI, UN = self.U.completeField()
+            TI, TN = self.T.completeField()
+            pI, pN = self.p.completeField()
             self.init = self.function([UI, TI, pI], [UN, TN, pN], 'init')
             self.reconstructor = Reconstruct(self.mesh, TVD)
+        else:
+            self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
+            # replace read BC values
+            for phi, phiB in zip(self.getBCFields(), [U.boundary, T.boundary, p.boundary]):
+                for patchID in self.mesh.sortedPatches:
+                    patch = phi.BC[patchID]
+                    for key, value in zip(patch.keys, patch.inputs):
+                        if key == 'value':
+                            nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
+                            value[1][:] = extractField(phiB[patchID][key], nFaces, phi.dimensions)
         return
 
     def getBCFields(self):

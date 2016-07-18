@@ -729,72 +729,86 @@ class Mesh(object):
             patch = mesh.boundary[patchID]
             startFace, endFace, nFaces = self.getPatchFaceRange(patchID)
             if patch['type'] == 'slidingPeriodic1D':
-                # single processor has everything
-                if nFaces == 0:
-                    if dt == 0.:
-                        self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
-                    patch['movingCellCentres'] = np.zeros((0, 3), config.precision)
-                    patch['loc_multiplier'] = sparse.csr_matrix((0,0), dtype=config.precision)
-                    patch['loc_velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
-                    continue
-                if dt == 0.:
-                    patch['nLayers'] = int(patch['nLayers'])
-                    patch['nFacesPerLayer'] = nFaces/patch['nLayers']
-                    neighbourPatch = mesh.boundary[patch['neighbourPatch']]   
-                    neighbourStartFace = neighbourPatch['startFace']
-                    neighbourEndFace = neighbourStartFace + patch['nFacesPerLayer']
-                    patch['loc_velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
-                    patch['loc_fixedCellCentres'] = mesh.cellCentres[mesh.owner[neighbourStartFace:neighbourEndFace]]
-                    dists = sp.spatial.distance.squareform(sp.spatial.distance.pdist(patch['loc_fixedCellCentres']))
-                    # is this guaranteed to give extreme indices?
-                    index1, index2 = np.unravel_index(np.argmax(dists), dists.shape)
-                    patch1 = mesh.boundary[patch['periodicPatch']]
-                    patch2 = mesh.boundary[patch1['neighbourPatch']]
-                    if np.linalg.norm(patch['loc_fixedCellCentres'][index1] + patch2['loc_transform'] - patch['loc_fixedCellCentres'][index2]) > np.max(dists):
-                        index2, index1 = index1, index2
-                    point1 = patch['loc_fixedCellCentres'][index2] + patch1['loc_transform']
-                    point2 = patch['loc_fixedCellCentres'][index1] + patch2['loc_transform']
-                    #print patchID, mesh.cellCentres[mesh.owner[startFace:endFace]][0], point1, patch['velocity']
-                    # reread
-                    if 'movingCellCentres' in patch:
-                        patch['movingCellCentres'] = extractField(patch['movingCellCentres'], patch['nFacesPerLayer']+1, (3,))
-                    else:
-                        patch['movingCellCentres'] = np.vstack((patch['loc_fixedCellCentres'].copy(), point2))
-                    patch['loc_periodicLimit'] = point1
-                    patch['loc_extraIndex'] = index1
-                    self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
-                patch['movingCellCentres'] += patch['loc_velocity']*dt
-                # only supports low enough velocities
-                transformIndices = (patch['movingCellCentres']-patch['loc_periodicLimit']).dot(patch['loc_velocity']) > 1e-6
-                #print patchID, patch['movingCellCentres'][0], patch['loc_periodicLimit'], patch['loc_velocity']
-                patch['movingCellCentres'][transformIndices] += mesh.boundary[mesh.boundary[patch['periodicPatch']]['neighbourPatch']]['loc_transform']
-                dists = sp.spatial.distance.cdist(patch['loc_fixedCellCentres'], patch['movingCellCentres'])
-                n, m = dists.shape
-                sortedDists = np.argsort(dists, axis=1)[:,:2]
-                np.place(sortedDists, sortedDists == (m-1), patch['loc_extraIndex'])
-                indices = np.arange(n).reshape(-1,1)
-                minDists = dists[indices, sortedDists]
-                # weights should use weighted average?
-                weights = (minDists/minDists.sum(axis=1, keepdims=True))[:,[1, 0]].ravel()
-                sortedDists = sortedDists.ravel()
-                indices = np.hstack((indices, indices)).ravel()
-                # repetition
-                weights = np.tile(weights, patch['nLayers'])
-                repeater = np.repeat(np.arange(patch['nLayers']), 2*patch['nFacesPerLayer'])*patch['nFacesPerLayer']
-                indices = np.tile(indices, patch['nLayers']) + repeater
-                sortedDists = np.tile(sortedDists, patch['nLayers']) + repeater
-                loc_multiplier = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(nFaces, nFaces)).tocsr()
-                if 'loc_multiplier' not in patch:
-                    patch['loc_multiplier'] = loc_multiplier
-                else:
-                    patch['loc_multiplier'].data = loc_multiplier.data
-                    patch['loc_multiplier'].indices = loc_multiplier.indices
-                    patch['loc_multiplier'].indptr = loc_multiplier.indptr
-                #print patch['movingCellCentres']
-                #print 'set', id(patch['loc_multiplier'].data)
+                self.updateSlidingPatch(patch, t, dt)
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Time to update mesh:', end-start)
+
+    def initSlidingPatch(patch):
+        nFaces = patch['nFaces']
+        if nFaces == 0:
+            self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
+            return
+
+        patch['nLayers'] = int(patch['nLayers'])
+        patch['nFacesPerLayer'] = nFaces/patch['nLayers']
+        neighbourPatch = mesh.boundary[patch['neighbourPatch']]   
+        neighbourStartFace = neighbourPatch['startFace']
+        neighbourEndFace = neighbourStartFace + patch['nFacesPerLayer']
+        patch['loc_velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
+        patch['loc_fixedCellCentres'] = mesh.cellCentres[mesh.owner[neighbourStartFace:neighbourEndFace]]
+        dists = sp.spatial.distance.squareform(sp.spatial.distance.pdist(patch['loc_fixedCellCentres']))
+        # is this guaranteed to give extreme indices?
+        index1, index2 = np.unravel_index(np.argmax(dists), dists.shape)
+        patch1 = mesh.boundary[patch['periodicPatch']]
+        patch2 = mesh.boundary[patch1['neighbourPatch']]
+        if np.linalg.norm(patch['loc_fixedCellCentres'][index1] + patch2['loc_transform'] - patch['loc_fixedCellCentres'][index2]) > np.max(dists):
+            index2, index1 = index1, index2
+        point1 = patch['loc_fixedCellCentres'][index2] + patch1['loc_transform']
+        point2 = patch['loc_fixedCellCentres'][index1] + patch2['loc_transform']
+        #print patchID, mesh.cellCentres[mesh.owner[startFace:endFace]][0], point1, patch['velocity']
+        # reread
+        if 'movingCellCentres' in patch:
+            patch['movingCellCentres'] = extractField(patch['movingCellCentres'], patch['nFacesPerLayer']+1, (3,))
+        else:
+            patch['movingCellCentres'] = np.vstack((patch['loc_fixedCellCentres'].copy(), point2))
+        patch['loc_periodicLimit'] = point1
+        patch['loc_extraIndex'] = index1
+        self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
+        return
+
+    def updateSlidingPatch(patch, t, dt):
+        nFaces = patch['nFaces']
+        # single processor has everything
+        if dt == 0.:
+            self.initSlidingPatch(patch)
+
+        if nFaces == 0:
+            patch['movingCellCentres'] = np.zeros((0, 3), config.precision)
+            patch['loc_multiplier'] = sparse.csr_matrix((0,0), dtype=config.precision)
+            patch['loc_velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
+            return
+
+        patch['movingCellCentres'] += patch['loc_velocity']*dt
+        # only supports low enough velocities
+        transformIndices = (patch['movingCellCentres']-patch['loc_periodicLimit']).dot(patch['loc_velocity']) > 1e-6
+        #print patchID, patch['movingCellCentres'][0], patch['loc_periodicLimit'], patch['loc_velocity']
+        patch['movingCellCentres'][transformIndices] += mesh.boundary[mesh.boundary[patch['periodicPatch']]['neighbourPatch']]['loc_transform']
+        dists = sp.spatial.distance.cdist(patch['loc_fixedCellCentres'], patch['movingCellCentres'])
+        n, m = dists.shape
+        sortedDists = np.argsort(dists, axis=1)[:,:2]
+        np.place(sortedDists, sortedDists == (m-1), patch['loc_extraIndex'])
+        indices = np.arange(n).reshape(-1,1)
+        minDists = dists[indices, sortedDists]
+        # weights should use weighted average?
+        weights = (minDists/minDists.sum(axis=1, keepdims=True))[:,[1, 0]].ravel()
+        sortedDists = sortedDists.ravel()
+        indices = np.hstack((indices, indices)).ravel()
+        # repetition
+        weights = np.tile(weights, patch['nLayers'])
+        repeater = np.repeat(np.arange(patch['nLayers']), 2*patch['nFacesPerLayer'])*patch['nFacesPerLayer']
+        indices = np.tile(indices, patch['nLayers']) + repeater
+        sortedDists = np.tile(sortedDists, patch['nLayers']) + repeater
+        loc_multiplier = sparse.coo_matrix((weights, (indices, sortedDists)), shape=(nFaces, nFaces)).tocsr()
+        if 'loc_multiplier' not in patch:
+            patch['loc_multiplier'] = loc_multiplier
+        else:
+            patch['loc_multiplier'].data = loc_multiplier.data
+            patch['loc_multiplier'].indices = loc_multiplier.indices
+            patch['loc_multiplier'].indptr = loc_multiplier.indptr
+        #print patch['movingCellCentres']
+        #print 'set', id(patch['loc_multiplier'].data)
+        return
 
     def decompose(self, nprocs):
         assert parallel.nProcessors == 1

@@ -122,18 +122,12 @@ class Solver(object):
             dt = dts[timeIndex]
         stackedFields = self.stackFields(fields, np)
 
-        for index, value in enumerate(source(fields, mesh.origMesh, t)):
-            #if index == 1:
-            #    phi = IOField.internalField('rhoUS', value, (3,))
-            #    with IOField.handle(startTime):
-            #        phi.write()
-            self.source[index][1][:] = value
-
         # objective is local
         instObjective = self.objective(stackedFields)
         result += instObjective
         timeSeries = [parallel.sum(instObjective)]
         timeSteps = []
+
         # writing and returning local solutions
         if mode == 'forward':
             if self.dynamicMesh:
@@ -143,10 +137,20 @@ class Solver(object):
             else:
                 solutions = [stackedFields]
 
+        # source term update
+        for index, value in enumerate(source(fields, mesh.origMesh, t)):
+            #if index == 1:
+            #    phi = IOField.internalField('rhoUS', value, (3,))
+            #    with IOField.handle(startTime):
+            #        phi.write()
+            self.source[index][1][:] = value
+
 
         pprint('Time marching for', ' '.join(self.names))
 
-        while t < endTime and timeIndex < nSteps:
+        def iterate(t, timeIndex):
+            return t < endTime and timeIndex < nSteps
+        while iterate(t, timeIndex):
             printMemUsage()
             start = time.time()
 
@@ -171,6 +175,7 @@ class Solver(object):
             pprint('Time since beginning:', end-config.runtime)
             pprint('Running average objective: ', parallel.sum(result)/(timeIndex + 1))
 
+            # time management
             timeSteps.append([t, dt])
             timeIndex += 1
             if self.localTimeStep:
@@ -190,9 +195,12 @@ class Solver(object):
             for index, value in enumerate(source(fields, mesh.origMesh, t)):
                 self.source[index][1][:] = value
 
+            # objective management
             instObjective = self.objective(stackedFields)
             result += instObjective
             timeSeries.append(parallel.sum(instObjective))
+
+            # write management
             if mode == 'forward':
                 if self.dynamicMesh:
                     instMesh = Mesh()
@@ -200,12 +208,12 @@ class Solver(object):
                     solutions.append((instMesh, stackedFields))
                 else:
                     solutions.append(stackedFields)
-
-            if (timeIndex % writeInterval == 0) and (mode != 'forward'):
+            elif (timeIndex % writeInterval == 0) or not iterate(t, timeIndex):
                 # write mesh, fields, status
                 dtc = IOField.internalField('dtc', dtc, (1,))
                 self.writeFields(fields + [dtc], t)
-                #self.writeStatusFile([timeIndex, t, dt, result])
+                if mode != 'simulation':
+                    self.writeStatusFile([timeIndex, t, dt, result])
 
                 # write timeSeries if in orig mode (problem.py)
                 if mode == 'orig' and parallel.rank == 0:
@@ -216,19 +224,8 @@ class Solver(object):
                     lastIndex = len(timeSteps)
             pprint()
 
-
         if mode == 'forward':
             return solutions
-        if (timeIndex % writeInterval != 0) and (timeIndex > writeInterval):
-            dtc = IOField('dtc', dtc, (1,))
-            dtc.partialComplete()
-            self.writeFields(fields + [dtc], t)
-            if mode == 'orig' and parallel.rank == 0:
-                with open(self.timeStepFile, 'a') as f:
-                    np.savetxt(f, timeSteps[lastIndex:])
-                with open(self.timeSeriesFile, 'a') as f:
-                    np.savetxt(f, timeSeries[lastIndex:])
-                lastIndex = len(timeSteps)
         return result
 
     def readStatusFile(self):
@@ -250,6 +247,13 @@ class Solver(object):
                 pkl.dump(data, status)
         return
 
+    def removeStatusFile(self):
+        if parallel.rank == 0:
+            try:
+                os.remove(primal.statusFile)
+            except OSError:
+                pass
+
     def function(self, inputs, outputs, name, **kwargs):
         return SolverFunction(inputs, outputs, self, name, **kwargs)
 
@@ -260,6 +264,7 @@ class SolverFunction(object):
         self.symbolic = []
         self.values = []
         mesh = solver.mesh
+        # values require inplace substitution
         self.populate_mesh(self.symbolic, mesh, mesh)
         self.populate_mesh(self.values, mesh.origMesh, mesh)
         if BCs:

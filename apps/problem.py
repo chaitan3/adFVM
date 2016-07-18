@@ -132,8 +132,5 @@ if __name__ == "__main__":
             source = perturb[sim]
         result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex, source=source)
         writeResult(user.option, result/(nSteps + 1), '{}'.format(sim))
-        if parallel.rank == 0:
-            try:
-                os.remove(primal.statusFile)
-            except OSError:
-                pass
+        primal.removeStatusFile()
+        

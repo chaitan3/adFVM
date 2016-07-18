@@ -256,8 +256,6 @@ class IOField(Field):
         self.boundary = boundary
         if len(list(boundary.keys())) == 0:
             self.boundary = self.mesh.defaultBoundary
-        else:
-            self.boundary = boundary
         self.phi = None
 
     @classmethod
@@ -321,6 +319,7 @@ class IOField(Field):
                         break
                     # skip non binary, non value, uniform or empty patches
                     elif key == 'value' and config.fileFormat == 'binary' and getToken(content[start:])[0] != 'uniform' and mesh.boundary[patchID]['nFaces'] != 0:
+
                         match = re.search(re.compile('[ ]+(nonuniform[ ]+List<[a-z]+>[\s\r\n\t0-9]*\()', re.DOTALL), content[start:])
                         nBytes = bytesPerField * mesh.boundary[patchID]['nFaces']
                         start += match.end()
@@ -417,13 +416,12 @@ class IOField(Field):
         return self.field[:self.mesh.origMesh.nInternalCells]
 
 
-    def complete(self):
+    def completeField(self):
         logger.debug('completing field {0}'.format(self.name))
         internalField = ad.matrix()
-        #X.tag.test_value = self.field
         # CellField for later use
         self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, ghost=True)
-        return internalField
+        return internalField, self.phi.field
 
     def partialComplete(self, value=0.):
         mesh = self.mesh.origMesh
