@@ -1,7 +1,7 @@
 #!/usr/bin/python2
-import config
-from mesh import Mesh
-from field import Field, IOField
+from adFVM import config
+from adFVM.mesh import Mesh
+from adFVM.field import Field, IOField
 
 import os, shutil
 import argparse
@@ -41,9 +41,8 @@ fields = os.listdir(timeDir)
 for phi in fields:
     if phi == 'polyMesh':
         continue
-    IOField.openHandle(user.time)
-    field = IOField.read(phi)
-    field.boundary['intersection_master']['type'] = 'slidingPeriodic1D'
-    field.boundary['intersection_slave']['type'] = 'slidingPeriodic1D'
-    field.write(skipProcessor=True)
-    IOField.closeHandle()
+    with IOField.handle(user.time):
+        field = IOField.read(phi)
+        field.boundary['intersection_master']['type'] = 'slidingPeriodic1D'
+        field.boundary['intersection_slave']['type'] = 'slidingPeriodic1D'
+        field.write(skipProcessor=True)

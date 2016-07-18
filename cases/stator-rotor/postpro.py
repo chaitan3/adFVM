@@ -10,7 +10,7 @@ from adFVM.density import RCF
 
 #surface = 'blade'
 ##surface = 'blade0'
-surface = 'blade'
+surface = 'nozzle'
 
 def postprocess(solver, time, suffix=''):
 
@@ -25,9 +25,8 @@ def postprocess(solver, time, suffix=''):
     point = np.array([0.052641,-0.1,0.005])
     normal = np.array([1.,0.,0.])
 
-    get_profile(surface)
-    patches = [surface + '_pressure', surface + '_suction']
-    #patches = ['blade_pressure', 'blade_suction', 'blade0_pressure', 'blade0_suction', 'nozzle_pressure', 'nozzle_suction']
+    #patches = [surface + '_pressure', surface + '_suction']
+    patches = ['blade_pressure', 'blade_suction', 'blade0_pressure', 'blade0_suction', 'nozzle_pressure', 'nozzle_suction']
 
     pprint('postprocessing', time)
     rho, rhoU, rhoE = solver.initFields(time, suffix=suffix)
@@ -43,8 +42,8 @@ def postprocess(solver, time, suffix=''):
     uplus = IOField.boundaryField('uplus' + suffix, uplus, (3,))
     yplus = IOField.boundaryField('yplus' + suffix, yplus, (1,))
     with IOField.handle(time):
-        htc.write()
-        Ma.write()
+        #htc.write()
+        #Ma.write()
         uplus.write()
         yplus.write()
 

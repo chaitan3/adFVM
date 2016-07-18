@@ -21,6 +21,9 @@ for time in times:
     fields = []
     with IOField.handle(time):
         for name in os.listdir(mesh.getTimeDir(time)):
+            if name == 'polyMesh':
+                # replace mesh boundary !!
+                continue
             phi = IOField.readFoam(name)
             phi.partialComplete()
             fields.append(phi)
