@@ -86,24 +86,30 @@ class RCF(Solver):
 
     # only reads fields
     def readFields(self, t, suffix=''):
-        # IO Fields, with phi attribute as a CellField
+        firstRun = self.init is None
+        if firstRun:
+            info = 'boundary fields'
+        else:
+            info = 'fields'
+
         start = time.time()
         with IOField.handle(t):
-            U = IOField.read('U' + suffix)
-            T = IOField.read('T' + suffix)
-            p = IOField.read('p' + suffix)
+            U = IOField.read('U' + suffix, skipField=firstRun)
+            T = IOField.read('T' + suffix, skipField=firstRun)
+            p = IOField.read('p' + suffix, skipField=firstRun)
             if self.readConservative:
-                rho = IOField.read('rho' + suffix)
-                rhoU = IOField.read('rhoU' + suffix)
-                rhoE = IOField.read('rhoE' + suffix)
+                rho = IOField.read('rho' + suffix, skipField=firstRun)
+                rhoU = IOField.read('rhoU' + suffix, skipField=firstRun)
+                rhoE = IOField.read('rhoE' + suffix, skipField=firstRun)
                 U.field, T.field, p.field = [phi.field for phi in self.primitive(rho, rhoU, rhoE)]
             if self.dynamicMesh:
                 self.mesh.read(IOField._handle)
         parallel.mpi.Barrier()
         end = time.time()
-        pprint('Time for reading fields: {0}'.format(end-start))
+        pprint('Time for reading {}: {}'.format(info, end-start))
 
-        if self.init is None:
+        # IO Fields, with phi attribute as a CellField
+        if firstRun:
             self.U, self.T, self.p = U, T, p
             UI, UN = self.U.completeField()
             TI, TN = self.T.completeField()

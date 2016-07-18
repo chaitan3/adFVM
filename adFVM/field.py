@@ -277,14 +277,14 @@ class IOField(Field):
         return self(name, field, dimensions, meshBoundary)
 
     @classmethod
-    def read(self, name):
+    def read(self, name, **kwargs):
         if config.hdf5:
-            return self.readHDF5(name)
+            return self.readHDF5(name, **kwargs)
         else:
-            return self.readFoam(name)
+            return self.readFoam(name, **kwargs)
 
     @classmethod
-    def readFoam(self, name):
+    def readFoam(self, name, skipField=False):
         # mesh values required outside theano
         pprint('reading foam field {0}, time {1}'.format(name, self.time))
         timeDir = self._handle
@@ -297,8 +297,11 @@ class IOField(Field):
             dimensions = 1 + vector*2
             bytesPerField = 8*(1 + 2*vector)
             startBoundary = content.find('boundaryField')
-            data = re.search(re.compile('internalField[\s\r\n]+(.*)', re.DOTALL), content[:startBoundary]).group(1)
-            internalField = extractField(data, mesh.nInternalCells, (dimensions,))
+            if not skipField:
+                data = re.search(re.compile('internalField[\s\r\n]+(.*)', re.DOTALL), content[:startBoundary]).group(1)
+                internalField = extractField(data, mesh.nInternalCells, (dimensions,))
+            else:
+                internalField = np.zeros((0,) + (dimensions,), config.precision)
         except Exception as e:
             config.exceptInfo(e, (timeDir, name))
 
@@ -343,7 +346,7 @@ class IOField(Field):
         return self(name, internalField, dimensions, boundary)
 
     @classmethod
-    def readHDF5(self, name):
+    def readHDF5(self, name, skipField=False):
         pprint('reading hdf5 field {0}, time {1}'.format(name, self.time))
 
         assert self._handle is not None
@@ -362,11 +365,18 @@ class IOField(Field):
 
         mesh = self.mesh.origMesh
         fieldData = fieldGroup['field']
+        if skipField:
+            delta = mesh.nInternalCells
+        else:
+            delta = 0
         with fieldData.collective:
-            field = fieldData[parallelStart[0]:parallelEnd[0]]
+            field = fieldData[parallelStart[0] + delta:parallelEnd[0]]
         field = np.array(field).astype(config.precision)
-        internalField = field[:mesh.nInternalCells]
         dimensions = field.shape[1:]
+        if not skipField:
+            internalField = field[:mesh.nInternalCells]
+        else:
+            internalField = np.zeros((0,) + dimensions, config.precision)
 
         boundaryData = fieldGroup['boundary']
         with boundaryData.collective:
@@ -381,9 +391,7 @@ class IOField(Field):
             patch = boundary[patchID]
             if patch['type'] in BCs.valuePatches:
                 cellStartFace, cellEndFace, _ = mesh.getPatchCellRange(patchID)
-                patch['value'] = field[cellStartFace:cellEndFace]
-
-        #fieldsFile.close()
+                patch['value'] = field[cellStartFace - delta:cellEndFace - delta]
 
         return self(name, internalField, dimensions, boundary)
  
