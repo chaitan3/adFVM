@@ -22,7 +22,9 @@ class Solver(object):
                         'adjoint': False,
                         'dynamicMesh': False,
                         'localTimeStep': False,
-                        'postpro': []
+                        'stepFactor': 1.0,
+                        'postpro': [],
+                        'sourceTerms': []
                     }
 
     def __init__(self, case, **userConfig):
@@ -41,10 +43,8 @@ class Solver(object):
         self.timeStepCoeff = getattr(timestep, self.timeIntegrator)()
         self.nStages = self.timeStepCoeff[0].shape[0]
         self.stage = 0
-        self.stepFactor = 1.0
-
         self.init = None
-        self.sourceTerms = []
+        return
 
     def compile(self, adjoint=False):
         self.compileInit()
