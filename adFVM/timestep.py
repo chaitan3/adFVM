@@ -54,36 +54,36 @@ def timeStepper(equation, boundary, stackedFields, solver):
     return solver.stackFields(fields[-1], ad)
 
 # DOES NOT WORK
-def implicit(equation, boundary, fields, garbage):
-    assert ad.__name__ == 'numpad'
-    start = time.time()
-
-    names = [phi.name for phi in fields]
-    pprint('Solving for', ' '.join(names))
-    for index in range(0, len(fields)):
-        fields[index].old = CellField.copy(fields[index])
-        fields[index].info()
-    nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in fields]))))
-    nDimensions = zip(nDimensions[:-1], nDimensions[1:])
-    def setInternalFields(stackedInternalFields):
-        internalFields = []
-        # range creates a copy on the array
-        for index in range(0, len(fields)):
-            internalFields.append(stackedInternalFields[:, range(*nDimensions[index])])
-        return boundary(*internalFields)
-    def solver(internalFields):
-        newFields = setInternalFields(internalFields)
-        for index in range(0, len(fields)):
-            newFields[index].old = fields[index].old
-        return ad.hstack([phi.field for phi in equation(*newFields)])
-
-    internalFields = ad.hstack([phi.getInternalField() for phi in fields])
-    solution = ad.solve(solver, internalFields)
-    newFields = setInternalFields(solution)
-    for index in range(0, len(fields)):
-        newFields[index].name = fields[index].name
-
-    end = time.time()
-    pprint('Time for iteration:', end-start)
-    return newFields
+#def implicit(equation, boundary, fields, garbage):
+#    assert ad.__name__ == 'numpad'
+#    start = time.time()
+#
+#    names = [phi.name for phi in fields]
+#    pprint('Solving for', ' '.join(names))
+#    for index in range(0, len(fields)):
+#        fields[index].old = CellField.copy(fields[index])
+#        fields[index].info()
+#    nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in fields]))))
+#    nDimensions = zip(nDimensions[:-1], nDimensions[1:])
+#    def setInternalFields(stackedInternalFields):
+#        internalFields = []
+#        # range creates a copy on the array
+#        for index in range(0, len(fields)):
+#            internalFields.append(stackedInternalFields[:, range(*nDimensions[index])])
+#        return boundary(*internalFields)
+#    def solver(internalFields):
+#        newFields = setInternalFields(internalFields)
+#        for index in range(0, len(fields)):
+#            newFields[index].old = fields[index].old
+#        return ad.hstack([phi.field for phi in equation(*newFields)])
+#
+#    internalFields = ad.hstack([phi.getInternalField() for phi in fields])
+#    solution = ad.solve(solver, internalFields)
+#    newFields = setInternalFields(solution)
+#    for index in range(0, len(fields)):
+#        newFields[index].name = fields[index].name
+#
+#    end = time.time()
+#    pprint('Time for iteration:', end-start)
+#    return newFields
 

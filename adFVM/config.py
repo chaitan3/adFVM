@@ -142,6 +142,18 @@ def suppressOutput():
         finally:
             sys.stdout = old_stdout
 
+def timeFunction(string):
+    def decorator(function):
+        def wrapper(*args, **kwargs):
+            start = time.time()
+            output = function(*args, **kwargs)
+            parallel.mpi.Barrier()
+            end = time.time()
+            parallel.pprint(string + ':', end-start)
+            return output
+        return wrapper
+    return decorator
+
 # CONSTANTS
 if precision == np.float64:
     SMALL = 1e-15

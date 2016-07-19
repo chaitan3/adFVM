@@ -56,22 +56,19 @@ class Mesh(object):
 
     @classmethod
     def create(cls, caseDir=None, currTime='constant'):
-        start = time.time()
         self = cls()
 
         if config.hdf5:
             meshData = self.readHDF5(caseDir)
         else:
             meshData = self.readFoam(caseDir, currTime) 
-        parallel.mpi.Barrier()
-        pprint('Time for reading mesh:', time.time()-start)
 
         self.build(meshData, currTime)
 
         return self
 
+    @config.timeFunction('Time for building mesh')
     def build(self, meshData, currTime='constant'):
-        start = time.time()
         pprint('Building mesh')
 
         self.points, self.faces, self.owner, self.neighbour, \
@@ -109,13 +106,8 @@ class Mesh(object):
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
         pprint('nFaces:', parallel.sum(self.origMesh.nFaces))
-        parallel.mpi.Barrier()
-
-        pprint('Time for building mesh:', time.time()-start)
-        pprint()
 
         printMemUsage()
-
         return 
 
     def getTimeDir(self, time, case=None):
@@ -152,6 +144,7 @@ class Mesh(object):
                 self.origMesh.boundary[patchID].update(boundary[patchID])
         self.update(time, 0.)
 
+    @config.timeFunction('Time for reading mesh')
     def readFoam(self, caseDir, currTime):
         pprint('Reading foam mesh')
         self.case = caseDir + parallel.processorDirectory
@@ -242,6 +235,7 @@ class Mesh(object):
             boundary[patch[0]]['startFace'] = int(boundary[patch[0]]['startFace'])
         return boundary
 
+    @config.timeFunction('Time for reading mesh')
     def readHDF5(self, caseDir):
         pprint('Reading hdf5 mesh')
 
@@ -721,17 +715,15 @@ class Mesh(object):
         default = [('startFace', ad.iscalar()), ('nFaces', ad.iscalar())]
         return default + self.boundaryTensor.get(patchID, [])
 
+    @config.timeFunction('Time to update mesh')
     def update(self, t, dt):
         logger.info('updating mesh')
-        start = time.time()
         mesh = self.origMesh
         for patchID in self.localPatches:
             patch = mesh.boundary[patchID]
             startFace, endFace, nFaces = self.getPatchFaceRange(patchID)
             if patch['type'] == 'slidingPeriodic1D':
                 self.updateSlidingPatch(patch, t, dt)
-        parallel.mpi.Barrier()
-        end = time.time()
         pprint('Time to update mesh:', end-start)
 
     def initSlidingPatch(patch):
@@ -810,6 +802,7 @@ class Mesh(object):
         #print 'set', id(patch['loc_multiplier'].data)
         return
 
+    @config.timeFunction('Time to decompose mesh')
     def decompose(self, nprocs):
         assert parallel.nProcessors == 1
         start = time.time()

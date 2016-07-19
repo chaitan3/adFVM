@@ -89,14 +89,10 @@ class RCF(Solver):
         return rho
 
     # only reads fields
+    @config.timeFunction('Time for reading fields')
     def readFields(self, t, suffix=''):
         firstRun = self.init is None
-        if firstRun:
-            info = 'boundary fields'
-        else:
-            info = 'fields'
 
-        start = time.time()
         with IOField.handle(t):
             U = IOField.read('U' + suffix, skipField=firstRun)
             T = IOField.read('T' + suffix, skipField=firstRun)
@@ -109,12 +105,7 @@ class RCF(Solver):
             if self.dynamicMesh:
                 self.mesh.read(IOField._handle)
         fields = [U, T, p]
-        parallel.mpi.Barrier()
-        end = time.time()
-        pprint('Time for reading {}: {}'.format(info, end-start))
-
         # IO Fields, with phi attribute as a CellField
-
         if firstRun:
             self.U, self.T, self.p = fields
             self.fields = fields
@@ -128,20 +119,16 @@ class RCF(Solver):
         self.U.field, self.T.field, self.p.field = self.init(self.U.field, self.T.field, self.p.field)
         return self.conservative(self.U, self.T, self.p)
     
+    @config.timeFunction('Time for writing fields')
     def writeFields(self, fields, t):
         U, T, p = self.primitive(*fields[:-1])
         self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
-        start = time.time()
 
         with IOField.handle(t):
             for phi in fields + self.fields:
                 phi.write()
             if self.dynamicMesh:
                 self.mesh.write(IOField._handle)
-
-        parallel.mpi.Barrier()
-        end = time.time()
-        pprint('Time for writing fields: {0}'.format(end-start))
         return
           
     def equation(self, rho, rhoU, rhoE):
