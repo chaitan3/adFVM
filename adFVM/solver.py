@@ -11,6 +11,7 @@ from .memory import printMemUsage
 
 from .field import Field, CellField, IOField
 from .mesh import Mesh
+from .mesh import extractField
 
 logger = config.Logger(__name__)
 
@@ -108,17 +109,6 @@ class Solver(object):
             fields.append(CellField(names[index], field, dim))
         return fields
 
-    def getBCFields(self):
-        return [phi.phi for phi in self.fields]
-
-    def readFields(self, t):
-        fields = []
-        with IOField.handle(t):
-            for name in self.names:
-                fields.append(IOField.read(name))
-        self.fields = fields
-        return fields
-
     def initSource(self):
         self.sourceFields = self.getSymbolicFields()
         symbolics = [phi.field for phi in self.sourceFields]
@@ -126,13 +116,48 @@ class Solver(object):
         self.source = zip(symbolics, values)
         return
 
-    def initFields(self, t, fields=None):
-        if fields is None:
-            fields = self.readFields(t)
-        fields = self.init(*[phi.field for phi in fields])
-        for phiI, phiN in zip(self.fields, fields):
-            phiI.field = phiN
+    def updateSource(self, source):
+        for index, value in enumerate(source):
+            #if index == 1:
+            #    phi = IOField.internalField('rhoUS', value, (3,))
+            #    with IOField.handle(startTime):
+            #        phi.write()
+            self.source[index][1][:] = value
+        return
+
+    def readFields(self, t):
+        fields = []
+        with IOField.handle(t):
+            for name in self.names:
+                fields.append(IOField.read(name))
+        if self.init is None:
+            self.fields = fields
+        else:
+            self.updateFields(fields)
+        return 
+
+    def getBCFields(self):
+        return [phi.phi for phi in self.fields]
+
+    def initFields(self, t, read=True):
+        if read:
+            self.readFields(t)
+        fields = self.init(*[phi.field for phi in self.fields])
+        for phi, phiN in zip(self.fields, fields):
+            phi.field = phiN
         return self.fields
+
+    def updateFields(self, fields):
+        for phi, phiN in zip(self.fields, fields):
+            phi.field = phiN.field
+        for phi, phiB in zip(self.getBCFields(), [phi.boundary for phi in fields]):
+            for patchID in self.mesh.sortedPatches:
+                patch = phi.BC[patchID]
+                for key, value in zip(patch.keys, patch.inputs):
+                    if key == 'value':
+                        nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
+                        value[1][:] = extractField(phiB[patchID][key], nFaces, phi.dimensions)
+        return
 
     def writeFields(self, fields, t):
         for phi, phiN in zip(self.fields, fields):
@@ -140,6 +165,7 @@ class Solver(object):
         with IOField.handle(t):
             for phi in self.fields:
                 phi.write()
+        return
 
     def readStatusFile(self):
         data = None
@@ -212,13 +238,7 @@ class Solver(object):
                 solutions = [stackedFields]
 
         # source term update
-        for index, value in enumerate(source(fields, mesh.origMesh, t)):
-            #if index == 1:
-            #    phi = IOField.internalField('rhoUS', value, (3,))
-            #    with IOField.handle(startTime):
-            #        phi.write()
-            self.source[index][1][:] = value
-
+        self.updateSource(source(fields, mesh.origMesh, t))
 
         pprint('Time marching for', ' '.join(self.names))
 
@@ -266,8 +286,7 @@ class Solver(object):
                 dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
 
             mesh.update(t, dt)
-            for index, value in enumerate(source(fields, mesh.origMesh, t)):
-                self.source[index][1][:] = value
+            self.updateSource(source(fields, mesh.origMesh, t))
 
             # objective management
             instObjective = self.objective(stackedFields)

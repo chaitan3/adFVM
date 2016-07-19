@@ -2,14 +2,13 @@ import numpy as np
 import sys
 import time
 
-from adFVM import config, parallel, riemann
-from adFVM.config import ad
-from adFVM.parallel import pprint
-from adFVM.field import Field, IOField
-from adFVM.op import  div, snGrad, grad, laplacian, internal_sum
-from adFVM.solver import Solver
-from adFVM.interp import central, Reconstruct, TVD
-from adFVM.mesh import extractField
+from . import config, parallel, riemann
+from .config import ad
+from .parallel import pprint
+from .field import Field, IOField
+from .op import  div, snGrad, grad, laplacian, internal_sum
+from .solver import Solver
+from .interp import central, Reconstruct, TVD
 
 logger = config.Logger(__name__)
 
@@ -109,24 +108,18 @@ class RCF(Solver):
                 U.field, T.field, p.field = [phi.field for phi in self.primitive(rho, rhoU, rhoE)]
             if self.dynamicMesh:
                 self.mesh.read(IOField._handle)
+        fields = [U, T, p]
         parallel.mpi.Barrier()
         end = time.time()
         pprint('Time for reading {}: {}'.format(info, end-start))
 
         # IO Fields, with phi attribute as a CellField
+
         if firstRun:
-            self.U, self.T, self.p = U, T, p
-            self.fields = [U, T, p]
+            self.U, self.T, self.p = fields
+            self.fields = fields
         else:
-            self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
-            # replace read BC values
-            for phi, phiB in zip(self.getBCFields(), [U.boundary, T.boundary, p.boundary]):
-                for patchID in self.mesh.sortedPatches:
-                    patch = phi.BC[patchID]
-                    for key, value in zip(patch.keys, patch.inputs):
-                        if key == 'value':
-                            nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
-                            value[1][:] = extractField(phiB[patchID][key], nFaces, phi.dimensions)
+            self.updateFields(fields)
         return
 
     # reads and updates ghost cells

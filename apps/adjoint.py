@@ -83,7 +83,7 @@ class Adjoint(Solver):
 
         startTime = timeSteps[nSteps - firstCheckpoint*writeInterval][0]
         if firstCheckpoint == 0:
-            fields = self.initFields(startTime, fields=self.fields)
+            fields = self.initFields(startTime, read=False)
         else:
             fields = self.initFields(startTime)
         stackedFields = self.stackFields(fields, np)
