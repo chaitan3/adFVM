@@ -38,7 +38,6 @@ def div(phi, U=None, ghost=False):
     if U is None:
         divField = internal_sum(phi, mesh)
     else:
-        raise Exception('not tested')
         assert phi.dimensions == (1,)
         divField = internal_sum((phi*U).dotN(), mesh)
     if ghost:

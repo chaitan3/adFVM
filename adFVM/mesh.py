@@ -724,7 +724,6 @@ class Mesh(object):
             startFace, endFace, nFaces = self.getPatchFaceRange(patchID)
             if patch['type'] == 'slidingPeriodic1D':
                 self.updateSlidingPatch(patch, t, dt)
-        pprint('Time to update mesh:', end-start)
 
     def initSlidingPatch(patch):
         nFaces = patch['nFaces']

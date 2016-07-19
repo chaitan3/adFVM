@@ -41,7 +41,10 @@ class Solver(object):
         self.timeStepCoeff = getattr(timestep, self.timeIntegrator)()
         self.nStages = self.timeStepCoeff[0].shape[0]
         self.stage = 0
+        self.stepFactor = 1.0
+
         self.init = None
+        self.sourceTerms = []
 
     def compile(self, adjoint=False):
         self.compileInit()
@@ -52,7 +55,12 @@ class Solver(object):
         else:
             self.dt = ad.scalar()
         self.t0 = ad.scalar()
+
+        # default values
         self.t = self.t0*1.
+        self.dtc = self.dt
+        self.local, self.remote = self.mesh.nCells, self.mesh.nFaces
+
         stackedFields = ad.matrix()
         newStackedFields = timestep.timeStepper(self.equation, self.boundary, stackedFields, self)
         self.map = self.function([stackedFields, self.dt, self.t0], \
@@ -60,10 +68,10 @@ class Solver(object):
         if adjoint:
             stackedAdjointFields = ad.matrix()
             scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
-            gradientInputs = [stackedFields] + list(zip(*self.source)[0])
+            gradientInputs = [stackedFields] + list(zip(*self.sourceTerms)[0])
             gradients = ad.grad(scalarFields, gradientInputs)
             #meshGradient = ad.grad(scalarFields, mesh)
-            self.adjoint = self.function([stackedFields, stackedAdjointFields, self.dt, self.t], \
+            self.adjoint = self.function([stackedFields, stackedAdjointFields, self.dt, self.t0], \
                             gradients, 'adjoint')
             #self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \
             #                ad.Rop(newStackedFields, stackedFields, stackedAdjointFields), 'tangent')
@@ -113,7 +121,7 @@ class Solver(object):
         self.sourceFields = self.getSymbolicFields()
         symbolics = [phi.field for phi in self.sourceFields]
         values = [np.zeros((self.mesh.origMesh.nInternalCells, nDims[0])) for nDims in self.dimensions]
-        self.source = zip(symbolics, values)
+        self.sourceTerms = zip(symbolics, values)
         return
 
     def updateSource(self, source):
@@ -122,7 +130,7 @@ class Solver(object):
             #    phi = IOField.internalField('rhoUS', value, (3,))
             #    with IOField.handle(startTime):
             #        phi.write()
-            self.source[index][1][:] = value
+            self.sourceTerms[index][1][:] = value
         return
 
     def readFields(self, t):
@@ -139,6 +147,15 @@ class Solver(object):
     def getBCFields(self):
         return [phi.phi for phi in self.fields]
 
+    def setBCFields(self, fields):
+        for phi, phiN in zip(self.getBCFields(), fields):
+            phi.field = phiN.field
+
+    def setFields(self, fields):
+        for phi, phiN in zip(self.fields, fields):
+            phi.field = phiN.field
+        return
+
     def initFields(self, t, read=True):
         if read:
             self.readFields(t)
@@ -148,8 +165,7 @@ class Solver(object):
         return self.fields
 
     def updateFields(self, fields):
-        for phi, phiN in zip(self.fields, fields):
-            phi.field = phiN.field
+        self.setFields(fields)
         for phi, phiB in zip(self.getBCFields(), [phi.boundary for phi in fields]):
             for patchID in self.mesh.sortedPatches:
                 patch = phi.BC[patchID]
@@ -160,8 +176,7 @@ class Solver(object):
         return
 
     def writeFields(self, fields, t):
-        for phi, phiN in zip(self.fields, fields):
-            phi.field = phiN.field
+        self.setFields(fields) 
         with IOField.handle(t):
             for phi in self.fields:
                 phi.write()
@@ -336,8 +351,8 @@ class SolverFunction(object):
             self.populate_BCs(self.symbolic, solver, 0)
             self.populate_BCs(self.values, solver, 1)
         # source terms
-        if source:
-            symbolic, values = zip(*solver.source)
+        if source and len(solver.sourceTerms) > 0:
+            symbolic, values = zip(*solver.sourceTerms)
             self.symbolic.extend(symbolic)
             self.values.extend(values)
         # postpro variables

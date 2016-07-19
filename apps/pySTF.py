@@ -3,48 +3,30 @@ from __future__ import print_function
 import numpy as np
 import time
 
-from adFVM import config
 from adFVM.mesh import Mesh
-from adFVM.field import Field, CellField
-from adFVM.matop import div, ddt, laplacian, hybrid
-from adFVM.solver import implicit, forget
-from adFVM.config import ad, Logger
-from adFVM.parallel import pprint
+from adFVM.op import div, laplacian
+from adFVM.interp import central
+#from adFVM.matop_petsc import div, ddt, laplacian, hybrid
+from adFVM.solver import Solver
 
-logger = Logger(__name__)
+class STF(Solver):
+    def __init__(self, case, **userConfig):
+        super(STF, self).__init__(case, **userConfig)
+        self.names = ['T', 'U']
+        self.dimensions = [(1,), (3,)]
+        
+        self.DT = 0.01
 
-case = 'tests/cyclic/'
-mesh = Mesh(case)
+    def equation(self, T, U):
+        self.setBCFields([T, U])
+        TF = central(T, self.mesh)
+        UF = central(U, self.mesh)
+        return [div(TF, UF) - laplacian(T, self.DT), 
+                laplacian(U, 0)]
 
-t = 0.1
-dt = 0.001
-DT = 0.01
-
-#initialize
-Field.mesh = mesh
-CellField.solver = mesh
-T = CellField.zeros('T', (1,))
-mid = np.array([0.5, 0.5, 0.5])
-T.setInternalField(np.exp(-10*config.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)).reshape(-1,1))
-#T = Field.read('T', mesh, t)
-U = 1.*ad.ones((mesh.nFaces, 3))*np.array([1., 0., 0])
-U = Field('U', U)
-
-for i in range(0, 300):
-    if i % 20 == 0:
-        T.write(t)
-
-    print('Simulation Time:', t, 'Time step:', dt)
-    def equation(T):
-        return [ddt(T, dt) + div(T, U) - laplacian(T, DT)]
-    def boundary(TI):
-        TN = CellField.copy(T)
-        TN.setInternalField(TI)
-        return [TN]
-    
-    T = hybrid(equation, boundary, [T], dt)[0]
-    forget([T])
-    t += dt
-    t = round(t, 6)
-    print()
-    
+if __name__ == '__main__':
+    solver = STF('cases/cylinder/')
+    t = 2.0
+    solver.readFields(t)
+    solver.compile()
+    solver.run(startTime=t, dt=0.001, nSteps=100)

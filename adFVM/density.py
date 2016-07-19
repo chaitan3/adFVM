@@ -122,7 +122,7 @@ class RCF(Solver):
     @config.timeFunction('Time for writing fields')
     def writeFields(self, fields, t):
         U, T, p = self.primitive(*fields[:-1])
-        self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
+        self.setFields([U, T, p])
 
         with IOField.handle(t):
             for phi in fields + self.fields:
@@ -135,12 +135,8 @@ class RCF(Solver):
         logger.info('computing RHS/LHS')
         mesh = self.mesh
 
-        self.local = mesh.nCells
-        self.remote = mesh.nCells
-        
         U, T, p = self.primitive(rho, rhoU, rhoE)
-        UB, TB, pB = self.getBCFields()
-        UB.field, TB.field, pB.field = U.field, T.field, p.field
+        self.setBCFields([U, T, p])
 
         ## face reconstruction
         #rhoLF, rhoRF = TVD_dual(rho, gradRho)
@@ -154,6 +150,7 @@ class RCF(Solver):
         gradT = grad(central(T, mesh), ghost=True)
         gradp = grad(central(p, mesh), ghost=True)
         # for zeroGradient boundary
+        UB, TB, pB = self.getBCFields()
         UB.grad, TB.grad, pB.grad = gradU, gradT, gradp
         #self.local = gradp.field[:mesh.nInternalCells]
 
