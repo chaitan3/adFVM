@@ -423,7 +423,6 @@ class IOField(Field):
     def getInternalField(self):
         return self.field[:self.mesh.origMesh.nInternalCells]
 
-
     def completeField(self):
         logger.debug('completing field {0}'.format(self.name))
         internalField = ad.matrix()

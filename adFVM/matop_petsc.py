@@ -92,7 +92,7 @@ class Matrix(object):
             ksp.solve(-b, x)
             conv = ksp.getConvergenceHistory()
             pprint('convergence{0}:'.format(i), end='')
-            pprint(' '.join([str(x) for x in conv]))
+            pprint(' '.join([str(y) for y in conv]))
             X.append(x.getArray().copy().reshape(-1,1))
         end = time.time()
         pprint('Time to solve linear system:', end-start)

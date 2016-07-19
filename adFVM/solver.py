@@ -42,39 +42,9 @@ class Solver(object):
         self.stage = 0
         self.init = None
 
-    def symbolicFields(self, field=True):
-        names = self.names
-        fields = []
-        for index, dim in enumerate(self.dimensions):
-            if dim == (1,):
-                field = ad.bcmatrix()
-            else:
-                field = ad.matrix()
-            fields.append(CellField(names[index], field, dim))
-        return fields
-
-    def stackFields(self, fields, mod): 
-        return mod.concatenate([phi.field for phi in fields], axis=1)
-
-    def unstackFields(self, stackedFields, mod, names=None, **kwargs):
-        if names is None:
-            names = self.names
-        fields = []
-        nDimensions = np.concatenate(([0], np.cumsum(np.array(self.dimensions))))
-        nDimensions = zip(nDimensions[:-1], nDimensions[1:])
-        for name, dim, dimRange in zip(names, self.dimensions, nDimensions):
-            phi = stackedFields[:, range(*dimRange)]
-            fields.append(mod(name, phi, dim, **kwargs))
-        return fields
-
-    def initSource(self):
-        self.sourceFields = self.symbolicFields()
-        symbolics = [phi.field for phi in self.sourceFields]
-        values = [np.zeros((self.mesh.origMesh.nInternalCells, nDims[0])) for nDims in self.dimensions]
-        self.source = zip(symbolics, values)
-        return
-
     def compile(self, adjoint=False):
+        self.compileInit()
+
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         if self.localTimeStep:
             self.dt = ad.bcmatrix()
@@ -100,6 +70,47 @@ class Solver(object):
             exit()
         pprint()
 
+    def compileInit(self, functionName='init'):
+        internalFields = []
+        completeFields = []
+        for phi in self.fields:
+            phiI, phiN = phi.completeField()
+            internalFields.append(phiI)
+            completeFields.append(phiN)
+        self.init = self.function(internalFields, completeFields, functionName, source=False)
+        return
+
+    def function(self, inputs, outputs, name, **kwargs):
+        return SolverFunction(inputs, outputs, self, name, **kwargs)
+
+    def stackFields(self, fields, mod): 
+        return mod.concatenate([phi.field for phi in fields], axis=1)
+
+    def unstackFields(self, stackedFields, mod, names=None, **kwargs):
+        if names is None:
+            names = self.names
+        fields = []
+        nDimensions = np.concatenate(([0], np.cumsum(np.array(self.dimensions))))
+        nDimensions = zip(nDimensions[:-1], nDimensions[1:])
+        for name, dim, dimRange in zip(names, self.dimensions, nDimensions):
+            phi = stackedFields[:, range(*dimRange)]
+            fields.append(mod(name, phi, dim, **kwargs))
+        return fields
+
+    def getSymbolicFields(self, field=True):
+        names = self.names
+        fields = []
+        for index, dim in enumerate(self.dimensions):
+            if dim == (1,):
+                field = ad.bcmatrix()
+            else:
+                field = ad.matrix()
+            fields.append(CellField(names[index], field, dim))
+        return fields
+
+    def getBCFields(self):
+        return [phi.phi for phi in self.fields]
+
     def readFields(self, t):
         fields = []
         with IOField.handle(t):
@@ -108,22 +119,19 @@ class Solver(object):
         self.fields = fields
         return fields
 
-    def compileInit(self, functionName='init'):
-        internalFields = []
-        completeFields = []
-        for phi in self.fields:
-            phiI, phiN = phi.completeField()
-            internalFields.append(phiI)
-            completeFields.append(phiN)
-        self.init = self.function(internalFields, completeFields, functionName)
+    def initSource(self):
+        self.sourceFields = self.getSymbolicFields()
+        symbolics = [phi.field for phi in self.sourceFields]
+        values = [np.zeros((self.mesh.origMesh.nInternalCells, nDims[0])) for nDims in self.dimensions]
+        self.source = zip(symbolics, values)
+        return
 
-    def getBCFields(self, t):
-        return [phi.phi for phi in self.fields]
-
-    def initFields(self, t):
-        fields = self.init(*self.readFields(t))
-        for phi, phiN in self.fields, fields:
-            phi.field = phiN
+    def initFields(self, t, fields=None):
+        if fields is None:
+            fields = self.readFields(t)
+        fields = self.init(*[phi.field for phi in fields])
+        for phiI, phiN in zip(self.fields, fields):
+            phiI.field = phiN
         return self.fields
 
     def writeFields(self, fields, t):
@@ -132,6 +140,32 @@ class Solver(object):
         with IOField.handle(t):
             for phi in self.fields:
                 phi.write()
+
+    def readStatusFile(self):
+        data = None
+        scatterData = None
+        if parallel.rank == 0:
+            with open(self.statusFile, 'rb') as status:
+                readData = pkl.load(status)
+            data = readData[:-1]
+            scatterData = readData[-1]
+        data = parallel.mpi.bcast(data, root=0)
+        data.append(parallel.mpi.scatter(scatterData, root=0))
+        return data
+
+    def writeStatusFile(self, data):
+        data[-1] = parallel.mpi.gather(data[-1], root=0)
+        if parallel.rank == 0:
+            with open(self.statusFile, 'wb') as status:
+                pkl.dump(data, status)
+        return
+
+    def removeStatusFile(self):
+        if parallel.rank == 0:
+            try:
+                os.remove(self.statusFile)
+            except OSError:
+                pass
 
     def equation(self, *fields):
         pass
@@ -268,34 +302,6 @@ class Solver(object):
             return solutions
         return result
 
-    def readStatusFile(self):
-        data = None
-        scatterData = None
-        if parallel.rank == 0:
-            with open(self.statusFile, 'rb') as status:
-                readData = pkl.load(status)
-            data = readData[:-1]
-            scatterData = readData[-1]
-        data = parallel.mpi.bcast(data, root=0)
-        data.append(parallel.mpi.scatter(scatterData, root=0))
-        return data
-
-    def writeStatusFile(self, data):
-        data[-1] = parallel.mpi.gather(data[-1], root=0)
-        if parallel.rank == 0:
-            with open(self.statusFile, 'wb') as status:
-                pkl.dump(data, status)
-        return
-
-    def removeStatusFile(self):
-        if parallel.rank == 0:
-            try:
-                os.remove(primal.statusFile)
-            except OSError:
-                pass
-
-    def function(self, inputs, outputs, name, **kwargs):
-        return SolverFunction(inputs, outputs, self, name, **kwargs)
 
 class SolverFunction(object):
     counter = 0

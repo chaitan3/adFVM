@@ -9,6 +9,7 @@ from adFVM.matop_petsc import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointNorm, computeGradients, getAdjointEnergy
+from adFVM.solver import Solver
 
 from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult, nPerturb
 
@@ -17,172 +18,181 @@ import time
 import sys
 import os
 import cPickle as pkl
-
 import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('--scaling', required=False)
-user, args = parser.parse_known_args()
 
-primal.adjoint = True
-mesh = primal.mesh
-if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
-    firstCheckpoint, result  = primal.readStatusFile()
-    pprint('Read status file, checkpoint =', firstCheckpoint)
-else:
-    firstCheckpoint = 0
-    result = [0.]*nPerturb
-if parallel.rank == 0:
-    timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
-    timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(9), 0]])))
-else:
-    timeSteps = np.zeros((nSteps + 1, 2))
-parallel.mpi.Bcast(timeSteps, root=0)
+class Adjoint(Solver):
+    def __init__(self, primal, scaling):
+        self.primal = primal
+        self.scaling = scaling
+        self.mesh = primal.mesh
+        self.statusFile = primal.statusFile
+        self.names = [name + 'a' for name in primal.names]
+        self.dimensions = primal.dimensions
+        return
 
-# provision for restaring adjoint
-adjointNames = ['{0}a'.format(name) for name in primal.names]
-if firstCheckpoint == 0:
-    adjointFields = [IOField(name, np.zeros((mesh.origMesh.nInternalCells, dimensions[0]), config.precision), dimensions, mesh.calculatedBoundary) for name, dimensions in zip(adjointNames, primal.dimensions)]
-else:
-    t = timeSteps[nSteps - firstCheckpoint*writeInterval][0]
-    with IOField.handle(t):
-        adjointFields = [IOField.read(name) for name in adjointNames]
+    def createFields(self):
+        fields = []
+        for name, dims in zip(self.names, self.dimensions):
+            phi = np.zeros((self.mesh.origMesh.nInternalCells, dims[0]), config.precision)
+            fields.append(IOField(name, phi, dims, self.mesh.calculatedBoundary))
+        self.fields = fields
 
-# TODO: FIX THIS
-adjointInternalFields = [phi.complete() for phi in adjointFields]
-adjointNewFields = [phi.phi.field for phi in adjointFields]
-# UGLY HACK
-oldFunc = primal.getBCFields
-primal.getBCFields = lambda: adjointFields
-adjointInitFunc = primal.function(adjointInternalFields, adjointNewFields, 'adjoint_init')
-primal.getBCFields = oldFunc
+    def compile(self):
+        primal = self.primal
 
-# dummy initialize
-primal.readFields(timeSteps[nSteps-writeInterval][0])
-if user.scaling:
-    computer = computeGradients(primal)
-primal.compile()
+        self.compileInit(functionName='adjoint_init')
 
-newFields = adjointInitFunc(*[phi.field for phi in adjointFields])
-for phi, field in zip(adjointFields, newFields):
-    phi.field = field
+        primal.compile(adjoint=True)
+        self.map = primal.adjoint
 
-def unstackAdjointFields(stackedAdjointFields):
-    return primal.unstackFields(stackedAdjointFields, IOField, names=adjointNames, boundary=mesh.calculatedBoundary)
+        if self.scaling:
+            self.computer = computeGradients(primal)
+        return
 
-def writeAdjointFields(stackedAdjointFields, writeTime):
-    # TODO: fix unstacking F_CONTIGUOUS
-    start = time.time()
-    IOField.openHandle(writeTime)
-    for phi in unstackAdjointFields(stackedAdjointFields):
-        phi.field = np.ascontiguousarray(phi.field)
-        phi.write()
-    IOField.closeHandle()
-    parallel.mpi.Barrier()
-    end = time.time()
-    pprint('Time for writing fields: {0}'.format(end-start))
-    pprint()
+    def viscosity(self, solution):
+        rho = Field('rho', solution[:,[0]], (1,))
+        rhoU = Field('rhoU', solution[:,1:4], (3,))
+        rhoE = Field('rhoE', solution[:,[4]], (1,))
+        U, T, p = primal.primitive(rho, rhoU, rhoE)
+        outputs = self.computer(U.field, T.field, p.field)
+        M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)[0]
+        M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
+        viscosityScale = float(self.scaling)
+        pprint('M_2norm: ' +  str(M_2normScale))
+        return M_2norm*(viscosityScale/M_2normScale)
 
-def adjointViscosity(solution):
-    rho = Field('rho', solution[:,[0]], (1,))
-    rhoU = Field('rhoU', solution[:,1:4], (3,))
-    rhoE = Field('rhoE', solution[:,[4]], (1,))
-    U, T, p = primal.primitive(rho, rhoU, rhoE)
-    outputs = computer(U.field, T.field, p.field)
-    M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)[0]
-    M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
-    viscosityScale = float(user.scaling)
-    pprint('M_2norm: ' +  str(M_2normScale))
-    return M_2norm*(viscosityScale/M_2normScale)
-
-# local adjoint fields
-stackedAdjointFields = primal.stackFields(adjointFields, np)
-pprint('STARTING ADJOINT')
-pprint('Number of steps:', nSteps)
-pprint('Write interval:', writeInterval)
-pprint()
-
-totalCheckpoints = nSteps/writeInterval
-for checkpoint in range(firstCheckpoint, totalCheckpoints):
-    pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
-    primalIndex = nSteps - (checkpoint + 1)*writeInterval
-    t, dt = timeSteps[primalIndex]
-    #writeInterval = 1
-    solutions = primal.run(startTime=t, dt=dt, nSteps=writeInterval, mode='forward')
-
-    pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
-    # if starting from 0, create the adjointField
-    pprint('Time marching for', ' '.join(adjointNames))
-
-    if checkpoint == 0:
-        t, dt = timeSteps[-1]
-        if primal.dynamicMesh:
-            lastMesh, lastSolution = solutions[-1]
-            mesh.origMesh.boundary = lastMesh.boundarydata[m:].reshape(-1,1)
+    def initPrimalData(self):
+        if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
+            self.firstCheckpoint, self.result  = primal.readStatusFile()
+            pprint('Read status file, checkpoint =', firstCheckpoint)
         else:
-            lastSolution = solutions[-1]
-        stackedAdjointFields  = np.ascontiguousarray(objectiveGradient(lastSolution)/(nSteps + 1))
-        adjointFields = unstackAdjointFields(stackedAdjointFields)
-        for phi in adjointFields:
-            phi.info()
-        pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *adjointFields))
-        writeAdjointFields(stackedAdjointFields, t)
-
-    for step in range(0, writeInterval):
-        printMemUsage()
-        start = time.time()
-        adjointFields = unstackAdjointFields(stackedAdjointFields)
-        for phi in adjointFields:
-            phi.info()
-        pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *adjointFields))
-
-        adjointIndex = writeInterval-1 - step
-        pprint('Time step', adjointIndex)
-        t, dt = timeSteps[primalIndex + adjointIndex]
-        if primal.dynamicMesh:
-            previousMesh, previousSolution = solutions[adjointIndex]
-            # new mesh boundary
-            mesh.origMesh.boundary = previousMesh.boundary
+            self.firstCheckpoint = 0
+            self.result = [0.]*nPerturb
+        if parallel.rank == 0:
+            self.timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
+            self.timeSteps = np.concatenate((self.timeSteps, np.array([[np.sum(self.timeSteps[-1]).round(9), 0]])))
         else:
-            previousSolution = solutions[adjointIndex]
-        #paddedPreviousSolution = parallel.getRemoteCells(previousSolution, mesh)
-        ## adjoint time stepping
-        #paddedJacobian = np.ascontiguousarray(primal.gradient(paddedPreviousSolution, stackedAdjointFields))
-        #jacobian = parallel.getAdjointRemoteCells(paddedJacobian, mesh)
-        gradients = primal.gradient(previousSolution, stackedAdjointFields, dt, t)
-        gradient = gradients[0]
-        sourceGradient = gradients[1:]
-        stackedAdjointFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
+            self.timeSteps = np.zeros((nSteps + 1, 2))
+        parallel.mpi.Bcast(self.timeSteps, root=0)
+        return
+    
+    def run(self):
+        primal, mesh = self.primal, self.mesh
+        result, firstCheckpoint = self.result, self.firstCheckpoint
+        timeSteps = self.timeSteps
 
-        if user.scaling:
-            pprint('Smoothing adjoint field')
-            #weight = adjointViscosity(previousSolution).field
-            #stackedAdjointFields[:mesh.origMesh.nInternalCells] += dt*adjointSmoother(stackedAdjointFields, weight)
-            stackedPhi = Field('a', stackedAdjointFields, (5,))
-            stackedPhi.old = stackedAdjointFields
-            start2 = time.time() 
-            weight = central(adjointViscosity(previousSolution), mesh.origMesh)
-            start3 = time.time()
-            #stackedAdjointFields[:mesh.origMesh.nLocalCells] = BCs(stackedPhi, ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
-            stackedAdjointFields[:mesh.origMesh.nInternalCells] = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
-            start4 = time.time()
-            pprint('Timers 1:', start3-start2, '2:', start4-start3)
+        startTime = timeSteps[nSteps - firstCheckpoint*writeInterval][0]
+        if firstCheckpoint == 0:
+            fields = self.initFields(startTime, fields=self.fields)
+        else:
+            fields = self.initFields(startTime)
+        stackedFields = self.stackFields(fields, np)
 
-        # compute sensitivity using adjoint solution
-        for index, perturbation in enumerate(perturb):
-            for derivative, delphi in zip(sourceGradient, perturbation(None, mesh.origMesh, t)):
-                result[index] += np.sum(np.ascontiguousarray(derivative) * delphi)
+        pprint('STARTING ADJOINT')
+        pprint('Number of steps:', nSteps)
+        pprint('Write interval:', writeInterval)
+        pprint()
 
-        parallel.mpi.Barrier()
-        end = time.time()
-        pprint('Time for adjoint iteration: {0}'.format(end-start))
-        pprint('Time since beginning:', end-config.runtime)
-        pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
+        totalCheckpoints = nSteps/writeInterval
+        for checkpoint in range(firstCheckpoint, totalCheckpoints):
+            pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
+            primalIndex = nSteps - (checkpoint + 1)*writeInterval
+            t, dt = timeSteps[primalIndex]
+            #writeInterval = 1
+            solutions = primal.run(startTime=t, dt=dt, nSteps=writeInterval, mode='forward')
 
-    #exit(1)
+            pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
+            pprint('Time marching for', ' '.join(self.names))
 
-    writeAdjointFields(stackedAdjointFields, t)
-    primal.writeStatusFile([checkpoint + 1, result])
+            if checkpoint == 0:
+                t, dt = timeSteps[-1]
+                if primal.dynamicMesh:
+                    lastMesh, lastSolution = solutions[-1]
+                    mesh.origMesh.boundary = lastMesh.boundarydata[m:].reshape(-1,1)
+                else:
+                    lastSolution = solutions[-1]
+                stackedFields  = np.ascontiguousarray(objectiveGradient(lastSolution)/(nSteps + 1))
+                fields = self.unstackFields(stackedFields, IOField)
+                for phi in fields:
+                    phi.info()
+                pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
+                self.writeFields(fields, t)
 
-for index in range(0, nPerturb):
-    writeResult('adjoint', result[index], '{} {}'.format(index, user.scaling))
-primal.removeStatusFile()
+            for step in range(0, writeInterval):
+                printMemUsage()
+                start = time.time()
+                fields = self.unstackFields(stackedFields, IOField)
+                for phi in fields:
+                    phi.info()
+                pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
+
+                adjointIndex = writeInterval-1 - step
+                pprint('Time step', adjointIndex)
+                t, dt = timeSteps[primalIndex + adjointIndex]
+                if primal.dynamicMesh:
+                    previousMesh, previousSolution = solutions[adjointIndex]
+                    # new mesh boundary
+                    mesh.origMesh.boundary = previousMesh.boundary
+                else:
+                    previousSolution = solutions[adjointIndex]
+                #paddedPreviousSolution = parallel.getRemoteCells(previousSolution, mesh)
+                ## adjoint time stepping
+                #paddedJacobian = np.ascontiguousarray(primal.gradient(paddedPreviousSolution, stackedAdjointFields))
+                #jacobian = parallel.getAdjointRemoteCells(paddedJacobian, mesh)
+                gradients = self.map(previousSolution, stackedFields, dt, t)
+                gradient = gradients[0]
+                sourceGradient = gradients[1:]
+                stackedFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
+
+                if self.scaling:
+                    pprint('Smoothing adjoint field')
+                    #weight = adjointViscosity(previousSolution).field
+                    #stackedAdjointFields[:mesh.origMesh.nInternalCells] += dt*adjointSmoother(stackedAdjointFields, weight)
+                    stackedPhi = Field('a', stackedFields, (5,))
+                    stackedPhi.old = stackedFields
+                    start2 = time.time() 
+                    weight = central(self.viscosity(previousSolution), mesh.origMesh)
+                    start3 = time.time()
+                    #stackedAdjointFields[:mesh.origMesh.nLocalCells] = BCs(stackedPhi, ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
+                    stackedFields[:mesh.origMesh.nInternalCells] = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
+                    start4 = time.time()
+                    pprint('Timers 1:', start3-start2, '2:', start4-start3)
+
+                # compute sensitivity using adjoint solution
+                for index, perturbation in enumerate(perturb):
+                    for derivative, delphi in zip(sourceGradient, perturbation(None, mesh.origMesh, t)):
+                        result[index] += np.sum(np.ascontiguousarray(derivative) * delphi)
+
+                parallel.mpi.Barrier()
+                end = time.time()
+                pprint('Time for adjoint iteration: {0}'.format(end-start))
+                pprint('Time since beginning:', end-config.runtime)
+                pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
+
+            #exit(1)
+            fields = self.unstackFields(stackedFields, IOField)
+            self.writeFields(fields, t)
+            self.writeStatusFile([checkpoint + 1, result])
+
+        for index in range(0, nPerturb):
+            writeResult('adjoint', result[index], '{} {}'.format(index, self.scaling))
+        self.removeStatusFile()
+        return
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--scaling', required=False)
+    user, args = parser.parse_known_args()
+
+    adjoint = Adjoint(primal, user.scaling)
+    adjoint.initPrimalData()
+
+    adjoint.createFields()
+    primal.readFields(adjoint.timeSteps[nSteps-writeInterval][0])
+    adjoint.compile()
+
+    adjoint.run()
+
+if __name__ == '__main__':
+    main()
+

@@ -51,6 +51,11 @@ class RCF(Solver):
         self.Jref = 1.
         return
 
+    def compileInit(self):
+        super(RCF, self).compileInit()
+        self.reconstructor = Reconstruct(self.mesh, TVD)
+        return
+
     def primitive(self, rho, rhoU, rhoE):
         logger.info('converting fields to primitive')
         U = rhoU/rho
@@ -71,7 +76,7 @@ class RCF(Solver):
         rho.name, rhoU.name, rhoE.name = self.names
         return rho, rhoU, rhoE
 
-    def flux(self, U, T, p, Normals):
+    def getFlux(self, U, T, p, Normals):
         rho, rhoU, rhoE = self.conservative(U, T, p)
         Un = U.dot(Normals)
         rhoFlux = rho*Un
@@ -111,11 +116,7 @@ class RCF(Solver):
         # IO Fields, with phi attribute as a CellField
         if firstRun:
             self.U, self.T, self.p = U, T, p
-            UI, UN = U.completeField()
-            TI, TN = T.completeField()
-            pI, pN = p.completeField()
-            self.init = self.function([UI, TI, pI], [UN, TN, pN], 'init')
-            self.reconstructor = Reconstruct(self.mesh, TVD)
+            self.fields = [U, T, p]
         else:
             self.U.field, self.T.field, self.p.field = U.field, T.field, p.field
             # replace read BC values
@@ -127,9 +128,6 @@ class RCF(Solver):
                             nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
                             value[1][:] = extractField(phiB[patchID][key], nFaces, phi.dimensions)
         return
-
-    def getBCFields(self):
-        return self.U.phi, self.T.phi, self.p.phi
 
     # reads and updates ghost cells
     def initFields(self, t, **kwargs):
@@ -143,11 +141,8 @@ class RCF(Solver):
         start = time.time()
 
         with IOField.handle(t):
-            for phi in fields:
+            for phi in fields + self.fields:
                 phi.write()
-            self.U.write()
-            self.T.write()
-            self.p.write()
             if self.dynamicMesh:
                 self.mesh.write(IOField._handle)
 
@@ -232,7 +227,7 @@ class RCF(Solver):
             cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
             UBF, TBF, pBF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
             BNormals = mesh.Normals.getField(indices)
-            rhoBFlux, rhoUBFlux, rhoEBFlux = self.flux(UBF, TBF, pBF, BNormals)
+            rhoBFlux, rhoUBFlux, rhoEBFlux = self.getFlux(UBF, TBF, pBF, BNormals)
             rhoFlux.setField(indices, rhoBFlux)
             rhoUFlux.setField(indices, rhoUBFlux)
             rhoEFlux.setField(indices, rhoEBFlux)

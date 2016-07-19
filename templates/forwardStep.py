@@ -15,13 +15,19 @@ def objective(fields, mesh):
     field = rhoE.field[cellStartFace:cellEndFace]
     return ad.sum(field*areas)
 
-def perturb(mesh):
+def perturb(fields, mesh, t):
     patchID = 'inlet'
-    cellStartFace, cellEndFace, _ = mesh.getPatchCellRange(patchID)
-    stackedFields[cellStartFace:cellEndFace][:,1] += 0.1
+    startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
+    rho = np.zeros((mesh.nInternalCells, 1))
+    rhoU = np.zeros((mesh.nInternalCells, 3))
+    rhoE = np.zeros((mesh.nInternalCells, 1))
+    rhoU[mesh.owner[startFace:endFace], 0] += 0.1
+    return rho, rhoU, rhoE
 
-nSteps = 20000
-writeInterval = 500
+#nSteps = 20000
+#writeInterval = 500
+nSteps = 10
+writeInterval = 2
 startTime = 0.0
 dt = 1e-4
 

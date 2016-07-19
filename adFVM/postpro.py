@@ -10,7 +10,7 @@ from adFVM.config import ad
 def computeGradients(solver):
     mesh = solver.mesh
     g = solver.gamma
-    p, U, T = solver.symbolicFields()
+    p, U, T = solver.getSymbolicFields()
     c = (g*T*solver.R).sqrt()
 
     #divU
