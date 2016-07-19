@@ -74,7 +74,7 @@ class Solver(object):
         self.source = zip(symbolics, values)
         return
 
-    def compile(self):
+    def compile(self, adjoint=False):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         if self.localTimeStep:
             self.dt = ad.bcmatrix()
@@ -84,15 +84,15 @@ class Solver(object):
         self.t = self.t0*1.
         stackedFields = ad.matrix()
         newStackedFields = timestep.timeStepper(self.equation, self.boundary, stackedFields, self)
-        self.forward = self.function([stackedFields, self.dt, self.t0], \
+        self.map = self.function([stackedFields, self.dt, self.t0], \
                        [newStackedFields, self.dtc, self.local, self.remote], 'forward')
-        if self.adjoint:
+        if adjoint:
             stackedAdjointFields = ad.matrix()
             scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
             gradientInputs = [stackedFields] + list(zip(*self.source)[0])
             gradients = ad.grad(scalarFields, gradientInputs)
             #meshGradient = ad.grad(scalarFields, mesh)
-            self.gradient = self.function([stackedFields, stackedAdjointFields, self.dt, self.t], \
+            self.adjoint = self.function([stackedFields, stackedAdjointFields, self.dt, self.t], \
                             gradients, 'adjoint')
             #self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \
             #                ad.Rop(newStackedFields, stackedFields, stackedAdjointFields), 'tangent')
@@ -100,7 +100,47 @@ class Solver(object):
             exit()
         pprint()
 
+    def readFields(self, t):
+        fields = []
+        with IOField.handle(t):
+            for name in self.names:
+                fields.append(IOField.read(name))
+        self.fields = fields
+        return fields
 
+    def compileInit(self, functionName='init'):
+        internalFields = []
+        completeFields = []
+        for phi in self.fields:
+            phiI, phiN = phi.completeField()
+            internalFields.append(phiI)
+            completeFields.append(phiN)
+        self.init = self.function(internalFields, completeFields, functionName)
+
+    def getBCFields(self, t):
+        return [phi.phi for phi in self.fields]
+
+    def initFields(self, t):
+        fields = self.init(*self.readFields(t))
+        for phi, phiN in self.fields, fields:
+            phi.field = phiN
+        return self.fields
+
+    def writeFields(self, fields, t):
+        for phi, phiN in zip(self.fields, fields):
+            phi.field = phiN.field
+        with IOField.handle(t):
+            for phi in self.fields:
+                phi.write()
+
+    def equation(self, *fields):
+        pass
+
+    def boundary(self, *newFields):
+        boundaryFields = self.getBCFields()
+        for phiB, phiN in zip(boundaryFields, newFields):
+            phiB.setInternalField(phiN.field)
+        return boundaryFields
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
             startIndex=0, result=0., mode='simulation', source=lambda *args: []):
@@ -158,8 +198,8 @@ class Solver(object):
                 fields[index].info()
 
             pprint('Time step', timeIndex)
-            #stackedFields, dtc = self.forward(stackedFields)
-            stackedFields, dtc, local, remote = self.forward(stackedFields, dt, t)
+            #stackedFields, dtc = self.map(stackedFields)
+            stackedFields, dtc, local, remote = self.map(stackedFields, dt, t)
             #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()
             #print remote.shape, remote.dtype, np.abs(remote).max(), np.abs(remote).min(), (remote).max(), (remote).min(), np.isnan(remote).any()
 

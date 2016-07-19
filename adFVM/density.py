@@ -111,9 +111,9 @@ class RCF(Solver):
         # IO Fields, with phi attribute as a CellField
         if firstRun:
             self.U, self.T, self.p = U, T, p
-            UI, UN = self.U.completeField()
-            TI, TN = self.T.completeField()
-            pI, pN = self.p.completeField()
+            UI, UN = U.completeField()
+            TI, TN = T.completeField()
+            pI, pN = p.completeField()
             self.init = self.function([UI, TI, pI], [UN, TN, pN], 'init')
             self.reconstructor = Reconstruct(self.mesh, TVD)
         else:
@@ -156,7 +156,7 @@ class RCF(Solver):
         pprint('Time for writing fields: {0}'.format(end-start))
         return
           
-    def equation(self, rho, rhoU, rhoE, exit=False):
+    def equation(self, rho, rhoU, rhoE):
         logger.info('computing RHS/LHS')
         mesh = self.mesh
 
