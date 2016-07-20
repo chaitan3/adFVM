@@ -124,6 +124,11 @@ class Mesh(object):
             times = [float(x) for x in os.listdir(self.case) if config.isfloat(x) ]
         return sorted(times)
 
+    def getFields(self, time):
+        fields = os.listdir(self.getTimeDir(time))
+        fields = filter(lambda x: x != 'polyMesh', fields)
+        return fields
+
     # re-reading after mesh creation
     def read(self, timeDir):
         if config.hdf5:

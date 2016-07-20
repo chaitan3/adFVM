@@ -20,7 +20,7 @@ for time in times:
     config.hdf5 = False
     fields = []
     with IOField.handle(time):
-        for name in os.listdir(mesh.getTimeDir(time)):
+        for name in mesh.getFields(time):
             if name == 'polyMesh':
                 # replace mesh boundary !!
                 continue

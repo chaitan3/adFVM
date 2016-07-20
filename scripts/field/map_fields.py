@@ -38,7 +38,7 @@ for patchID in meshO1.boundary:
     centres2 = meshO2.faceCentres[startFace:endFace]
     patchIndices[patchID] = mapNearest(centres1, centres2)
 
-for field in os.listdir(mesh1.getTimeDir(time1)):
+for field in mesh1.getFields(time1)
     print 'interpolating', field
     Field.setMesh(mesh1)
     with IOField.handle(time1):

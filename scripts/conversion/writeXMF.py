@@ -10,8 +10,8 @@ from adFVM import config
 case = sys.argv[1]
 name = os.path.basename(case.rstrip('/'))
 
-#serial = ''
-serial = '_serial'
+serial = ''
+#serial = '_serial'
 offset = 5 + len(serial)
 
 xmfFile = case + name + serial + '.xmf'
@@ -26,6 +26,7 @@ xmf.write("""<?xml version="1.0" ?>
 
 meshFile = case + 'mesh{}.hdf5'.format(serial)
 timeFiles = [x for x in os.listdir(case) if config.isfloat(x[:-5]) and x.endswith('.hdf5')]
+timeFiles = sorted(timeFiles, key=lambda x: float(x[:-5]))
 times = [x[:-5] for x in timeFiles]
 timeFiles = [case + x for x in timeFiles]
 
@@ -100,6 +101,8 @@ for index, timeFile in enumerate(timeFiles):
         """.format('{}_{}_{}'.format(name, index, proc), nCells, topologyString, geometryString))
 
         for fieldName in time.keys():
+            if fieldName == 'mesh':
+                continue
             phi = time[fieldName]['field']
 
             start = time[fieldName]['parallel/start']

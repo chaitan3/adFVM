@@ -154,7 +154,7 @@ for rank, processor in enumerate(processorDirs):
     config.hdf5 = True
     IOField.setMesh(mesh)
     for index, time in enumerate(times):
-        fields = os.listdir(mesh.getTimeDir(time))
+        fields = mesh.getFields(time)
         for name in fields:
             phi = IOField.readFoam(name, mesh, time)
             phi.partialComplete()

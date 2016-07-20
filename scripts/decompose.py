@@ -12,7 +12,7 @@ data = mesh.decompose(nprocs)
 
 IOField.setMesh(mesh)
 for time in times:
-    fields = os.listdir(mesh.getTimeDir(time))
+    fields = mesh.getFields(time)
     IOField.openHandle(case, time)
     with IOField.handle(time)
         for name in fields:
