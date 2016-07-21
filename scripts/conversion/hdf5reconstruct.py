@@ -48,12 +48,14 @@ boundaryGroup = mesh['boundary']
 boundaryParallelStart = boundaryGroup['parallel/start'][:,0]
 boundaryParallelEnd = boundaryGroup['parallel/end'][:,0]
 boundaryData = boundaryGroup['values']
+boundarySerial = []
 
 nPoints = 0
 nFaces = 0
 cellAddressingAll = []
 nCells = []
-boundarySerial = {}
+boundaryAddressing = []
+boundaryRange = {}
 
 for proc in range(0, nProcs):
     cellAddressing = mesh['cellProcAddressing'][parallelStart[proc,7]:parallelEnd[proc,7]]
@@ -82,20 +84,32 @@ for proc in range(0, nProcs):
                 boundary[patchID][key] = int(value)
             else:
                 boundary[patchID][key] = value
+
     if proc == 0:
-        boundarySerial = copy.deepcopy(boundary)
-    for patchID in boundarySerial:
-        patchSerial = boundarySerial[patchID]
+        boundaryProc = copy.deepcopy(boundary)
+
+    boundaryAddressing.append({})
+    for patchID in boundary:
         patch = boundary[patchID]
         patchFaces = np.arange(patch['startFace'], patch['startFace']+patch['nFaces'])
-        patchFaces = faceA
-        patchSerial['startFace'] = min(patchSerial['startFace'], patch['startFace'])
+        patchFaces = faceAddressing[patchFaces]
+        boundaryAddressing[-1][patchID] = patchFaces
+        if patchID not in boundaryRange:
+            boundaryRange[patchID] = (2**62,0)
+        currRange = boundaryRange[patchID]
+        boundaryRange[patchID] = min(currRange[0], patchFaces.min()), max(currRange[1], patchFaces.max())
             
 cellAddressing = np.concatenate(cellAddressingAll)
 pointSerial = pointSerial[:nPoints]
 faceSerial = faceSerial[:nFaces]
-
-
+for patchID in boundaryProc:
+    patch = boundarySerial[patchID]
+    faceRange = boundaryRange[patchID]
+    patch['startFace'] = str(faceRange[0])
+    patch['nFaces'] = str(faceRange[1]-faceRange[0])
+for patchID in boundaryProc:
+    for key, value in boundaryProc.items():
+        boundarySerial.append([patchID, key, value])
 mesh.close()
 
 path = case + '/mesh.hdf5'
@@ -110,6 +124,7 @@ if not os.path.exists(path):
     parallelGroup.create_dataset('end', data=np.array([[0,pointSerial.shape[0],0,0,cellSerial.shape[0]]], np.int64))
 
     boundaryGroup = meshSerial.create_group('boundary')
+    boundaryGroup.create_dataset('values', data=np.array(boundarySerial, dtype='S100'))
     parallelGroup = boundaryGroup.create_group('parallel')
     parallelGroup.create_dataset('start', data=np.zeros((1,1), np.int64))
     parallelGroup.create_dataset('end', data=np.array([[len(boundaryData)]], np.int64))
@@ -130,6 +145,7 @@ for time in times:
             continue
         print 'reading field ' + name
         fieldData = field[name]['field'][:]
+        boundaryData = field[name]['boundary'][:]
         parallelStart = field[name]['parallel/start']
         parallelEnd = field[name]['parallel/end']
         data = []
@@ -139,12 +155,18 @@ for time in times:
         data = np.vstack(data)
         dataSerial = np.zeros_like(data)
         dataSerial[cellAddressing] = data
+        boundary = []
+        start, end = parallelStart[0,0], parallelEnd[0,1]
+        for patchID, key, value in boundaryData[start:end]:
+            if not patchID.startswith('procBoundary'):
+                boundary.append([patchID, key, value])
 
         print('writing serial field ' + name)
         fieldGroup = fieldSerial.create_group(name)
         fieldGroup.create_dataset('field', data=dataSerial)
+        fieldGroup.create_dataset('boundary', data=boundary)
         parallelGroup = fieldGroup.create_group('parallel')
         parallelGroup.create_dataset('start', data=np.zeros((1,2), np.int64))
-        parallelGroup.create_dataset('end', data=np.array([[cellSerial.shape[0],0]], np.int64))
+        parallelGroup.create_dataset('end', data=np.array([[cellSerial.shape[0],boundary.shape[0]]], np.int64))
 
     fieldSerial.close()
