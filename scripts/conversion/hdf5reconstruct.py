@@ -9,8 +9,8 @@ import copy
 from adFVM import config
 config.hdf5 = True
 
-#delta = 14
-delta = 5
+delta = 14
+#delta = 5
 case = sys.argv[1]
 times = [float(x) for x in sys.argv[2:]]
 if len(times) == 0:
@@ -116,7 +116,7 @@ for proc in range(0, nProcs):
         if patchID not in boundaryRange:
             boundaryRange[patchID] = (2**62,0)
         currRange = boundaryRange[patchID]
-        boundaryRange[patchID] = min(currRange[0], patchFaces.min()), max(currRange[1], patchFaces.max())
+        boundaryRange[patchID] = min(currRange[0], patchFaces.min()), max(currRange[1], patchFaces.max() + 1)
             
 cellAddressing = np.concatenate(cellAddressingAll)
 pointSerial = pointSerial[:nPoints]
@@ -156,7 +156,7 @@ if not os.path.exists(path):
     parallelGroup.create_dataset('end', data=np.array([[len(boundarySerial)]], np.int64))
     meshSerial.close()
 
-exit(1)
+#exit(1)
 for time in times:
     time = str(time)
     print 'reading hdf5 fields ' + time
@@ -183,11 +183,16 @@ for time in times:
         dims = (data.shape[0] + nFaces - nInternalFaces,) + data.shape[1:]
         dataSerial = np.zeros(dims, data.dtype)
         dataSerial[cellAddressing] = data
+
         boundary = []
-        start, end = parallelStart[0,0], parallelEnd[0,1]
-        for patchID, key, value in boundaryData[start:end]:
-            if not patchID.startswith('procBoundary'):
-                boundary.append([patchID, key, value])
+        for patchID in boundaryProc[0]:
+            for proc in range(0, nProcs):
+                if boundaryProc[proc][patchID]['nFaces'] > 0:
+                    start, end = parallelStart[proc,1], parallelEnd[proc,1]
+                    for patchID2, key, value in boundaryData[start:end]:
+                        if patchID2 == patchID:
+                            boundary.append([patchID, key, value])
+                    break
         for proc in range(0, nProcs):
             for patchID, addressing in boundaryAddressing[proc].items():
                 patch = boundaryProc[proc][patchID]
@@ -201,6 +206,6 @@ for time in times:
         fieldGroup.create_dataset('boundary', data=np.array(boundary, dtype='S100'))
         parallelGroup = fieldGroup.create_group('parallel')
         parallelGroup.create_dataset('start', data=np.zeros((1,2), np.int64))
-        parallelGroup.create_dataset('end', data=np.array([[cellSerial.shape[0],len(boundary)]], np.int64))
+        parallelGroup.create_dataset('end', data=np.array([[dataSerial.shape[0],len(boundary)]], np.int64))
 
     fieldSerial.close()

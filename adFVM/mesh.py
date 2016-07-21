@@ -48,10 +48,10 @@ class Mesh(object):
         self.boundary = copy.deepcopy(mesh.boundary)
         if fields:
             for attr in cls.fields:
-              setattr(self, attr, copy.deepcopy(getattr(mesh, attr)))
+                setattr(self, attr, copy.deepcopy(getattr(mesh, attr)))
         if constants:
             for attr in cls.constants:
-              setattr(self, attr, getattr(mesh, attr))
+                setattr(self, attr, getattr(mesh, attr))
         return self
 
     @classmethod

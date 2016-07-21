@@ -81,7 +81,6 @@ def laplacian(phi, DT):
 
 def ddt(phi, dt):
     mesh = phi.mesh.origMesh
-    oldPhi = phi.old[:mesh.nInternalCells]
     #A = sp.eye(mesh.nInternalCells, mesh.nLocalCells)*(1./dt)
     A = sp.eye(mesh.nInternalCells)*(1./dt)
     b = -phi.old[:mesh.nInternalCells]/dt
@@ -116,6 +115,7 @@ def BCs(phi, M):
     return M
 
 # OLD CODE
+from . import op
 def div(phi, U):
     if not hasattr(div, 'A'):
         internalField = phi.getInternalField()
