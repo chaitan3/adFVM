@@ -730,7 +730,7 @@ class Mesh(object):
             if patch['type'] == 'slidingPeriodic1D':
                 self.updateSlidingPatch(patch, t, dt)
 
-    def initSlidingPatch(patch):
+    def initSlidingPatch(self, patch):
         nFaces = patch['nFaces']
         if nFaces == 0:
             self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
@@ -763,7 +763,7 @@ class Mesh(object):
         self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
         return
 
-    def updateSlidingPatch(patch, t, dt):
+    def updateSlidingPatch(self, patch, t, dt):
         nFaces = patch['nFaces']
         # single processor has everything
         if dt == 0.:
