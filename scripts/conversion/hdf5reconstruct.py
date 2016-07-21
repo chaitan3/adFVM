@@ -9,8 +9,8 @@ import copy
 from adFVM import config
 config.hdf5 = True
 
-delta = 14
-#delta = 5
+#delta = 14
+delta = 5
 case = sys.argv[1]
 times = [float(x) for x in sys.argv[2:]]
 if len(times) == 0:
@@ -96,15 +96,13 @@ for proc in range(0, nProcs):
 
     boundary = {}
     for patchID, key, value in boundaryData[boundaryParallelStart[proc]:boundaryParallelEnd[proc]]:
-        if not patchID.startswith('procBoundary'):
-            if patchID not in boundary:
-                boundary[patchID] = {}
-            if key == 'startFace' or key == 'nFaces':
-                boundary[patchID][key] = int(value)
-            else:
-                boundary[patchID][key] = value
-
-    boundaryProc.append(boundary)
+        if patchID not in boundary:
+            boundary[patchID] = {}
+        if key == 'startFace' or key == 'nFaces':
+            boundary[patchID][key] = int(value)
+        else:
+            boundary[patchID][key] = value
+    boundary = {k:v for k,v in boundary.iteritems() if v['type'] != 'processor'}
     boundaryAddressing.append({})
     for patchID in boundary:
         patch = boundary[patchID]
@@ -112,16 +110,22 @@ for proc in range(0, nProcs):
         if len(patchFaces) == 0:
             continue
         patchFaces = faceAddressing[patchFaces]
-        boundaryAddressing[-1][patchID] = patchFaces
+        if patch['type'] != 'processorCyclic':
+            boundaryAddressing[-1][patchID] = patchFaces
+        else:
+            patchID = patch['referPatch']
         if patchID not in boundaryRange:
             boundaryRange[patchID] = (2**62,0)
         currRange = boundaryRange[patchID]
         boundaryRange[patchID] = min(currRange[0], patchFaces.min()), max(currRange[1], patchFaces.max() + 1)
+    boundary = {k:v for k,v in boundary.iteritems() if v['type'] != 'processorCyclic'}
+    boundaryProc.append(boundary)
             
 cellAddressing = np.concatenate(cellAddressingAll)
 pointSerial = pointSerial[:nPoints]
 faceSerial = faceSerial[:nFaces]
 nInternalFaces = nFaces
+
 for patchID in boundaryProc[0]:
     faceRange = boundaryRange[patchID]
     nInternalFaces = min(faceRange[0], nInternalFaces)

@@ -8,7 +8,7 @@ import re
 from adFVM import config
 
 case = sys.argv[1]
-name = os.path.basename(case.rstrip('/'))
+name = os.path.basename(os.path.realpath(case.rstrip('/')))
 
 serial = ''
 #serial = '_serial'
