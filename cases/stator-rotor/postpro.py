@@ -51,10 +51,11 @@ if __name__ == '__main__':
     case = sys.argv[1]
     times = [float(x) for x in sys.argv[2:]]
 
+    config.hdf5 = True
     solver = RCF(case)
     if len(times) == 0:
         times = solver.mesh.getTimes()
-    solver.readFields(times[0])
+    #solver.readFields(times[0])
 
     # plot over surface normals
     #for patchID in patches:
