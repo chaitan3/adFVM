@@ -166,7 +166,7 @@ else:
 
 def isfloat(s):
     try:
-        f = float(s)
+        float(s)
         return True
     except ValueError:
         return False

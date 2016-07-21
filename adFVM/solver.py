@@ -396,7 +396,7 @@ class SolverFunction(object):
                 if config.pickleFunction or (parallel.nProcessors > 1):
                     pklData = pkl.dumps(fn)
                     pprint('Saving pickle file', pklFile)
-                    f = open(pklFile, 'w').write(pklData)
+                    open(pklFile, 'w').write(pklData)
                     pprint('Module size: {0:.2f}'.format(float(len(pklData))/(1024*1024)))
             end = time.time()
             pprint('Compilation time: {0:.2f}'.format(end-start))

@@ -173,7 +173,7 @@ class Field(object):
         else:
             product = self.field * phi.field
             dimensions = max(self.dimensions, phi.dimensions)
-            return self.__class__('{0}*{1}'.format(self.name, phi.name), self.field * phi.field, dimensions)
+            return self.__class__('{0}*{1}'.format(self.name, phi.name), product, dimensions)
 
 
     def __rmul__(self, phi):
@@ -515,8 +515,6 @@ class IOField(Field):
     def writeHDF5(self, skipProcessor=False):
         # mesh values required outside theano
         pprint('writing hdf5 field {0}, time {1}'.format(self.name, self.time))
-        nProcs = parallel.nProcessors
-        rank = parallel.rank
 
         boundary = []
         for patchID in self.boundary.keys():

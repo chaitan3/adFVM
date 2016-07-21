@@ -92,7 +92,7 @@ def eulerHLLC(gamma, pLF, pRF, TLF, TRF, ULF, URF, \
     PrhoF = (cLF.sqr()+0.5*(gamma-1)*qLF + (cRF.sqr()+0.5*(gamma-1)*qRF)*RrhoF)/divRhoF
     cF = (PrhoF-0.5*(gamma-1)*UF.magSqr()).sqrt()
     # speed of sound for CFL
-    aF = cF
+    #aF = cF
 
     sLF = Field.min(UnF-cF, UnLF-cLF)
     sRF = Field.max(UnF+cF, UnRF+cRF)

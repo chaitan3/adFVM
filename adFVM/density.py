@@ -1,12 +1,7 @@
-import numpy as np
-import sys
-import time
-
-from . import config, parallel, riemann
+from . import config, riemann
 from .config import ad
-from .parallel import pprint
 from .field import Field, IOField
-from .op import  div, snGrad, grad, laplacian, internal_sum
+from .op import  div, snGrad, grad, internal_sum
 from .solver import Solver
 from .interp import central, Reconstruct, TVD
 

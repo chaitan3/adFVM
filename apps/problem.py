@@ -4,12 +4,11 @@ from __future__ import print_function
 from adFVM import config, parallel
 from adFVM.config import ad
 from adFVM.parallel import pprint
-from adFVM.field import CellField, Field, IOField
+from adFVM.field import CellField
 
 import numpy as np
 import sys
 import os
-import cPickle as pkl
 
 import argparse
 parser = argparse.ArgumentParser()

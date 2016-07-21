@@ -1,6 +1,5 @@
 from __future__ import print_function
 import numpy as np
-import time
 
 from . import config
 from .config import ad, adsparse

@@ -1,11 +1,10 @@
 import numpy as np
 
 from adFVM import parallel
-from adFVM.field import IOField, CellField
+from adFVM.field import IOField
 from adFVM.op import div, grad
 from adFVM.interp import central
 from adFVM.compat import intersectPlane
-from adFVM.config import ad
 
 def computeGradients(solver):
     mesh = solver.mesh
@@ -108,7 +107,6 @@ def getTotalPressureAndEntropy(U, T, p, solver):
 
 def getPressureLoss(p, T, U, p0, point, normal):
     solver = p.solver
-    mesh = p.mesh.origMesh
 
     cells, _ = intersectPlane(solver.mesh, point, normal)
 
@@ -129,7 +127,6 @@ def getFieldByVolume(phi):
     return phiByV
 
 def getAdjointEnergy(solver, rhoa, rhoUa, rhoEa):
-    mesh = rhoa.mesh
     # J = rhohV*rho/t
     Uref, Tref, pref = solver.Uref, solver.Tref, solver.pref
     rhoref = pref/(Tref*solver.R)
@@ -158,7 +155,6 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     gradb = gradc/sg
     grada = gradc*sg1/sg
     Z = np.zeros_like(divU)
-    Z3 = np.zeros_like(gradU)
     
     M1 = np.dstack((np.hstack((divU, gradb, Z)),
                np.hstack((gradb[:,[0]], divU, Z, Z, grada[:,[0]])),

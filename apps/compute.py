@@ -6,6 +6,7 @@ from adFVM import config
 from adFVM.parallel import pprint
 from adFVM.postpro import *
 from adFVM.density import RCF
+from adFVM.field import IOField
 
 parser = argparse.ArgumentParser()
 parser.add_argument('case')

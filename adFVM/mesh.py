@@ -8,7 +8,7 @@ import copy
 import os
 
 from . import config, parallel
-from .config import ad, adsparse, T
+from .config import ad, adsparse
 from .compat import norm, decompose, getCells
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
@@ -637,7 +637,6 @@ class Mesh(object):
     def createGhostCells(self):
         logger.info('generated ghost cells')
         self.neighbour = np.concatenate((self.neighbour, np.zeros(self.nBoundaryFaces, np.int32)))
-        rank = parallel.rank
         self.cellCentres = np.concatenate((self.cellCentres, np.zeros((self.nBoundaryFaces, 3), config.precision)))
         nLocalCells = self.nInternalCells
         exchanger = Exchanger()
@@ -723,15 +722,15 @@ class Mesh(object):
     @config.timeFunction('Time to update mesh')
     def update(self, t, dt):
         logger.info('updating mesh')
-        mesh = self.origMesh
         for patchID in self.localPatches:
-            patch = mesh.boundary[patchID]
-            startFace, endFace, nFaces = self.getPatchFaceRange(patchID)
-            if patch['type'] == 'slidingPeriodic1D':
-                self.updateSlidingPatch(patch, t, dt)
+            if self.boundary[patchID]['type'] == 'slidingPeriodic1D':
+                self.updateSlidingPatch(patchID, t, dt)
 
-    def initSlidingPatch(self, patch):
+    def initSlidingPatch(self, patchID):
+        mesh = self.origMesh
+        patch = mesh.boundary[patchID]
         nFaces = patch['nFaces']
+
         if nFaces == 0:
             self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
             return
@@ -763,11 +762,14 @@ class Mesh(object):
         self.boundaryTensor[patchID] = [('loc_multiplier', adsparse.csr_matrix(dtype=config.dtype))]
         return
 
-    def updateSlidingPatch(self, patch, t, dt):
+    def updateSlidingPatch(self, patchID, t, dt):
+        mesh = self.origMesh
+        patch = mesh.boundary[patchID]
         nFaces = patch['nFaces']
+
         # single processor has everything
         if dt == 0.:
-            self.initSlidingPatch(patch)
+            self.initSlidingPatch(patchID)
 
         if nFaces == 0:
             patch['movingCellCentres'] = np.zeros((0, 3), config.precision)
@@ -775,6 +777,7 @@ class Mesh(object):
             patch['loc_velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
             return
 
+        mesh = self.origMesh
         patch['movingCellCentres'] += patch['loc_velocity']*dt
         # only supports low enough velocities
         transformIndices = (patch['movingCellCentres']-patch['loc_periodicLimit']).dot(patch['loc_velocity']) > 1e-6

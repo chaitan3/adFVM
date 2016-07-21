@@ -1,10 +1,7 @@
-from . import parallel
 from .parallel import pprint
-from .field import Field, IOField
 from .compat import add_at
 
 import numpy as np
-import scipy.sparse as sp
 import time
 
 import petsc4py
@@ -101,7 +98,6 @@ class Matrix(object):
 # cyclic and BC support
 def laplacian(phi, DT):
 #def laplacian_new(phi, DT):
-    dim = phi.dimensions
     mesh = phi.mesh.origMesh
     meshC = phi.mesh
     nrhs = phi.dimensions[0]
@@ -176,7 +172,6 @@ def laplacian(phi, DT):
 
 #def laplacian(phi, DT):
 def laplacian_old(phi, DT):
-    dim = phi.dimensions
     mesh = phi.mesh.origMesh
     #n = mesh.nLocalCells
     #m = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)

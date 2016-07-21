@@ -1,9 +1,6 @@
 #!/usr/bin/python2
 from __future__ import print_function
-import numpy as np
-import time
 
-from adFVM.mesh import Mesh
 from adFVM.op import div, laplacian
 from adFVM.interp import central
 #from adFVM.matop_petsc import div, ddt, laplacian, hybrid

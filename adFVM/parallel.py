@@ -104,7 +104,6 @@ def getAdjointRemoteCells(field, meshC):
     adjointRemoteCells = {}
     exchanger = Exchanger()
     for patchID in meshC.remotePatches:
-        patch = mesh.boundary[patchID]
         local, remote, tag = meshC.getProcessorPatchInfo(patchID)
         startFace, endFace, cellStartFace, cellEndFace, nFaces = mesh.getPatchFaceCellRange(patchID)
         adjointRemoteCells[patchID] = np.zeros((nFaces,) + dimensions, precision)

@@ -55,7 +55,8 @@ if __name__ == '__main__':
     solver = RCF(case)
     if len(times) == 0:
         times = solver.mesh.getTimes()
-    #solver.readFields(times[0])
+    solver.readFields(times[0])
+    solver.compileInit()
 
     # plot over surface normals
     #for patchID in patches:

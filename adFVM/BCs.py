@@ -1,8 +1,7 @@
 import numpy as np
 
 from . import config
-from .config import ad, adsparse, T
-from .parallel import pprint
+from .config import ad, adsparse
 from .mesh import extractField, extractVector
 logger = config.Logger(__name__)
 
@@ -120,11 +119,11 @@ class zeroGradient(BoundaryCondition):
     def update(self):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))
         boundaryValue = self.phi.field[self.internalIndices]
-        if hasattr(self.phi, 'grad'):
-            # second order correction
-            grad = self.phi.grad.field[self.internalIndices]
-            R = self.mesh.faceCentres[self.startFace:self.endFace] - self.mesh.cellCentres[self.internalIndices]
-            #boundaryValue = boundaryValue + 0.5*dot(grad, R, self.phi.dimensions[0])
+        #if hasattr(self.phi, 'grad'):
+        #    # second order correction
+        #    grad = self.phi.grad.field[self.internalIndices]
+        #    R = self.mesh.faceCentres[self.startFace:self.endFace] - self.mesh.cellCentres[self.internalIndices]
+        #    boundaryValue = boundaryValue + 0.5*dot(grad, R, self.phi.dimensions[0])
         self.setValue(boundaryValue)
 
 class symmetryPlane(zeroGradient):
@@ -190,7 +189,6 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
 class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
         self.Ma = float(self.patch['Mamax'])
         self.L = float(self.patch['L'])
         self.pt = self.createInput('ptar', (1,))

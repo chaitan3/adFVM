@@ -1,8 +1,6 @@
-from field import Field, CellField
-import numpy as np
-
 from . import config
-from .config import ad, T
+from .config import ad
+from field import Field
 
 logger = config.Logger(__name__)
 
@@ -49,7 +47,6 @@ class Reconstruct(object):
     def dual(self, phi, gradPhi):
         assert len(phi.dimensions) == 1
         logger.info('TVD {0}'.format(phi.name))
-        mesh = phi.mesh
 
         faceFields = []
         faceFields.append(self.update(self.indices, 0, phi, gradPhi))

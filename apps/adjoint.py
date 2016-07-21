@@ -2,7 +2,6 @@
 from __future__ import print_function
 
 from adFVM import config, parallel
-from adFVM.config import ad
 from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
 from adFVM.matop_petsc import laplacian, ddt
@@ -15,9 +14,7 @@ from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, w
 
 import numpy as np
 import time
-import sys
 import os
-import cPickle as pkl
 import argparse
 
 class Adjoint(Solver):
@@ -64,7 +61,7 @@ class Adjoint(Solver):
     def initPrimalData(self):
         if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
             self.firstCheckpoint, self.result  = primal.readStatusFile()
-            pprint('Read status file, checkpoint =', firstCheckpoint)
+            pprint('Read status file, checkpoint =', self.firstCheckpoint)
         else:
             self.firstCheckpoint = 0
             self.result = [0.]*nPerturb
