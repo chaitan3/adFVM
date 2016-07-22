@@ -24,7 +24,7 @@ boundaryField
     right
     {
         type            nonReflectingOutletPressure;
-        L               2e-4;
+        L               6e-4;
         Mamax           0.25;
         ptar            uniform 101325;
         value           uniform 101325;
