@@ -84,7 +84,11 @@ class Field(object):
         nanCheck = np.isnan(field)
         if nanCheck.any():
             indices = np.where(nanCheck)[0]
-            print(parallel.rank, mesh.nInternalCells, mesh.nLocalCells, indices)
+            indices += -mesh.nInternalCells + mesh.nInternalFaces
+            print('rank:', parallel.rank, 
+                  'internal cells', mesh.nInternalCells, 
+                  'local cells:', mesh.nLocalCells, 
+                  'indices', indices)
             raise FloatingPointError('nan found')
         fieldMin = parallel.min(field)
         fieldMax = parallel.max(field)

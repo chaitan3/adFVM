@@ -85,6 +85,9 @@ class Solver(object):
         for phi in self.fields:
             phiI, phiN = phi.completeField()
             internalFields.append(phiI)
+            #completeFields.append(phiN)
+        for phi in self.fields:
+            phiN = phi.phi.field
             completeFields.append(phiN)
         self.init = self.function(internalFields, completeFields, functionName, source=False)
         return
