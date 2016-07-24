@@ -6,10 +6,10 @@ from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
 #primal = RCF('.')
-primal = RCF('/home/talnikar/foam/stator-rotor/laminar-test/', timeIntegrator='euler')
+primal = RCF('/home/talnikar/foam/stator-rotor/laminar/')
 #primal = RCF('/master/home/talnikar/foam/stator-rotor/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/stator-rotor/les/')
-primal.dynamicMesh = True
+#primal.dynamicMesh = True
 
 # heat transfer
 def objectiveHeatTransfer(fields, mesh):
@@ -76,8 +76,8 @@ def perturb(mesh):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 10
-writeInterval = 2
-startTime = 2.0
+nSteps = 100000
+writeInterval = 5000
+startTime = 1.0
 dt = 1e-8
 

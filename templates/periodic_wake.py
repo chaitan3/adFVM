@@ -5,7 +5,7 @@ from adFVM.config import ad
 from adFVM.compat import norm
 from adFVM.density import RCF 
 
-primal = RCF('/home/talnikar/adFVM/cases/periodic_wake/')#, timeIntegrator='euler')
+primal = RCF('/home/talnikar/adFVM/cases/periodic_wake/par2_1.1/')#, timeIntegrator='euler')
 
 def objective(fields, mesh):
     rho, rhoU, rhoE = fields
@@ -43,7 +43,7 @@ def source(fields, mesh, t):
     dw = 0.001
     Bx = (0.003, 0.027)
     wy = (mid-dw/2, mid+dw/2)
-    ux = 100
+    ux = 101
 
     B = np.zeros_like(x)
     left = x <= Bx[0]
@@ -65,5 +65,5 @@ def source(fields, mesh, t):
 
 nSteps = 20000
 writeInterval = 500
-startTime = 2.0
+startTime = 1.0
 dt = 1e-7
