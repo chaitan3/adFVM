@@ -34,7 +34,6 @@ def objectiveDrag(fields, mesh):
     return ad.sum((p*nx-mungUx)*areas)
 
 def getPlane(solver):
-    from compat import intersectPlane
     point = np.array([0.00032,0.0,0.0])
     normal = np.array([1.,0.,0.])
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
