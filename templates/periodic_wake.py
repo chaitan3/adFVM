@@ -43,7 +43,7 @@ def source(fields, mesh, t):
     dw = 0.001
     Bx = (0.003, 0.027)
     wy = (mid-dw/2, mid+dw/2)
-    ux = 101
+    ux = 100*(1+1e-6)
 
     B = np.zeros_like(x)
     left = x <= Bx[0]
