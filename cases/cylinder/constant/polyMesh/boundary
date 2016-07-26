@@ -15,49 +15,51 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-7
+6
 (
-    down
-    {
-        type            patch;
-        nFaces          300;
-        startFace       92000;
-    }
     right
     {
         type            patch;
-        nFaces          150;
-        startFace       92300;
+        nFaces          300;
+        startFace       184300;
     }
     up
     {
         type            patch;
-        nFaces          300;
-        startFace       92450;
+        nFaces          600;
+        startFace       184600;
     }
     left
     {
         type            patch;
-        nFaces          150;
-        startFace       92750;
+        nFaces          300;
+        startFace       185200;
     }
     cylinder
     {
         type            patch;
-        nFaces          100;
-        startFace       92900;
+        nFaces          200;
+        startFace       185500;
     }
-    z1noc
+    z1
     {
-        type            patch;
-        nFaces          46250;
-        startFace       93000;
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          92500;
+        startFace       185700;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  z2;
     }
-    z2noc
+    z2
     {
-        type            patch;
-        nFaces          46250;
-        startFace       139250;
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          92500;
+        startFace       278200;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  z1;
     }
 )
 

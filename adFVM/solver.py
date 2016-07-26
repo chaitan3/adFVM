@@ -123,7 +123,7 @@ class Solver(object):
     def initSource(self):
         self.sourceFields = self.getSymbolicFields()
         symbolics = [phi.field for phi in self.sourceFields]
-        values = [np.zeros((self.mesh.origMesh.nInternalCells, nDims[0])) for nDims in self.dimensions]
+        values = [np.zeros((self.mesh.origMesh.nInternalCells, nDims[0]), config.precision) for nDims in self.dimensions]
         self.sourceTerms = zip(symbolics, values)
         return
 
@@ -394,7 +394,7 @@ class SolverFunction(object):
                 pprint('Loading pickled file', pklFile)
                 pklData = open(pklFile).read()
             else:
-                fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)
+                fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)#, allow_input_downcast=True)
                 #T.printing.pydotprint(fn, outfile='graph.png')
                 if config.pickleFunction or (parallel.nProcessors > 1):
                     pklData = pkl.dumps(fn)

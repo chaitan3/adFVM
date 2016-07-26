@@ -1,6 +1,6 @@
 import numpy as np
 
-from adFVM import parallel
+from adFVM import parallel, config
 from adFVM.field import IOField
 from adFVM.op import div, grad
 from adFVM.interp import central
@@ -120,7 +120,7 @@ def getPressureLoss(p, T, U, p0, point, normal):
 
 def getFieldByVolume(phi):
     mesh = phi.mesh
-    phiByV = np.zeros((mesh.origMesh.nCells,) + phi.dimensions)
+    phiByV = np.zeros((mesh.origMesh.nCells,) + phi.dimensions, config.precision)
     nInternalCells = mesh.origMesh.nInternalCells
     phiByV[:nInternalCells] = phi.field[:nInternalCells]/mesh.origMesh.volumes
     phiByV = IOField(phi.name + 'ByV', phiByV, (1,), boundary=mesh.calculatedBoundary)

@@ -261,7 +261,7 @@ class turbulentInletVelocityN(BoundaryCondition):
         r23 = float(self.patch['r23'])
         r33 = float(self.patch['r33'])
         self.x0 = np.array(extractVector(self.patch['x0'])).astype(config.precision)
-        R = np.array([[r11,0,0],[r12,r22,0],[r13,r23,r33]])
+        R = np.array([[r11,0,0],[r12,r22,0],[r13,r23,r33]]).astype(config.precision)
         w, v = np.linalg.eigh(R)
         self.c = np.sqrt(w)
         self.T = v

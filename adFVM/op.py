@@ -23,8 +23,6 @@ def internal_sum(phi, mesh, absolute=False):
             x = ad.inc_subtensor(x[mesh.neighbour[:mesh.nInternalFaces]], -phiF[:mesh.nInternalFaces])
         else:
             x = ad.inc_subtensor(x[mesh.neighbour[:mesh.nInternalFaces]], phiF[:mesh.nInternalFaces])
-        # TODO: mesh.repeat disabled, won't work correctly in parallel
-        #x = ad.set_subtensor(x[mesh.repeat[0]], x[mesh.repeat].sum(axis=0))
         x = x[:-1]/mesh.volumes
 
     # retain pattern broadcasting

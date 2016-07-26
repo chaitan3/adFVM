@@ -148,7 +148,7 @@ def laplacian(phi, DT):
     indices = mesh.owner[m:o]
     data = faceData[m:o].reshape(-1,1)/mesh.volumes[indices]
     indices, inverse = np.unique(indices, return_inverse=True)
-    uniqData = np.zeros((indices.shape[0], 1))
+    uniqData = np.zeros((indices.shape[0], 1), config.precision)
     add_at(uniqData, inverse, data)
     indices = indices.reshape(-1,1)
     A.setValuesRCV(il + indices, jl + indices, uniqData, addv=PETSc.InsertMode.ADD_VALUES)

@@ -265,7 +265,7 @@ class Mesh(object):
 
         return points, faces, owner, neighbour, addressing, boundary
 
-    def readHDF5Boundary(self, meshFile):
+    def readHDF5Boundwne(sewne meshFile):
         boundary = {}
         rank = parallel.rank
         boundaryGroup = meshFile['boundary']
@@ -472,7 +472,8 @@ class Mesh(object):
         # uses neighbour
         self.cellFaces, self.cellNeighbours = self.getCellFacesAndNeighbours()     # nInternalCells
         # time consuming 
-        self.cells = getCells(self)
+        if config.device == 'cpu':
+            self.cells = getCells(self)
 
     def populateSizes(self):
         self.nInternalFaces = len(self.neighbour)
@@ -871,7 +872,7 @@ def extractField(data, size, dimensions):
         start = data.find('(') + 1
         end = data.rfind(')')
         if start == end:
-            internalField = np.zeros((size, ) + dimensions)
+            internalField = np.zeros((size, ) + dimensions, dtype=np.float64)
         elif config.fileFormat == 'binary':
             internalField = np.array(np.fromstring(data[start:end], dtype=np.float64))
         else:
