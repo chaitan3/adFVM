@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 import argparse
 
-from adFVM import config
+from adFVM import config, parallel
 from adFVM.config import T
 from adFVM.density import RCF
 
@@ -29,4 +29,5 @@ solver.compile()
 solver.run(startTime=user.time, dt=user.dt, nSteps=user.nSteps, writeInterval=user.writeInterval)
 
 # for profiling purposes
-#T.compile.profiling._atexit_print_fn()
+#if parallel.rank == 0:
+#    T.compile.profiling._atexit_print_fn()
