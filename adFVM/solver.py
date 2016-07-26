@@ -396,8 +396,9 @@ class SolverFunction(object):
             else:
                 fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)#, allow_input_downcast=True)
                 #T.printing.pydotprint(fn, outfile='graph.png')
-                if config.pickleFunction or (parallel.nProcessors > 1):
-                    pklData = pkl.dumps(fn)
+                #if config.pickleFunction or (parallel.nProcessors > 1):
+                pklData = pkl.dumps(fn)
+                if config.pickleFunction:
                     pprint('Saving pickle file', pklFile)
                     open(pklFile, 'w').write(pklData)
                     pprint('Module size: {0:.2f}'.format(float(len(pklData))/(1024*1024)))

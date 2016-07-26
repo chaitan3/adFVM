@@ -2,6 +2,7 @@
 import argparse
 
 from adFVM import config
+from adFVM.config import T
 from adFVM.density import RCF
 
 parser = argparse.ArgumentParser()
@@ -26,3 +27,6 @@ solver = RCF(user.case, mu=mu, timeIntegrator=user.timeIntegrator, CFL=user.CFL,
 solver.readFields(user.time)
 solver.compile()
 solver.run(startTime=user.time, dt=user.dt, nSteps=user.nSteps, writeInterval=user.writeInterval)
+
+# for profiling purposes
+#T.compile.profiling._atexit_print_fn()
