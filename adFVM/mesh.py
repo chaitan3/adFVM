@@ -265,7 +265,7 @@ class Mesh(object):
 
         return points, faces, owner, neighbour, addressing, boundary
 
-    def readHDF5Boundary(meshFile):
+    def readHDF5Boundary(self, meshFile):
         boundary = {}
         rank = parallel.rank
         boundaryGroup = meshFile['boundary']
