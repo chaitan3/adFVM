@@ -7,7 +7,11 @@ from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
 config.hdf5 = True
-primal = RCF(CASEDIR, readConservative=True, timeIntegrator='SSPRK', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)))
+primal = RCF(CASEDIR, readConservative=True, timeIntegrator='SSPRK', CFL=1.2)
+
+viscosity = (ad.scalar(), 2.5e-5*PARAMETER)
+primal.mu = lambda T: Field('mu', T.field/T.field*viscosity[0], (1,))
+primal.postpro.append(viscosity)
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
@@ -66,7 +70,7 @@ objective = objectivePressureLoss
 def source(fields, mesh, t):
     mesh = mesh.origMesh
     mid = np.array([-0.001, 0.0, 0.])
-    factor = 1e2*PARAMETER
+    factor = 1e2*(PARAMETER-1)
     G = factor*np.exp(-3e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     rho = G
     rhoU = np.zeros((mesh.nInternalCells, 3))
@@ -77,7 +81,7 @@ def source(fields, mesh, t):
 nSteps = NSTEPS
 startTime = STARTTIME
 writeInterval = NSTEPS
-dt = 1e-8
+dt = 8e-9
 
 
 

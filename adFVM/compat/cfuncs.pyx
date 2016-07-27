@@ -61,7 +61,7 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
                     lines[i,k+1] = (k+1)%d
 
     # get points of intersection
-    interPoints = np.zeros((n, 2, 3))
+    interPoints = np.zeros((n, 2, 3), mesh.points.dtype)
     for i in [0, 2]:
         l0 = points[faces[inter, 1 + lines[:,i]]]
         l1 = points[faces[inter, 1 + lines[:,i+1]]]
@@ -317,7 +317,7 @@ def decompose(object mesh, int nprocs):
 
     decomposed = []
     addressing = []
-    cdef np.ndarray[double, ndim=2] procPoints
+    cdef np.ndarray[dtype, ndim=2] procPoints
     cdef np.ndarray[int, ndim=2] procFaces
     cdef np.ndarray[int, ndim=1] procOwner
     cdef np.ndarray[int, ndim=1] procNeighbour

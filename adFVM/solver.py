@@ -89,7 +89,7 @@ class Solver(object):
         for phi in self.fields:
             phiN = phi.phi.field
             completeFields.append(phiN)
-        self.init = self.function(internalFields, completeFields, functionName, source=False)
+        self.init = self.function(internalFields, completeFields, functionName, source=False, postpro=False)
         return
 
     def function(self, inputs, outputs, name, **kwargs):
@@ -342,7 +342,7 @@ class Solver(object):
 
 class SolverFunction(object):
     counter = 0
-    def __init__(self, inputs, outputs, solver, name, BCs=True, postpro=False, source=True):
+    def __init__(self, inputs, outputs, solver, name, BCs=True, source=True, postpro=True):
         logger.info('compiling function')
         self.symbolic = []
         self.values = []
