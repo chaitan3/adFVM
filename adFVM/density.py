@@ -241,8 +241,9 @@ class RCF(Solver):
 
         # CFL based time step
         self.aF = ((self.gamma-1)*self.Cp*TF).sqrt()
-        maxaF = (UF.dotN()).abs() + self.aF
-        self.dtc = 2*self.CFL/internal_sum(maxaF, mesh, absolute=True)
+        if self.stage == 1:
+            maxaF = (UF.dotN()).abs() + self.aF
+            self.dtc = 2*self.CFL/internal_sum(maxaF, mesh, absolute=True)
 
         return [div(rhoFlux) - self.sourceFields[0], \
                 #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],

@@ -67,16 +67,15 @@ def objectivePressureLoss(fields, mesh):
 #objective = objectiveDrag
 objective = objectivePressureLoss
 
-def source(fields, mesh, t):
-    mesh = mesh.origMesh
-    mid = np.array([-0.001, 0.0, 0.])
-    factor = 1e2*(PARAMETER-1)
-    G = factor*np.exp(-3e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    rho = G
-    rhoU = np.zeros((mesh.nInternalCells, 3))
-    rhoU[:, 0] += G.flatten()*100
-    rhoE = G*2e5
-    return rho, rhoU, rhoE
+#def source(fields, mesh, t):
+#    mid = np.array([-0.001, 0.0, 0.])
+#    factor = 1e2*(PARAMETER-1)
+#    G = factor*np.exp(-3e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+#    rho = G
+#    rhoU = np.zeros((mesh.nInternalCells, 3))
+#    rhoU[:, 0] += G.flatten()*100
+#    rhoE = G*2e5
+#    return rho, rhoU, rhoE
 
 nSteps = NSTEPS
 startTime = STARTTIME

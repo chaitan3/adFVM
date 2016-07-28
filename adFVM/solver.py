@@ -395,7 +395,7 @@ class SolverFunction(object):
                 pklData = open(pklFile).read()
             else:
                 fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)#, allow_input_downcast=True)
-                #T.printing.pydotprint(fn, outfile='graph.png')
+                #T.printing.pydotprint(fn, outfile=name + '_graph.png')
                 #if config.pickleFunction or (parallel.nProcessors > 1):
                 pklData = pkl.dumps(fn)
                 if config.pickleFunction:

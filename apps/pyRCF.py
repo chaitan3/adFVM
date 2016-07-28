@@ -29,5 +29,5 @@ solver.compile()
 solver.run(startTime=user.time, dt=user.dt, nSteps=user.nSteps, writeInterval=user.writeInterval)
 
 # for profiling purposes
-#if parallel.rank == 0:
-#    T.compile.profiling._atexit_print_fn()
+if parallel.rank == 0 and config.user.profile:
+    T.compile.profiling._atexit_print_fn()
