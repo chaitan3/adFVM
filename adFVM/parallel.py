@@ -63,21 +63,23 @@ def sum(data):
 class Exchanger(object):
     def __init__(self):
         self.requests = []
-        self.statuses = []
+        #self.statuses = []
 
     def exchange(self, remote, sendData, recvData, tag):
         sendRequest = mpi.Isend(sendData, dest=remote, tag=tag)
         recvRequest = mpi.Irecv(recvData, source=remote, tag=tag)
-        sendStatus = MPI.Status()
-        recvStatus = MPI.Status()
+        #sendStatus = MPI.Status()
+        #recvStatus = MPI.Status()
         self.requests.extend([sendRequest, recvRequest])
-        self.statuses.extend([sendStatus, recvStatus])
+        #self.statuses.extend([sendStatus, recvStatus])
 
     def wait(self):
         if nProcessors == 1:
             return []
-        MPI.Request.Waitall(self.requests, self.statuses)
-        return self.statuses
+        MPI.Request.Waitall(self.requests)
+        return
+        #MPI.Request.Waitall(self.requests, self.statuses)
+        #return self.statuses
 
 def getRemoteCells(field, meshC):
     # mesh values required outside theano
