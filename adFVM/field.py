@@ -479,9 +479,10 @@ class IOField(Field):
 
         self.writeFoamField(internalField, boundary)
 
-    def writeFoamField(self, internalField, boundary):
+    def writeFoamField(self, internalField, boundary, timeDir=None):
         name = self.name
-        timeDir = self._handle
+        if timeDir is None:
+            timeDir = self._handle
         if not os.path.exists(timeDir):
             os.makedirs(timeDir)
         handle = open(timeDir + name, 'w')
@@ -593,7 +594,7 @@ class IOField(Field):
                         boundaryField[patchID]['value'] = self.field[neighbourIndices]
 
             case = self.mesh.case + 'processor{}/'.format(i)
-            self.writeFoamField(case, time, internalField, boundaryField)
+            self.writeFoamField(internalField, boundaryField, timeDir=self.mesh.getTimeDir(time, case=case) + '/')
 
         pprint('decomposing', self.name, 'to', nprocs, 'processors')
         pprint()

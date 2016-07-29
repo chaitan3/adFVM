@@ -81,11 +81,24 @@ class Exchanger(object):
         #MPI.Request.Waitall(self.requests, self.statuses)
         #return self.statuses
 
+mtime = 0.
+wtime = 0.
 def getRemoteCells(field, meshC):
     # mesh values required outside theano
     #logger.info('fetching remote cells')
     if nProcessors == 1:
         return field
+    global mtime, wtime
+    if meshC.reset:
+        meshC.reset = False
+        #print(rank, mtime, wtime)
+        mtime = 0.
+        wtime = 0.
+
+    #start = time.time()
+    #mpi.Barrier()
+    #start2 = time.time()
+    #wtime += start2-start
     exchanger = Exchanger()
     mesh = meshC.origMesh
     for patchID in meshC.remotePatches:
@@ -93,6 +106,7 @@ def getRemoteCells(field, meshC):
         startFace, endFace, cellStartFace, cellEndFace, _ = mesh.getPatchFaceCellRange(patchID)
         exchanger.exchange(remote, field[mesh.owner[startFace:endFace]], field[cellStartFace:cellEndFace], tag)
     exchanger.wait()
+    #mtime += time.time()-start2
     return field
 
 def getAdjointRemoteCells(field, meshC):

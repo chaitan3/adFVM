@@ -225,6 +225,7 @@ class Solver(object):
 
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
+        mesh.reset = True
         #initialize
         fields = self.initFields(startTime)
         pprint()
@@ -269,6 +270,7 @@ class Solver(object):
             for index in range(0, len(fields)):
                 fields[index].info()
 
+            mesh.reset = True
             pprint('Time step', timeIndex)
             #stackedFields, dtc = self.map(stackedFields)
             stackedFields, dtc, local, remote = self.map(stackedFields, dt, t)
@@ -281,7 +283,7 @@ class Solver(object):
             for phi in fields:
                 phi.field = np.ascontiguousarray(phi.field)
 
-            parallel.mpi.Barrier()
+            #parallel.mpi.Barrier()
             end = time.time()
             pprint('Time for iteration:', end-start)
             pprint('Time since beginning:', end-config.runtime)

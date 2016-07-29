@@ -13,9 +13,8 @@ data = mesh.decompose(nprocs)
 IOField.setMesh(mesh)
 for time in times:
     fields = mesh.getFields(time)
-    IOField.openHandle(case, time)
-    with IOField.handle(time)
+    with IOField.handle(time):
         for name in fields:
-            phi = IOField.readFoam(name, mesh, time)
+            phi = IOField.readFoam(name)
             phi.partialComplete()
             phi.decompose(time, data)
