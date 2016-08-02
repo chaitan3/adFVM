@@ -6,5 +6,6 @@ cdef extern from "metis.h":
                   idx_t *vwgt, idx_t *vsize, idx_t *ncommon, idx_t *nparts, 
                   real_t *tpwgts, idx_t *options, idx_t *objval, idx_t *epart, 
                   idx_t *npart);
+    int METIS_SetDefaultOptions(idx_t *options);
 
 

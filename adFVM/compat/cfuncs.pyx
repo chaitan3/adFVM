@@ -181,7 +181,15 @@ def decompose(object mesh, int nprocs):
     cdef int c_ne = ne
     cdef int c_nn = nn
     cdef int objval
-    part_mesh.METIS_PartMeshDual(&c_ne, &c_nn, &eptr[0], &eind[0,0], NULL, NULL, &ncommon, &nprocs, NULL, NULL, &objval, &epart[0], &npart[0])
+    cdef int[40] options
+    part_mesh.METIS_SetDefaultOptions(options)
+    options[0] = 1
+    options[1] = 0
+    options[2] = 1
+    options[3] = 4
+    options[4] = 1
+    options[16] = 30
+    part_mesh.METIS_PartMeshDual(&c_ne, &c_nn, &eptr[0], &eind[0,0], NULL, NULL, &ncommon, &nprocs, NULL, options, &objval, &epart[0], &npart[0])
 
     print 'metis completed'
 

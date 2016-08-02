@@ -23,6 +23,7 @@ if not times:
     times = mesh.getTimes()
 
 solver.readFields(times[0])
+solver.compileInit()
 computer = computeGradients(solver)
 
 if config.compile:

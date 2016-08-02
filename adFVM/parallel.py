@@ -81,19 +81,19 @@ class Exchanger(object):
         #MPI.Request.Waitall(self.requests, self.statuses)
         #return self.statuses
 
-mtime = 0.
-wtime = 0.
+#mtime = 0.
+#wtime = 0.
 def getRemoteCells(field, meshC):
     # mesh values required outside theano
     #logger.info('fetching remote cells')
     if nProcessors == 1:
         return field
-    global mtime, wtime
-    if meshC.reset:
-        meshC.reset = False
-        #print(rank, mtime, wtime)
-        mtime = 0.
-        wtime = 0.
+    #global mtime, wtime
+    #if meshC.reset:
+    #    meshC.reset = False
+    #    #print(rank, mtime, wtime)
+    #    mtime = 0.
+    #    wtime = 0.
 
     #start = time.time()
     #mpi.Barrier()

@@ -23,7 +23,7 @@ def central(phi, mesh):
     return faceField
 
 class Reconstruct(object):
-    def __init__(self, mesh, update):
+    def __init__(self, mesh, update, limiter=True):
         self.update = update
         self.mesh = mesh
         indices = [ad.arange(0, mesh.nInternalFaces)]
@@ -43,14 +43,15 @@ class Reconstruct(object):
         self.indices = ad.concatenate(indices)
         self.Cindices = Cindices
         self.Bindices = Bindices
+        self.limiter = True
 
     def dual(self, phi, gradPhi):
         assert len(phi.dimensions) == 1
         logger.info('TVD {0}'.format(phi.name))
 
         faceFields = []
-        faceFields.append(self.update(self.indices, 0, phi, gradPhi))
-        faceFields.append(self.update(self.indices, 1, phi, gradPhi))
+        faceFields.append(self.update(self.indices, 0, phi, gradPhi, self.limiter))
+        faceFields.append(self.update(self.indices, 1, phi, gradPhi, self.limiter))
 
         return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
 
@@ -99,7 +100,7 @@ def characteristic(startFace, endFace, faceField, phi, gradPhi):
 #    neighbour = mesh.neighbour[start:end]
 #    faceCentres = mesh.faceCentres[start:end]
 #    deltas = mesh.deltas[start:end]
-def TVD(indices, index, phi, gradPhi):
+def TVD(indices, index, phi, gradPhi, useLimiter):
     mesh = phi.mesh
     owner = mesh.owner[indices]
     neighbour = mesh.neighbour[indices]
@@ -111,27 +112,31 @@ def TVD(indices, index, phi, gradPhi):
         C, D = [neighbour, owner]
     phiC = phi.field[C]
     phiD = phi.field[D]
-    # wTF is *1 necessary over here for theano
-    phiDC = (phiD-phiC)*1
+
     R = Field('R', mesh.cellCentres[D] - mesh.cellCentres[C], (3,))
     F = Field('F', faceCentres - mesh.cellCentres[C], (3,))
-    gradC = Field('gradC({0})'.format(phi.name), gradPhi.field[C], gradPhi.dimensions)
-    gradF = Field('gradF({0})'.format(phi.name), phiDC, phi.dimensions)
-    gradC = gradC.dot(R)
-    if phi.dimensions[0] == 3:
-        gradC = gradC.dot(gradF)
-        gradF = gradF.magSqr()
-    r = 2.*gradC/gradF.stabilise(config.SMALL) - 1.
-    #r = Field.switch(ad.gt(gradC.abs().field, 1000.*gradF.abs().field), 2.*1000.*gradC.sign()*gradF.sign() - 1., 2.*gradC/gradF.stabilise(config.VSMALL) - 1.)
-
     weights = (F.dot(R)).field/(deltas*deltas)
-    #weights = 0.5
-    psi = lambda r, rabs: (r + rabs)/(1 + rabs)
-    limiter = psi(r, r.abs()).field
-    #phi.solver.local = phiC
-    #phi.solver.remote = phiD
-    #faceFields[index] = ad.set_subtensor(faceFields[index][start:end], phiC + weights*limiter*phiDC)
-    return phiC + weights*limiter*phiDC
+    phiDC = (phiD-phiC)*1
+    gradF = Field('gradF({0})'.format(phi.name), phiDC, phi.dimensions)
+    gradC = Field('gradC({0})'.format(phi.name), gradPhi.field[C], gradPhi.dimensions)
+    gradC = gradC.dot(R)
+
+    limiter = 1.
+    if useLimiter:
+        if len(gradPhi.dimensions) == 2:
+            gradC = gradC.dot(gradF)
+            gradF = gradF.magSqr()
+        r = 2.*gradC/gradF.stabilise(config.SMALL) - 1.
+        #r = Field.switch(ad.gt(gradC.abs().field, 1000.*gradF.abs().field), 2.*1000.*gradC.sign()*gradF.sign() - 1., 2.*gradC/gradF.stabilise(config.VSMALL) - 1.)
+        psi = lambda r, rabs: (r + rabs)/(1 + rabs)
+        limiter = psi(r, r.abs()).field
+        return phiC + weights*limiter*phiDC
+    else:
+        #weights1 = 1
+        #weights2 = 2
+        #return phiC + weights1*phiDC + weights2*gradC
+        return phiC + gradC
+
 
 #def TVD_dual(phi, gradPhi):
 #    from op import grad

@@ -6,7 +6,7 @@ from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
 #primal = RCF('/home/talnikar/foam/blade/les-turb/')
-primal = RCF('/home/talnikar/foam/vane/laminar-lowRe/')#, timeIntegrator='euler')
+primal = RCF('/home/talnikar/foam/vane/laminar/')#, timeIntegrator='euler')
 #primal = RCF('/home/talnikar/foam/vane/laminar/')#, timeIntegrator='euler')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
@@ -85,10 +85,12 @@ def makePerturb(mid):
 perturb = [makePerturb(np.array([-0.08, 0.014, 0.005])),
            makePerturb(np.array([0.03, -0.03, 0.005]))]
 
-nSteps = 20000
-writeInterval = 500
+nSteps = 10
+writeInterval = 5
+#nSteps = 20000
+#writeInterval = 500
 #nSteps = 100000
 #writeInterval = 5000
-startTime = 4.0
+startTime = 1.0
 dt = 1e-8
 

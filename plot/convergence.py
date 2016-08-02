@@ -11,10 +11,10 @@ convergence = [np.array(x.split(' ')).astype(float) for x in convergence]
 convergence = np.array([x[-1]/x[0] for x in convergence])
 print convergence.max(), convergence.min()
 
-#plt.plot(M2/M2.max(), label='M2')
+plt.semilogy(M2/M2.max(), label='M2')
 plt.semilogy(energy/energy.max(), label='energy')
+plt.semilogy(convergence, label='convergence')
 #plt.semilogy(convergence/convergence.max(), label='convergence')
-#plt.plot(convergence/convergence.max(), label='convergence')
-plt.legend()
+plt.legend(loc=0)
 plt.show()
 

@@ -4,7 +4,8 @@ from __future__ import print_function
 from adFVM import config, parallel
 from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
-from adFVM.matop_petsc import laplacian, ddt
+#from adFVM.matop_petsc import laplacian, ddt
+from adFVM.matop import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointNorm, computeGradients, getAdjointEnergy
@@ -111,6 +112,7 @@ class Adjoint(Solver):
                 stackedFields  = np.ascontiguousarray(objectiveGradient(lastSolution)/(nSteps + 1))
                 fields = self.unstackFields(stackedFields, IOField)
                 for phi in fields:
+                    phi.field = np.ascontiguousarray(phi.field)
                     phi.info()
                 pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
                 self.writeFields(fields, t)
@@ -160,7 +162,7 @@ class Adjoint(Solver):
                     for derivative, delphi in zip(sourceGradient, perturbation(None, mesh.origMesh, t)):
                         result[index] += np.sum(np.ascontiguousarray(derivative) * delphi)
 
-                parallel.mpi.Barrier()
+                #parallel.mpi.Barrier()
                 end = time.time()
                 pprint('Time for adjoint iteration: {0}'.format(end-start))
                 pprint('Time since beginning:', end-config.runtime)
@@ -168,6 +170,8 @@ class Adjoint(Solver):
 
             #exit(1)
             fields = self.unstackFields(stackedFields, IOField)
+            for phi in fields:
+                phi.field = np.ascontiguousarray(phi.field)
             self.writeFields(fields, t)
             self.writeStatusFile([checkpoint + 1, result])
 

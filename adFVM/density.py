@@ -18,10 +18,11 @@ class RCF(Solver):
                              'CFL': 1.2,
                              'stepFactor': 1.2,
                              'timeIntegrator': 'SSPRK', 'nStages': 3,
-                             'riemannSolver': 'eulerRoe',
+                             'riemannSolver': 'eulerHLLC',
                              #'boundaryRiemannSolver': 'eulerLaxFriedrichs',
-                             'boundaryRiemannSolver': 'eulerRoe',
-                             'readConservative': False
+                             'boundaryRiemannSolver': 'eulerHLLC',
+                             'readConservative': False,
+                             'useLimiter': True,
                         })
 
     def __init__(self, case, **userConfig):
@@ -47,7 +48,7 @@ class RCF(Solver):
 
     def compileInit(self):
         super(RCF, self).compileInit()
-        self.reconstructor = Reconstruct(self.mesh, TVD)
+        self.reconstructor = Reconstruct(self.mesh, TVD, limiter=self.useLimiter)
         return
 
     def primitive(self, rho, rhoU, rhoE):
