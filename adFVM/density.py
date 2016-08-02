@@ -18,9 +18,10 @@ class RCF(Solver):
                              'CFL': 1.2,
                              'stepFactor': 1.2,
                              'timeIntegrator': 'SSPRK', 'nStages': 3,
-                             'riemannSolver': 'eulerHLLC',
+                             'riemannSolver': 'eulerRoe',
+                             # eulerHLLC DOES NOT WORK
                              #'boundaryRiemannSolver': 'eulerLaxFriedrichs',
-                             'boundaryRiemannSolver': 'eulerHLLC',
+                             'boundaryRiemannSolver': 'eulerRoe',
                              'readConservative': False,
                              'useLimiter': True,
                         })

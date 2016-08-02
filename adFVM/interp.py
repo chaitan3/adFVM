@@ -129,13 +129,13 @@ def TVD(indices, index, phi, gradPhi, limiter):
         #r = Field.switch(ad.gt(gradC.abs().field, 1000.*gradF.abs().field), 2.*1000.*gradC.sign()*gradF.sign() - 1., 2.*gradC/gradF.stabilise(config.VSMALL) - 1.)
         psi = lambda r, rabs: (r + rabs)/(1 + rabs)
         limiter = psi(r, r.abs()).field
-        return phiC + weights*limiter*phiDC
+        return phiC + weights.field*limiter*phiDC
     else:
         # blending
-        weights1 = weights
-        weights2 = 0.*F
-        #weights1 = 1./3*weights
-        #weights2 = 2./3*F + 1./3*weights*R
+        #weights1 = weights
+        #weights2 = 0.*F
+        weights1 = 1./3*weights
+        weights2 = 2./3*F + 1./3*weights*R
         #weights1 = 0.
         #weights2 = F
         return phiC + (weights1*gradF + gradC.dot(weights2)).field
