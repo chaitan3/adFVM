@@ -43,7 +43,7 @@ class Reconstruct(object):
         self.indices = ad.concatenate(indices)
         self.Cindices = Cindices
         self.Bindices = Bindices
-        self.limiter = True
+        self.limiter = limiter
 
     def dual(self, phi, gradPhi):
         assert len(phi.dimensions) == 1
@@ -100,29 +100,28 @@ def characteristic(startFace, endFace, faceField, phi, gradPhi):
 #    neighbour = mesh.neighbour[start:end]
 #    faceCentres = mesh.faceCentres[start:end]
 #    deltas = mesh.deltas[start:end]
-def TVD(indices, index, phi, gradPhi, useLimiter):
+def TVD(indices, index, phi, gradPhi, limiter):
     mesh = phi.mesh
     owner = mesh.owner[indices]
     neighbour = mesh.neighbour[indices]
     faceCentres = mesh.faceCentres[indices]
-    deltas = mesh.deltas[indices]
     if index == 0:
         C, D = [owner, neighbour]
     else:
         C, D = [neighbour, owner]
     phiC = phi.field[C]
     phiD = phi.field[D]
+    phiDC = (phiD-phiC)*1
 
     R = Field('R', mesh.cellCentres[D] - mesh.cellCentres[C], (3,))
     F = Field('F', faceCentres - mesh.cellCentres[C], (3,))
-    weights = (F.dot(R)).field/(deltas*deltas)
-    phiDC = (phiD-phiC)*1
+    weights = (F.dot(R))/(R.dot(R))
+    #weights = 0.5
     gradF = Field('gradF({0})'.format(phi.name), phiDC, phi.dimensions)
     gradC = Field('gradC({0})'.format(phi.name), gradPhi.field[C], gradPhi.dimensions)
-    gradC = gradC.dot(R)
 
-    limiter = 1.
-    if useLimiter:
+    if limiter:
+        gradC = gradC.dot(R)
         if len(gradPhi.dimensions) == 2:
             gradC = gradC.dot(gradF)
             gradF = gradF.magSqr()
@@ -132,10 +131,14 @@ def TVD(indices, index, phi, gradPhi, useLimiter):
         limiter = psi(r, r.abs()).field
         return phiC + weights*limiter*phiDC
     else:
-        #weights1 = 1
-        #weights2 = 2
-        #return phiC + weights1*phiDC + weights2*gradC
-        return phiC + gradC
+        # blending
+        weights1 = weights
+        weights2 = 0.*F
+        #weights1 = 1./3*weights
+        #weights2 = 2./3*F + 1./3*weights*R
+        #weights1 = 0.
+        #weights2 = F
+        return phiC + (weights1*gradF + gradC.dot(weights2)).field
 
 
 #def TVD_dual(phi, gradPhi):
