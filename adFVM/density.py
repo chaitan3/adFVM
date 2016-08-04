@@ -145,7 +145,11 @@ class RCF(Solver):
         # gradient evaluated using gauss integration rule
         gradU = grad(central(U, mesh), ghost=True)
         gradT = grad(central(T, mesh), ghost=True)
-        gradp = grad(central(p, mesh), ghost=True)
+        #gradpO = grad(central(p, mesh), ghost=True)
+        gradp = grad(p, ghost=True, op=True)
+        #self.local = gradp.field
+        #self.remote = gradpO.field
+
         # for zeroGradient boundary
         UB, TB, pB = self.getBCFields()
         UB.grad, TB.grad, pB.grad = gradU, gradT, gradp

@@ -1,6 +1,9 @@
 # custom norm for numpy 1.7
 import numpy as np
 
+import cfuncs
+from cfuncs import intersectPlane, getCells, decompose
+
 def norm(a, axis, **kwuser):
     try:
         #return np.linalg.norm(a, axis=axis, keepdims=True)
@@ -19,4 +22,3 @@ def add_at(a, indices, b):
         assert b.dtype == np.float64
         cfuncs.add_at(a, indices, b)
 
-from cfuncs import intersectPlane, getCells, decompose

@@ -9,7 +9,7 @@ import os
 
 from . import config, parallel
 from .config import ad, adsparse
-from .compat import norm, decompose, getCells
+from .compat import norm, decompose, getCells, add_at
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
 
@@ -28,7 +28,7 @@ class Mesh(object):
               'areas', 'volumes',
               'weights', 'deltas', 'normals',
               'cellCentres', 'faceCentres',
-              'sumOp']
+              'sumOp', 'gradOp']
 
     def __init__(self):
         for attr in Mesh.constants:
@@ -90,13 +90,14 @@ class Mesh(object):
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()
         self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 
 
-        # uses neighbour
-        self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
-        
         # ghost cell modification: neighbour and cellCentres
         self.nLocalCells = self.createGhostCells()
         self.deltas = self.getDeltas()           # nFaces 
         self.weights = self.getWeights()   # nFaces
+
+        # uses neighbour
+        self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
+        self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)
 
         # theano shared variables
         self.origMesh = Mesh.copy(self, fields=True)
@@ -502,6 +503,7 @@ class Mesh(object):
 
     def getNormals(self):
         logger.info('generated normals')
+        # normal goes from owner to neighbour
         v1 = self.points[self.faces[:,1]]-self.points[self.faces[:,2]]
         v2 = self.points[self.faces[:,2]]-self.points[self.faces[:,3]]
         # CROSS product makes it F_CONTIGUOUS even if normals is not
@@ -561,7 +563,7 @@ class Mesh(object):
         return weights
     # end: need to convert to ad
 
-    def getSumOp(self, mesh, ghost=False):
+    def getSumOp(self, mesh):
         logger.info('generated sum op')
         owner = sparse.csc_matrix((np.ones(mesh.nFaces, config.precision), mesh.owner, np.arange(0, mesh.nFaces+1, dtype=np.int32)), shape=(mesh.nInternalCells, mesh.nFaces))
         Nindptr = np.concatenate((np.arange(0, mesh.nInternalFaces+1, dtype=np.int32), mesh.nInternalFaces*np.ones(mesh.nFaces-mesh.nInternalFaces, np.int32)))
@@ -578,6 +580,45 @@ class Mesh(object):
     
         #return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
         return sumOp
+
+    def getGradOp(self, mesh):
+        logger.info('generated grad op')
+        cells = np.arange(0, mesh.nInternalCells).reshape(-1,1)
+        vol = mesh.volumes
+        indices = (mesh.owner[mesh.cellFaces] == cells)
+        pos = mesh.weights*mesh.normals*mesh.areas
+        neg = mesh.normals*mesh.areas-pos
+        diagonal = np.zeros((mesh.nInternalCells, 3), config.precision) 
+        row = np.zeros_like(mesh.cellFaces)
+        row[:,:] = cells
+        column = mesh.cellFaces
+        data = np.zeros(mesh.cellFaces.shape + (3,), config.precision)
+
+        faces = mesh.cellFaces[indices]
+        np.add.at(diagonal, mesh.owner[faces], pos[faces])
+        column[indices] = mesh.neighbour[faces]
+        data[indices] = neg[faces]
+
+        indices = np.logical_not(indices)
+        faces = mesh.cellFaces[indices]
+        np.add.at(diagonal, mesh.neighbour[faces], -neg[faces])
+        column[indices] = mesh.owner[faces]
+        data[indices] = -pos[faces]
+
+        data = np.vstack((data.reshape(np.prod(data.shape[:-1]), 3), diagonal))
+        row = np.concatenate((row.flatten(), cells.flatten()))
+        column = np.concatenate((column.flatten(), cells.flatten()))
+        data /= vol[row]
+        row = (row*3).reshape(-1,1)
+        import pdb; pdb.set_trace()
+        row = np.hstack((row, row+1, row+2)).flatten()
+        column = np.repeat(column, 3)
+        data = data.flatten()
+
+        shape = (3*mesh.nInternalCells, mesh.nCells)
+        gradOp = sparse.coo_matrix((data, (row, column)), shape=shape).tocsr()
+
+        return gradOp
 
     def getDefaultBoundary(self):
         logger.info('generated default boundary')
@@ -704,7 +745,7 @@ class Mesh(object):
             value = getattr(self, attr) 
             if attr in ['owner', 'neighbour']:
                 setattr(self, attr, ad.ivector())
-            elif attr == 'sumOp':
+            elif attr == 'sumOp' or attr == 'gradOp':
                 setattr(self, attr, adsparse.csr_matrix(dtype=config.dtype))
             elif value.shape[1] == 1:
                 setattr(self, attr, ad.bcmatrix())

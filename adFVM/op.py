@@ -43,21 +43,30 @@ def div(phi, U=None, ghost=False):
     else:
         return Field('div({0})'.format(phi.name), divField, phi.dimensions)
 
-def grad(phi, ghost=False):
+def grad(phi, ghost=False, op=False):
     assert len(phi.dimensions) == 1
     logger.info('gradient of {0}'.format(phi.name))
     mesh = phi.mesh
-    if phi.dimensions[0] == 1:
-        product = phi * mesh.Normals
+    dimensions = (3,) + phi.dimensions
+    if phi.dimensions == (1,):
         dimensions = (3,)
+
+    if op:
+        gradField = adsparse.basic.dot(mesh.gradOp, phi.field)
+        gradField = gradField.reshape((mesh.nInternalCells,) + dimensions)
+        if dimensions == (3,3):
+            gradField = gradField.transpose((0, 2, 1))
     else:
-        product = phi.outer(mesh.Normals)
-        product.field = product.field.reshape((mesh.nFaces, 9))
-        dimensions = (3,3)
-    gradField = internal_sum(product, mesh)
-    # if grad of scalar
-    if phi.dimensions[0] == 3:
-        gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
+        if dimensions == (3,):
+            product = phi * mesh.Normals
+        else:
+            product = phi.outer(mesh.Normals)
+            product.field = product.field.reshape((mesh.nFaces, 9))
+        gradField = internal_sum(product, mesh)
+        # if grad of vector
+        if dimensions == (3,3):
+            gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
+
     if ghost:
         gradPhi = CellField('grad({0})'.format(phi.name), gradField, dimensions, ghost=True)
         return gradPhi
