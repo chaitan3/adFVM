@@ -132,10 +132,10 @@ def TVD(indices, index, phi, gradPhi, limiter):
         return phiC + weights.field*limiter*phiDC
     else:
         # blending
-        #weights1 = weights
-        #weights2 = 0.*F
-        weights1 = 1./3*weights
-        weights2 = 2./3*F + 1./3*weights*R
+        weights1 = weights
+        weights2 = 0.*F
+        #weights1 = 1./3*weights
+        #weights2 = 2./3*F + 1./3*weights*R
         #weights1 = 0.
         #weights2 = F
         return phiC + (weights1*gradF + gradC.dot(weights2)).field

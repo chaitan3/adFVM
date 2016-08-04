@@ -42,14 +42,15 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
 
     fill=1
 
-    
     plt.scatter(expp[:,0], expp[:,1], c='r', marker='+', label='Exp. pressure')
     plt.scatter(exps[:,0], exps[:,1], c='b', marker='+', label='Exp. suction')
     plt.scatter(sp, Map, c='r', s=10, alpha=fill, marker='o', label='Sim. pressure')
     plt.scatter(ss, Mas, c='b', s=10, alpha=fill, marker='o', label='Sim. suction')
+    plt.xlim([0, ss.max()])
+    plt.ylim([0, Mas.max()])
     plt.xlabel('s/c (mm)')
     plt.ylabel('Ma')
-    plt.legend()
+    plt.legend(loc='lower right')
 
     plt.savefig(saveFile)
     plt.clf()
@@ -91,6 +92,9 @@ if __name__ == '__main__':
         htc.partialComplete()
         Ma = IOField.read('Ma_avg')
         Ma.partialComplete()
+        with open(IOField._handle + '/wake_avg', 'r') as f:
+            data = load(f)
+            wakeCells, pl = data['arr_0'], data['arr_1']
 
     #nLayers = 1
     nLayers = 200
@@ -117,14 +121,15 @@ if __name__ == '__main__':
         htc_args.extend([y, x])
         y = spanwise_average(Ma.field[cellStartFace:cellEndFace])
         Ma_args.extend([y, x])
-
     htc_args += [case + 'htc.png']
     Ma_args += [case + 'Ma.png']
     match_velocity(*Ma_args)
     match_htc(*htc_args)
 
-    #y = PL/(p0*nTimes)
-    #x = 1000*mesh.cellCentres[wakeCells[:nCellsPerLayer], 1]
-    #wake_args = [y, x, p0]
-    #match_wakes(*wake_args)
+    p0 = 175158.
+    nCellsPerLayer = len(wakeCells)/nLayers
+    y = pl[:nCellsPerLayer]/p0
+    x = 1000*mesh.cellCentres[wakeCells[:nCellsPerLayer], 1]
+    wake_args = [y, x, p0, case + 'wake.png']
+    match_wakes(*wake_args)
 
