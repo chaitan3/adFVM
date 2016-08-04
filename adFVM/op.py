@@ -51,7 +51,7 @@ def grad(phi, ghost=False, op=False):
     if phi.dimensions == (1,):
         dimensions = (3,)
 
-    if op:
+    if op and config.device == 'cpu':
         gradField = adsparse.basic.dot(mesh.gradOp, phi.field)
         gradField = gradField.reshape((mesh.nInternalCells,) + dimensions)
         if dimensions == (3,3):

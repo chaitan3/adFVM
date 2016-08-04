@@ -610,7 +610,6 @@ class Mesh(object):
         column = np.concatenate((column.flatten(), cells.flatten()))
         data /= vol[row]
         row = (row*3).reshape(-1,1)
-        import pdb; pdb.set_trace()
         row = np.hstack((row, row+1, row+2)).flatten()
         column = np.repeat(column, 3)
         data = data.flatten()
