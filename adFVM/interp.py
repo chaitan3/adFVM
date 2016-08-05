@@ -113,14 +113,13 @@ def TVD(indices, index, phi, gradPhi, limiter):
     phiD = phi.field[D]
     phiDC = (phiD-phiC)*1
 
-    R = Field('R', mesh.cellCentres[D] - mesh.cellCentres[C], (3,))
-    F = Field('F', faceCentres - mesh.cellCentres[C], (3,))
-    weights = (F.dot(R))/(R.dot(R))
-    #weights = 0.5
     gradF = Field('gradF({0})'.format(phi.name), phiDC, phi.dimensions)
     gradC = Field('gradC({0})'.format(phi.name), gradPhi.field[C], gradPhi.dimensions)
 
     if limiter:
+        R = Field('R', mesh.cellCentres[D] - mesh.cellCentres[C], (3,))
+        F = Field('F', faceCentres - mesh.cellCentres[C], (3,))
+        weights = (F.dot(R))/(R.dot(R))
         gradC = gradC.dot(R)
         if len(gradPhi.dimensions) == 2:
             gradC = gradC.dot(gradF)
@@ -131,13 +130,8 @@ def TVD(indices, index, phi, gradPhi, limiter):
         limiter = psi(r, r.abs()).field
         return phiC + weights.field*limiter*phiDC
     else:
-        # blending
-        weights1 = weights
-        weights2 = 0.*F
-        #weights1 = 1./3*weights
-        #weights2 = 2./3*F + 1./3*weights*R
-        #weights1 = 0.
-        #weights2 = F
+        weights1 = mesh.linearWeights[:,index]
+        weights2 = mesh.quadraticWeights[:,index]
         return phiC + (weights1*gradF + gradC.dot(weights2)).field
 
 

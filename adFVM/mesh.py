@@ -27,6 +27,7 @@ class Mesh(object):
     fields = ['owner', 'neighbour',
               'areas', 'volumes',
               'weights', 'deltas', 'normals',
+              'linearWeights', 'quadraticWeights'
               'cellCentres', 'faceCentres',
               'sumOp', 'gradOp']
 
@@ -93,11 +94,12 @@ class Mesh(object):
         # ghost cell modification: neighbour and cellCentres
         self.nLocalCells = self.createGhostCells()
         self.deltas = self.getDeltas()           # nFaces 
-        self.weights = self.getWeights()   # nFaces
+        self.weights, self.linearWeights, self.quadraticWeights = self.getWeights()   # nFaces
 
         # uses neighbour
         self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
         self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)
+        self.checkWeights()
 
         # theano shared variables
         self.origMesh = Mesh.copy(self, fields=True)
@@ -560,8 +562,46 @@ class Mesh(object):
         neighbourDist = np.abs(np.sum((F-N)*self.normals, axis=1, keepdims=True))
         ownerDist = np.abs(np.sum((F-P)*self.normals, axis=1, keepdims=True))
         weights = neighbourDist/(neighbourDist + ownerDist)
-        return weights
+
+        combinedLinearWeights = np.zeros((self.nFaces, 2), config.precision)
+        combinedQuadraticWeights = np.zeros((self.nFaces, 3, 2), config.precision)
+        index = 0
+        for C, D in [[self.owner, self.neighbour], [self.neighbour, self.owner]]:
+            R = self.cellCentres[D] - self.cellCentres[C]
+            F = faceCentres - self.cellCentres[C]
+            w = (F*R).sum(axis=1)/(R*R).sum(axis=1)
+
+            #linearWeights = w
+            #quadraticWeights = 0.*F
+            #linearWeights = 0.
+            #quadraticWeights = F
+            linearWeights = 1./3*w
+            quadraticWeights = 2./3*F + 1./3*w*R
+            combinedLinearWeights[:, index] = linearWeights
+            combinedQuadraticWeights[:,:,index] = quadraticWeights
+            index += 1
+
+        return weights, combinedLinearWeights, combinedQuadraticWeights
+
     # end: need to convert to ad
+
+    def checkWeights(self):
+        faceOptions = [[self.owner, self.neighbour], [self.neighbour, self.owner]]
+        for index in [0, 1]:
+            C, D = faceOptions[index] 
+            row = np.hstack((C*3, C*3+1, C*3+2))
+            column = np.hstack((C, C, C))
+            diagonal = self.gradOp[row, column] 
+            diag_q = (1-self.linearWeights[:,index]) + (self.quadraticWeights[:,:,index]*diagonal).sum(axis=1)
+            # cellNeighbours might have -1
+            N = self.cellNeighbours[C]
+            F = self.cellFaces[C]
+            row = np.dstack((F*3, F*3+1, F*3+2))
+            column = np.dstack((N, N, N))
+            off_diagonal = self.gradOp[row, column]
+            sum_abs_coeff_q = (self.quadraticWeights[:,:,index][F]*off_diagonal).sum(axis=2)
+            sum_abs_coeff_q[N == D] += self.linearWeights[:, index]
+            sum_abs_coeff_q = sum_abs_coeff_q.sum(axis=1).abs()
 
     def getSumOp(self, mesh):
         logger.info('generated sum op')
