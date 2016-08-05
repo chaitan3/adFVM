@@ -563,6 +563,8 @@ class Mesh(object):
         ownerDist = np.abs(np.sum((F-P)*self.normals, axis=1, keepdims=True))
         weights = neighbourDist/(neighbourDist + ownerDist)
 
+        # weights generally for all faces
+        # for actual boundary faces (no coupled) does not matter, NOT USED
         combinedLinearWeights = np.zeros((self.nFaces, 2), config.precision)
         combinedQuadraticWeights = np.zeros((self.nFaces, 3, 2), config.precision)
         index = 0
@@ -576,7 +578,7 @@ class Mesh(object):
             #linearWeights = 0.
             #quadraticWeights = F
             linearWeights = 1./3*w
-            quadraticWeights = 2./3*F + 1./3*w.reshape(-1,1)*R
+            quadraticWeights = 2./3*F + 1./3*(F-w.reshape(-1,1)*R)
             combinedLinearWeights[:, index] = linearWeights
             combinedQuadraticWeights[:,:,index] = quadraticWeights
             index += 1
@@ -603,6 +605,7 @@ class Mesh(object):
             indices = np.equal(cellNeighbours[C], D.reshape(-1,1))
             sum_abs_coeff_q[indices] += self.linearWeights[:end, index]
             sum_abs_coeff_q = np.abs(sum_abs_coeff_q).sum(axis=1)
+            pprint('diag sum ratio:', parallel.min(diag_q/sum_abs_coeff_q))
 
     def getSumOp(self, mesh):
         logger.info('generated sum op')
