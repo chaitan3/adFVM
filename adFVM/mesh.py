@@ -568,7 +568,7 @@ class Mesh(object):
         index = 0
         for C, D in [[self.owner, self.neighbour], [self.neighbour, self.owner]]:
             R = self.cellCentres[D] - self.cellCentres[C]
-            F = faceCentres - self.cellCentres[C]
+            F = self.faceCentres - self.cellCentres[C]
             w = (F*R).sum(axis=1)/(R*R).sum(axis=1)
 
             #linearWeights = w
@@ -576,7 +576,7 @@ class Mesh(object):
             #linearWeights = 0.
             #quadraticWeights = F
             linearWeights = 1./3*w
-            quadraticWeights = 2./3*F + 1./3*w*R
+            quadraticWeights = 2./3*F + 1./3*w.reshape(-1,1)*R
             combinedLinearWeights[:, index] = linearWeights
             combinedQuadraticWeights[:,:,index] = quadraticWeights
             index += 1
@@ -586,22 +586,24 @@ class Mesh(object):
     # end: need to convert to ad
 
     def checkWeights(self):
-        faceOptions = [[self.owner, self.neighbour], [self.neighbour, self.owner]]
+        faceOptions = [[self.owner, self.neighbour], [self.neighbour[:self.nInternalFaces], self.owner[:self.nInternalFaces]]]
+        
+        cellNeighbours = self.owner[self.cellFaces]
+        indices = np.arange(0, self.nInternalCells).reshape(-1,1)
+        indices = np.equal(cellNeighbours, indices)
+        cellNeighbours[indices] = self.neighbour[self.cellFaces][indices]
+
         for index in [0, 1]:
             C, D = faceOptions[index] 
-            row = np.hstack((C*3, C*3+1, C*3+2))
-            column = np.hstack((C, C, C))
-            diagonal = self.gradOp[row, column] 
-            diag_q = (1-self.linearWeights[:,index]) + (self.quadraticWeights[:,:,index]*diagonal).sum(axis=1)
-            # cellNeighbours might have -1
-            N = self.cellNeighbours[C]
-            F = self.cellFaces[C]
-            row = np.dstack((F*3, F*3+1, F*3+2))
-            column = np.dstack((N, N, N))
-            off_diagonal = self.gradOp[row, column]
-            sum_abs_coeff_q = (self.quadraticWeights[:,:,index][F]*off_diagonal).sum(axis=2)
-            sum_abs_coeff_q[N == D] += self.linearWeights[:, index]
-            sum_abs_coeff_q = sum_abs_coeff_q.sum(axis=1).abs()
+            end = len(C)
+            diagonal = self.gradOpDiagonal[C]
+            diag_q = (1-self.linearWeights[:end,index]) + (self.quadraticWeights[:end,:,index]*diagonal).sum(axis=1)
+            off_diagonal = self.gradOpOffDiagonal[C]
+            sum_abs_coeff_q = (self.quadraticWeights[:,:,index][self.cellFaces[C]]*off_diagonal).sum(axis=2)
+            indices = np.equal(cellNeighbours[C], D.reshape(-1,1))
+            sum_abs_coeff_q[indices] += self.linearWeights[:end, index]
+            import pdb; pdb.set_trace()
+            sum_abs_coeff_q = np.abs(sum_abs_coeff_q).sum(axis=1)
 
     def getSumOp(self, mesh):
         logger.info('generated sum op')
@@ -631,7 +633,7 @@ class Mesh(object):
         diagonal = np.zeros((mesh.nInternalCells, 3), config.precision) 
         row = np.zeros_like(mesh.cellFaces)
         row[:,:] = cells
-        column = mesh.cellFaces
+        column = mesh.cellFaces.copy()
         data = np.zeros(mesh.cellFaces.shape + (3,), config.precision)
 
         faces = mesh.cellFaces[indices]
@@ -645,6 +647,8 @@ class Mesh(object):
         column[indices] = mesh.owner[faces]
         data[indices] = -pos[faces]
 
+        self.gradOpDiagonal = diagonal
+        self.gradOpOffDiagonal = data
         data = np.vstack((data.reshape(np.prod(data.shape[:-1]), 3), diagonal))
         row = np.concatenate((row.flatten(), cells.flatten()))
         column = np.concatenate((column.flatten(), cells.flatten()))
