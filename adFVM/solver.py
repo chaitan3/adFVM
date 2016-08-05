@@ -307,7 +307,8 @@ class Solver(object):
             else:
                 dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
 
-            mesh.update(t, dt)
+            if self.dynamicMesh:
+                mesh.update(t, dt)
             self.updateSource(source(fields, mesh.origMesh, t))
 
             # objective management

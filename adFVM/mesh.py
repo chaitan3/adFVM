@@ -27,7 +27,7 @@ class Mesh(object):
     fields = ['owner', 'neighbour',
               'areas', 'volumes',
               'weights', 'deltas', 'normals',
-              'linearWeights', 'quadraticWeights'
+              'linearWeights', 'quadraticWeights',
               'cellCentres', 'faceCentres',
               'sumOp', 'gradOp']
 
@@ -602,7 +602,6 @@ class Mesh(object):
             sum_abs_coeff_q = (self.quadraticWeights[:,:,index][self.cellFaces[C]]*off_diagonal).sum(axis=2)
             indices = np.equal(cellNeighbours[C], D.reshape(-1,1))
             sum_abs_coeff_q[indices] += self.linearWeights[:end, index]
-            import pdb; pdb.set_trace()
             sum_abs_coeff_q = np.abs(sum_abs_coeff_q).sum(axis=1)
 
     def getSumOp(self, mesh):
@@ -792,6 +791,8 @@ class Mesh(object):
                 setattr(self, attr, adsparse.csr_matrix(dtype=config.dtype))
             elif value.shape[1] == 1:
                 setattr(self, attr, ad.bcmatrix())
+            elif len(value.shape) > 2:
+                setattr(self, attr, ad.tensor3())
             else:
                 setattr(self, attr, ad.matrix())
 

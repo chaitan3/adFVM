@@ -130,8 +130,8 @@ def TVD(indices, index, phi, gradPhi, limiter):
         limiter = psi(r, r.abs()).field
         return phiC + weights.field*limiter*phiDC
     else:
-        weights1 = mesh.linearWeights[:,index]
-        weights2 = mesh.quadraticWeights[:,index]
+        weights1 = Field('lw', mesh.linearWeights[indices,index].reshape((-1,1)), (1,))
+        weights2 = Field('qw', mesh.quadraticWeights[indices,:,index], (3,))
         return phiC + (weights1*gradF + gradC.dot(weights2)).field
 
 
