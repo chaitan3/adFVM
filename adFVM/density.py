@@ -1,9 +1,9 @@
-from . import config, riemann
+from . import config, riemann, interp
 from .config import ad
 from .field import Field, IOField
 from .op import  div, snGrad, grad, internal_sum
 from .solver import Solver
-from .interp import central, Reconstruct, TVD
+from .interp import central
 
 logger = config.Logger(__name__)
 
@@ -23,7 +23,7 @@ class RCF(Solver):
                              #'boundaryRiemannSolver': 'eulerLaxFriedrichs',
                              'boundaryRiemannSolver': 'eulerRoe',
                              'readConservative': False,
-                             'useLimiter': True,
+                             'faceReconstructor': 'SecondOrder',
                         })
 
     def __init__(self, case, **userConfig):
@@ -34,6 +34,7 @@ class RCF(Solver):
         self.kappa = lambda mu, T: mu*(self.Cp/self.Pr)
         self.riemannSolver = getattr(riemann, self.riemannSolver)
         self.boundaryRiemannSolver = getattr(riemann, self.boundaryRiemannSolver)
+        self.faceReconstructor = getattr(interp, self.faceReconstructor)
 
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
@@ -49,7 +50,7 @@ class RCF(Solver):
 
     def compileInit(self):
         super(RCF, self).compileInit()
-        self.reconstructor = Reconstruct(self.mesh, TVD, limiter=self.useLimiter)
+        self.faceReconstructor = self.faceReconstructor(self.mesh)
         return
 
     def primitive(self, rho, rhoU, rhoE):
@@ -180,13 +181,13 @@ class RCF(Solver):
         rhoEFlux = Field('rhoE', ad.zeros((mesh.nFaces,) + rhoE.dimensions), rhoE.dimensions)
         UF = Field('U', ad.zeros((mesh.nFaces,) + U.dimensions), U.dimensions)
         TF = Field('T', ad.zeros((mesh.nFaces,) + T.dimensions), T.dimensions)
-        indices, Bindices, Cindices = self.reconstructor.indices, self.reconstructor.Bindices, self.reconstructor.Cindices
+        indices, Bindices, Cindices = self.faceReconstructor.indices, self.faceReconstructor.Bindices, self.faceReconstructor.Cindices
 
         # INTERNAL FLUX
         # face reconstruction
-        ULIF, URIF = self.reconstructor.dual(U, gradU)
-        TLIF, TRIF = self.reconstructor.dual(T, gradT)
-        pLIF, pRIF = self.reconstructor.dual(p, gradp)
+        ULIF, URIF = self.faceReconstructor.dual(U, gradU)
+        TLIF, TRIF = self.faceReconstructor.dual(T, gradT)
+        pLIF, pRIF = self.faceReconstructor.dual(p, gradp)
 
         rhoLIF, rhoULIF, rhoELIF = self.conservative(ULIF, TLIF, pLIF)
         rhoRIF, rhoURIF, rhoERIF = self.conservative(URIF, TRIF, pRIF)
