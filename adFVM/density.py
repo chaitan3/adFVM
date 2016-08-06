@@ -183,7 +183,7 @@ class RCF(Solver):
         TF = Field('T', ad.zeros((mesh.nFaces,) + T.dimensions), T.dimensions)
         indices, Bindices, Cindices = self.faceReconstructor.indices, self.faceReconstructor.Bindices, self.faceReconstructor.Cindices
 
-        # INTERNAL FLUX
+        # INTERNAL FLUX: includes internal faces, cyclic and processor faces
         # face reconstruction
         ULIF, URIF = self.faceReconstructor.dual(U, gradU)
         TLIF, TRIF = self.faceReconstructor.dual(T, gradT)
@@ -204,6 +204,7 @@ class RCF(Solver):
 
         # BOUNDARY FLUX
         if len(Bindices) > 0:
+            # no riemann stuff
             indices = ad.concatenate(Bindices)
             cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
             UBF, TBF, pBF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
@@ -220,6 +221,7 @@ class RCF(Solver):
             cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
             Iindices = mesh.owner[indices]
             URCF, TRCF, pRCF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
+            # first order interpolation? really?
             ULCF, TLCF, pLCF = U.getField(Iindices), T.getField(Iindices), p.getField(Iindices)
             rhoLCF, rhoULCF, rhoELCF = self.conservative(ULCF, TLCF, pLCF)
             rhoRCF, rhoURCF, rhoERCF = self.conservative(URCF, TRCF, pRCF)

@@ -81,9 +81,9 @@ def perturb(fields, mesh, t):
 
 #nSteps = 100000
 #writeInterval = 5000
-nSteps = 20000
-writeInterval = 500
+nSteps = 100000
+writeInterval = 10000
 #nSteps = 10
 #writeInterval = 5
-startTime = 0.0
+startTime = 0.00016
 dt = 8e-9
