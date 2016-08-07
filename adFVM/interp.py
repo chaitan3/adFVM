@@ -80,6 +80,17 @@ class SecondOrder(Reconstruct):
         weights2 = Field('qw', mesh.quadraticWeights[self.indices,:,index], (3,))
         return phiC + (weights1*gradF + gradC.dot(weights2)).field
 
+class ENO(Reconstruct):
+    def __init__(self, mesh):
+        super(self.__class__, self).__init__(mesh)
+        return
+
+    def update(self, index, phi, gradPhi):
+        C, D = self.faceOptions[index]
+        phiC = phi.field[C]
+        dphi = 1e20*ad.ones_like(phiC)
+        return phiC + dPhi
+
 class oldTVD(Reconstruct):
     def update(self, index, phi, gradPhi):
         R = Field('R', mesh.cellCentres[D] - mesh.cellCentres[C], (3,))
