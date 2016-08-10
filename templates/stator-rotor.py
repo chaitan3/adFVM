@@ -78,6 +78,6 @@ def perturb(mesh):
 
 nSteps = 100000
 writeInterval = 5000
-startTime = 2.0
+startTime = 1.0
 dt = 1e-8
 

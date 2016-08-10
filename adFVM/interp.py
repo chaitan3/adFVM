@@ -2,6 +2,9 @@ from . import config
 from .config import ad
 from field import Field
 
+import itertools
+import numpy as np
+
 logger = config.Logger(__name__)
 
 # central is second order with no grad
@@ -66,6 +69,7 @@ class FirstOrder(Reconstruct):
         return 
 
 class SecondOrder(Reconstruct):
+    # weights selected in mesh.py
     def update(self, index, phi, gradPhi):
         mesh = phi.mesh
         C, D = self.faceOptions[index]
@@ -83,6 +87,17 @@ class SecondOrder(Reconstruct):
 class ENO(Reconstruct):
     def __init__(self, mesh):
         super(self.__class__, self).__init__(mesh)
+        meshO = mesh.origMesh
+        volumes = meshO.volumes
+        cellNeighbours = mesh.cellNeighboursFull
+        cellCentres = np.expand_dims(meshO.cellCentres[:meshO.nInternalCells],1)
+        count = np.zeros(volumes.shape[0])
+        combinations = list(itertools.combinations(range(0, 6), 3))
+        for indices in combinations:
+            neighbours =  cellNeighbours[:,indices]
+            neighbourDist = meshO.cellCentres[neighbours]-cellCentres
+            distDet = np.linalg.det(neighbourDist)
+            count += (np.abs(distDet) > 1e-4*volumes.flatten())
         return
 
     def update(self, index, phi, gradPhi):
@@ -91,7 +106,7 @@ class ENO(Reconstruct):
         dphi = 1e20*ad.ones_like(phiC)
         return phiC + dPhi
 
-class oldTVD(Reconstruct):
+class limitedSecondOrder(Reconstruct):
     def update(self, index, phi, gradPhi):
         R = Field('R', mesh.cellCentres[D] - mesh.cellCentres[C], (3,))
         F = Field('F', faceCentres - mesh.cellCentres[C], (3,))

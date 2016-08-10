@@ -573,10 +573,13 @@ class Mesh(object):
             F = self.faceCentres - self.cellCentres[C]
             w = (F*R).sum(axis=1)/(R*R).sum(axis=1)
 
+            # central scheme
             #linearWeights = w
             #quadraticWeights = 0.*F
+            # upwind biased: gradient based
             #linearWeights = 0.
             #quadraticWeights = F
+            # upwind biased: gradient + central difference
             linearWeights = 1./3*w
             quadraticWeights = 2./3*F + 1./3*(F-w.reshape(-1,1)*R)
             combinedLinearWeights[:, index] = linearWeights
@@ -606,6 +609,8 @@ class Mesh(object):
             sum_abs_coeff_q[indices] += self.linearWeights[:end, index]
             sum_abs_coeff_q = np.abs(sum_abs_coeff_q).sum(axis=1)
             pprint('diag sum ratio:', parallel.min(diag_q/sum_abs_coeff_q))
+
+        self.cellNeighboursFull = cellNeighbours
 
     def getSumOp(self, mesh):
         logger.info('generated sum op')

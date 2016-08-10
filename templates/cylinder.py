@@ -8,11 +8,11 @@ from adFVM.density import RCF
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('cases/cylinder/orig/', 
+primal = RCF('cases/cylinder/per/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
-             mu=lambda T: T/T*2.5e-5, 
-             useLimiter=False
+             mu=lambda T: T/T*2.5e-5*(1+1e-3),
+             faceReconstructor='ENO'
 )
 
 def dot(a, b):
@@ -79,11 +79,9 @@ def perturb(fields, mesh, t):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-#nSteps = 100000
-#writeInterval = 5000
-nSteps = 100000
-writeInterval = 10000
+nSteps = 20000
+writeInterval = 100
 #nSteps = 10
 #writeInterval = 5
-startTime = 0.00016
+startTime = 1.0
 dt = 8e-9
