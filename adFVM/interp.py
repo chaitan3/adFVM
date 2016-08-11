@@ -88,16 +88,27 @@ class ENO(Reconstruct):
     def __init__(self, mesh):
         super(self.__class__, self).__init__(mesh)
         meshO = mesh.origMesh
-        volumes = meshO.volumes
-        cellNeighbours = mesh.cellNeighboursFull
-        cellCentres = np.expand_dims(meshO.cellCentres[:meshO.nInternalCells],1)
-        count = np.zeros(volumes.shape[0])
-        combinations = list(itertools.combinations(range(0, 6), 3))
-        for indices in combinations:
-            neighbours =  cellNeighbours[:,indices]
-            neighbourDist = meshO.cellCentres[neighbours]-cellCentres
+        combinations = np.array(list(itertools.combinations(range(0, 6), 3)))
+        enoCount = np.zeros(meshO.volumes.shape[0], np.int32)
+        enoIndices = []
+        distDets = []
+        neighbourDists = []
+        for index, triplet in enumerate(combinations):
+            neighbours =  mesh.cellNeighboursFull[:,triplet]
+            neighbourDist = meshO.cellCentres[neighbours]-np.expand_dims(meshO.cellCentres[:meshO.nInternalCells], 1)
             distDet = np.linalg.det(neighbourDist)
-            count += (np.abs(distDet) > 1e-4*volumes.flatten())
+            enoIndices.append((np.abs(distDet) > 1e-4*volumes.flatten()))
+            enoCount += enoIndices[-1]
+            distDets.append(distDet)
+            neighbourDists.append(neighbourDist)
+        enoIndices = np.vstack(enoIndices).T
+        distDets = np.vstack(distDets).T
+        neighbourDists = np.vstack(neighbourDists).transpose((1,0,2))
+
+        enoIndices = np.nonzero(enoIndices)[1]
+        faceDists = meshO.faceCentres-meshO.cellCentres[meshO.owner]
+        combinations[enoIndices]
+    
         return
 
     def update(self, index, phi, gradPhi):
