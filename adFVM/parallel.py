@@ -109,20 +109,20 @@ def getRemoteCells(field, meshC):
     #mtime += time.time()-start2
     return field
 
-def getRemoteFaces(field1, field2, meshC):
+def getRemoteFaces(field1, field2, procStartFace, meshC):
     # mesh values required outside theano
     #logger.info('fetching remote cells')
     if nProcessors == 1:
         return field2
     exchanger = Exchanger()
     mesh = meshC.origMesh
-    nRemoteFaces = mesh.nCells-mesh.nLocalCells
-    startFace = field1.shape[0]-nRemoteFaces
-    exchanger.exchange(remote, field1[startFace:], field2[startFace:])
+    startFace = procStartFace
     for patchID in meshC.remotePatches:
         local, remote, tag = meshC.getProcessorPatchInfo(patchID)
-        startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
+        _, _, nFaces = mesh.getPatchFaceRange(patchID)
+        endFace = startFace + nFaces
         exchanger.exchange(remote, field1[startFace:endFace], field2[startFace:endFace], tag)
+        startFace += nFaces
     exchanger.wait()
     #mtime += time.time()-start2
     return field2

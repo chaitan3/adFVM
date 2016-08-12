@@ -183,6 +183,7 @@ class ENO(Reconstruct):
                 nFaces = self.mesh.boundary[patchID]['nFaces']
                 self.cyclicStartFaces[patchID] = startFace
                 startFace += nFaces
+        self.procStartFace = startFace
 
         return
 
@@ -227,7 +228,7 @@ class ENO(Reconstruct):
                 neighbourStartFace = self.cyclicStartFaces[patch['neighbourPatch']]
                 faceFields[1] = ad.set_subtensor(faceFields[1][startFace:startFace+nFaces], 
                                                  faceFields[0][neighbourStartFace:neighbourStartFace+nFaces])
-        faceFields[1] = faceExchange(faceFields[0], faceFields[1])
+        faceFields[1] = faceExchange(faceFields[0], faceFields[1], self.procStartFace)
 
         return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
 

@@ -635,14 +635,15 @@ class FaceExchangerOp(T.Op):
         if parallel.nProcessors == 1:
             self.view_map = {0: [0]}
 
-    def make_node(self, x, y):
+    def make_node(self, x, y, z):
         assert hasattr(self, '_props')
         #x = ad.as_tensor_variable(x)
-        return T.Apply(self, [x, y], [x.type()])
+        return T.Apply(self, [x, y, z], [x.type()])
     def perform(self, node, inputs, output_storage):
         field1 = np.ascontiguousarray(inputs[0])
         field2 = np.ascontiguousarray(inputs[1])
-        output_storage[0][0] = parallel.getRemoteFaces(field1, field2, Field.mesh)
+        startFace = inputs[2]
+        output_storage[0][0] = parallel.getRemoteFaces(field1, field2, startFace, Field.mesh)
 
 class gradExchangerOp(T.Op):
     __props__ = ()
