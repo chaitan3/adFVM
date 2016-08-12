@@ -94,6 +94,7 @@ from theano.ifelse import ifelse
 ad.ifelse = ifelse
 broadcastPattern = (False, True)
 ad.bcmatrix = ad.TensorType(dtype, broadcastable=broadcastPattern)
+ad.bctensor3 = ad.TensorType(dtype, broadcastable=(False,False,True))
 def bcalloc(value, shape):
     X = ad.alloc(value, *shape)
     if shape[1:] == (1,):
@@ -103,6 +104,7 @@ ad.bcalloc = bcalloc
 # debugging/compiling
 if not user.python:
     compile_mode = 'FAST_RUN'
+    #compile_mode = 'FAST_COMPILE'
 else:
     compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
 #T.config.compute_test_value = 'raise'

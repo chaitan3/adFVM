@@ -635,10 +635,10 @@ class FaceExchangerOp(T.Op):
         if parallel.nProcessors == 1:
             self.view_map = {0: [0]}
 
-    def make_node(self, x):
+    def make_node(self, x, y):
         assert hasattr(self, '_props')
-        x = ad.as_tensor_variable(x)
-        return T.Apply(self, [x], [x.type()])
+        #x = ad.as_tensor_variable(x)
+        return T.Apply(self, [x, y], [x.type()])
     def perform(self, node, inputs, output_storage):
         field1 = np.ascontiguousarray(inputs[0])
         field2 = np.ascontiguousarray(inputs[1])

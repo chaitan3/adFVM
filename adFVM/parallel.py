@@ -113,7 +113,7 @@ def getRemoteFaces(field1, field2, meshC):
     # mesh values required outside theano
     #logger.info('fetching remote cells')
     if nProcessors == 1:
-        return field
+        return field2
     #global mtime, wtime
     #if meshC.reset:
     #    meshC.reset = False
@@ -133,7 +133,7 @@ def getRemoteFaces(field1, field2, meshC):
         exchanger.exchange(remote, field1[startFace:endFace], field2[startFace:endFace], tag)
     exchanger.wait()
     #mtime += time.time()-start2
-    return field
+    return field2
 
 def getAdjointRemoteCells(field, meshC):
     if nProcessors == 1:

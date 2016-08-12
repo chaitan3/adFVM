@@ -1,5 +1,5 @@
 from . import config
-from .config import ad
+from .config import ad, T
 from field import Field, faceExchange
 
 import itertools
@@ -147,29 +147,37 @@ class ENO(Reconstruct):
                 faceNeighbourDistsTemp[:,index,:] = faceDists
                 faceDistsDets.append(np.linalg.det(faceNeighbourDists).reshape(-1,1))
 
-            self.solver.postpro.append((ad.ivector(), enoFaceCount))
+            self.solver.postpro.append((ad.ivector(), enoFaceCount.astype(np.int32)))
             self.enoCount.append(solver.postpro[-1][0])
-            self.solver.postpro.append((ad.ivector(), enoFaceIndices))
+            self.solver.postpro.append((ad.ivector(), enoFaceIndices.astype(np.int32)))
             self.enoIndices.append(solver.postpro[-1][0])
-            self.solver.postpro.append((ad.tensor3(), np.expand_dims(np.concatenate(faceDistsDets, axis=1), 2)))
+            self.solver.postpro.append((ad.bctensor3(), np.expand_dims(np.concatenate(faceDistsDets, axis=1), 2).astype(np.int32)))
             self.faceDistsDets.append(solver.postpro[-1][0])
-            self.solver.postpro.append((ad.matrix(), np.expand_dims(distDets[faceIndices, enoFaceIndices], 1)))
+            self.solver.postpro.append((ad.bcmatrix(), np.expand_dims(distDets[faceIndices, enoFaceIndices], 1).astype(np.int32)))
             self.distDets.append(solver.postpro[-1][0])
 
-        self.solver.postpro.append((ad.ivector(), combinations))
+        self.solver.postpro.append((ad.imatrix(), combinations.astype(np.int32)))
         self.combinations = solver.postpro[-1][0]
         return
 
     def update(self, index, phi, gradPhi):
         C = self.faceOptions[index][0]
         phiC = phi.field[C]
-        indices = ad.repeat(C, self.enoCount[index]).reshape((-1,1))
+        enoCount = self.enoCount[index]
+        indices = ad.repeat(C, enoCount).reshape((-1,1))
         phiN = phi.field[self.mesh.cellNeighbours[indices,self.combinations[self.enoIndices[index]]]]
         phiP = phi.field[indices]
         dphi = phiN-phiP
         dphi = (dphi*self.faceDistsDets[index]).sum(axis=1)/self.distDets[index]
-        dphi = reduce_abs_min(dphi, enoCount)
-            
+
+        def reductionAbsMin(count, cumCount, dphi):
+            return dphi[cumCount-count:cumCount].min(axis=0)
+
+        dphi, _ = T.scan(fn=reductionAbsMin, 
+                         sequences=[enoCount, enoCount.cumsum()], 
+                         non_sequences=dphi,
+                         n_steps=enoCount.shape[0])
+        dphi = ad.patternbroadcast(dphi, phi.field.broadcastable)
         return phiC + dphi
 
     def dual(self, phi, gradPhi):
@@ -184,7 +192,7 @@ class ENO(Reconstruct):
         faceFields[1] = faceExchange(faceFields[0], faceFields[1])
         for patchID in self.mesh.localPatches:
             startFace, endFace, _ = self.mesh.getPatchFaceRange(patchID)
-            patch = mesh.boundary[patchID]
+            patch = self.mesh.boundary[patchID]
             if patch['type'] in config.cyclicPatches:
                 neighbourStartFace, neighbourEndFace, _ = self.mesh.getPatchRange(neighbourPatch)
                 faceFields[1] = ad.set_subtensor(faceFields[1][startFace:endFace], faceFields[0][neighbourStartFace:neighbourEndFace])
