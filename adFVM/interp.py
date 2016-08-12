@@ -122,8 +122,6 @@ reduceAbsMin = reduceAbsMinOp()
 class ENO(Reconstruct):
     def __init__(self, solver):
         super(self.__class__, self).__init__(solver)
-        self.faceOptions[1][0] = self.faceOptions[1][0][:self.mesh.nInternalFaces]
-
         mesh = self.mesh
         meshO = mesh.origMesh
         combinations = np.array(list(itertools.combinations(range(0, 6), 3)))
@@ -175,6 +173,17 @@ class ENO(Reconstruct):
 
         self.solver.postpro.append((ad.imatrix(), combinations.astype(np.int32)))
         self.combinations = solver.postpro[-1][0]
+
+        self.faceOptions[1][0] = self.faceOptions[1][0][:self.mesh.nInternalFaces]
+        self.cyclicStartFaces = {}
+        startFace = self.mesh.nInternalFaces
+        for patchID in self.mesh.localPatches:
+            patch = self.mesh.boundary[patchID]
+            if patch['type'] in config.cyclicPatches:
+                nFaces = self.mesh.boundary[patchID]['nFaces']
+                self.cyclicStartFaces[patchID] = startFace
+                startFace += nFaces
+
         return
 
     def update(self, index, phi, gradPhi):
@@ -209,13 +218,16 @@ class ENO(Reconstruct):
         faceFields.append(self.update(1, phi, gradPhi))
 
         # BC type thing
-        faceFields[1] = faceExchange(faceFields[0], faceFields[1])
+        faceFields[1] = ad.concatenate((faceFields[1], faceFields[0][self.mesh.nInternalFaces:]), axis=0)
         for patchID in self.mesh.localPatches:
-            startFace, endFace, _ = self.mesh.getPatchFaceRange(patchID)
             patch = self.mesh.boundary[patchID]
             if patch['type'] in config.cyclicPatches:
-                neighbourStartFace, neighbourEndFace, _ = self.mesh.getPatchRange(neighbourPatch)
-                faceFields[1] = ad.set_subtensor(faceFields[1][startFace:endFace], faceFields[0][neighbourStartFace:neighbourEndFace])
+                startFace = self.cyclicStartFaces[patchID]
+                nFaces = patch['nFaces']
+                neighbourStartFace = self.cyclicStartFaces[patch['neighbourPatch']]
+                faceFields[1] = ad.set_subtensor(faceFields[1][startFace:startFace+nFaces], 
+                                                 faceFields[0][neighbourStartFace:neighbourStartFace+nFaces])
+        faceFields[1] = faceExchange(faceFields[0], faceFields[1])
 
         return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
 

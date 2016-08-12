@@ -114,19 +114,11 @@ def getRemoteFaces(field1, field2, meshC):
     #logger.info('fetching remote cells')
     if nProcessors == 1:
         return field2
-    #global mtime, wtime
-    #if meshC.reset:
-    #    meshC.reset = False
-    #    #print(rank, mtime, wtime)
-    #    mtime = 0.
-    #    wtime = 0.
-
-    #start = time.time()
-    #mpi.Barrier()
-    #start2 = time.time()
-    #wtime += start2-start
     exchanger = Exchanger()
     mesh = meshC.origMesh
+    nRemoteFaces = mesh.nCells-mesh.nLocalCells
+    startFace = field1.shape[0]-nRemoteFaces
+    exchanger.exchange(remote, field1[startFace:], field2[startFace:])
     for patchID in meshC.remotePatches:
         local, remote, tag = meshC.getProcessorPatchInfo(patchID)
         startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
