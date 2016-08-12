@@ -109,6 +109,32 @@ def getRemoteCells(field, meshC):
     #mtime += time.time()-start2
     return field
 
+def getRemoteFaces(field1, field2, meshC):
+    # mesh values required outside theano
+    #logger.info('fetching remote cells')
+    if nProcessors == 1:
+        return field
+    #global mtime, wtime
+    #if meshC.reset:
+    #    meshC.reset = False
+    #    #print(rank, mtime, wtime)
+    #    mtime = 0.
+    #    wtime = 0.
+
+    #start = time.time()
+    #mpi.Barrier()
+    #start2 = time.time()
+    #wtime += start2-start
+    exchanger = Exchanger()
+    mesh = meshC.origMesh
+    for patchID in meshC.remotePatches:
+        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+        startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
+        exchanger.exchange(remote, field1[startFace:endFace], field2[startFace:endFace], tag)
+    exchanger.wait()
+    #mtime += time.time()-start2
+    return field
+
 def getAdjointRemoteCells(field, meshC):
     if nProcessors == 1:
         return field

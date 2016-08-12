@@ -1,6 +1,6 @@
 from . import config
 from .config import ad
-from field import Field
+from field import Field, faceExchange
 
 import itertools
 import numpy as np
@@ -26,25 +26,44 @@ def central(phi, mesh):
     return faceField
 
 class Reconstruct(object):
-    def __init__(self, mesh):
-        self.mesh = mesh
-        indices = [ad.arange(0, mesh.nInternalFaces)]
+    def __init__(self, solver):
+        self.solver = solver
+        self.mesh = solver.mesh
+        mesh = self.mesh
+        meshO = mesh.origMesh
+        indices = [np.arange(0, meshO.nInternalFaces)]
         Cindices = []
         Bindices = []
         for patchID in mesh.localPatches:
-            startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
-            patchType = mesh.boundary[patchID]['type']
+            startFace, endFace, _ = meshO.getPatchFaceRange(patchID)
+            patchType = meshO.boundary[patchID]['type']
+            patchIndices = np.arange(startFace, endFace)
             if patchType in config.cyclicPatches:
-                indices.append(ad.arange(startFace, endFace))
+                indices.append(patchIndices)
             elif patchType == 'characteristic':
-                Cindices.append(ad.arange(startFace, endFace))
+                Cindices.append(patchIndices)
             else:
-                Bindices.append(ad.arange(startFace, endFace))
-        nRemoteFaces = mesh.nFaces-(mesh.nCells-mesh.nLocalCells)
-        indices.append(ad.arange(nRemoteFaces, mesh.nFaces))
-        self.indices = ad.concatenate(indices)
-        self.Cindices = Cindices
-        self.Bindices = Bindices
+                Bindices.append(patchIndices)
+
+        nRemoteFaces = meshO.nFaces-(meshO.nCells-meshO.nLocalCells)
+        indices.append(np.arange(nRemoteFaces, meshO.nFaces))
+        indices = np.concatenate(indices).astype(np.int32)
+        self.indices = ad.ivector()
+        solver.postpro.append((self.indices, indices))
+
+        self.boundary = len(Bindices) > 0
+        if self.boundary:
+            Bindices = np.concatenate(Bindices).astype(np.int32)
+            self.Bindices = ad.ivector()
+            solver.postpro.append((self.Bindices, Bindices))
+
+        self.characteristic = len(Cindices) > 0
+        if self.characteristic:
+            Cindices = np.concatenate(Cindices).astype(np.int32)
+            self.Cindices = ad.ivector()
+            solver.postpro.append((self.Cindices, Cindices))
+
+        self.valueIndices = [indices, Bindices, Cindices]
         owner, neighbour = mesh.owner[self.indices], mesh.neighbour[self.indices]
         self.faceOptions = [[owner, neighbour], [neighbour, owner]]
         return
@@ -85,8 +104,11 @@ class SecondOrder(Reconstruct):
         return phiC + (weights1*gradF + gradC.dot(weights2)).field
 
 class ENO(Reconstruct):
-    def __init__(self, mesh):
-        super(self.__class__, self).__init__(mesh)
+    def __init__(self, solver):
+        super(self.__class__, self).__init__(solver)
+        self.faceOptions[1][0] = self.faceOptions[1][0][:self.mesh.nInternalFaces]
+
+        mesh = self.mesh
         meshO = mesh.origMesh
         combinations = np.array(list(itertools.combinations(range(0, 6), 3)))
         enoCount = np.zeros(meshO.volumes.shape[0], np.int32)
@@ -94,28 +116,80 @@ class ENO(Reconstruct):
         distDets = []
         neighbourDists = []
         for index, triplet in enumerate(combinations):
-            neighbours =  mesh.cellNeighboursFull[:,triplet]
+            neighbours =  meshO.cellNeighbours[:,triplet]
             neighbourDist = meshO.cellCentres[neighbours]-np.expand_dims(meshO.cellCentres[:meshO.nInternalCells], 1)
             distDet = np.linalg.det(neighbourDist)
-            enoIndices.append((np.abs(distDet) > 1e-4*volumes.flatten()))
+            enoIndices.append((np.abs(distDet) > 1e-4*meshO.volumes.flatten()))
             enoCount += enoIndices[-1]
             distDets.append(distDet)
             neighbourDists.append(neighbourDist)
         enoIndices = np.vstack(enoIndices).T
         distDets = np.vstack(distDets).T
-        neighbourDists = np.vstack(neighbourDists).transpose((1,0,2))
+        neighbourDists = np.vstack(np.expand_dims(neighbourDists,axis=0)).transpose((1,0,2,3))
 
-        enoIndices = np.nonzero(enoIndices)[1]
-        faceDists = meshO.faceCentres-meshO.cellCentres[meshO.owner]
-        combinations[enoIndices]
-    
+        indices = self.valueIndices[0]
+        nIF = meshO.nInternalFaces
+        self.enoCount = []
+        self.enoIndices = []
+        self.faceDistsDets = []
+        self.distDets = []
+        for faces, C in [(indices, meshO.owner[indices]), (indices[:nIF], meshO.neighbour[indices[:nIF]])]:
+            enoFaceCount = enoCount[C]
+            enoFaceIndices = np.nonzero(enoIndices[C])[1]
+            faceDists = meshO.faceCentres[faces]-meshO.cellCentres[C]
+            faceDists = np.repeat(faceDists, enoFaceCount, axis=0)
+            faceIndices = np.repeat(C, enoFaceCount)
+
+            faceNeighbourDists = neighbourDists[faceIndices, enoFaceIndices]
+            faceDistsDets = []
+            for index in range(0, 3):
+                faceNeighbourDistsTemp = faceNeighbourDists.copy()
+                faceNeighbourDistsTemp[:,index,:] = faceDists
+                faceDistsDets.append(np.linalg.det(faceNeighbourDists).reshape(-1,1))
+
+            self.solver.postpro.append((ad.ivector(), enoFaceCount))
+            self.enoCount.append(solver.postpro[-1][0])
+            self.solver.postpro.append((ad.ivector(), enoFaceIndices))
+            self.enoIndices.append(solver.postpro[-1][0])
+            self.solver.postpro.append((ad.tensor3(), np.expand_dims(np.concatenate(faceDistsDets, axis=1), 2)))
+            self.faceDistsDets.append(solver.postpro[-1][0])
+            self.solver.postpro.append((ad.matrix(), np.expand_dims(distDets[faceIndices, enoFaceIndices], 1)))
+            self.distDets.append(solver.postpro[-1][0])
+
+        self.solver.postpro.append((ad.ivector(), combinations))
+        self.combinations = solver.postpro[-1][0]
         return
 
     def update(self, index, phi, gradPhi):
-        C, D = self.faceOptions[index]
+        C = self.faceOptions[index][0]
         phiC = phi.field[C]
-        dphi = 1e20*ad.ones_like(phiC)
-        return phiC + dPhi
+        indices = ad.repeat(C, self.enoCount[index]).reshape((-1,1))
+        phiN = phi.field[self.mesh.cellNeighbours[indices,self.combinations[self.enoIndices[index]]]]
+        phiP = phi.field[indices]
+        dphi = phiN-phiP
+        dphi = (dphi*self.faceDistsDets[index]).sum(axis=1)/self.distDets[index]
+        dphi = reduce_abs_min(dphi, enoCount)
+            
+        return phiC + dphi
+
+    def dual(self, phi, gradPhi):
+        assert len(phi.dimensions) == 1
+        logger.info('ENO {0}'.format(phi.name))
+
+        faceFields = []
+        faceFields.append(self.update(0, phi, gradPhi))
+        faceFields.append(self.update(1, phi, gradPhi))
+
+        # BC type thing
+        faceFields[1] = faceExchange(faceFields[0], faceFields[1])
+        for patchID in self.mesh.localPatches:
+            startFace, endFace, _ = self.mesh.getPatchFaceRange(patchID)
+            patch = mesh.boundary[patchID]
+            if patch['type'] in config.cyclicPatches:
+                neighbourStartFace, neighbourEndFace, _ = self.mesh.getPatchRange(neighbourPatch)
+                faceFields[1] = ad.set_subtensor(faceFields[1][startFace:endFace], faceFields[0][neighbourStartFace:neighbourEndFace])
+
+        return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
 
 class limitedSecondOrder(Reconstruct):
     def update(self, index, phi, gradPhi):

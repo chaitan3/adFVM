@@ -50,7 +50,7 @@ class RCF(Solver):
 
     def compileInit(self):
         super(RCF, self).compileInit()
-        self.faceReconstructor = self.faceReconstructor(self.mesh)
+        self.faceReconstructor = self.faceReconstructor(self)
         return
 
     def primitive(self, rho, rhoU, rhoE):
@@ -181,9 +181,9 @@ class RCF(Solver):
         rhoEFlux = Field('rhoE', ad.zeros((mesh.nFaces,) + rhoE.dimensions), rhoE.dimensions)
         UF = Field('U', ad.zeros((mesh.nFaces,) + U.dimensions), U.dimensions)
         TF = Field('T', ad.zeros((mesh.nFaces,) + T.dimensions), T.dimensions)
-        indices, Bindices, Cindices = self.faceReconstructor.indices, self.faceReconstructor.Bindices, self.faceReconstructor.Cindices
+        indices = self.faceReconstructor.indices
 
-        # INTERNAL FLUX: includes internal faces, cyclic and processor faces
+        # INTERNAL FLUX: includes internal faces
         # face reconstruction
         ULIF, URIF = self.faceReconstructor.dual(U, gradU)
         TLIF, TRIF = self.faceReconstructor.dual(T, gradT)
@@ -203,9 +203,9 @@ class RCF(Solver):
         TF.setField(indices, 0.5*(TLIF + TRIF))
 
         # BOUNDARY FLUX
-        if len(Bindices) > 0:
+        if self.faceReconstructor.boundary:
             # no riemann stuff
-            indices = ad.concatenate(Bindices)
+            indices = self.faceReconstructor.Bindices
             cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
             UBF, TBF, pBF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
             BNormals = mesh.Normals.getField(indices)
@@ -216,8 +216,8 @@ class RCF(Solver):
             UF.setField(indices, UBF)
             TF.setField(indices, TBF)
         # CHARACTERISTIC BOUNDARY FLUX 
-        if len(Cindices) > 0:
-            indices = ad.concatenate(Cindices)
+        if self.faceReconstructor.characteristic:
+            indices = self.faceReconstructor.Cindices
             cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
             Iindices = mesh.owner[indices]
             URCF, TRCF, pRCF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
@@ -234,6 +234,7 @@ class RCF(Solver):
             rhoEFlux.setField(indices, rhoECFlux)
             UF.setField(indices, 0.5*(ULCF + URCF))
             TF.setField(indices, 0.5*(TLCF + TRCF))
+        
 
         # viscous part
         mu = self.mu(TF)

@@ -28,7 +28,7 @@ class Mesh(object):
               'areas', 'volumes',
               'weights', 'deltas', 'normals',
               'linearWeights', 'quadraticWeights',
-              'cellCentres', 'faceCentres',
+              'cellCentres', 'faceCentres', 'cellNeighbours',
               'sumOp', 'gradOp']
 
     def __init__(self):
@@ -97,6 +97,8 @@ class Mesh(object):
         self.weights, self.linearWeights, self.quadraticWeights = self.getWeights()   # nFaces
 
         # uses neighbour
+        self.cellNeighboursMapOp = self.getCellNeighbours(boundary=False)
+        self.cellNeighbours = self.getCellNeighbours()
         self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
         self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)
         self.checkWeights()
@@ -473,7 +475,7 @@ class Mesh(object):
         self.populateSizes()
         # mesh computation
         # uses neighbour
-        self.cellFaces, self.cellNeighbours = self.getCellFacesAndNeighbours()     # nInternalCells
+        self.cellFaces = self.getCellFaces()     # nInternalCells
         # time consuming 
         if config.device == 'cpu':
             self.cells = getCells(self)
@@ -487,21 +489,24 @@ class Mesh(object):
         self.nCells = self.nInternalCells + self.nGhostCells
 
     # start: need to convert to ad
-    def getCellFacesAndNeighbours(self):
+    def getCellFaces(self):
         logger.info('generated cell faces') 
         enum = lambda x: np.column_stack((np.indices(x.shape, np.int32)[0], x)) 
         combined = np.concatenate((enum(self.owner), enum(self.neighbour)))
         cellFaces = combined[combined[:,1].argsort(), 0]
         # todo: make it a list ( investigate np.diff )
         cellFaces = cellFaces.reshape(self.nInternalCells, len(cellFaces)/self.nInternalCells)
+        return cellFaces
 
-        neighbour = -np.ones(self.nFaces, np.int32)
-        neighbour[:self.nInternalFaces] = self.neighbour
-        cellNeighbours = self.owner[cellFaces]
+    def getCellNeighbours(self, boundary=True):
+        neighbour = self.neighbour.copy()
+        if not boundary:
+            neighbour[self.nInternalFaces:] = -1
+        cellNeighbours = self.owner[self.cellFaces]
         indices = np.arange(0, self.nInternalCells).reshape(-1,1)
         indices = np.equal(cellNeighbours, indices)
-        cellNeighbours[indices] = neighbour[cellFaces][indices]
-        return cellFaces, cellNeighbours
+        cellNeighbours[indices] = neighbour[self.cellFaces][indices]
+        return cellNeighbours
 
     def getNormals(self):
         logger.info('generated normals')
@@ -592,12 +597,6 @@ class Mesh(object):
 
     def checkWeights(self):
         faceOptions = [[self.owner, self.neighbour], [self.neighbour[:self.nInternalFaces], self.owner[:self.nInternalFaces]]]
-        
-        cellNeighbours = self.owner[self.cellFaces]
-        indices = np.arange(0, self.nInternalCells).reshape(-1,1)
-        indices = np.equal(cellNeighbours, indices)
-        cellNeighbours[indices] = self.neighbour[self.cellFaces][indices]
-
         for index in [0, 1]:
             C, D = faceOptions[index] 
             end = len(C)
@@ -605,12 +604,12 @@ class Mesh(object):
             diag_q = (1-self.linearWeights[:end,index]) + (self.quadraticWeights[:end,:,index]*diagonal).sum(axis=1)
             off_diagonal = self.gradOpOffDiagonal[C]
             sum_abs_coeff_q = (self.quadraticWeights[:,:,index][self.cellFaces[C]]*off_diagonal).sum(axis=2)
-            indices = np.equal(cellNeighbours[C], D.reshape(-1,1))
+            indices = np.equal(self.cellNeighbours[C], D.reshape(-1,1))
             sum_abs_coeff_q[indices] += self.linearWeights[:end, index]
             sum_abs_coeff_q = np.abs(sum_abs_coeff_q).sum(axis=1)
             pprint('diag sum ratio:', parallel.min(diag_q/sum_abs_coeff_q))
 
-        self.cellNeighboursFull = cellNeighbours
+        return
 
     def getSumOp(self, mesh):
         logger.info('generated sum op')
@@ -795,6 +794,8 @@ class Mesh(object):
             value = getattr(self, attr) 
             if attr in ['owner', 'neighbour']:
                 setattr(self, attr, ad.ivector())
+            elif attr in ['cellNeighbours']:
+                setattr(self, attr, ad.imatrix())
             elif attr == 'sumOp' or attr == 'gradOp':
                 setattr(self, attr, adsparse.csr_matrix(dtype=config.dtype))
             elif value.shape[1] == 1:

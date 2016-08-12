@@ -115,7 +115,8 @@ def laplacian(phi, DT):
     neighbourData = faceData[meshC.cellFaces]
     neighbourData /= mesh.volumes
     row = np.arange(0, n, dtype=np.int32).reshape(-1,1)
-    col = meshC.cellNeighbours.copy()
+    
+    col = meshC.cellNeighboursMatOp.copy()
     col[col > -1] += jl
     A.setValuesRCV(il + row, col, neighbourData)
 
