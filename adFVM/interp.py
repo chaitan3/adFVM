@@ -171,7 +171,9 @@ class ENO(Reconstruct):
         dphi = (dphi*self.faceDistsDets[index]).sum(axis=1)/self.distDets[index]
 
         def reductionAbsMin(count, cumCount, dphi):
-            return dphi[cumCount-count:cumCount].min(axis=0)
+            start = cumCount-count
+            absArgmin = ad.abs_(dphi[start:cumCount]).argmin(axis=0)
+            return dphi[start + absArgmin, ad.arange(0, dphi.shape[1])]
 
         dphi, _ = T.scan(fn=reductionAbsMin, 
                          sequences=[enoCount, enoCount.cumsum()], 
