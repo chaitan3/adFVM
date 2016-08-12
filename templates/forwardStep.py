@@ -25,8 +25,8 @@ def perturb(fields, mesh, t):
     rhoU[mesh.owner[startFace:endFace], 0] += 0.1
     return rho, rhoU, rhoE
 
-nSteps = 1000
-writeInterval = 100
+nSteps = 4000
+writeInterval = 1000
 #nSteps = 10
 #writeInterval = 2
 startTime = 0.0

@@ -401,4 +401,23 @@ def decompose(object mesh, int nprocs):
         addressing.append((pyPointProc, pyFaceProc, pyCellProc, pyBoundaryProc))
     return decomposed, addressing
 
+def reduceAbsMin(np.ndarray[dtype, ndim=2] arr, np.ndarray[int] count):
+    cdef int n = count.shape[0]
+    cdef int m = arr.shape[1]
+    cdef np.ndarray[dtype, ndim=2] arrMin = np.zeros((n, m), arr.dtype)
+    cdef int i, j, k, l
+    cdef int c, d
+    cdef dtype absMin
+    d = 0
+    for i in range(0, n):
+        c = count[i]
+        for j in range(0, m):
+            absMin = 1e20
+            for k in range(0, c):
+                if abs(arr[d+k,j]) < absMin:
+                    l = k
+                    absMin = abs(arr[d+k,j])
+            arrMin[i,j] = arr[d+l,j]
+        d += c
+    return arrMin
 

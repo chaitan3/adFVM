@@ -1,4 +1,5 @@
 from . import config
+from . import compat
 from .config import ad, T
 from field import Field, faceExchange
 
@@ -103,6 +104,21 @@ class SecondOrder(Reconstruct):
         weights2 = Field('qw', mesh.quadraticWeights[self.indices,:,index], (3,))
         return phiC + (weights1*gradF + gradC.dot(weights2)).field
 
+class reduceAbsMinOp(T.Op):
+    __props__ = ()
+    def __init__(self):
+        pass
+
+    def make_node(self, x, y):
+        assert hasattr(self, '_props')
+        return T.Apply(self, [x, y], [x.type()])
+
+    def perform(self, node, inputs, output_storage):
+        field = inputs[0]
+        count = inputs[1]
+        output_storage[0][0] = compat.reduceAbsMin(field, count)
+reduceAbsMin = reduceAbsMinOp()
+
 class ENO(Reconstruct):
     def __init__(self, solver):
         super(self.__class__, self).__init__(solver)
@@ -145,15 +161,16 @@ class ENO(Reconstruct):
             for index in range(0, 3):
                 faceNeighbourDistsTemp = faceNeighbourDists.copy()
                 faceNeighbourDistsTemp[:,index,:] = faceDists
-                faceDistsDets.append(np.linalg.det(faceNeighbourDists).reshape(-1,1))
+                faceDistsDets.append(np.linalg.det(faceNeighbourDistsTemp).reshape(-1,1))
 
             self.solver.postpro.append((ad.ivector(), enoFaceCount.astype(np.int32)))
             self.enoCount.append(solver.postpro[-1][0])
             self.solver.postpro.append((ad.ivector(), enoFaceIndices.astype(np.int32)))
             self.enoIndices.append(solver.postpro[-1][0])
-            self.solver.postpro.append((ad.bctensor3(), np.expand_dims(np.concatenate(faceDistsDets, axis=1), 2).astype(np.int32)))
+            #tmp =  np.abs(np.concatenate(faceDistsDets))
+            self.solver.postpro.append((ad.bctensor3(), np.expand_dims(np.concatenate(faceDistsDets, axis=1), 2).astype(config.precision)))
             self.faceDistsDets.append(solver.postpro[-1][0])
-            self.solver.postpro.append((ad.bcmatrix(), np.expand_dims(distDets[faceIndices, enoFaceIndices], 1).astype(np.int32)))
+            self.solver.postpro.append((ad.bcmatrix(), np.expand_dims(distDets[faceIndices, enoFaceIndices], 1).astype(config.precision)))
             self.distDets.append(solver.postpro[-1][0])
 
         self.solver.postpro.append((ad.imatrix(), combinations.astype(np.int32)))
@@ -170,15 +187,16 @@ class ENO(Reconstruct):
         dphi = phiN-phiP
         dphi = (dphi*self.faceDistsDets[index]).sum(axis=1)/self.distDets[index]
 
-        def reductionAbsMin(count, cumCount, dphi):
-            start = cumCount-count
-            absArgmin = ad.abs_(dphi[start:cumCount]).argmin(axis=0)
-            return dphi[start + absArgmin, ad.arange(0, dphi.shape[1])]
+        #def reductionAbsMin(count, cumCount, dphi):
+        #    start = cumCount-count
+        #    absArgmin = ad.abs_(dphi[start:cumCount]).argmin(axis=0)
+        #    return dphi[start + absArgmin, ad.arange(0, dphi.shape[1])]
+        #dphi, _ = T.scan(fn=reductionAbsMin, 
+        #                 sequences=[enoCount, enoCount.cumsum()], 
+        #                 non_sequences=dphi,
+        #                 n_steps=enoCount.shape[0])
 
-        dphi, _ = T.scan(fn=reductionAbsMin, 
-                         sequences=[enoCount, enoCount.cumsum()], 
-                         non_sequences=dphi,
-                         n_steps=enoCount.shape[0])
+        dphi = reduceAbsMin(dphi, enoCount)
         dphi = ad.patternbroadcast(dphi, phi.field.broadcastable)
         return phiC + dphi
 

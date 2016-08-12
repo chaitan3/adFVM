@@ -84,7 +84,7 @@ class Field(object):
         nanCheck = np.isnan(field)
         if nanCheck.any():
             indices = np.where(nanCheck)[0]
-            indices += -mesh.nInternalCells + mesh.nInternalFaces
+            #indices += -mesh.nInternalCells + mesh.nInternalFaces
             print('rank:', parallel.rank, 
                   'internal cells', mesh.nInternalCells, 
                   'local cells:', mesh.nLocalCells, 

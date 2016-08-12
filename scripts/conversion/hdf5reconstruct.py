@@ -68,7 +68,6 @@ parallelInfo = parallelEnd-parallelStart
 
 for proc in range(0, nProcs):
     cellAddressing = mesh['cellProcAddressing'][parallelStart[proc,7]:parallelEnd[proc,7]]
-    # look into why faceProcAddressing values are negative
     faceAddressing = np.abs(mesh['faceProcAddressing'][parallelStart[proc,6]:parallelEnd[proc,6]])-1
     pointAddressing = mesh['pointProcAddressing'][parallelStart[proc,5]:parallelEnd[proc,5]]
 
