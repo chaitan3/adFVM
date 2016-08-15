@@ -11,7 +11,7 @@ from adFVM.density import RCF
 primal = RCF('cases/cylinder/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
-             mu=lambda T: T/T*2.5e-5*(1+1e-3),
+             mu=lambda T: T/T*2.5e-5,
              faceReconstructor='ENO'
 )
 
@@ -79,8 +79,8 @@ def perturb(fields, mesh, t):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 20000
-writeInterval = 100
+nSteps = 400000
+writeInterval = 10000
 #nSteps = 10
 #writeInterval = 5
 startTime = 1.0
