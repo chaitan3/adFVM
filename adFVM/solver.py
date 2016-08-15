@@ -278,7 +278,8 @@ class Solver(object):
             stackedFields, dtc, local, remote = self.map(stackedFields, dt, t)
             #diff = local-remote
             #print diff.min(), diff.max()
-            #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()
+            print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()
+            print local.sum(), local.shape[0]
             #print remote.shape, remote.dtype, (remote).max(), (remote).min(), np.isnan(remote).any()
 
             fields = self.unstackFields(stackedFields, IOField)

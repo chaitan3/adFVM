@@ -185,9 +185,10 @@ class RCF(Solver):
 
         # INTERNAL FLUX: includes internal faces
         # face reconstruction
-        ULIF, URIF = self.faceReconstructor.dual(U, gradU)
-        TLIF, TRIF = self.faceReconstructor.dual(T, gradT)
-        pLIF, pRIF = self.faceReconstructor.dual(p, gradp)
+
+        (ULIF, URIF), (TLIF, TRIF), (pLIF, pRIF) = self.faceReconstructor.dualSystem(
+                (U, gradU), (T, gradT), (p, gradp)
+        )
 
         rhoLIF, rhoULIF, rhoELIF = self.conservative(ULIF, TLIF, pLIF)
         rhoRIF, rhoURIF, rhoERIF = self.conservative(URIF, TRIF, pRIF)

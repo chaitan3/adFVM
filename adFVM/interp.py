@@ -78,6 +78,13 @@ class Reconstruct(object):
 
         return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
 
+    def dualSystem(self, *fieldsSys):
+        phiFSys = []
+        for phi, gradPhi in fieldsSys:
+            phiF = self.dual(phi, gradPhi)
+            phiFSys.append(phiF)
+        return phiFSys
+
     def update(self, index, phi, gradPhi):
         pass
 
@@ -120,7 +127,7 @@ reduceAbsMin = reduceAbsMinOp()
 
 class ENO(Reconstruct):
     def __init__(self, solver):
-        super(self.__class__, self).__init__(solver)
+        super(ENO, self).__init__(solver)
         mesh = self.mesh
         meshO = mesh.origMesh
         combinations = np.array(list(itertools.combinations(range(0, 6), 3)))
@@ -184,19 +191,28 @@ class ENO(Reconstruct):
         self.procStartFace = startFace
         return
 
-    def update(self, index, phi, gradPhi):
-        C = self.faceOptions[index][0]
+    def partialUpdate(self, index, indices, phi, gradPhi):
+        C = self.faceOptions[index][0][indices]
+        enoCount = self.enoCount[index][indices]
+        repIndices = ad.repeat(C, enoCount)
+        enoIndices = self.enoIndices[index][repIndices]
+        faceDistsDets = self.faceDistsDets[index][repIndices]
+        distDets = self.distDets[index][repIndices]
+
         phiC = phi.field[C]
-        enoCount = self.enoCount[index]
-        indices = ad.repeat(C, enoCount).reshape((-1,1))
-        phiN = phi.field[self.mesh.cellNeighbours[indices,self.combinations[self.enoIndices[index]]]]
-        phiP = phi.field[indices]
+        combinations = self.combinations[enoIndices]
+        repIndices = repIndices.reshape((-1,1))
+        phiN = phi.field[self.mesh.cellNeighbours[repIndices, combinations]]
+        phiP = phi.field[repIndices]
         dphi = phiN-phiP
-        dphi = (dphi*self.faceDistsDets[index]).sum(axis=1)/self.distDets[index]
+        dphi = (dphi*faceDistsDets).sum(axis=1)/distDets
 
         dphi = reduceAbsMin(dphi, enoCount)
         dphi = ad.patternbroadcast(dphi, phi.field.broadcastable)
         return phiC + dphi
+
+    def update(self, index, phi, gradPhi):
+        return self.partialUpdate(index, self.indices, phi, gradPhi)
 
     def dual(self, phi, gradPhi):
         assert len(phi.dimensions) == 1
@@ -234,6 +250,50 @@ class limitedSecondOrder(Reconstruct):
         psi = lambda r, rabs: (r + rabs)/(1 + rabs)
         limiter = psi(r, r.abs()).field
         return phiC + weights.field*limiter*phiDC
+
+class AnkitENO(SecondOrder):
+    def __init__(self, solver):
+        super(AnkitENO, self).__init__(solver)
+        self.ENO = ENO(solver)
+        return
+
+    def shockSensor(self, (UFs, TFs, pFs), (U, T, p), (gradU, _, __)):
+        shock = ad.zeros_like(self.indices)
+        for index,(C, D) in enumerate(self.faceOptions):
+            gradULF = gradU.getField(C)
+            dil = gradULF.trace().field
+            dil2 = dil*dil
+            gradULF = gradULF.field
+            wx = gradULF[:,2,1]-gradULF[:,1,2]
+            wy = gradULF[:,0,2]-gradULF[:,2,0]
+            wz = gradULF[:,1,0]-gradULF[:,0,1]
+            w2 = wx*wx + wy*wy + wz*wz
+            w2 = w2.reshape((-1,1))
+            delta = self.mesh.volumes[C]**(1./3)
+            sos = ad.sqrt(self.solver.gamma*self.solver.R*T.field[C])
+            C_SS = 0.5*(1-ad.tanh(2.5+10*delta/sos*dil))*(dil2/(dil2+w2+1e-7))
+            condition = ad.abs_(pFs[index].field-p.field[C]) > 0.99*ad.minimum(p.field[C],p.field[D])
+            shock = ad.set_subtensor(shock[condition], 1)
+            #shock[ad.abs_] = 1
+            condition = C_SS > 0.22
+            shock = ad.set_subtensor(shock[condition], 1)
+        # expand by 1 face
+        return shock
+
+    def dualSystem(self, *fieldsSys):
+        faceFieldsSys = super(AnkitENO, self).dualSystem(*fieldsSys)
+        (U, gradU), (T, gradT), (p, gradp) = fieldsSys
+        shock = self.shockSensor(faceFieldsSys, (U, T, p), (gradU, gradT, gradp))
+        shockIndices = shock.nonzero()[0]
+        self.solver.local = shock
+
+        for phiFs, (phi, gradPhi) in zip(faceFieldsSys, fieldsSys):
+            for index in range(0, 1):
+                phiFs[index].setField(shockIndices,
+                    self.ENO.partialUpdate(index, shockIndices, phi, gradPhi) 
+                )
+
+        return faceFieldsSys
 
 #def TVD_dual(phi, gradPhi):
 #    from op import grad
