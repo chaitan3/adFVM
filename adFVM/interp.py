@@ -1,5 +1,4 @@
-from . import config
-from . import compat
+from . import config, compat, parallel
 from .config import ad, T
 from field import Field, faceExchange
 
@@ -176,15 +175,13 @@ class ENO(Reconstruct):
 
         self.faceOptions[1][0] = self.faceOptions[1][0][:self.mesh.nInternalFaces]
         self.cyclicStartFaces = {}
-        startFace = self.mesh.nInternalFaces
+        startFace = self.mesh.nInternalFaces.copy()
         for patchID in self.mesh.localPatches:
             patch = self.mesh.boundary[patchID]
             if patch['type'] in config.cyclicPatches:
-                nFaces = self.mesh.boundary[patchID]['nFaces']
                 self.cyclicStartFaces[patchID] = startFace
-                startFace += nFaces
+                startFace += patch['nFaces']
         self.procStartFace = startFace
-
         return
 
     def update(self, index, phi, gradPhi):
@@ -196,15 +193,6 @@ class ENO(Reconstruct):
         phiP = phi.field[indices]
         dphi = phiN-phiP
         dphi = (dphi*self.faceDistsDets[index]).sum(axis=1)/self.distDets[index]
-
-        #def reductionAbsMin(count, cumCount, dphi):
-        #    start = cumCount-count
-        #    absArgmin = ad.abs_(dphi[start:cumCount]).argmin(axis=0)
-        #    return dphi[start + absArgmin, ad.arange(0, dphi.shape[1])]
-        #dphi, _ = T.scan(fn=reductionAbsMin, 
-        #                 sequences=[enoCount, enoCount.cumsum()], 
-        #                 non_sequences=dphi,
-        #                 n_steps=enoCount.shape[0])
 
         dphi = reduceAbsMin(dphi, enoCount)
         dphi = ad.patternbroadcast(dphi, phi.field.broadcastable)

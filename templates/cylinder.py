@@ -9,8 +9,8 @@ from adFVM.density import RCF
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
 primal = RCF('cases/cylinder/', 
-             timeIntegrator='SSPRK', 
-             CFL=1.2, 
+             timeIntegrator='euler', 
+             CFL=0.4, 
              mu=lambda T: T/T*2.5e-5,
              faceReconstructor='ENO'
 )
@@ -83,5 +83,5 @@ nSteps = 400000
 writeInterval = 10000
 #nSteps = 10
 #writeInterval = 5
-startTime = 1.0
+startTime = 0.0
 dt = 8e-9

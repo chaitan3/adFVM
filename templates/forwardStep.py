@@ -26,9 +26,9 @@ def perturb(fields, mesh, t):
     return rho, rhoU, rhoE
 
 nSteps = 4000
-writeInterval = 1000
+writeInterval = 400
 #nSteps = 10
 #writeInterval = 2
-startTime = 1.0
+startTime = 0.0
 dt = 1e-4
 

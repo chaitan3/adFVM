@@ -116,7 +116,8 @@ def getRemoteFaces(field1, field2, procStartFace, meshC):
         return field2
     exchanger = Exchanger()
     mesh = meshC.origMesh
-    startFace = procStartFace
+    startFace = procStartFace.copy()
+    #print(field2[procStartFace:])
     for patchID in meshC.remotePatches:
         local, remote, tag = meshC.getProcessorPatchInfo(patchID)
         _, _, nFaces = mesh.getPatchFaceRange(patchID)
