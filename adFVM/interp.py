@@ -66,6 +66,17 @@ class Reconstruct(object):
         self.valueIndices = [indices, Bindices, Cindices]
         owner, neighbour = mesh.owner[self.indices], mesh.neighbour[self.indices]
         self.faceOptions = [[owner, neighbour], [neighbour, owner]]
+
+        self.cyclicStartFaces = {}
+        startFace = self.mesh.nInternalFaces.copy()
+        for patchID in self.mesh.localPatches:
+            patch = self.mesh.boundary[patchID]
+            if patch['type'] in config.cyclicPatches:
+                self.cyclicStartFaces[patchID] = startFace
+                startFace += patch['nFaces']
+        self.procStartFace = startFace
+        self.BCUpdate = False
+
         return
 
     def dual(self, phi, gradPhi):
@@ -76,7 +87,10 @@ class Reconstruct(object):
         faceFields.append(self.update(0, phi, gradPhi))
         faceFields.append(self.update(1, phi, gradPhi))
 
-        return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
+        faceFieldsF = [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
+        if self.BCUpdate:
+            self.faceBCUpdate(faceFieldsF)
+        return faceFieldsF
 
     def dualSystem(self, *fieldsSys):
         phiFSys = []
@@ -84,6 +98,19 @@ class Reconstruct(object):
             phiF = self.dual(phi, gradPhi)
             phiFSys.append(phiF)
         return phiFSys
+
+    def faceBCUpdate(self, faceFieldsF):
+        faceFields = [phi.field for phi in faceFieldsF]
+        faceFields[1] = ad.concatenate((faceFields[1], faceFields[0][self.mesh.nInternalFaces:]), axis=0)
+        for patchID in self.mesh.localPatches:
+            patch = self.mesh.boundary[patchID]
+            if patch['type'] in config.cyclicPatches:
+                startFace = self.cyclicStartFaces[patchID]
+                nFaces = patch['nFaces']
+                neighbourStartFace = self.cyclicStartFaces[patch['neighbourPatch']]
+                faceFields[1] = ad.set_subtensor(faceFields[1][startFace:startFace+nFaces], 
+                                                 faceFields[0][neighbourStartFace:neighbourStartFace+nFaces])
+        faceFields[1] = faceExchange(faceFields[0], faceFields[1], self.procStartFace)
 
     def update(self, index, phi, gradPhi):
         pass
@@ -195,16 +222,12 @@ class ENO(Reconstruct):
         self.solver.postpro.append((ad.imatrix(), combinations.astype(np.int32)))
         self.combinations = solver.postpro[-1][0]
 
-        self.faceOptions[1][0] = self.faceOptions[1][0][:self.mesh.nInternalFaces]
-        self.cyclicStartFaces = {}
-        startFace = self.mesh.nInternalFaces.copy()
-        for patchID in self.mesh.localPatches:
-            patch = self.mesh.boundary[patchID]
-            if patch['type'] in config.cyclicPatches:
-                self.cyclicStartFaces[patchID] = startFace
-                startFace += patch['nFaces']
-        self.procStartFace = startFace
-
+        nIF = self.mesh.nInternalFaces
+        for index in range(0, 2):
+            self.faceOptions[1][index] = self.faceOptions[1][index][:nIF]
+        self.indices = [self.indices, self.indices[:nIF]]
+        self.BCUpdate = True
+        
         self.enoStartCount = []
         for index in range(0, 2):
             enoCount = self.enoCount[index]
@@ -235,33 +258,7 @@ class ENO(Reconstruct):
         return phiC + dphi
 
     def update(self, index, phi, gradPhi):
-        if index == 0:
-            indices = self.indices
-        else:
-            indices = self.indices[:self.mesh.nInternalFaces]
-        return self.partialUpdate(index, indices, phi, gradPhi)
-
-    def dual(self, phi, gradPhi):
-        assert len(phi.dimensions) == 1
-        logger.info('ENO {0}'.format(phi.name))
-
-        faceFields = []
-        faceFields.append(self.update(0, phi, gradPhi))
-        faceFields.append(self.update(1, phi, gradPhi))
-
-        # BC type thing
-        faceFields[1] = ad.concatenate((faceFields[1], faceFields[0][self.mesh.nInternalFaces:]), axis=0)
-        for patchID in self.mesh.localPatches:
-            patch = self.mesh.boundary[patchID]
-            if patch['type'] in config.cyclicPatches:
-                startFace = self.cyclicStartFaces[patchID]
-                nFaces = patch['nFaces']
-                neighbourStartFace = self.cyclicStartFaces[patch['neighbourPatch']]
-                faceFields[1] = ad.set_subtensor(faceFields[1][startFace:startFace+nFaces], 
-                                                 faceFields[0][neighbourStartFace:neighbourStartFace+nFaces])
-        faceFields[1] = faceExchange(faceFields[0], faceFields[1], self.procStartFace)
-
-        return [Field('{0}F'.format(phi.name), faceField, phi.dimensions) for faceField in faceFields]
+        return self.partialUpdate(index, self.indices[index], phi, gradPhi)
 
 class limitedSecondOrder(Reconstruct):
     def update(self, index, phi, gradPhi):
@@ -302,7 +299,7 @@ class AnkitENO(SecondOrder):
 
     def shockSensor(self, (UFs, TFs, pFs), (U, T, p), (gradU, _, __)):
         shock = ad.zeros_like(self.indices)
-        for index,(C, D) in enumerate(self.faceOptions):
+        for index, (C, D) in enumerate(self.ENO.faceOptions):
             gradULF = gradU.getField(C)
             dil = gradULF.trace().field
             dil2 = dil*dil
@@ -315,7 +312,8 @@ class AnkitENO(SecondOrder):
             delta = self.mesh.volumes[C]**(1./3)
             sos = ad.sqrt(self.solver.gamma*self.solver.R*T.field[C])
             C_SS = 0.5*(1.-ad.tanh(2.5+10.*delta/sos*dil))*(dil2/(dil2+w2+1e-7))
-            condition = ad.abs_(pFs[index].field-p.field[C]) > 0.99*ad.minimum(p.field[C],p.field[D])
+            pF = pFs[index].field[self.faceMap[self.ENO.indices[index]]]
+            condition = ad.abs_(pF-p.field[C]) > 0.99*ad.minimum(p.field[C],p.field[D])
             shock = ad.set_subtensor(shock[condition.nonzero()[0]], 1)
             #shock[ad.abs_] = 1
             condition = C_SS > 0.02
@@ -343,12 +341,17 @@ class AnkitENO(SecondOrder):
         (U, gradU), (T, gradT), (p, gradp) = fieldsSys
         shock = self.shockSensor(faceFieldsSys, (U, T, p), (gradU, gradT, gradp))
         shockIndices = shock.nonzero()[0]
+        shockIndices = [shockIndices, shockIndices.copy()]
+        condition = shockIndices[1] < self.mesh.nInternalFaces
+        shockIndices[1] = shockIndices[1][condition.nonzero()[0]]
 
         for phiFs, (phi, gradPhi) in zip(faceFieldsSys, fieldsSys):
             for index in range(0, 2):
-                phiFs[index].setField(shockIndices,
-                    self.ENO.partialUpdate(index, shockIndices, phi, gradPhi) 
+                phiFs[index].setField(shockIndices[index],
+                    self.ENO.partialUpdate(index, shockIndices[index], phi, gradPhi) 
                 )
+            # overwrites work done by second order
+            self.faceBCUpdate(phiFs)
 
         return faceFieldsSys
 

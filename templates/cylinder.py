@@ -12,7 +12,7 @@ primal = RCF('cases/cylinder/',
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*2.5e-5,
-             faceReconstructor='ENO'
+             faceReconstructor='AnkitENO'
 )
 
 def dot(a, b):
