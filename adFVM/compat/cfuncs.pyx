@@ -421,3 +421,15 @@ def reduceAbsMin(np.ndarray[dtype, ndim=2] arr, np.ndarray[int] count):
         d += c
     return arrMin
 
+def selectMultipleRange(np.ndarray[int] start, np.ndarray[int] count):
+    cdef int total = count.sum()
+    cdef np.ndarray[int] arr = np.zeros(total, np.int32)
+    cdef int n = count.shape[0]
+    cdef int i, j
+    cdef int pos = 0
+    for i in range(0, n):
+        for j in range(0, count[i]):
+            arr[pos] = start[i]+j
+            pos += 1
+    return arr
+

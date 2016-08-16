@@ -125,6 +125,21 @@ class reduceAbsMinOp(T.Op):
         output_storage[0][0] = compat.reduceAbsMin(field, count)
 reduceAbsMin = reduceAbsMinOp()
 
+class selectMultipleRangeOp(T.Op):
+    __props__ = ()
+    def __init__(self):
+        pass
+
+    def make_node(self, x, y):
+        assert hasattr(self, '_props')
+        return T.Apply(self, [x, y], [x.type()])
+
+    def perform(self, node, inputs, output_storage):
+        start = inputs[0]
+        count = inputs[1]
+        output_storage[0][0] = compat.selectMultipleRange(start, count)
+selectMultipleRange = selectMultipleRangeOp()
+
 class ENO(Reconstruct):
     def __init__(self, solver):
         super(ENO, self).__init__(solver)
@@ -189,19 +204,27 @@ class ENO(Reconstruct):
                 self.cyclicStartFaces[patchID] = startFace
                 startFace += patch['nFaces']
         self.procStartFace = startFace
+
+        self.enoStartCount = []
+        for index in range(0, 2):
+            enoCount = self.enoCount[index]
+            enoStartCount = enoCount.cumsum()-enoCount
+            self.enoStartCount.append(enoStartCount)
         return
 
     def partialUpdate(self, index, indices, phi, gradPhi):
         C = self.faceOptions[index][0][indices]
         enoCount = self.enoCount[index][indices]
-        repIndices = ad.repeat(C, enoCount)
-        enoIndices = self.enoIndices[index][repIndices]
-        faceDistsDets = self.faceDistsDets[index][repIndices]
-        distDets = self.distDets[index][repIndices]
+        enoStartCount = self.enoStartCount[index][indices]
+        faceIndices = selectMultipleRange(enoStartCount, enoCount)
+        
+        enoIndices = self.enoIndices[index][faceIndices]
+        faceDistsDets = self.faceDistsDets[index][faceIndices]
+        distDets = self.distDets[index][faceIndices]
 
         phiC = phi.field[C]
         combinations = self.combinations[enoIndices]
-        repIndices = repIndices.reshape((-1,1))
+        repIndices = ad.repeat(C, enoCount).reshape((-1,1))
         phiN = phi.field[self.mesh.cellNeighbours[repIndices, combinations]]
         phiP = phi.field[repIndices]
         dphi = phiN-phiP
@@ -212,7 +235,11 @@ class ENO(Reconstruct):
         return phiC + dphi
 
     def update(self, index, phi, gradPhi):
-        return self.partialUpdate(index, self.indices, phi, gradPhi)
+        if index == 0:
+            indices = self.indices
+        else:
+            indices = self.indices[:self.mesh.nInternalFaces]
+        return self.partialUpdate(index, indices, phi, gradPhi)
 
     def dual(self, phi, gradPhi):
         assert len(phi.dimensions) == 1

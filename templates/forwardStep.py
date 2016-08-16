@@ -5,8 +5,8 @@ from adFVM.config import ad
 from adFVM.density import RCF 
 
 #primal = RCF('cases/forwardStep/', timeIntegrator='SSPRK', CFL=1.2, Cp=2.5, mu=lambda T: config.VSMALL*T)
-primal = RCF('cases/forwardStep/', riemannSolver='eulerRoe', timeIntegrator='euler', 
-        CFL=0.4, Cp=2.5, mu=lambda T: 0.*T, faceReconstructor='AnkitENO')
+primal = RCF('cases/forwardStep/', riemannSolver='eulerRoe', timeIntegrator='SSPRK', 
+        CFL=1.2, Cp=2.5, mu=lambda T: 0.*T, faceReconstructor='AnkitENO')
 
 def objective(fields, mesh):
     rho, rhoU, rhoE = fields

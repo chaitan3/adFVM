@@ -2,7 +2,7 @@
 import numpy as np
 
 import cfuncs
-from cfuncs import intersectPlane, getCells, decompose, reduceAbsMin
+from cfuncs import intersectPlane, getCells, decompose, reduceAbsMin, selectMultipleRange
 
 def norm(a, axis, **kwuser):
     try:
