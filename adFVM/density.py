@@ -119,7 +119,7 @@ class RCF(Solver):
     
     @config.timeFunction('Time for writing fields')
     def writeFields(self, fields, t):
-        U, T, p = self.primitive(*fields[:-1])
+        U, T, p = self.primitive(*fields[:3])
         self.setFields([U, T, p])
 
         with IOField.handle(t):

@@ -270,24 +270,32 @@ class Solver(object):
             start = time.time()
 
             for index in range(0, len(fields)):
-                fields[index].info()
+                #fields[index].info()
+                try:
+                    fields[index].info()
+                except:
+                    with IOField.handle(t):
+                        fields[index].write()
+                    exit(1)
 
             mesh.reset = True
             pprint('Time step', timeIndex)
+
             #stackedFields, dtc = self.map(stackedFields)
             stackedFields, dtc, local, remote = self.map(stackedFields, dt, t)
-            #diff = local-remote
-            #print diff.min(), diff.max()
+
             #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()
             #print remote.shape, remote.dtype, (remote).max(), (remote).min(), np.isnan(remote).any()
-            #print local
+            print 'percent shock capturing: {0:.2f}%'.format(float(local)*100)
+            #diff = local-remote
+            #print diff.min(), diff.max()
+
             #local = IOField.internalField('local', local.reshape(-1,1), (1,))
             #with IOField.handle(t):
             #    local.write()
             #exit(1)
 
             fields = self.unstackFields(stackedFields, IOField)
-
             # TODO: fix unstacking F_CONTIGUOUS
             for phi in fields:
                 phi.field = np.ascontiguousarray(phi.field)
@@ -335,6 +343,7 @@ class Solver(object):
                 # write mesh, fields, status
                 dtc = IOField.internalField('dtc', dtc, (1,))
                 self.writeFields(fields + [dtc], t)
+                #self.writeFields(fields + [dtc, local], t)
                 if mode != 'simulation':
                     self.writeStatusFile([timeIndex, t, dt, result])
 

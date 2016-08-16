@@ -314,23 +314,25 @@ class AnkitENO(SecondOrder):
             w2 = w2.reshape((-1,1))
             delta = self.mesh.volumes[C]**(1./3)
             sos = ad.sqrt(self.solver.gamma*self.solver.R*T.field[C])
-            C_SS = 0.5*(1-ad.tanh(2.5+10*delta/sos*dil))*(dil2/(dil2+w2+1e-7))
+            C_SS = 0.5*(1.-ad.tanh(2.5+10.*delta/sos*dil))*(dil2/(dil2+w2+1e-7))
             condition = ad.abs_(pFs[index].field-p.field[C]) > 0.99*ad.minimum(p.field[C],p.field[D])
             shock = ad.set_subtensor(shock[condition.nonzero()[0]], 1)
             #shock[ad.abs_] = 1
             condition = C_SS > 0.02
             shock = ad.set_subtensor(shock[condition.nonzero()[0]], 1)
         # expand by 1 face
-        shockIndices = shock.nonzero()[0]
-        owner, neighbour = self.faceOptions[0]
-        cells = neighbour[shockIndices]
-        condition = cells < self.mesh.nInternalCells
-        cells = cells[condition.nonzero()[0]]
-        cells = ad.concatenate((cells, owner[shockIndices]))
-        faces = self.mesh.cellFaces[cells].flatten()
-        condition = faces > -1
-        faces = self.faceMap[faces[condition.nonzero()[0]]]
-        shock = ad.set_subtensor(shock[faces], 1)
+        for index in range(0, 1):
+            shockIndices = shock.nonzero()[0]
+            owner, neighbour = self.faceOptions[0]
+            cells = neighbour[shockIndices]
+            condition = cells < self.mesh.nInternalCells
+            cells = cells[condition.nonzero()[0]]
+            cells = ad.concatenate((cells, owner[shockIndices]))
+            faces = self.mesh.cellFaces[cells].flatten()
+            condition = faces > -1
+            faces = self.faceMap[faces[condition.nonzero()[0]]]
+            shock = ad.set_subtensor(shock[faces], 1)
+        self.solver.local = (cells.shape[0]*1.)/self.mesh.nInternalCells
         #local = ad.zeros_like(self.mesh.volumes)
         #local = ad.set_subtensor(local[cells], 1)
         #self.solver.local = local
@@ -343,7 +345,7 @@ class AnkitENO(SecondOrder):
         shockIndices = shock.nonzero()[0]
 
         for phiFs, (phi, gradPhi) in zip(faceFieldsSys, fieldsSys):
-            for index in range(0, 1):
+            for index in range(0, 2):
                 phiFs[index].setField(shockIndices,
                     self.ENO.partialUpdate(index, shockIndices, phi, gradPhi) 
                 )
