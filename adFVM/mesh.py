@@ -28,7 +28,8 @@ class Mesh(object):
               'areas', 'volumes',
               'weights', 'deltas', 'normals',
               'linearWeights', 'quadraticWeights',
-              'cellCentres', 'faceCentres', 'cellNeighbours',
+              'cellCentres', 'faceCentres', 
+              'cellNeighbours', 'cellFaces',
               'sumOp', 'gradOp']
 
     def __init__(self):
@@ -794,7 +795,7 @@ class Mesh(object):
             value = getattr(self, attr) 
             if attr in ['owner', 'neighbour']:
                 setattr(self, attr, ad.ivector())
-            elif attr in ['cellNeighbours']:
+            elif attr in ['cellNeighbours', 'cellFaces']:
                 setattr(self, attr, ad.imatrix())
             elif attr == 'sumOp' or attr == 'gradOp':
                 setattr(self, attr, adsparse.csr_matrix(dtype=config.dtype))

@@ -255,6 +255,22 @@ class AnkitENO(SecondOrder):
     def __init__(self, solver):
         super(AnkitENO, self).__init__(solver)
         self.ENO = ENO(solver)
+        mesh = self.mesh
+
+        faceMap = -ad.ones_like(mesh.owner)
+        faceMap = ad.set_subtensor(faceMap[:mesh.nInternalFaces], ad.arange(0, mesh.nInternalFaces))
+        for patchID in mesh.localPatches:
+            patch = mesh.boundary[patchID]
+            if patch['type'] in config.cyclicPatches:
+                startFace = patch['startFace']
+                nFaces = patch['nFaces']
+                faceMap = ad.set_subtensor(faceMap[startFace:startFace+nFaces], \
+                    ad.arange(self.ENO.cyclicStartFaces[patchID],self.ENO.cyclicStartFaces[patchID]+nFaces))
+        nLocalFaces = mesh.nLocalCells - mesh.nInternalCells + mesh.nInternalFaces
+        nRemoteFaces = mesh.nFaces-nLocalFaces
+        faceMap = ad.set_subtensor(faceMap[nLocalFaces:], \
+                ad.arange(self.ENO.procStartFace, self.ENO.procStartFace + nRemoteFaces))
+        self.faceMap = faceMap
         return
 
     def shockSensor(self, (UFs, TFs, pFs), (U, T, p), (gradU, _, __)):
@@ -273,11 +289,24 @@ class AnkitENO(SecondOrder):
             sos = ad.sqrt(self.solver.gamma*self.solver.R*T.field[C])
             C_SS = 0.5*(1-ad.tanh(2.5+10*delta/sos*dil))*(dil2/(dil2+w2+1e-7))
             condition = ad.abs_(pFs[index].field-p.field[C]) > 0.99*ad.minimum(p.field[C],p.field[D])
-            shock = ad.set_subtensor(shock[condition], 1)
+            shock = ad.set_subtensor(shock[condition.nonzero()[0]], 1)
             #shock[ad.abs_] = 1
-            condition = C_SS > 0.22
-            shock = ad.set_subtensor(shock[condition], 1)
+            condition = C_SS > 0.02
+            shock = ad.set_subtensor(shock[condition.nonzero()[0]], 1)
         # expand by 1 face
+        shockIndices = shock.nonzero()[0]
+        owner, neighbour = self.faceOptions[0]
+        cells = neighbour[shockIndices]
+        condition = cells < self.mesh.nInternalCells
+        cells = cells[condition.nonzero()[0]]
+        cells = ad.concatenate((cells, owner[shockIndices]))
+        faces = self.mesh.cellFaces[cells].flatten()
+        condition = faces > -1
+        faces = self.faceMap[faces[condition.nonzero()[0]]]
+        shock = ad.set_subtensor(shock[faces], 1)
+        #local = ad.zeros_like(self.mesh.volumes)
+        #local = ad.set_subtensor(local[cells], 1)
+        #self.solver.local = local
         return shock
 
     def dualSystem(self, *fieldsSys):
@@ -285,7 +314,6 @@ class AnkitENO(SecondOrder):
         (U, gradU), (T, gradT), (p, gradp) = fieldsSys
         shock = self.shockSensor(faceFieldsSys, (U, T, p), (gradU, gradT, gradp))
         shockIndices = shock.nonzero()[0]
-        self.solver.local = shock
 
         for phiFs, (phi, gradPhi) in zip(faceFieldsSys, fieldsSys):
             for index in range(0, 1):
