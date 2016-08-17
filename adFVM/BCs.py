@@ -61,7 +61,8 @@ class BoundaryCondition(object):
         return symbolic
 
     def setValue(self, value):
-        self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], value)
+        self.phi.setField((self.cellStartFace, self.cellEndFace), value)
+        #self.phi.field = ad.set_subtensor(self.phi.field[self.cellStartFace:self.cellEndFace], value)
 
     def update(self):
         pass
@@ -162,9 +163,9 @@ class CBC_UPT(CharacteristicBoundaryCondition):
         self.p0 = self.createInput('p0', (1,))
 
     def update(self):
-        self.U.field = ad.set_subtensor(self.U.field[self.cellStartFace:self.cellEndFace], self.U0)
-        self.T.field = ad.set_subtensor(self.T.field[self.cellStartFace:self.cellEndFace], self.T0)
-        self.p.field = ad.set_subtensor(self.p.field[self.cellStartFace:self.cellEndFace], self.p0)
+        self.U.setField((self.cellStartFace, self.cellEndFace), self.U0)
+        self.T.setField((self.cellStartFace, self.cellEndFace), self.T0)
+        self.p.setField((self.cellStartFace, self.cellEndFace), self.p0)
 
 # implement support for characteristic time travel
 class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
@@ -182,9 +183,9 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
         T = self.Tt - 0.5*Un*Un/self.Cp
         p = self.pt * (T/self.Tt)**(self.gamma/(self.gamma-1))
         
-        self.U.field = ad.set_subtensor(self.U.field[self.cellStartFace:self.cellEndFace], U)
-        self.T.field = ad.set_subtensor(self.T.field[self.cellStartFace:self.cellEndFace], T)
-        self.p.field = ad.set_subtensor(self.p.field[self.cellStartFace:self.cellEndFace], p)
+        self.U.setField((self.cellStartFace, self.cellEndFace), U)
+        self.T.setField((self.cellStartFace, self.cellEndFace), T)
+        self.p.setField((self.cellStartFace, self.cellEndFace), p)
 
 class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):

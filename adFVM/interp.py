@@ -108,8 +108,8 @@ class Reconstruct(object):
                 startFace = self.cyclicStartFaces[patchID]
                 nFaces = patch['nFaces']
                 neighbourStartFace = self.cyclicStartFaces[patch['neighbourPatch']]
-                faceFields[1] = ad.set_subtensor(faceFields[1][startFace:startFace+nFaces], 
-                                                 faceFields[0][neighbourStartFace:neighbourStartFace+nFaces])
+                faceFieldsF[1].setField((startFace:startFace+nFaces), 
+                    faceFields[0][neighbourStartFace:neighbourStartFace+nFaces])
         faceFields[1] = faceExchange(faceFields[0], faceFields[1], self.procStartFace)
 
     def update(self, index, phi, gradPhi):
