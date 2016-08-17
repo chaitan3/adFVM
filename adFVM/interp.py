@@ -108,7 +108,7 @@ class Reconstruct(object):
                 startFace = self.cyclicStartFaces[patchID]
                 nFaces = patch['nFaces']
                 neighbourStartFace = self.cyclicStartFaces[patch['neighbourPatch']]
-                faceFieldsF[1].setField((startFace:startFace+nFaces), 
+                faceFieldsF[1].setField((startFace,startFace+nFaces), 
                     faceFields[0][neighbourStartFace:neighbourStartFace+nFaces])
         faceFields[1] = faceExchange(faceFields[0], faceFields[1], self.procStartFace)
 
