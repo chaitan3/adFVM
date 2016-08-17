@@ -18,8 +18,8 @@ class RCF(Solver):
                              'CFL': 1.2,
                              'stepFactor': 1.2,
                              'timeIntegrator': 'SSPRK', 'nStages': 3,
-                             'riemannSolver': 'eulerRoe',
                              # eulerHLLC DOES NOT WORK
+                             'riemannSolver': 'eulerRoe',
                              #'boundaryRiemannSolver': 'eulerLaxFriedrichs',
                              'boundaryRiemannSolver': 'eulerRoe',
                              'readConservative': False,
@@ -218,12 +218,12 @@ class RCF(Solver):
             TF.setField(indices, TBF)
         # CHARACTERISTIC BOUNDARY FLUX 
         if self.faceReconstructor.characteristic:
-            indices = self.faceReconstructor.Cindices
-            cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
-            Iindices = mesh.owner[indices]
-            URCF, TRCF, pRCF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
             # first order interpolation? really?
+            indices = self.faceReconstructor.Cindices
+            Iindices = mesh.owner[indices]
+            cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
             ULCF, TLCF, pLCF = U.getField(Iindices), T.getField(Iindices), p.getField(Iindices)
+            URCF, TRCF, pRCF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
             rhoLCF, rhoULCF, rhoELCF = self.conservative(ULCF, TLCF, pLCF)
             rhoRCF, rhoURCF, rhoERCF = self.conservative(URCF, TRCF, pRCF)
             CNormals = mesh.Normals.getField(indices)
@@ -235,7 +235,6 @@ class RCF(Solver):
             rhoEFlux.setField(indices, rhoECFlux)
             UF.setField(indices, 0.5*(ULCF + URCF))
             TF.setField(indices, 0.5*(TLCF + TRCF))
-        
 
         # viscous part
         mu = self.mu(TF)

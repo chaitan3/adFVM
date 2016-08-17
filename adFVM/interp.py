@@ -36,7 +36,7 @@ class Reconstruct(object):
         Bindices = []
         for patchID in mesh.localPatches:
             startFace, endFace, _ = meshO.getPatchFaceRange(patchID)
-            patchType = meshO.boundary[patchID]['type']
+            patchType = mesh.boundary[patchID]['type']
             patchIndices = np.arange(startFace, endFace)
             if patchType in config.cyclicPatches:
                 indices.append(patchIndices)
@@ -225,7 +225,7 @@ class ENO(Reconstruct):
         nIF = self.mesh.nInternalFaces
         for index in range(0, 2):
             self.faceOptions[1][index] = self.faceOptions[1][index][:nIF]
-        self.indices = [self.indices, self.indices[:nIF]]
+        self.Iindices = [self.indices, self.indices[:nIF]]
         self.BCUpdate = True
         
         self.enoStartCount = []
@@ -258,7 +258,7 @@ class ENO(Reconstruct):
         return phiC + dphi
 
     def update(self, index, phi, gradPhi):
-        return self.partialUpdate(index, self.indices[index], phi, gradPhi)
+        return self.partialUpdate(index, self.Iindices[index], phi, gradPhi)
 
 class limitedSecondOrder(Reconstruct):
     def update(self, index, phi, gradPhi):

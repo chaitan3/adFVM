@@ -89,7 +89,8 @@ class Field(object):
                   'internal cells', mesh.nInternalCells, 
                   'local cells:', mesh.nLocalCells, 
                   'indices', indices)
-            raise FloatingPointError('nan found')
+            print('FloatingPointException: NAN FOUND')
+            parallel.mpi.Abort()
         fieldMin = parallel.min(field)
         fieldMax = parallel.max(field)
         pprint(' min:', fieldMin, 'max:', fieldMax)
