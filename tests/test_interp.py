@@ -27,7 +27,7 @@ class TestInterp(unittest.TestCase):
     def test_TVD_vector(self):
         self.assertTrue(False)
 
-    def test_interpolate(self):
+    def test_central(self):
         R = central(self.FU, self.mesh)
         self.assertTrue(isinstance(R, Field))
         self.assertEqual(R.dimensions, (3,))

@@ -12,7 +12,7 @@ def evaluate(output, inputs, value, self):
         inputs = [inputs]
     if not isinstance(value, list):
         value = [value]
-    f = SolverFunction(inputs, output, self, 'test', BCs=False, source=False)
+    f = SolverFunction(inputs, output, self, 'test', BCs=False, source=False, postpro=False)
     return f(*value)
 
 def checkArray(self, res, ref, maxThres=1e-7, sumThres=1e-4):
