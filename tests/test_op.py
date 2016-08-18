@@ -1,28 +1,11 @@
 from __future__ import print_function
 from test import *
 
-from adFVM.field import Field, CellField
+from adFVM.field import Field
 from adFVM.mesh import Mesh
 from adFVM.op import grad, div, laplacian, snGrad
 
-class TestOp(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
-        self.case = '../cases/convection/'
-        self.mesh = Mesh.create(self.case)
-        Field.setSolver(self)
-        self.meshO = self.mesh.origMesh
-        
-        self.X = self.meshO.cellCentres[:, 0]
-        self.Y = self.meshO.cellCentres[:, 1]
-        self.XF = self.meshO.faceCentres[:, 0]
-        self.YF = self.meshO.faceCentres[:, 1]
-
-        self.U = ad.matrix()
-        self.FU = CellField('F', self.U, (3,))
-        self.V = ad.bcmatrix()
-        self.FV = CellField('F', self.V, (1,))
-
+class TestOp(TestAdFVM):
     def test_grad_scalar(self):
 
         ref = np.zeros((self.meshO.nInternalCells, 3))
@@ -111,6 +94,7 @@ class TestOp(unittest.TestCase):
         self.assertTrue(isinstance(R, Field))
         self.assertEqual(R.dimensions, (1,))
         res = evaluate(R.field, self.V, T, self)
+        checkArray(self, res, ref)
 
 if __name__ == "__main__":
         unittest.main(verbosity=2, buffer=True)

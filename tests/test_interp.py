@@ -1,31 +1,47 @@
-from __future__ import print_function
 from test import *
 
-from adFVM.field import Field, CellField
-from adFVM.mesh import Mesh
-from adFVM.interp import central, TVD
+from adFVM.interp import central, FirstOrder, SecondOrder
+from adFVM.op import grad
 
-class TestInterp(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
-        self.case = '../cases/convection/'
-        self.mesh = Mesh.create(self.case)
-        Field.setSolver(self)
-        self.meshO = self.mesh.origMesh
+class TestInterp(TestAdFVM):
+    def test_first_order(self):
+        R = FirstOrder(self)
+        R = R.dual(self.FU, None)
+        ref = np.zeros((self.meshO.nFaces, 3))
+        ref[:,0] = 10
+        ref[:,1] = 4
+        
+        T = np.zeros((self.meshO.nCells, 3))
+        T[:,0] = 10
+        T[:,1] = 4
+        res = evaluate([x.field for x in R], self.U, T, self)
+        checkArray(self, res[0], ref)
+        checkArray(self, res[1], ref)
 
-        self.X = self.meshO.cellCentres[:, 0]
-        self.Y = self.meshO.cellCentres[:, 1]
-        self.XF = self.meshO.faceCentres[:, 0]
-        self.YF = self.meshO.faceCentres[:, 1]
+    def test_second_order(self):
+        R = SecondOrder(self)
+        GR = grad(self.FU, op=True, ghost=True)
+        R = R.dual(self.FU, GR)
+        ref = np.zeros((self.meshO.nFaces, 3))
+        ref[:,0] = np.sin(self.XF*np.pi)*np.sin(self.YF*np.pi)
+        ref[:,1] = np.sin(self.YF*np.pi)
+        
+        T = np.zeros((self.meshO.nCells, 3))
+        T[:,0] = np.sin(self.X*np.pi)*np.sin(self.Y*np.pi)
+        T[:,1] = np.sin(self.Y*np.pi)
+        res = evaluate([x.field for x in R], self.U, T, self)
+        n = self.meshO.nInternalFaces
+        print res[0][n+20000:n+21000]
+        print res[1][n+20000:n+21000]
+        print ref[n+20000:n+21000]
+        checkArray(self, res[0], ref, maxThres=1e-4)
+        checkArray(self, res[1], ref, maxThres=1e-4)
 
-        self.U = ad.matrix()
-        self.FU = CellField('F', self.U, (3,))
+    def test_eno(self):
+        pass
 
-    def test_TVD_scalar(self):
-        self.assertTrue(False)
-
-    def test_TVD_vector(self):
-        self.assertTrue(False)
+    def test_ankit_eno(self):
+        pass
 
     def test_central(self):
         R = central(self.FU, self.mesh)
