@@ -330,7 +330,7 @@ class AnkitENO(SecondOrder):
             condition = faces > -1
             faces = self.faceMap[faces[condition.nonzero()[0]]]
             shock = ad.set_subtensor(shock[faces], 1)
-        self.solver.local = (cells.shape[0]*1.)/self.mesh.nInternalCells
+        self.solver.local = (ad.extra_ops.Unique(cells).shape[0]*1.)/self.mesh.nInternalCells
         #local = ad.zeros_like(self.mesh.volumes)
         #local = ad.set_subtensor(local[cells], 1)
         #self.solver.local = local
