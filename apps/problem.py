@@ -61,7 +61,7 @@ if __name__ == "__main__":
     timeStepFile = primal.timeStepFile
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('option')
+    parser.add_argument('option', nargs='?', default='orig')
     user = parser.parse_args(args)
 
     if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):

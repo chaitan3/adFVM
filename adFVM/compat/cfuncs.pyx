@@ -405,6 +405,7 @@ def reduceAbsMin(np.ndarray[dtype, ndim=2] arr, np.ndarray[int] count):
     cdef int n = count.shape[0]
     cdef int m = arr.shape[1]
     cdef np.ndarray[dtype, ndim=2] arrMin = np.zeros((n, m), arr.dtype)
+    cdef np.ndarray[int, ndim=2] arrArgMin = np.zeros((n, m), count.dtype)
     cdef int i, j, k, l
     cdef int c, d
     cdef dtype absMin
@@ -418,8 +419,9 @@ def reduceAbsMin(np.ndarray[dtype, ndim=2] arr, np.ndarray[int] count):
                     l = k
                     absMin = abs(arr[d+k,j])
             arrMin[i,j] = arr[d+l,j]
+            arrArgMin[i,j] = d+l
         d += c
-    return arrMin
+    return arrMin, arrArgMin
 
 def selectMultipleRange(np.ndarray[int] start, np.ndarray[int] count):
     cdef int total = count.sum()

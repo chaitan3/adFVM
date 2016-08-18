@@ -144,12 +144,27 @@ class reduceAbsMinOp(T.Op):
 
     def make_node(self, x, y):
         assert hasattr(self, '_props')
-        return T.Apply(self, [x, y], [x.type()])
+        return T.Apply(self, [x, y], [x.type(), y.type()])
 
     def perform(self, node, inputs, output_storage):
         field = inputs[0]
         count = inputs[1]
-        output_storage[0][0] = compat.reduceAbsMin(field, count)
+        outputs = compat.reduceAbsMin(field, count)
+        output_storage[0][0] = outputs[0]
+        output_storage[1][0] = outputs[1]
+
+    def grad(self, inputs, output_grads):
+        outputs = reduceAbsMin(*inputs)
+        output_grad = ad.zeros_like(inputs[0])
+        indices = ad.tile(ad.arange(0,inputs[0].shape[1]), (inputs[1].shape[0], 1))
+        #output_grad = T.printing.Print('1', attrs=['shape'])(output_grad)
+        #outputs[1] = T.printing.Print('2', attrs=['shape'])(outputs[1])
+        #indices = T.printing.Print('3', attrs=['shape'])(indices)
+        #output_grads[0] = T.printing.Print('4', attrs=['shape'])(output_grads[0])
+        output_grad = ad.set_subtensor(output_grad[outputs[1], indices], output_grads[0])
+        output_grads = [output_grad, T.gradient.disconnected_type()]
+        return output_grads
+
 reduceAbsMin = reduceAbsMinOp()
 
 class selectMultipleRangeOp(T.Op):
@@ -253,7 +268,7 @@ class ENO(Reconstruct):
         dphi = phiN-phiP
         dphi = (dphi*faceDistsDets).sum(axis=1)/distDets
 
-        dphi = reduceAbsMin(dphi, enoCount)
+        dphi = reduceAbsMin(dphi, enoCount)[0]
         dphi = ad.patternbroadcast(dphi, phi.field.broadcastable)
         return phiC + dphi
 
