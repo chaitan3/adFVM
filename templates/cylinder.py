@@ -26,7 +26,7 @@ def objectiveDrag(fields, mesh):
     start, end, nF = mesh.getPatchFaceRange(patchID)
     areas = mesh.areas[start:end]
     nx = mesh.normals[start:end, 0].reshape((-1, 1))
-    cellStartFace = mesh.nInternalCells + start - mesh.nInternalFaces
+    cellStartFace = mesh.nInternalCells + start - mesh.nInternalFaces 
     cellEndFace = mesh.nInternalCells + end - mesh.nInternalFaces
     internalIndices = mesh.owner[start:end]
     start, end = cellStartFace, cellEndFace
@@ -79,9 +79,9 @@ def perturb(fields, mesh, t):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 400000
-writeInterval = 10000
-#nSteps = 10
-#writeInterval = 5
-startTime = 0.000132
+#nSteps = 400000
+#writeInterval = 10000
+nSteps = 20000
+writeInterval = 500
+startTime = 3.0
 dt = 8e-9
