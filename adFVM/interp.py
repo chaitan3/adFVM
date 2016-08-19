@@ -99,18 +99,17 @@ class Reconstruct(object):
             phiFSys.append(phiF)
         return phiFSys
 
-    def faceBCUpdate(self, faceFieldsF):
-        faceFields = [phi.field for phi in faceFieldsF]
-        faceFields[1] = ad.concatenate((faceFields[1], faceFields[0][self.mesh.nInternalFaces:]), axis=0)
+    def faceBCUpdate(self, faceFields):
+        faceFields[1].field = ad.concatenate((faceFields[1].field, faceFields[0].field[self.mesh.nInternalFaces:]), axis=0)
         for patchID in self.mesh.localPatches:
             patch = self.mesh.boundary[patchID]
             if patch['type'] in config.cyclicPatches:
                 startFace = self.cyclicStartFaces[patchID]
                 nFaces = patch['nFaces']
                 neighbourStartFace = self.cyclicStartFaces[patch['neighbourPatch']]
-                faceFieldsF[1].setField((startFace,startFace+nFaces), 
-                    faceFields[0][neighbourStartFace:neighbourStartFace+nFaces])
-        faceFields[1] = faceExchange(faceFields[0], faceFields[1], self.procStartFace)
+                faceFields[1].setField((startFace,startFace+nFaces), 
+                    faceFields[0].field[neighbourStartFace:neighbourStartFace+nFaces])
+        faceFields[1].field = faceExchange(faceFields[0].field, faceFields[1].field, self.procStartFace)
 
     def update(self, index, phi, gradPhi):
         pass
