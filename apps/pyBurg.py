@@ -14,7 +14,7 @@ class Burgers(Solver):
         super(Burgers, self).__init__(case, **userConfig)
         self.names = ['U']
         self.dimensions = [(1,)]
-        self.faceReconstructor = interp.AnkitENO(self)
+        self.faceReconstructor = interp.ENO(self)
 
     def getFlux(self, U):
         return 0.5*U*U
@@ -61,4 +61,4 @@ if __name__ == '__main__':
     solver.setInitialCondition(solver.fields[0])
     solver.writeFields(solver.fields, t)
     solver.compile()
-    solver.run(startTime=t, dt=0.001, nSteps=100)
+    solver.run(startTime=t, dt=0.001, nSteps=1000, writeInterval=100)
