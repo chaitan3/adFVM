@@ -23,19 +23,18 @@ class TestInterp(TestAdFVM):
         GR = grad(self.FU, op=True, ghost=True)
         R = R.dual(self.FU, GR)
         ref = np.zeros((self.meshO.nFaces, 3))
-        ref[:,0] = np.sin(self.XF*np.pi)*np.sin(self.YF*np.pi)
-        ref[:,1] = np.sin(self.YF*np.pi)
+        ref[:,0] = np.sin(2*self.XF*np.pi)*np.sin(2*self.YF*np.pi)
+        ref[:,1] = np.sin(2*self.YF*np.pi)
         
         T = np.zeros((self.meshO.nCells, 3))
-        T[:,0] = np.sin(self.X*np.pi)*np.sin(self.Y*np.pi)
-        T[:,1] = np.sin(self.Y*np.pi)
+        T[:,0] = np.sin(2*self.X*np.pi)*np.sin(2*self.Y*np.pi)
+        T[:,1] = np.sin(2*self.Y*np.pi)
         res = evaluate([x.field for x in R], self.U, T, self)
+        m = self.meshO.nInternalCells
         n = self.meshO.nInternalFaces
-        print res[0][n+20000:n+21000]
-        print res[1][n+20000:n+21000]
-        print ref[n+20000:n+21000]
-        checkArray(self, res[0], ref, maxThres=1e-4)
-        checkArray(self, res[1], ref, maxThres=1e-4)
+        res2 = evaluate(GR.field, self.U, T, self)
+        checkArray(self, res[0], ref, maxThres=1e-3)
+        checkArray(self, res[1], ref, maxThres=1e-3)
 
     def test_eno(self):
         pass
