@@ -99,8 +99,9 @@ class Reconstruct(object):
             phiFSys.append(phiF)
         return phiFSys
 
-    def faceBCUpdate(self, faceFields):
-        faceFields[1].field = ad.concatenate((faceFields[1].field, faceFields[0].field[self.mesh.nInternalFaces:]), axis=0)
+    def faceBCUpdate(self, faceFields, expand=True):
+        if expand:
+            faceFields[1].field = ad.concatenate((faceFields[1].field, faceFields[0].field[self.mesh.nInternalFaces:]), axis=0)
         for patchID in self.mesh.localPatches:
             patch = self.mesh.boundary[patchID]
             if patch['type'] in config.cyclicPatches:
@@ -365,7 +366,7 @@ class AnkitENO(SecondOrder):
                     self.ENO.partialUpdate(index, shockIndices[index], phi, gradPhi) 
                 )
             # overwrites work done by second order
-            self.faceBCUpdate(phiFs)
+            self.faceBCUpdate(phiFs, expand=False)
 
         return faceFieldsSys
 

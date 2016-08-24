@@ -61,10 +61,10 @@ for index, time in enumerate(times):
     pprint()
 
     ## rhoaByV
-    #rhoa = IOField.read('rhoa')
-    #rhoaByV = getFieldByVolume(rhoa)
-    #rhoaByV.write()
-    #pprint()
+    rhoa = IOField.read('rhoa')
+    rhoaByV = getFieldByVolume(rhoa)
+    rhoaByV.write()
+    pprint()
 
     ## adjoint energy
     #rhoUa = IOField.read('rhoUa')

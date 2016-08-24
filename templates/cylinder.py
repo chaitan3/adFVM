@@ -8,7 +8,7 @@ from adFVM.density import RCF
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('cases/cylinder/', 
+primal = RCF('cases/cylinder/chaotic/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*2.5e-5,
@@ -39,7 +39,8 @@ def objectiveDrag(fields, mesh):
     return ad.sum((p*nx-mungUx)*areas)
 
 def getPlane(solver):
-    point = np.array([0.0032,0.0,0.0], config.precision)
+    #point = np.array([0.0032,0.0,0.0], config.precision)
+    point = np.array([0.032,0.0,0.0], config.precision)
     normal = np.array([1.,0.,0.], config.precision)
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
     #print interCells.shape, interArea.sum()
@@ -79,9 +80,7 @@ def perturb(fields, mesh, t):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-#nSteps = 400000
-#writeInterval = 10000
 nSteps = 20000
 writeInterval = 500
-startTime = 3.0
-dt = 8e-9
+startTime = 2.0
+dt = 8e-8

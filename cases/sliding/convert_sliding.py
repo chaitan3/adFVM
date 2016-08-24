@@ -25,15 +25,15 @@ for boundaryDir in [mesh.case + '/constant/polyMesh/']:#, timeDir + 'polyMesh/']
     patch['type'] = 'slidingPeriodic1D'
     patch['periodicPatch'] = 'mid1plane'
     patch['velocity'] = '(0 252 0)'
-    #patch['nLayers'] = '1'
-    patch['nLayers'] = '10'
+    patch['nLayers'] = '1'
+    #patch['nLayers'] = '10'
     patch.pop('movingCellCentres', None)
     patch = mesh.origMesh.boundary['intersection_slave']
     patch['type'] = 'slidingPeriodic1D'
     patch['periodicPatch'] = 'mid2plane'
     patch['velocity'] = '(0 -252 0)'
-    #patch['nLayers'] = '1'
-    patch['nLayers'] = '10'
+    patch['nLayers'] = '1'
+    #patch['nLayers'] = '10'
     patch.pop('movingCellCentres', None)
     mesh.writeFoamBoundary(boundaryFile, mesh.origMesh.boundary)
 
@@ -45,4 +45,5 @@ for phi in fields:
         field = IOField.read(phi)
         field.boundary['intersection_master']['type'] = 'slidingPeriodic1D'
         field.boundary['intersection_slave']['type'] = 'slidingPeriodic1D'
+        field.partialComplete()
         field.write(skipProcessor=True)

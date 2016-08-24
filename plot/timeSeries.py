@@ -13,9 +13,10 @@ s = np.cumsum(y)/np.arange(1,len(y)+1)
 #plt.xlabel('time (T)')
 plt.xlabel('iteration')
 plt.ylabel('objective')
-plt.plot(x, y, label='instantaneous objective')
-plt.plot(x, s, label='cumulative averaged objective')
-plt.legend(loc='lower right')
+plt.semilogy(x, y, label='instantaneous objective')
+#plt.plot(x, y, label='instantaneous objective')
+#plt.plot(x, s, label='cumulative averaged objective')
+#plt.legend(loc='lower right')
 plt.show()
 
 
