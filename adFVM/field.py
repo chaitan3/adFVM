@@ -620,6 +620,7 @@ class ExchangerOp(T.Op):
         assert hasattr(self, '_props')
         x = ad.as_tensor_variable(x)
         return T.Apply(self, [x], [x.type()])
+
     def perform(self, node, inputs, output_storage):
         field = np.ascontiguousarray(inputs[0])
         output_storage[0][0] = parallel.getRemoteCells(field, Field.mesh)
@@ -638,13 +639,41 @@ class FaceExchangerOp(T.Op):
 
     def make_node(self, x, y, z):
         assert hasattr(self, '_props')
-        #x = ad.as_tensor_variable(x)
+        x = ad.as_tensor_variable(x)
+        y = ad.as_tensor_variable(y)
+        z = ad.as_tensor_variable(z)
         return T.Apply(self, [x, y, z], [x.type()])
+
     def perform(self, node, inputs, output_storage):
         field1 = np.ascontiguousarray(inputs[0])
         field2 = np.ascontiguousarray(inputs[1])
         startFace = inputs[2]
         output_storage[0][0] = parallel.getRemoteFaces(field1, field2, startFace, Field.mesh)
+
+    def grad(self, inputs, output_grads):
+        gradFace = gradFaceExchange(output_grads[0], inputs[2])
+        gradFace.append(T.gradient.disconnected_type())
+        return gradFace
+
+class gradFaceExchangerOp(T.Op):
+    __props__ = ()
+
+    def __init__(self):
+        if parallel.nProcessors == 1:
+            self.view_map = {0: [0]}
+
+    def make_node(self, x, y):
+        assert hasattr(self, '_props')
+        x = ad.as_tensor_variable(x)
+        y = ad.as_tensor_variable(y)
+        return T.Apply(self, [x, y], [x.type(), x.type()])
+
+    def perform(self, node, inputs, output_storage):
+        gradField = np.ascontiguousarray(inputs[0])
+        startFace = inputs[1]
+        gradField1, gradField2 = parallel.getAdjointRemoteFaces(gradField, startFace, Field.mesh)
+        output_storage[0][0] = gradField1
+        output_storage[1][0] = gradField2
 
 class gradExchangerOp(T.Op):
     __props__ = ()
@@ -665,3 +694,4 @@ class gradExchangerOp(T.Op):
 exchange = ExchangerOp()
 faceExchange = FaceExchangerOp()
 gradExchange = gradExchangerOp()
+gradFaceExchange = gradFaceExchangerOp()

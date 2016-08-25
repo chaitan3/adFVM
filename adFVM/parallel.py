@@ -128,6 +128,35 @@ def getRemoteFaces(field1, field2, procStartFace, meshC):
     #mtime += time.time()-start2
     return field2
 
+def getAdjointRemoteFaces(field, procStartFace, meshC):
+    if nProcessors == 1:
+        return np.zeros_like(field), field
+    mesh = meshC.origMesh
+    nLocalFaces = mesh.nLocalCells - mesh.nInternalCells + mesh.nInternalFaces
+    jacobian1 = np.zeros_like(field)
+    jacobian2 = np.zeros_like(field)
+    jacobian2[:nLocalFaces] = field[:nLocalFaces]
+    precision = field.dtype
+    dimensions = field.shape[1:]
+    adjointRemoteFaces = {}
+    exchanger = Exchanger()
+    startFace = procStartFace.copy()
+    for patchID in meshC.remotePatches:
+        local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+        _, _, nFaces = mesh.getPatchFaceRange(patchID)
+        endFace = startFace + nFaces
+        adjointRemoteFaces[patchID] = np.zeros((nFaces,) + dimensions, precision)
+        exchanger.exchange(remote, field[startFace:endFace], adjointRemoteFaces[patchID], tag)
+        startFace += nFaces
+    exchanger.wait()
+    startFace = procStartFace.copy()
+    for patchID in meshC.remotePatches:
+        _, _, nFaces = mesh.getPatchFaceRange(patchID)
+        endFace = startFace + nFaces
+        add_at(jacobian1, np.arange(startFace,endFace), adjointRemoteFaces[patchID])
+        startFace += nFaces
+    return jacobian1, jacobian2
+
 def getAdjointRemoteCells(field, meshC):
     if nProcessors == 1:
         return field
