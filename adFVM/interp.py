@@ -105,6 +105,8 @@ class Reconstruct(object):
         for patchID in self.mesh.localPatches:
             patch = self.mesh.boundary[patchID]
             if patch['type'] in config.cyclicPatches:
+                if patch['type'] == 'slidingPeriodic1D':
+                    raise NotImplementedError
                 startFace = self.cyclicStartFaces[patchID]
                 nFaces = patch['nFaces']
                 neighbourStartFace = self.cyclicStartFaces[patch['neighbourPatch']]
