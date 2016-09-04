@@ -5,6 +5,7 @@ from adFVM.op import grad
 
 class TestInterp(TestAdFVM):
     def test_first_order(self):
+        Field.setSolver(self)
         R = FirstOrder(self)
         R = R.dual(self.FU, None)
         ref = np.zeros((self.meshO.nFaces, 3))
@@ -19,6 +20,7 @@ class TestInterp(TestAdFVM):
         checkArray(self, res[1], ref)
 
     def test_second_order(self):
+        Field.setSolver(self)
         R = SecondOrder(self)
         GR = grad(self.FU, op=True, ghost=True)
         R = R.dual(self.FU, GR)
@@ -37,12 +39,32 @@ class TestInterp(TestAdFVM):
         checkArray(self, res[1], ref, maxThres=1e-3)
 
     def test_eno(self):
-        pass
+        from adFVM.burgers import Burgers
+        config.compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
+
+        with config.suppressOutput():
+            solver = Burgers('../cases/burgers/')
+            t = 0.0
+            solver.readFields(t)
+            solver.setInitialCondition(solver.fields[0])
+            solver.writeFields(solver.fields, t)
+            solver.compile()
+            solver.run(startTime=t, dt=0.001, nSteps=1000, writeInterval=100)
+            solver.readFields(1.)
+
+        mesh = solver.mesh.origMesh
+        res = solver.fields[0].field
+        ref = np.ones_like(res)
+        indices = (mesh.cellCentres[:mesh.nInternalCells,0] >= 0.75).nonzero()[0]
+        ref[indices] = 0.5
+        np.savetxt('res.txt', res)
+        checkVolSum(self, res, ref, mesh=solver.mesh, relThres=1e-2)
 
     def test_ankit_eno(self):
         pass
 
     def test_central(self):
+        Field.setSolver(self)
         R = central(self.FU, self.mesh)
         self.assertTrue(isinstance(R, Field))
         self.assertEqual(R.dimensions, (3,))

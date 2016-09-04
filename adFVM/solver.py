@@ -283,7 +283,6 @@ class Solver(object):
 
             #stackedFields, dtc = self.map(stackedFields)
             stackedFields, dtc, local, remote = self.map(stackedFields, dt, t)
-
             #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()
             #print remote.shape, remote.dtype, (remote).max(), (remote).min(), np.isnan(remote).any()
             pprint('Percent shock capturing: {0:.2f}%'.format(float(parallel.max(local))*100))

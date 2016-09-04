@@ -42,12 +42,14 @@ def checkArray(self, res, ref, maxThres=1e-7):#, sumThres=1e-4):
     self.assertAlmostEqual(0, diff.max(), delta=maxThres)
     #self.assertAlmostEqual(0, diff.sum(), delta=sumThres)
 
-def checkVolSum(self, res, ref, relThres=1e-4):
-    vols = self.mesh.origMesh.volumes
+def checkVolSum(self, res, ref, relThres=1e-4, mesh=None):
+    if not mesh:
+        mesh = self.mesh
+    vols = mesh.origMesh.volumes
     if len(res.shape) == 3:
         vols = vols.flatten().reshape((-1,1,1))
     diffV = np.abs(res-ref)*vols
-    refV = np.abs(refV)*vols
+    refV = np.abs(ref)*vols
     rel = diffV.sum()/refV.sum()
     self.assertAlmostEqual(0, rel, delta=relThres)
 

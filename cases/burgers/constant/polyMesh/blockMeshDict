@@ -41,8 +41,9 @@ boundary
 (
     side1
     {
-        type cyclic;
-        neighbourPatch side2;
+        type patch;
+        //type cyclic;
+        //neighbourPatch side2;
         faces
         (
             (1 2 6 5)
@@ -50,8 +51,9 @@ boundary
     }
     side2
     {
-        type cyclic;
-        neighbourPatch side1;
+        type patch;
+        //type cyclic;
+        //neighbourPatch side1;
         faces
         (
             (0 4 7 3)
