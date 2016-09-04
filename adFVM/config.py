@@ -5,7 +5,6 @@ runtime = time.time()
 import os
 import sys
 sys.setrecursionlimit(100000)
-# titan/voyager fixes
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -21,6 +20,7 @@ parser.add_argument('-s', '--python', action='store_true')
 parser.add_argument('--voyager', action='store_true')
 parser.add_argument('--titan', action='store_true')
 parser.add_argument('--bw', action='store_true')
+parser.add_argument('--mira', action='store_true')
 parser.add_argument('--hdf5', action='store_true')
 parser.add_argument('--coresPerNode', required=False, default=16, type=int)
 parser.add_argument('--unloadingStages', required=False, default=1, type=int)
@@ -59,6 +59,8 @@ if user.titan:
     assert np.__version__ == '1.9.2'
 elif user.bw:
     home = '/scratch/sciteam/talnikar/stable/.theano/'
+elif user.mira:
+    home = '/projects/LESOpt/talnikar/local/'
 if user.use_temp:
     home = parallel.copyToTemp(home, user.coresPerNode)
 #os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
