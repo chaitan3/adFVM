@@ -1,15 +1,20 @@
-import numpy as np
-import h5py
-from numbers import Number
 import re
 import os
 import copy
+import numpy as np
+from numbers import Number
 from contextlib import contextmanager
 
 from . import config, parallel, BCs
 from .config import ad, T
 from .parallel import pprint
 from .mesh import extractField, writeField
+
+try:
+    import h5py
+except:
+    pprint('h5py library not loaded')
+
 logger = config.Logger(__name__)
 
 class Field(object):

@@ -1,7 +1,6 @@
 import numpy as np
 import scipy as sp
 from scipy import sparse as sparse
-import h5py
 import re
 import time
 import copy
@@ -12,6 +11,11 @@ from .config import ad, adsparse
 from .compat import norm, decompose, getCells, add_at
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
+
+try:
+    import h5py
+except:
+    pprint('h5py library not loaded')
 
 logger = config.Logger(__name__)
 
