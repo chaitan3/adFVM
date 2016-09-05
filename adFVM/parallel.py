@@ -1,15 +1,27 @@
 from __future__ import print_function
-from mpi4py import MPI
 import numpy as np
 import subprocess
 import time
+try:
+    from mpi4py import MPI
+    mpi = MPI.COMM_WORLD
+    nProcessors = mpi.Get_size()
+    name = MPI.Get_processor_name()
+    rank = mpi.Get_rank()
+except:
+    class Container(object):
+        pass
+    mpi = Container()
+    nProcessors = 1
+    name = ''
+    rank = 0
+    mpi.bcast = lambda x: x
+    mpi.Barrier = lambda : None
+    mpi.scatter = lambda x: x[0]
+    mpi.gather = lambda x: [x]
 
 from .compat import add_at
 
-mpi = MPI.COMM_WORLD
-nProcessors = mpi.Get_size()
-name = MPI.Get_processor_name()
-rank = mpi.Get_rank()
 processorDirectory = '/'
 if nProcessors > 1:
     processorDirectory = '/processor{0}/'.format(rank)
