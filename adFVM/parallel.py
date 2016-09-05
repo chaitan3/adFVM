@@ -9,16 +9,17 @@ try:
     name = MPI.Get_processor_name()
     rank = mpi.Get_rank()
 except:
+    print('mpi4py NOT LOADED: YOU SHOULD BE RUNNING ON A SINGLE CORE')
     class Container(object):
         pass
     mpi = Container()
     nProcessors = 1
     name = ''
     rank = 0
-    mpi.bcast = lambda x: x
+    mpi.bcast = lambda x, root: x
     mpi.Barrier = lambda : None
-    mpi.scatter = lambda x: x[0]
-    mpi.gather = lambda x: [x]
+    mpi.scatter = lambda x, root: x[0]
+    mpi.gather = lambda x, root: [x]
 
 from .compat import add_at
 
