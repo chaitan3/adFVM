@@ -8,12 +8,13 @@ sys.setrecursionlimit(100000)
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--gpu', action='store_true', dest='use_gpu')
+parser.add_argument('-g', '--gpu', action='store_true', dest='use_gpu')
 parser.add_argument('--temp', action='store_true', dest='use_temp')
 parser.add_argument('-p', '--no_pickle', action='store_true')
 parser.add_argument('-u', '--no_unpickle', action='store_true')
 parser.add_argument('-o', '--profile', action='store_true')
 parser.add_argument('-c', '--compile', action='store_true')
+parser.add_argument('-n', '--no_compile', action='store_true')
 parser.add_argument('--profile_mem', action='store_true')
 parser.add_argument('--profile_opt', action='store_true')
 parser.add_argument('-s', '--python', action='store_true')
@@ -21,7 +22,7 @@ parser.add_argument('--voyager', action='store_true')
 parser.add_argument('--titan', action='store_true')
 parser.add_argument('--bw', action='store_true')
 parser.add_argument('--mira', action='store_true')
-parser.add_argument('--hdf5', action='store_true')
+parser.add_argument('-d', '--hdf5', action='store_true')
 parser.add_argument('--coresPerNode', required=False, default=16, type=int)
 parser.add_argument('--unloadingStages', required=False, default=1, type=int)
 user, args = parser.parse_known_args()
@@ -64,7 +65,9 @@ elif user.mira:
 if user.use_temp:
     home = parallel.copyToTemp(home, user.coresPerNode)
 #os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)
-os.environ['THEANO_FLAGS'] = 'lib.cnmem=0.45,compiledir='+home+'/.theano/{0}-{1}-{2}'.format(project, device, dtype)
+os.environ['THEANO_FLAGS'] = 'lib.cnmem=0.45'
+os.environ['THEANO_FLAGS'] += ',base_compiledir='+home+'/.theano'
+os.environ['THEANO_FLAGS'] += ',compiledir='+home+'/.theano/{0}-{1}-{2}'.format(project, device, dtype)
 os.environ['THEANO_FLAGS'] += ',floatX=' + dtype
 os.environ['THEANO_FLAGS'] += ',device=' + device
 # pickling
@@ -85,13 +88,20 @@ os.environ['THEANO_FLAGS'] += ',profile_memory=' + str(user.profile_mem)
 # openmp
 #os.environ['THEANO_FLAGS'] += ',openmp=True,openmp_elemwise_minsize=0'
 if user.voyager:
-#os.environ['THEANO_FLAGS'] += ',cxx='
     os.environ['THEANO_FLAGS'] += ',gcc.cxxflags=-I/master-usr/include/python2.7/ -I/master-usr/include/ -L/usr/lib/python2.7/config-x86_64-linux-gnu/'
 elif user.bw:
     os.environ['THEANO_FLAGS'] += ',gcc.cxxflags=-march=native'
+elif user.mira and not user.no_compile:
+    os.environ['THEANO_FLAGS'] += ',cxx=powerpc64-bgq-linux-g++'
+elif user.no_compile:
+    # needs modification to theano/gof/cmodule.py version_str
+    # and maybe gcc.cxxflags
+    os.environ['THEANO_FLAGS'] += ',cxx='
+    #os.environ['THEANO_FLAGS'] += ',gcc.cxxflags=-march=native'
 import theano as T
 import theano.tensor as ad
 import theano.sparse as adsparse
+parallel.pprint(T.config)
 from theano.ifelse import ifelse
 ad.ifelse = ifelse
 broadcastPattern = (False, True)
