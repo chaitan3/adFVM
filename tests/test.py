@@ -1,5 +1,7 @@
 import unittest
 import numpy as np
+import os
+import subprocess
 
 from adFVM import config
 from adFVM.config import ad, T
@@ -8,6 +10,13 @@ config.pickleFunction = False
 from adFVM.solver import SolverFunction
 from adFVM.mesh import Mesh
 from adFVM.field import Field, CellField
+
+test_path = os.path.dirname(__file__)
+adFVM_path = os.path.join(test_path, '..')
+scripts_path = os.path.join(adFVM_path, 'scripts')
+apps_path = os.path.join(adFVM_path, 'apps')
+cases_path = os.path.join(adFVM_path, 'cases')
+templates_path = os.path.join(adFVM_path, 'templates')
 
 class TestAdFVM(unittest.TestCase):
     @classmethod
@@ -54,3 +63,13 @@ def checkVolSum(self, res, ref, relThres=1e-4, mesh=None):
     self.assertAlmostEqual(0, rel, delta=relThres)
 
 
+def checkFields(self, case, field, time1, time2, relThres=1e-6, nProcs=1):
+    diff = os.path.join(scripts_path, 'field', 'diff_fields.py')
+    if nProcs == 1:
+        output = subprocess.check_output([diff, case, field, time1, time2])
+    else:
+        output = subprocess.check_output(['mpirun', '-np', str(nProcs), diff, case, field, time1, time2])
+    output = output.split('\n')
+    absDiff = float(output[-4].split(' ')[1])
+    relDiff = float(output[-3].split(' ')[1])
+    self.assertAlmostEqual(0, relDiff, delta=relThres)
