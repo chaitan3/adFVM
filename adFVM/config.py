@@ -101,7 +101,6 @@ elif user.no_compile:
 import theano as T
 import theano.tensor as ad
 import theano.sparse as adsparse
-parallel.pprint(T.config)
 from theano.ifelse import ifelse
 ad.ifelse = ifelse
 broadcastPattern = (False, True)
@@ -198,6 +197,7 @@ foamHeader = '''/*--------------------------------*- C++ -*---------------------
 \*---------------------------------------------------------------------------*/
 '''
 hdf5 = user.hdf5
+#hdf5 = True
 
 fileFormat = 'binary'
 #fileFormat = 'ascii'

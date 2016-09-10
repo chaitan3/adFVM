@@ -1,10 +1,13 @@
 #!/usr/bin/python2 
 
+import os
+import sys
 import h5py
 
-files = ['mesh.hdf5', '3.hdf5']
+files = sys.argv[1:]
 
 
+os.makedirs('swapped')
 for f in files:
     orig = h5py.File(f)
     swap = h5py.File('swapped/' + f, 'w')

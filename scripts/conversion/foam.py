@@ -14,13 +14,23 @@ mesh = Mesh.create(case)
 
 IOField.setMesh(mesh)
 times = glob.glob(mesh.case + '*.hdf5')
+#times = glob.glob(case + '*.hdf5')
+
+# tested in serial
 for timeF in times:
     if timeF.endswith('mesh.hdf5'): continue
-    fields = h5py.File(timeF, 'r', driver='mpio', comm=parallel.mpi).keys()
+    fieldNames = h5py.File(timeF, 'r', driver='mpio', comm=parallel.mpi).keys()
     time = float(timeF[:-5].split('/')[-1])
-    IOField.openHandle(mesh.case, time)
-    for name in fields:
-        phi = IOField.readHDF5(name, mesh, time)
-        phi.partialComplete()
-        phi.writeFoam(mesh.case + parallel.processorDirectory, time)
-    IOField.closeHandle()
+
+    fields = []
+    config.hdf5 = True
+    with IOField.handle(time):
+        for name in fieldNames:
+            phi = IOField.readHDF5(name)
+            phi.partialComplete()
+            fields.append(phi)
+
+    config.hdf5 = False
+    with IOField.handle(time):
+        for phi in fields:
+            phi.writeFoam()

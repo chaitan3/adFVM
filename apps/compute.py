@@ -37,41 +37,41 @@ for index, time in enumerate(times):
 
     IOField.openHandle(time)
 
-    outputs = computer(U.field, T.field, p.field)
-    outputsF = []
-    for field, name, dim in zip(outputs, names, dimensions):
-        outputsF.append(IOField(name, field, dim))
-        if len(dim) != 2:
-            outputsF[-1].write()
-    pprint()
-    # adjoint blowup
-    fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
-    for phi in fields:
-        phi.write()#, skipProcessor=True)
-    pprint()
-    enstrophy, Q = getEnstrophyAndQ(outputsF[1])
-    enstrophy.write(name='enstrophy') 
-    Q.write(name='Q')
+    #outputs = computer(U.field, T.field, p.field)
+    #outputsF = []
+    #for field, name, dim in zip(outputs, names, dimensions):
+    #    outputsF.append(IOField(name, field, dim))
+    #    if len(dim) != 2:
+    #        outputsF[-1].write()
+    #pprint()
+    ## adjoint blowup
+    #fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+    #for phi in fields:
+    #    phi.write()#, skipProcessor=True)
+    #pprint()
+    #enstrophy, Q = getEnstrophyAndQ(outputsF[1])
+    #enstrophy.write(name='enstrophy') 
+    #Q.write(name='Q')
 
-    c, M, pt, s = getTotalPressureAndEntropy(U, T, p, solver)
-    c.write(name='c') 
-    M.write(name='Ma')
-    pt.write(name='pt')
-    s.write(name='s')
-    pprint()
+    #c, M, pt, s = getTotalPressureAndEntropy(U, T, p, solver)
+    #c.write(name='c') 
+    #M.write(name='Ma')
+    #pt.write(name='pt')
+    #s.write(name='s')
+    #pprint()
 
-    ## rhoaByV
+    ### rhoaByV
     rhoa = IOField.read('rhoa')
     rhoaByV = getFieldByVolume(rhoa)
     rhoaByV.write()
     pprint()
 
     ## adjoint energy
-    #rhoUa = IOField.read('rhoUa')
-    #rhoEa = IOField.read('rhoEa')
-    #adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
-    #pprint('L2 norm adjoint', time, adjEnergy)
-    #pprint()
+    rhoUa = IOField.read('rhoUa')
+    rhoEa = IOField.read('rhoEa')
+    adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
+    pprint('L2 norm adjoint', time, adjEnergy)
+    pprint()
 
     IOField.closeHandle()
 
