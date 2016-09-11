@@ -20,6 +20,9 @@ def test_mpi_comm_method(case_path):
     return
 
 class TestParallel(unittest.TestCase):
+    def setUpClass(self):
+        sys.stdout = None
+
     def test_mpi_comm(self):
         case_path = os.path.join(cases_path, 'forwardStep')
         mesh = Mesh.create(case_path)
@@ -30,9 +33,9 @@ class TestParallel(unittest.TestCase):
         U.field = np.random.rand(*U.field.shape)
         with IOField.handle(1.):
             U.write()
-        subprocess.check_call(['decomposePar', '-case', case_path, '-time', '1'])
+        subprocess.check_output(['decomposePar', '-case', case_path, '-time', '1'])
 
-        subprocess.check_call(['mpirun', '-np', '4', 'python2', __file__, 'RUN', 'test_mpi_comm_method', case_path])
+        subprocess.check_output(['mpirun', '-np', '4', 'python2', __file__, 'RUN', 'test_mpi_comm_method', case_path])
 
         try:
             checkFields(self, case_path, 'U', '1.0', '2.0', relThres=1e-12, nProcs=4)
@@ -45,18 +48,18 @@ class TestParallel(unittest.TestCase):
         case_path = os.path.join(cases_path, 'forwardStep')
         endTime = '0.2'
         args = ['-t', endTime, '-w', '1000', '-f', 'AnkitENO', '-v', '--Cp', '2.5', '--dt', '1e-4']
-        #subprocess.check_call([solver, case_path, '0.0'] + args)
+        #subprocess.check_output([solver, case_path, '0.0'] + args)
         folder = float(endTime)
         if folder.is_integer():
             folder = int(folder)
         folder = str(folder)
-        subprocess.check_call(['mv', os.path.join(case_path, folder), os.path.join(case_path, '10')])
+        subprocess.check_output(['mv', os.path.join(case_path, folder), os.path.join(case_path, '10')])
 
-        subprocess.check_call(['decomposePar', '-case', case_path, '-time', '0'])
+        subprocess.check_output(['decomposePar', '-case', case_path, '-time', '0'])
         for pkl in glob.glob(os.path.join(case_path, '*.pkl')):
             shutil.copy(pkl, os.path.join(case_path, 'processor0'))
-        subprocess.check_call(['mpirun', '-np', '4', solver, case_path, '0.0'] + args)
-        subprocess.check_call(['reconstructPar', '-case', case_path, '-time', endTime])
+        subprocess.check_output(['mpirun', '-np', '4', solver, case_path, '0.0'] + args)
+        subprocess.check_output(['reconstructPar', '-case', case_path, '-time', endTime])
 
         try:
             checkFields(self, case_path, 'U', endTime, '10.0')

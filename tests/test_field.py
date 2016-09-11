@@ -5,16 +5,13 @@ from adFVM import config
 from adFVM.field import Field, CellField
 from adFVM.mesh import Mesh
 
-class TestField(unittest.TestCase):
+class TestField(TestAdFVM):
     @classmethod
     def setUpClass(self):
-        self.case = '../cases/convection/'
-        self.mesh = Mesh.create(self.case)
-        Field.setSolver(self)
+        super(self, TestField).setUpClass()
 
-        self.meshO = self.mesh.origMesh
-        self.X = self.meshO.cellCentres[:self.meshO.nInternalCells, 0]
-        self.Y = self.meshO.cellCentres[:self.meshO.nInternalCells, 1]
+        self.X = self.X[:self.meshO.nInternalCells]
+        self.Y = self.Y[:self.meshO.nInternalCells]
 
         self.U = ad.matrix()
         self.FU = Field('F', self.U, (3,))
@@ -22,20 +19,6 @@ class TestField(unittest.TestCase):
         self.FV = Field('F', self.V, (3,))
         self.W = ad.tensor3()
         self.FW = Field('F', self.W, (3,3))
-
-        #self.U.field[:, 0] = self.X
-        #self.U.field[:, 1] = self.Y
-        #self.U.field[:, 2] = 0.5
-        #self.V.field[:, 0] = self.Y
-        #self.V.field[:, 1] = -self.X
-        #self.V.field[:, 2] = 2.
-        #self.W.field[:, 0] = self.X*0.1
-        #self.W.field[:, 1] = self.X*0.2
-        #self.W.field[:, 2] = self.X*0.3
-        #self.T.field[:, 0, 0] = self.X*self.X
-        #self.T.field[:, 0, 1] = self.X*self.Y
-        #self.T.field[:, 1, 1] = self.Y*self.Y
-        #self.T.field[:, 2, 2] = 1.
 
     def test_max(self):
         FU = Field('F', self.U, (1,))

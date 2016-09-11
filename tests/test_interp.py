@@ -42,15 +42,14 @@ class TestInterp(TestAdFVM):
         from adFVM.burgers import Burgers
         config.compile_mode = T.compile.mode.Mode(linker='py', optimizer='None')
 
-        with config.suppressOutput():
-            solver = Burgers('../cases/burgers/')
-            t = 0.0
-            solver.readFields(t)
-            solver.setInitialCondition(solver.fields[0])
-            solver.writeFields(solver.fields, t)
-            solver.compile()
-            solver.run(startTime=t, dt=0.001, nSteps=1000, writeInterval=100)
-            solver.readFields(1.)
+        solver = Burgers('../cases/burgers/')
+        t = 0.0
+        solver.readFields(t)
+        solver.setInitialCondition(solver.fields[0])
+        solver.writeFields(solver.fields, t)
+        solver.compile()
+        solver.run(startTime=t, dt=0.001, nSteps=1000, writeInterval=100)
+        solver.readFields(1.)
 
         mesh = solver.mesh.origMesh
         res = solver.fields[0].field

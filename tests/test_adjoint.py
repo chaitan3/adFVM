@@ -16,10 +16,10 @@ class TestAdjoint(unittest.TestCase):
         primal = os.path.join(apps_path, 'problem.py')
         adjoint = os.path.join(apps_path, 'adjoint.py')
         
-        subprocess.check_call([primal, problem])
-        subprocess.check_call([primal, problem, 'perturb'])
+        subprocess.check_output([primal, problem])
+        subprocess.check_output([primal, problem, 'perturb'])
 
-        subprocess.check_call([adjoint, problem])
+        subprocess.check_output([adjoint, problem])
 
         with open(os.path.join(case_path, 'objective.txt')) as f:
             data = f.readlines()
@@ -39,12 +39,12 @@ class TestAdjoint(unittest.TestCase):
         primal = os.path.join(apps_path, 'problem.py')
         adjoint = os.path.join(apps_path, 'adjoint.py')
 
-        subprocess.check_call(['decomposePar', '-case', case_path, '-time', '1'])
+        subprocess.check_output(['decomposePar', '-case', case_path, '-time', '1'])
         
-        subprocess.check_call(['mpirun' '-np', '4', 'python2', primal, problem])
-        subprocess.check_call(['mpirun' '-np', '4', 'python2', primal, problem, 'perturb'])
+        subprocess.check_output(['mpirun' '-np', '4', 'python2', primal, problem])
+        subprocess.check_output(['mpirun' '-np', '4', 'python2', primal, problem, 'perturb'])
 
-        subprocess.check_call(['mpirun' '-np', '4', 'python2', adjoint, problem])
+        subprocess.check_output(['mpirun' '-np', '4', 'python2', adjoint, problem])
 
         with open(os.path.join(case_path, 'processor0', 'objective.txt')) as f:
             data = f.readlines()
