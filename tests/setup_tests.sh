@@ -1,6 +1,6 @@
 #!/bin/sh
 
-CASES=../cases
+CASES=`pwd`/../cases
 
 blockMesh -case $CASES/convection
 blockMesh -case $CASES/burgers
