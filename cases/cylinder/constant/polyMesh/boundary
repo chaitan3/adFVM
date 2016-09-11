@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  2.4.0                                 |
+|  \\    /   O peration     | Version:  4.x                                   |
 |   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -20,33 +20,33 @@ FoamFile
     right
     {
         type            patch;
-        nFaces          300;
-        startFace       184300;
+        nFaces          600;
+        startFace       368600;
     }
     up
     {
         type            patch;
-        nFaces          600;
-        startFace       184600;
+        nFaces          1200;
+        startFace       369200;
     }
     left
     {
         type            patch;
-        nFaces          300;
-        startFace       185200;
+        nFaces          600;
+        startFace       370400;
     }
     cylinder
     {
         type            patch;
-        nFaces          200;
-        startFace       185500;
+        nFaces          400;
+        startFace       371000;
     }
     z1
     {
         type            cyclic;
         inGroups        1(cyclic);
-        nFaces          92500;
-        startFace       185700;
+        nFaces          185000;
+        startFace       371400;
         matchTolerance  0.0001;
         transform       unknown;
         neighbourPatch  z2;
@@ -55,8 +55,8 @@ FoamFile
     {
         type            cyclic;
         inGroups        1(cyclic);
-        nFaces          92500;
-        startFace       278200;
+        nFaces          185000;
+        startFace       556400;
         matchTolerance  0.0001;
         transform       unknown;
         neighbourPatch  z1;
