@@ -20,9 +20,6 @@ def test_mpi_comm_method(case_path):
     return
 
 class TestParallel(unittest.TestCase):
-    def setUpClass(self):
-        sys.stdout = None
-
     def test_mpi_comm(self):
         case_path = os.path.join(cases_path, 'forwardStep')
         mesh = Mesh.create(case_path)
