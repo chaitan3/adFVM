@@ -12,7 +12,9 @@ primal = RCF('cases/cylinder/chaotic/adjoint_1e-3/',
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*2.5e-5,
-             faceReconstructor='AnkitENO'
+             faceReconstructor='AnkitENO',
+             boundaryRiemannSolver='eulerLaxFriedrichs'
+
 )
 
 def dot(a, b):
