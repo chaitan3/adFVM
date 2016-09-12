@@ -3,6 +3,7 @@ import os
 import sys
 import shutil
 import glob
+import time
 
 from test import *
 from adFVM import config
@@ -30,6 +31,8 @@ class TestParallel(unittest.TestCase):
         U.field = np.random.rand(*U.field.shape)
         with IOField.handle(1.):
             U.write()
+        time.sleep(1)
+
         subprocess.check_output(['decomposePar', '-case', case_path, '-time', '1'])
 
         subprocess.check_output(['mpirun', '-np', '4', 'python2', __file__, 'RUN', 'test_mpi_comm_method', case_path])
@@ -43,9 +46,9 @@ class TestParallel(unittest.TestCase):
     def test_mpi(self):
         solver = os.path.join(apps_path, 'pyRCF.py')
         case_path = os.path.join(cases_path, 'forwardStep')
-        endTime = '0.2'
+        endTime = '0.1'
         args = ['-t', endTime, '-w', '1000', '-f', 'AnkitENO', '-v', '--Cp', '2.5', '--dt', '1e-4']
-        #subprocess.check_output([solver, case_path, '0.0'] + args)
+        subprocess.check_output([solver, case_path, '0.0'] + args)
         folder = float(endTime)
         if folder.is_integer():
             folder = int(folder)
@@ -53,6 +56,7 @@ class TestParallel(unittest.TestCase):
         subprocess.check_output(['mv', os.path.join(case_path, folder), os.path.join(case_path, '10')])
 
         subprocess.check_output(['decomposePar', '-case', case_path, '-time', '0'])
+        #subprocess.check_output([os.path.join(scripts_path, 'decompose.py'), case_path, '4', '0.0'])
         for pkl in glob.glob(os.path.join(case_path, '*.pkl')):
             shutil.copy(pkl, os.path.join(case_path, 'processor0'))
         subprocess.check_output(['mpirun', '-np', '4', solver, case_path, '0.0'] + args)
