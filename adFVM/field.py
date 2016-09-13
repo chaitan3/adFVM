@@ -244,17 +244,21 @@ class CellField(Field):
         self.field = ad.bcalloc(config.precision(1.), size)
         #self.field.tag.test_value = np.zeros((mesh.origMesh.nCells,) + self.dimensions, config.precision)
 
-    def setInternalField(self, internalField):
+    def setInternalField(self, internalField, updateRemote=True):
         self.setField((0, self.mesh.nInternalCells), internalField)
-        self.updateGhostCells()
+        self.updateLocalCells()
+        if updateRemote:
+            self.updateRemoteCells()
 
     def getInternalField(self):
         return self.field[:self.mesh.nInternalCells]
 
-    def updateGhostCells(self):
+    def updateLocalCells(self):
         logger.info('updating ghost cells for {0}'.format(self.name))
         for patchID in self.BC:
             self.BC[patchID].update()
+
+    def updateRemoteCells(self):
         self.field = exchange(self.field)
 
 class IOField(Field):

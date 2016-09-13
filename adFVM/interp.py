@@ -65,7 +65,11 @@ class Reconstruct(object):
 
         self.valueIndices = [indices, Bindices, Cindices]
         owner, neighbour = mesh.owner[self.indices], mesh.neighbour[self.indices]
-        self.faceOptions = [[owner, neighbour], [neighbour, owner]]
+
+        nIF = self.mesh.nInternalFaces
+        self.faceOptions = [[owner, neighbour], [neighbour[:nIF], owner[:nIF]]]
+        self.Iindices = [self.indices, self.indices[:nIF]]
+        self.BCUpdate = True
 
         self.cyclicStartFaces = {}
         startFace = self.mesh.nInternalFaces.copy()
@@ -75,7 +79,6 @@ class Reconstruct(object):
                 self.cyclicStartFaces[patchID] = startFace
                 startFace += patch['nFaces']
         self.procStartFace = startFace
-        self.BCUpdate = False
 
         return
 
@@ -135,8 +138,8 @@ class SecondOrder(Reconstruct):
         gradF = Field('gradF({0})'.format(phi.name), phiDC, phi.dimensions)
         gradC = Field('gradC({0})'.format(phi.name), gradPhi.field[C], gradPhi.dimensions)
 
-        weights1 = Field('lw', mesh.linearWeights[self.indices,index].reshape((-1,1)), (1,))
-        weights2 = Field('qw', mesh.quadraticWeights[self.indices,:,index], (3,))
+        weights1 = Field('lw', mesh.linearWeights[self.Iindices[index],index].reshape((-1,1)), (1,))
+        weights2 = Field('qw', mesh.quadraticWeights[self.Iindices[index],:,index], (3,))
         return phiC + (weights1*gradF + gradC.dot(weights2)).field
 
 class reduceAbsMinOp(T.Op):
@@ -239,12 +242,6 @@ class ENO(Reconstruct):
         self.solver.postpro.append((ad.imatrix(), combinations.astype(np.int32)))
         self.combinations = solver.postpro[-1][0]
 
-        nIF = self.mesh.nInternalFaces
-        for index in range(0, 2):
-            self.faceOptions[1][index] = self.faceOptions[1][index][:nIF]
-        self.Iindices = [self.indices, self.indices[:nIF]]
-        self.BCUpdate = True
-        
         self.enoStartCount = []
         for index in range(0, 2):
             enoCount = self.enoCount[index]

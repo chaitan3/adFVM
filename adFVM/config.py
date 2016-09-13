@@ -82,7 +82,7 @@ pickleFunction = not user.no_pickle
 #os.environ['THEANO_FLAGS'] += ',exception_verbosity=high'
 os.environ['THEANO_FLAGS'] += ',profile=' + str(user.profile)
 if user.profile:
-    os.environ['THEANO_FLAGS'] += ',profiling.destination=profile_{}_{}.out'.format(device, parallel.rank)
+    os.environ['THEANO_FLAGS'] += ',profiling.destination=profile_{}_{}.out'.format(device, parallel.nProcessors)
 os.environ['THEANO_FLAGS'] += ',profile_optimizer=' + str(user.profile_opt)
 os.environ['THEANO_FLAGS'] += ',profile_memory=' + str(user.profile_mem)
 # openmp

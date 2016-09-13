@@ -94,24 +94,25 @@ class Exchanger(object):
         #MPI.Request.Waitall(self.requests, self.statuses)
         #return self.statuses
 
-#mtime = 0.
-#wtime = 0.
+mtime = 0.
+wtime = 0.
 def getRemoteCells(field, meshC):
     # mesh values required outside theano
     #logger.info('fetching remote cells')
     if nProcessors == 1:
         return field
+
     #global mtime, wtime
     #if meshC.reset:
     #    meshC.reset = False
     #    #print(rank, mtime, wtime)
     #    mtime = 0.
     #    wtime = 0.
-
     #start = time.time()
     #mpi.Barrier()
     #start2 = time.time()
     #wtime += start2-start
+
     exchanger = Exchanger()
     mesh = meshC.origMesh
     for patchID in meshC.remotePatches:
@@ -119,7 +120,10 @@ def getRemoteCells(field, meshC):
         startFace, endFace, cellStartFace, cellEndFace, _ = mesh.getPatchFaceCellRange(patchID)
         exchanger.exchange(remote, field[mesh.owner[startFace:endFace]], field[cellStartFace:cellEndFace], tag)
     exchanger.wait()
+
     #mtime += time.time()-start2
+    #pprint(np.max(field), mtime, wtime, mtime+wtime)
+
     return field
 
 def getRemoteFaces(field1, field2, procStartFace, meshC):
@@ -127,6 +131,13 @@ def getRemoteFaces(field1, field2, procStartFace, meshC):
     #logger.info('fetching remote cells')
     if nProcessors == 1:
         return field2
+
+    #global wtime, mtime
+    #start = time.time()
+    #mpi.Barrier()
+    #start2 = time.time()
+    #wtime += start2-start
+
     exchanger = Exchanger()
     mesh = meshC.origMesh
     startFace = procStartFace.copy()
@@ -138,7 +149,9 @@ def getRemoteFaces(field1, field2, procStartFace, meshC):
         exchanger.exchange(remote, field1[startFace:endFace], field2[startFace:endFace], tag)
         startFace += nFaces
     exchanger.wait()
+
     #mtime += time.time()-start2
+    #pprint(mtime, wtime, mtime+wtime)
     return field2
 
 def getAdjointRemoteFaces(field, procStartFace, meshC):
