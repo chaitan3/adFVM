@@ -1,14 +1,32 @@
 import numpy as np
 
-from adFVM import config
+from adFVM import config, parallel
 from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
+from adFVM.field import IOField
 
 #primal = RCF('/home/talnikar/foam/blade/les-turb/')
-primal = RCF('/home/talnikar/foam/vane/laminar/', faceReconstructo='AnkitENO')#, timeIntegrator='euler')
+primal = RCF(CASEDIR, faceReconstructo='AnkitENO')#, timeIntegrator='euler')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
+
+def updateInletPt():
+    pt = 175158.PARAMETER
+    with IOField.handle(startTime):
+        rank = parallel.rank
+        data = IOField.handle['/p/parallel/start']
+        with data.collective:
+            start = data[rank,1]
+        data = IOField.handle['/p/parallel/end']
+        with data.collective:
+            end = data[rank,1]
+        data = IOField.handle['/p/boundary']
+        with data.collective:
+            boundary = data[start:end,2]
+        index = np.where(boundary == "uniform 175158")[0][0]
+        IOField.handle['/p/boundary'][index,2] = "uniform {}".format(pt)
+updateInletPt()
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
@@ -81,17 +99,14 @@ def makePerturb(mid):
         return rho, rhoU, rhoE
     return perturb
 
+
 #perturb = [makePerturb(np.array([-0.08, 0.014, 0.005])),
 #           makePerturb(np.array([0.03, -0.03, 0.005]))]
 perturb = [makePerturb(np.array([-0.02, 0.01, 0.005])),
            makePerturb(np.array([-0.08, -0.01, 0.005]))]
 
-#nSteps = 10
-#writeInterval = 5
-#nSteps = 20000
-#writeInterval = 500
-nSteps = 100000
-writeInterval = 5000
-startTime = 1.0
+nSteps = NSTEPS
+startTime = STARTTIME
+writeInterval = NSTEPS
 dt = 1e-8
 

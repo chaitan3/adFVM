@@ -59,7 +59,7 @@ if user.titan:
     home = '/lustre/atlas/proj-shared/tur103'
     assert np.__version__ == '1.9.2'
 elif user.bw:
-    home = '/scratch/sciteam/talnikar/stable/.theano/'
+    home = '/scratch/sciteam/talnikar/stable/'
 elif user.mira:
     home = '/projects/LESOpt/talnikar/local/'
 if user.use_temp:
