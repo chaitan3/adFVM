@@ -1,6 +1,6 @@
 from . import config, compat, parallel
 from .config import ad, T
-from field import Field, faceExchange
+from .field import Field, faceExchange
 
 import itertools
 import numpy as np

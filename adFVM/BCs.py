@@ -176,10 +176,14 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
         self.pt = self.createInput('pt', (1,))
         self.Cp = self.solver.Cp
         self.gamma = self.solver.gamma
+        if 'direction' in self.patch:
+            self.direction = self.createInput('direction', (3,))
+        else:
+            self.direction = self.normals
 
     def update(self):
-        Un = dot(self.U.field[self.internalIndices], self.normals)
-        U = Un*self.normals
+        Un = dot(self.U.field[self.internalIndices], self.direction)
+        U = Un*self.direction
         T = self.Tt - 0.5*Un*Un/self.Cp
         p = self.pt * (T/self.Tt)**(self.gamma/(self.gamma-1))
         

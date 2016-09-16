@@ -1,10 +1,10 @@
 import numpy as np
 
-from adFVM import parallel, config
-from adFVM.field import IOField
-from adFVM.op import div, grad
-from adFVM.interp import central
-from adFVM.compat import intersectPlane
+from  import parallel, config
+from .field import IOField
+from .op import div, grad
+from .interp import central
+from .compat import intersectPlane
 
 def computeGradients(solver):
     mesh = solver.mesh
