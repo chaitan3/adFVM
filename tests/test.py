@@ -3,6 +3,8 @@ import numpy as np
 import os
 import subprocess
 
+from deep_eq import deep_eq
+
 from adFVM import config
 from adFVM.config import ad, T
 config.unpickleFunction = False

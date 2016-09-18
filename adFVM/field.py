@@ -410,6 +410,7 @@ class IOField(Field):
     def openHandle(self, time, case=None):
         timeDir = self.mesh.getTimeDir(time, case)
         if config.hdf5:
+            print timeDir + '.hdf5'
             self._handle = h5py.File(timeDir + '.hdf5', 'a', driver='mpio', comm=parallel.mpi)
         else:
             self._handle = timeDir + '/'
@@ -450,6 +451,7 @@ class IOField(Field):
                 cellStartFace, cellEndFace, nFaces = mesh.getPatchCellRange(patchID)
                 try:
                     value = extractField(patch['value'], nFaces, self.dimensions)
+                    patch['value'] = value
                     self.field[cellStartFace:cellEndFace] = value
                 except:
                     pass

@@ -1,8 +1,13 @@
 from __future__ import print_function
 from test import *
+import copy
+import shutil
+import glob
+import os
+import sys
 
 from adFVM import config
-from adFVM.field import Field, CellField
+from adFVM.field import Field, CellField, IOField
 from adFVM.mesh import Mesh
 
 class TestField(TestAdFVM):
@@ -251,5 +256,105 @@ class TestField(TestAdFVM):
         ref[:,2] = 2.
         checkArray(self, res, ref)
 
+def test_field_io(self, case, hdf5):
+    config.hdf5 = hdf5
+    mesh = Mesh.create(case)
+    IOField.setMesh(mesh)
+    time = 1.0
+
+    field = np.random.rand(mesh.origMesh.nInternalCells, 3)
+    boundary = copy.deepcopy(mesh.defaultBoundary)
+    nFaces = mesh.origMesh.getPatchFaceRange('inlet')[2]
+    boundary['inlet'] = {
+            'type':'CBC_TOTAL_PT',
+            'pt': 'uniform 20',
+            'value': np.random.rand(nFaces, 3)
+            }
+    U = IOField('U', field, (3,), boundary)
+    U.partialComplete()
+
+    field = np.random.rand(mesh.origMesh.nInternalCells, 1)
+    boundary = copy.deepcopy(mesh.defaultBoundary)
+    T = IOField('T', field, (1,), boundary)
+    boundary['outlet'] = {
+            'type':'fixedValue',
+            'value': 'uniform 10'
+            }
+
+    with IOField.handle(time):
+        U.write()
+        T.write()
+
+    with IOField.handle(time):
+        Tn = IOField.read('T')
+        Un = IOField.read('U')
+        Un.partialComplete()
+
+    config.hdf5 = False
+    self.assertTrue(deep_eq(Tn.boundary, T.boundary))
+    self.assertTrue(deep_eq(Un.boundary, U.boundary))
+    checkArray(self, Tn.field, T.field, maxThres=1e-16)
+    checkArray(self, Un.field, U.field, maxThres=1e-16)
+
+def test_field_io_mpi(case):
+    mesh = Mesh.create(case)
+    IOField.setMesh(mesh)
+    time = 1.0
+
+    config.hdf5 = False
+    with IOField.handle(time):
+        U = IOField.read('U')
+        U.partialComplete()
+
+    config.hdf5 = True
+    with IOField.handle(time, case=case):
+        Uh = IOField.read('U')
+        Uh.partialComplete()
+
+    assert np.allclose(U.field, Uh.field)
+    assert deep_eq(U.boundary, Uh.boundary)
+
+class TestIOField(unittest.TestCase):
+    def test_foam(self):
+        case = '../cases/forwardStep/'
+        try:
+            test_field_io(self, case, False)
+        finally:
+            shutil.rmtree(os.path.join(case, '1'))
+
+    def test_hdf5(self):
+        case = '../cases/forwardStep/'
+        try:
+            subprocess.check_output(['../scripts/conversion/hdf5.py', case])
+            test_field_io(self, case, True)
+        finally:
+            map(os.remove, glob.glob(os.path.join(case, '*.hdf5')))
+
+    def test_hdf5_mpi(self):
+        case = '../cases/forwardStep/'
+        try:
+            mesh = Mesh.create(case)
+            IOField.setMesh(mesh)
+            time = 1.0
+            field = np.random.rand(mesh.origMesh.nInternalCells, 3)
+            boundary = copy.deepcopy(mesh.defaultBoundary)
+            U = IOField('U', field, (3,), boundary)
+            with IOField.handle(time):
+                U.write()
+
+            subprocess.check_output(['decomposePar', '-time', '1', '-case', case])
+            subprocess.check_output(['mpirun', '-np', '4', '../scripts/conversion/hdf5.py', case, str(time)])
+            subprocess.check_output(['mpirun', '-np', '4', sys.executable, __file__, 'RUN', 'test_field_io_mpi', case])
+        finally:
+            shutil.rmtree(os.path.join(case, '1'))
+            map(os.remove, glob.glob(os.path.join(case, '*.hdf5')))
+            map(shutil.rmtree, glob.glob(os.path.join(case, 'processor*')))
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == 'RUN':
+        func = locals()[sys.argv[2]]
+        func(*sys.argv[3:])
+
+    else:
         unittest.main(verbosity=2, buffer=True)
