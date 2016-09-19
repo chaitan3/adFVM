@@ -1,6 +1,6 @@
 import numpy as np
 
-from  import parallel, config
+from . import parallel, config
 from .field import IOField
 from .op import div, grad
 from .interp import central
