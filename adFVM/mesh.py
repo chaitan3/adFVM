@@ -441,9 +441,11 @@ class Mesh(object):
 
         parallelGroup = meshFile.require_group('parallel')
         parallelStartData = parallelGroup.require_dataset('start', (nProcs, len(parallelInfo)), np.int64)
-        parallelStartData[rank] = parallelStart
+        with parallelStartData.collective:
+            parallelStartData[rank] = parallelStart
         parallelEndData = parallelGroup.require_dataset('end', (nProcs, len(parallelInfo)), np.int64)
-        parallelEndData[rank] = parallelEnd
+        with parallelEndData.collective:
+            parallelEndData[rank] = parallelEnd
         return parallelStart, parallelEnd, parallelSize
 
     def writeHDF5Boundary(self, meshFile):
