@@ -1,7 +1,8 @@
 class Op(object):
-    def __init__(self, inputs):
-        self.inputs = inputs
+    def __init__(self, inputs=[]):
         self.outputs = self.make_node(inputs)
+        # make_node can modify inputs
+        self.inputs = inputs
         for output in self.outputs:
             output.parent = self
         return

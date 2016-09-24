@@ -6,10 +6,10 @@ from opbase import Op
 
 class ConstantOp(Op):
     def make_node(self, inputs):
-        x, = inputs
-        self.constant = x
+        assert len(inputs) == 0
+        x = self.constant
         dims = 0
-        if isintance(x, np.ndarray):
+        if isinstance(x, np.ndarray):
             dims = len(x.shape) 
         return [tensor.tensor_dims[dims]()]
 
@@ -21,6 +21,7 @@ class BinaryOp(Op):
         x, y = inputs
         assert isinstance(x, tensor.tensor)
         y = tensor._as_tensor_object(y)
+        inputs[1] = y
         obj = x.__class__()
         return [obj]
 

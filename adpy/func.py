@@ -3,7 +3,10 @@ class Function:
         self._inputs = self._discover_inputs(outputs)
         self._inputs_map = {}
         for index, inp in enumerate(inputs):
-            self._inputs_map[index] = self._inputs.index(inp)
+            try:
+                self._inputs_map[index] = self._inputs.index(inp)
+            except ValueError:
+                print('Excess input specified')
         self._outputs = outputs
         return 
 
@@ -11,7 +14,10 @@ class Function:
         self._clear_values()
 
         for index, inp in enumerate(inputs):
-            self._inputs[self._inputs_map[index]].value = inputs[index]
+            try:
+                self._inputs[self._inputs_map[index]].value = inputs[index]
+            except KeyError:
+                pass
 
         return [output.value for output in self._outputs]
 
@@ -20,8 +26,9 @@ class Function:
 
     def _discover_inputs(self, outputs, inputs=[]):
         for out in outputs:
-            if out.parent is not None:
-                self._discover_inputs(out.parent.inputs, inputs)
+            op = out.parent
+            if op is not None:
+                self._discover_inputs(op.inputs, inputs)
             else:
                 inputs.append(out)
         return inputs
