@@ -15,7 +15,7 @@ class Op(object):
             self.outputs[index].value = value
         return
 
-    def compute(self):
+    def py_compute(self):
         #print 'computing', self
         input_values = self._get_input_values()
         output_values = self.perform(input_values)

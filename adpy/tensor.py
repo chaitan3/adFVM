@@ -23,7 +23,7 @@ class tensor(object):
         if self._value is None:
             if self.parent is None:
                 raise Exception('input value not provided')
-            self.parent.compute()
+            self.parent.py_compute()
         return self._value
 
     @value.setter
@@ -32,6 +32,7 @@ class tensor(object):
         self._value = value
 
     def __add__(self, a):
+        print ops.AddOp([self, a]).c_code()
         return ops.AddOp([self, a]).outputs[0]
 
     def __radd__(self, a):

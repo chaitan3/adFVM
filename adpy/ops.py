@@ -29,6 +29,20 @@ class BinaryOp(Op):
         op = getattr(operator, self.bin_op)
         return [op(inputs[0], inputs[1])]
 
+    def c_code(self):
+        # no broadcasting support yet
+        bin_op = {'add': '+', 'sub': '-', 'mul': '*', 'div': '/'}
+        bin_op = bin_op[self.bin_op]
+        return '''
+            int size = {input_0}->size;
+            scalar *data0 = {input_0}->data;
+            scalar *data1 = {input_1}->data;
+            scalar *data2 = {output_0}->data;
+            for (int i=0; i < size; i++) {
+                data2[i] = data0[i] %(bin_op)s data[1];
+            }
+        ''' % {'bin_op': bin_op}
+
 class NegOp(Op):
     def make_node(self, inputs):
         x, = inputs
