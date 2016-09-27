@@ -7,14 +7,15 @@ typedef int32_t integer;
 
 typedef struct {
     char * data;
+    int64_t *shape;
+    int dims;
+    int64_t size;
     int type;
     int bytes;
-    int dims;
-    int64_t *shape;
-    int64_t size;
 } ndarray;
 
-void ndarray_from_numpy(ndarray *ndarr, PyArrayObject *arr) {
+ndarray* ndarray_from_numpy(PyArrayObject *arr) {
+    ndarray *ndarr = malloc(sizeof(ndarray));
     ndarr -> data = arr -> data;
     ndarr -> dims = arr -> nd;
     ndarr -> shape = arr -> dimensions;
@@ -25,22 +26,38 @@ void ndarray_from_numpy(ndarray *ndarr, PyArrayObject *arr) {
         ndarr -> size *= ndarr -> shape[i];
     }
     //printf("%d %f\n", ndarr->size, ((double*)ndarr->data)[0]);
+    return ndarr;
 }
 
 ndarray* ndarray_alloc(ndarray* ndarr_ref) {
     ndarray *ndarr = malloc(sizeof(ndarray));
     memcpy(ndarr, ndarr_ref, sizeof(ndarray));
 
-    int shape_size = sizeof(int)*ndarr->dims;
+    int shape_size = sizeof(int64_t)*ndarr->dims;
     ndarr -> shape = malloc(shape_size);
     memcpy(ndarr->shape, ndarr_ref->shape, shape_size);
 
     int64_t data_size = ndarr -> size * ndarr -> bytes;
     ndarr -> data = malloc(data_size);
-    memset(ndarr->shape, 0, data_size);
+    memset(ndarr->data, 0, data_size);
 
     return ndarr;
 }
+
+//ndarray* ndarray_build(char* data, int64_t* shape, int dims)
+//    ndarray *ndarr = malloc(sizeof(ndarray));
+//    ndarr -> data = data;
+//    ndarr -> shape = shape;
+//    ndarr -> dims = dims;
+//    ndarr -> size = 1;
+//    for (int64_t i = 0; i < ndarr -> dims; i++) {
+//        ndarr -> size *= ndarr -> shape[i];
+//    }
+//    ndarr -> type = NPY_DOUBLE;
+//    ndarr -> bytes = 8;
+//    return ndarr;
+//}
+
 
 void ndarray_free(ndarray* ndarr) {
     free(ndarr->data);
@@ -61,31 +78,33 @@ ndarray* ndarray_multiply(ndarray *ndarr, scalar constant) {
 }
 
 PyArrayObject* numpy_from_ndarray(ndarray *ndarr) {
-    PyArrayObject* arr = PyArray_SimpleNewFromData(ndarr->dims, ndarr->shape, NPY_DOUBLE, ndarr->data);
+    PyArrayObject* arr = PyArray_SimpleNewFromData(ndarr->dims, ndarr->shape, ndarr->type, ndarr->data);
+    PyArray_ENABLEFLAGS(arr, NPY_ARRAY_OWNDATA);
     return arr;
 }
 
-PyObject* interface(PyObject* self, PyObject *args) {
+PyObject* test_interface(PyObject* self, PyObject *args) {
     PyArrayObject *input;
     if (!PyArg_ParseTuple(args, "O", &input)) {
         return NULL;
     }
-    ndarray ndarr;
-    ndarray_from_numpy(&ndarr, input);
+    ndarray *ndarr = ndarray_from_numpy(input);
 
-
-    ndarray* ndarr2 = ndarray_multiply(&ndarr, 2.0);
+    ndarray* ndarr2 = ndarray_multiply(&ndarr, 3.84);
     //ndarray_free(ndarr2);
 
     PyArrayObject* output = numpy_from_ndarray(ndarr2);
-    PyArray_ENABLEFLAGS(output, NPY_ARRAY_OWNDATA);
     return (PyObject*)output;
 }
 
+#include "interface.c"
+
 static PyMethodDef methods[] =
 {
-     {"interface", interface, METH_VARARGS,
-              "wtf"},
+     {"test_interface", test_interface, METH_VARARGS, "wtf"},
+ #ifdef FUNCTION_INTERFACE
+     {"interface", interface, METH_VARARGS, "wtf"},
+ #endif
      {NULL, NULL, 0, NULL}
 };
 

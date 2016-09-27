@@ -12,18 +12,24 @@ def _as_tensor_object(a):
     else:
         raise Exception('object not recognized', a)
 
+_tensor_id = 0
+
 class tensor(object):
     def __init__(self, parent=None):
+        global _tensor_id
         self.parent = parent
         self._value = None
+        self.id = _tensor_id
+        _tensor_id += 1
 
     @property
     def value(self):
         #print 'retrieving value', self, self._value
+        op = self.parent
         if self._value is None:
-            if self.parent is None:
+            if not op:
                 raise Exception('input value not provided')
-            self.parent.py_compute()
+            op.py_compute()
         return self._value
 
     @value.setter
@@ -32,7 +38,6 @@ class tensor(object):
         self._value = value
 
     def __add__(self, a):
-        print ops.AddOp([self, a]).c_code()
         return ops.AddOp([self, a]).outputs[0]
 
     def __radd__(self, a):

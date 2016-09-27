@@ -1,4 +1,5 @@
 import numpy as np
+from numbers import Number
 import operator
 
 import tensor
@@ -9,12 +10,27 @@ class ConstantOp(Op):
         assert len(inputs) == 0
         x = self.constant
         dims = 0
-        if isinstance(x, np.ndarray):
-            dims = len(x.shape) 
-        return [tensor.tensor_dims[dims]()]
+        assert isinstance(x, Number)
+        return [tensor.scalar()]
+        #if isinstance(x, np.ndarray):
+        #    dims = len(x.shape) 
+        #return [tensor.tensor_dims[dims]()]
 
     def perform(self, inputs):
         return [self.constant]
+
+    def c_code(self):
+        return ''
+#        constant = np.array(self.constant).astype(np.float64)
+#        shape = constant.shape
+#        if len(shape) == 0:
+#            op_cose +int64_t shape[] = {{%(shape)s}};
+#        op_code = '''
+#    scalar *data = {{%(constant)s}};
+#    int dims = %(dims)d;
+#    ndarray* {output_0} = ndarray_build(data, shape, dims);
+#        ''' % {'constant': constant, 'shape': constant.shape, 'dims': len(constant.shape)}
+#        return op_code
 
 class BinaryOp(Op):
     def make_node(self, inputs):
@@ -22,8 +38,7 @@ class BinaryOp(Op):
         assert isinstance(x, tensor.tensor)
         y = tensor._as_tensor_object(y)
         inputs[1] = y
-        obj = x.__class__()
-        return [obj]
+        return [x.__class__()]
 
     def perform(self, inputs):
         op = getattr(operator, self.bin_op)
@@ -33,22 +48,38 @@ class BinaryOp(Op):
         # no broadcasting support yet
         bin_op = {'add': '+', 'sub': '-', 'mul': '*', 'div': '/'}
         bin_op = bin_op[self.bin_op]
-        return '''
-            int size = {input_0}->size;
-            scalar *data0 = {input_0}->data;
-            scalar *data1 = {input_1}->data;
-            scalar *data2 = {output_0}->data;
-            for (int i=0; i < size; i++) {
-                data2[i] = data0[i] %(bin_op)s data[1];
-            }
-        ''' % {'bin_op': bin_op}
+        y = self.inputs[1]
+        if isinstance(y.parent, ConstantOp):
+            return '''
+    ndarray* {output_0} = ndarray_alloc({input_0});
+    {{
+        int size = {input_0}->size;
+        scalar *data0 = {input_0}->data;
+        scalar *data2 = {output_0}->data;
+        for (i=0; i < size; i++) {{
+            data2[i] = data0[i] %(bin_op)s %(constant)f;
+        }}
+    }}
+            ''' % {'bin_op': bin_op, 'constant':y.parent.constant}
+        else:
+            return '''
+    ndarray* {output_0} = ndarray_alloc({input_0});
+    {{
+        int size = {input_0}->size;
+        scalar *data0 = {input_0}->data;
+        scalar *data1 = {input_1}->data;
+        scalar *data2 = {output_0}->data;
+        for (i=0; i < size; i++) {{
+            data2[i] = data0[i] %(bin_op)s data1[i];
+        }}
+    }}
+            ''' % {'bin_op': bin_op}
 
 class NegOp(Op):
     def make_node(self, inputs):
         x, = inputs
         assert isinstance(x, tensor.tensor)
-        obj = x.__class__()
-        return [obj]
+        return [x.__class__()]
 
     def perform(self, inputs):
         return [-inputs[0]]
