@@ -7,6 +7,9 @@ import subprocess
 class Function:
     def __init__(self, inputs, outputs, mode='py'):
         # TODO
+        # broadcasting
+        # shapeOp
+        # integer arrays
         # in place optimizations
         # garbage collection
         self._sorted_ops = self._topological_sort(outputs)

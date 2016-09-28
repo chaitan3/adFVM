@@ -1,9 +1,10 @@
 from . import config, compat, parallel
-from .config import ad, T
+from .config import ad, T, adsparse
 from .field import Field, faceExchange
 
 import itertools
 import numpy as np
+from scipy import sparse as sparse
 
 logger = config.Logger(__name__)
 
@@ -182,7 +183,33 @@ class selectMultipleRangeOp(T.Op):
         start = inputs[0]
         count = inputs[1]
         output_storage[0][0] = compat.selectMultipleRange(start, count)
+
+
 selectMultipleRange = selectMultipleRangeOp()
+
+class reduceSumOp(T.Op):
+    __props__ = ()
+    def __init__(self):
+        pass
+
+    def make_node(self, x, y):
+        assert hasattr(self, '_props')
+        return T.Apply(self, [x, y], [x.type()])
+
+    def perform(self, node, inputs, output_storage):
+        start = inputs[0]
+        count = inputs[1]
+        output_storage[0][0] = compat.reduceSum(start, count)
+
+    def grad(self, inputs, output_grads):
+        count = inputs[1]
+        output_grad = ad.repeat(output_grads[0], count, axis=0)
+        output_grads = [output_grad, T.gradient.disconnected_type()]
+        return output_grads
+
+reduceSum = reduceSumOp()
+
+
 
 class ENO(Reconstruct):
     def __init__(self, solver):
@@ -277,6 +304,51 @@ class ENO(Reconstruct):
     def update(self, index, phi, gradPhi):
         return self.partialUpdate(index, self.Iindices[index], phi, gradPhi)
 
+
+class WENO(ENO):
+    def __init__(self, solver):
+        super(WENO, self).__init__(solver)
+        #self.enoSparseCount = []
+        #for index in range(0, 2):
+        #    for symbolic, value in solver.postpro:
+        #        if symbolic == self.enoCount[index]:
+        #            self.enoSparseCount.append(value)
+        #for index in range(0, 2):
+        #    indptr = np.concatenate(([0], np.cumsum(self.enoSparseCount[index])))
+        #    data = np.ones(indptr[-1], config.precision)
+        #    indices = np.arange(indptr[-1])
+        #    enoSparseCount = sparse.csr_matrix((data, indices, indptr))
+        #    self.solver.postpro.append((adsparse.csr_matrix(dtype=config.dtype), enoSparseCount))
+        #    self.enoSparseCount[index] = solver.postpro[-1][0]
+
+
+    def partialUpdate(self, index, indices, phi, gradPhi):
+        mesh = self.mesh
+        C = self.faceOptions[index][0][indices]
+        enoCount = self.enoCount[index][indices]
+        enoStartCount = self.enoStartCount[index][indices]
+        faceIndices = selectMultipleRange(enoStartCount, enoCount)
+        #enoSparseCount = self.enoSparseCount[index][indices]
+        
+        enoIndices = self.enoIndices[index][faceIndices]
+        faceDistsDets = self.faceDistsDets[index][faceIndices]
+        distDets = self.distDets[index][faceIndices]
+
+        phiC = phi.field[C]
+        combinations = self.combinations[enoIndices]
+        repIndices = ad.repeat(C, enoCount).reshape((-1,1))
+        phiN = phi.field[self.mesh.cellNeighbours[repIndices, combinations]]
+        phiP = phi.field[repIndices]
+        dphi = phiN-phiP
+        dphi = (dphi*faceDistsDets).sum(axis=1)/distDets
+        wenoWeights = ad.abs_(distDets)/mesh.volumes[repIndices.flatten()]
+        wenoWeights /= ((dphi*dphi).sum(axis=1, keepdims=True) + 1e-6)
+
+        dphi = reduceSum(dphi*wenoWeights, enoCount) / reduceSum(wenoWeights, enoCount)
+        #dphi = adsparse.basic.dot(enoSparseCount, dphi)/adsparse.basic.dot(enoSparseCount, wenoWeights)
+        dphi = ad.patternbroadcast(dphi, phi.field.broadcastable)
+        return phiC + dphi
+
 class limitedSecondOrder(Reconstruct):
     def update(self, index, phi, gradPhi):
         R = Field('R', mesh.cellCentres[D] - mesh.cellCentres[C], (3,))
@@ -293,9 +365,10 @@ class limitedSecondOrder(Reconstruct):
         return phiC + weights.field*limiter*phiDC
 
 class AnkitENO(SecondOrder):
+    ENOType = ENO
     def __init__(self, solver):
         super(AnkitENO, self).__init__(solver)
-        self.ENO = ENO(solver)
+        self.ENO = self.ENOType(solver)
         mesh = self.mesh
 
         faceMap = -ad.ones_like(mesh.owner)
@@ -371,6 +444,9 @@ class AnkitENO(SecondOrder):
             self.faceBCUpdate(phiFs, expand=False)
 
         return faceFieldsSys
+
+class AnkitWENO(AnkitENO):
+    ENOType = WENO
 
 #def TVD_dual(phi, gradPhi):
 #    from op import grad
