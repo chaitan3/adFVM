@@ -18,10 +18,12 @@ import time
 import os
 import argparse
 
+
 class Adjoint(Solver):
-    def __init__(self, primal, scaling):
+    def __init__(self, primal, scaling, gradType):
         self.primal = primal
         self.scaling = scaling
+        self.gradType = gradType
         self.mesh = primal.mesh
         self.statusFile = primal.statusFile
         self.names = [name + 'a' for name in primal.names]
@@ -40,11 +42,12 @@ class Adjoint(Solver):
 
         self.compileInit(functionName='adjoint_init')
 
-        primal.compile(adjoint=True)
-        self.map = primal.adjoint
-
         if self.scaling:
             self.computer = computeGradients(primal)
+
+        primal.compile(adjoint=self)
+        self.map = primal.adjoint
+
         return
 
     def viscosity(self, solution):
@@ -140,7 +143,7 @@ class Adjoint(Solver):
                 #jacobian = parallel.getAdjointRemoteCells(paddedJacobian, mesh)
                 gradients = self.map(previousSolution, stackedFields, dt, t)
                 gradient = gradients[0]
-                sourceGradient = gradients[1:]
+                paramGradient = gradients[1:]
                 stackedFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
 
                 if self.scaling:
@@ -159,7 +162,7 @@ class Adjoint(Solver):
 
                 # compute sensitivity using adjoint solution
                 for index, perturbation in enumerate(perturb):
-                    for derivative, delphi in zip(sourceGradient, perturbation(None, mesh.origMesh, t)):
+                    for derivative, delphi in zip(paramGradient, perturbation(None, mesh.origMesh, t)):
                         result[index] += np.sum(np.ascontiguousarray(derivative) * delphi)
 
                 #parallel.mpi.Barrier()
@@ -183,9 +186,10 @@ class Adjoint(Solver):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--scaling', required=False)
+    parser.add_argument('--grad_type', required=False, default='source')
     user, args = parser.parse_known_args()
 
-    adjoint = Adjoint(primal, user.scaling)
+    adjoint = Adjoint(primal, user.scaling, user.grad_type)
     adjoint.initPrimalData()
 
     adjoint.createFields()

@@ -36,6 +36,13 @@ class Mesh(object):
               'cellNeighbours', 'cellFaces',
               'sumOp', 'gradOp']
 
+    gradFields = ['areas', 'volumes',
+                  'weights', 'deltas', 'normals',
+                  'linearWeights', 'quadraticWeights',
+                  #'cellCentres', 'faceCentres', 
+                  #'gradOp'
+                 ]
+
     def __init__(self):
         for attr in Mesh.constants:
             setattr(self, attr, 0)
@@ -58,12 +65,13 @@ class Mesh(object):
         if constants:
             for attr in cls.constants:
                 setattr(self, attr, getattr(mesh, attr))
+        self.parent = mesh
         return self
 
     @classmethod
     def create(cls, caseDir=None, currTime='constant'):
         self = cls()
-
+        self.caseDir = caseDir
         if config.hdf5:
             meshData = self.readHDF5(caseDir)
         else:
@@ -792,6 +800,21 @@ class Mesh(object):
 
         return nLocalCells
 
+    def getPointsPerturbation(self, pointsPerturbation):
+        mesh = self.origMesh
+        meshData = self.points + pointsPerturbation, self.faces, mesh.owner, mesh.neighbour[:mesh.nInternalFaces], \
+                self.addressing, copy.deepcopy(mesh.boundary)
+        mesh = Mesh()
+        mesh.build(meshData, 'constant')
+        diff = [getattr(mesh.origMesh, field) - getattr(self.origMesh, field) for field in Mesh.gradFields]
+        return diff
+
+    def getPerturbation(self, caseDir=None):
+        if caseDir is None:
+            caseDir = self.caseDir
+        mesh = Mesh.create(caseDir)
+        diff = [getattr(mesh.origMesh, field) - getattr(self.origMesh, field) for field in Mesh.gradFields]
+        return diff
         
     def makeTensor(self):
         logger.info('making tensor variables')

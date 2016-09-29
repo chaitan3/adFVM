@@ -5,11 +5,11 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-primal = RCF('cases/naca0012/', 
+primal = RCF('/home/talnikar/adFVM/cases/naca0012/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*3.4e-5,
-             faceReconstructor='AnkitENO',
+             faceReconstructor='AnkitWENO',
              #faceReconstructor='FirstOrder',
              boundaryRiemannSolver='eulerLaxFriedrichs'
 )
@@ -79,6 +79,6 @@ def perturb(fields, mesh, t):
     return rho, rhoU, rhoE
 
 nSteps = 100000
-writeInterval = 5000
+writeInterval = 200
 startTime = 3.0
-dt = 2e-9
+dt = 6e-9

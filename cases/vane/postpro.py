@@ -8,6 +8,8 @@ from adFVM.parallel import pprint
 from adFVM.postpro import getHTC, getIsentropicMa, getPressureLoss, getYPlus
 from adFVM.density import RCF
 
+config.hdf5 = True
+
 def postprocess(solver, time, suffix=''):
     mesh = solver.mesh.origMesh
 
@@ -26,17 +28,17 @@ def postprocess(solver, time, suffix=''):
     wakeCells, pl = getPressureLoss(p, T, U, p0, point, normal)
     uplus, yplus, ustar, yplus1 = getYPlus(U, T, rho, patches)
 
-    for patchID in patches:
-        startFace = mesh.boundary[patchID]['startFace']
-        endFace = startFace + mesh.boundary[patchID]['nFaces']
-        index = 0
-        mult = np.logspace(0, 2, 100)
-        points = mesh.faceCentres[startFace + index] \
-               - mesh.normals[startFace + index]*yplus1[patchID][index]*mult.reshape(-1,1)
-        field = U.interpolate(points)/ustar[patchID][index]
-        field = ((field**2).sum(axis=1))**0.5
-        plt.plot(mult, field)
-        plt.show()
+    #for patchID in patches:
+    #    startFace = mesh.boundary[patchID]['startFace']
+    #    endFace = startFace + mesh.boundary[patchID]['nFaces']
+    #    index = 0
+    #    mult = np.logspace(0, 2, 100)
+    #    points = mesh.faceCentres[startFace + index] \
+    #           - mesh.normals[startFace + index]*yplus1[patchID][index]*mult.reshape(-1,1)
+    #    field = U.interpolate(points)/ustar[patchID][index]
+    #    field = ((field**2).sum(axis=1))**0.5
+    #    plt.plot(mult, field)
+    #    plt.show()
 
     htc = IOField.boundaryField('htc' + suffix, htc, (1,))
     Ma = IOField.boundaryField('Ma' + suffix, Ma, (1,))
@@ -47,7 +49,10 @@ def postprocess(solver, time, suffix=''):
         Ma.write()
         uplus.write()
         yplus.write()
-        with open(IOField._handle + '/wake'+suffix, 'w') as f:
+        join = '/'
+        if config.hdf5:
+            join = '_'
+        with open(solver.mesh.getTimeDir(time) + join +  'wake' + suffix, 'w') as f:
             np.savez(f, wakeCells, pl)
 
 if __name__ == '__main__':

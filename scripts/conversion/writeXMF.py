@@ -101,6 +101,7 @@ for index, timeFile in enumerate(timeFiles):
         """.format('{}_{}_{}'.format(name, index, proc), nCells, topologyString, geometryString))
 
         for fieldName in time.keys():
+            #print fieldName
             if fieldName == 'mesh':
                 continue
             phi = time[fieldName]['field']

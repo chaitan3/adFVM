@@ -2,11 +2,13 @@
 from matplotlib import pyplot as plt, mlab
 from matplotlib import markers as mk
 import os
+import sys
 from profile import get_length, pressure, suction, c, pitch
 from numpy import *
 import csv
 import scipy.interpolate as inter
 currdir = os.path.dirname(os.path.realpath(__file__))
+
 
 def read_data(name):
     with open(currdir + '/' + name) as f:
@@ -78,9 +80,10 @@ def match_wakes(pl, coords, p0, saveFile):
 
 
 if __name__ == '__main__':
+    from adFVM import config
     from adFVM.mesh import Mesh
     from adFVM.field import Field, IOField
-    import sys
+    config.hdf5 = True
 
     case, time = sys.argv[1:3]
     time = float(time)
@@ -92,7 +95,10 @@ if __name__ == '__main__':
         htc.partialComplete()
         Ma = IOField.read('Ma_avg')
         Ma.partialComplete()
-        with open(IOField._handle + '/wake_avg', 'r') as f:
+        join = '/'
+        if config.hdf5:
+            join = '_'
+        with open(mesh.getTimeDir(time) + join + 'wake_avg', 'r') as f:
             data = load(f)
             wakeCells, pl = data['arr_0'], data['arr_1']
 

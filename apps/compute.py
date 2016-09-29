@@ -60,12 +60,12 @@ for index, time in enumerate(times):
     s.write(name='s')
     pprint()
 
-    uplus, yplus, _, _ = getYPlus(U, T, rho, ['airfoil'])
-    uplus = IOField.boundaryField('uplus', uplus, (3,))
-    yplus = IOField.boundaryField('yplus', yplus, (1,))
-    #print yplus.field.max(), yplus.field.min()
-    uplus.write()
-    yplus.write()
+    #uplus, yplus, _, _ = getYPlus(U, T, rho, ['airfoil'])
+    #uplus = IOField.boundaryField('uplus', uplus, (3,))
+    #yplus = IOField.boundaryField('yplus', yplus, (1,))
+    ##print yplus.field.max(), yplus.field.min()
+    #uplus.write()
+    #yplus.write()
 
     ### rhoaByV
     #rhoa = IOField.read('rhoa')

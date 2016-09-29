@@ -258,6 +258,7 @@ class ENO(Reconstruct):
             self.solver.postpro.append((ad.ivector(), enoFaceIndices.astype(np.int32)))
             self.enoIndices.append(solver.postpro[-1][0])
             #tmp =  np.abs(np.concatenate(faceDistsDets))
+            # TODO; somehow add to mesh grad fields?
             self.solver.postpro.append((ad.bctensor3(), np.expand_dims(np.concatenate(faceDistsDets, axis=1), 2).astype(config.precision)))
             self.faceDistsDets.append(solver.postpro[-1][0])
             self.solver.postpro.append((ad.bcmatrix(), np.expand_dims(distDets[faceIndices, enoFaceIndices], 1).astype(config.precision)))

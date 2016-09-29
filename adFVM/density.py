@@ -144,12 +144,12 @@ class RCF(Solver):
         #URF, TRF, pRF = self.primitive(rhoRF, rhoURF, rhoERF)
 
         # gradient evaluated using gauss integration rule
-        #gradU = grad(central(U, mesh), ghost=True)
-        #gradT = grad(central(T, mesh), ghost=True)
-        #gradp = grad(central(p, mesh), ghost=True)
-        gradU = grad(U, ghost=True, op=True)
-        gradT = grad(T, ghost=True, op=True)
-        gradp = grad(p, ghost=True, op=True)
+        gradU = grad(central(U, mesh), ghost=True)
+        gradT = grad(central(T, mesh), ghost=True)
+        gradp = grad(central(p, mesh), ghost=True)
+        #gradU = grad(U, ghost=True, op=True)
+        #gradT = grad(T, ghost=True, op=True)
+        #gradp = grad(p, ghost=True, op=True)
         #self.local = gradp.field
         #self.remote = gradpO.field
 

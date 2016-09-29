@@ -48,7 +48,7 @@ class Solver(object):
         self.init = None
         return
 
-    def compile(self, adjoint=False):
+    def compile(self, adjoint=None):
         self.compileInit()
 
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
@@ -68,11 +68,15 @@ class Solver(object):
         self.map = self.function([stackedFields, self.dt, self.t0], \
                        [newStackedFields, self.dtc, self.local, self.remote], 'forward')
         if adjoint:
+            mesh = self.mesh
             stackedAdjointFields = ad.matrix()
             scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
-            gradientInputs = [stackedFields] + list(zip(*self.sourceTerms)[0])
+            gradientInputs = [stackedFields]
+            if adjoint.gradType == 'source':
+                gradientInputs += list(zip(*self.sourceTerms)[0])
+            else:
+                gradientInputs += [getattr(mesh, field) for field in Mesh.gradFields]
             gradients = ad.grad(scalarFields, gradientInputs)
-            #meshGradient = ad.grad(scalarFields, mesh)
             self.adjoint = self.function([stackedFields, stackedAdjointFields, self.dt, self.t0], \
                             gradients, 'adjoint')
             #self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \
