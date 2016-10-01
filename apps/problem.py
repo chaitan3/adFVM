@@ -18,13 +18,8 @@ user, args = parser.parse_known_args(config.args)
 source = lambda *args: []
 perturb = []
 
-caseDir, caseFile = os.path.split(user.caseFile)
-sys.path.append(os.path.abspath(caseDir))
-caseFile = __import__(caseFile.split('.')[0])
-for attr in dir(caseFile):
-    if not attr.startswith('_'):
-        # defines primal, objective and perturb, nSteps, writeInterval, startTime, dt
-        locals()[attr] = getattr(caseFile, attr)
+config.importModule(locals(), user.caseFile)
+assert all(key in locals() for key in ['primal, objective, perturb, nSteps, writeInterval, startTime, dt'])
 
 if not isinstance(perturb, list):
     perturb = [perturb]

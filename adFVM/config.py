@@ -156,6 +156,15 @@ def suppressOutput():
             yield
         finally:
             sys.stdout = old_stdout
+def importModule(localsDict, module)
+    caseDir, caseFile = os.path.split(, module)
+    sys.path.append(os.path.abspath(caseDir))
+    caseFile = __import__(caseFile.split('.')[0])
+    for attr in dir(caseFile):
+        if not attr.startswith('_'):
+            # defines primal, objective and perturb, nSteps, writeInterval, startTime, dt
+            localsDict[attr] = getattr(caseFile, attr)
+    return 
 
 def timeFunction(string):
     def decorator(function):

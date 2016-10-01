@@ -9,7 +9,7 @@ primal = RCF('/home/talnikar/adFVM/cases/naca0012/',
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*3.4e-5,
-             faceReconstructor='AnkitWENO',
+             faceReconstructor='SecondOrder',
              #faceReconstructor='FirstOrder',
              boundaryRiemannSolver='eulerLaxFriedrichs'
 )
