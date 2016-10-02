@@ -3,7 +3,7 @@ from adFVM import parallel, config
 import sys
 import os
 case = sys.argv[1]
-if sys.argv[2] == 'None':
+if len(sys.argv) > 2 and sys.argv[2] == 'None':
     times = None
 else:
     times = [float(x) for x in sys.argv[2:]]

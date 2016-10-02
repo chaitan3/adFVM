@@ -410,7 +410,6 @@ class IOField(Field):
     def openHandle(self, time, case=None):
         timeDir = self.mesh.getTimeDir(time, case)
         if config.hdf5:
-            print timeDir + '.hdf5'
             self._handle = h5py.File(timeDir + '.hdf5', 'a', driver='mpio', comm=parallel.mpi)
         else:
             self._handle = timeDir + '/'
