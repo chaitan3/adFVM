@@ -19,7 +19,8 @@ source = lambda *args: []
 perturb = []
 
 config.importModule(locals(), user.caseFile)
-assert all(key in locals() for key in ['primal, objective, perturb, nSteps, writeInterval, startTime, dt'])
+#print(locals().keys())
+#assert all(key in locals() for key in ['primal', 'objective', 'perturb', 'nSteps', 'writeInterval', 'startTime', 'dt'])
 
 if not isinstance(perturb, list):
     perturb = [perturb]

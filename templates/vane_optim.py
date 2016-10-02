@@ -6,13 +6,22 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-caseDir = '/home/talnikar/foam/vane/laminar/'
+caseDir = '/home/talnikar/adFVM/cases/vane_optim/'
+foamDir = caseDir
 nParam = 4
 
-#primal = RCF(CASEDIR, faceReconstructor='AnkitENO')
+if not sys.argv[0].endswith('optim.py'):
+    primal = RCF(CASEDIR, faceReconstructor='AnkitENO')
+else:
+    sys.path.append(foamDir)
+    from profile import gen_mesh_param
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
+
+def genMeshParam(param, paramDir):
+    gen_mesh_param(param, foamDir, paramDir)
+    return
 
 # heat transfer
 def objectiveHeatTransfer(fields, mesh):
@@ -74,34 +83,13 @@ objective = objectivePressureLoss
 def makePerturb(index):
     def perturbMesh(fields, mesh, t):
         if not hasattr(perturbMesh, 'perturbation'):
-            ## do the perturbation based on param and eps
-            #perturbMesh.perturbation = mesh.getPerturbation()
-            points = np.zeros_like(mesh.parent.points)
-            points[param] = eps
-            perturbMesh.perturbation = mesh.parent.getPointsPerturbation(points)
+            perturbMesh.perturbation = mesh.getPerturbation(os.path.join(CASEDIR), 'grad{}'.format(index))
         return perturbMesh.perturbation
     return perturbMesh
 perturb = []
 for index in range(0, nParam):
     perturb.append(makePerturb(index))
 
-#def makePerturb(mid):
-#    def perturb(fields, mesh, t):
-#        G = 10*np.exp(-1e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#        #rho
-#        rho = G
-#        rhoU = np.zeros((mesh.nInternalCells, 3))
-#        rhoU[:, 0] = G.flatten()*100
-#        rhoE = G*2e5
-#        return rho, rhoU, rhoE
-#    return perturb
-#perturb = [makePerturb(np.array([-0.02, 0.01, 0.005])),
-#           makePerturb(np.array([-0.08, -0.01, 0.005]))]
-
-#nSteps = 10
-#writeInterval = 5
-#nSteps = 20000
-#writeInterval = 500
 nSteps = 100000
 writeInterval = 5000
 startTime = 1.0

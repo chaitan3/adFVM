@@ -156,8 +156,8 @@ def suppressOutput():
             yield
         finally:
             sys.stdout = old_stdout
-def importModule(localsDict, module)
-    caseDir, caseFile = os.path.split(, module)
+def importModule(localsDict, module):
+    caseDir, caseFile = os.path.split(module)
     sys.path.append(os.path.abspath(caseDir))
     caseFile = __import__(caseFile.split('.')[0])
     for attr in dir(caseFile):
