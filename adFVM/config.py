@@ -53,7 +53,6 @@ else:
 # theano
 project = 'adFVM'
 dtype = str(np.zeros(1, precision).dtype)
-home = os.path.expanduser('~')
 # titan check
 if user.titan:
     home = '/lustre/atlas/proj-shared/tur103'
@@ -62,6 +61,8 @@ elif user.bw:
     home = '/scratch/sciteam/talnikar/stable/'
 elif user.mira:
     home = '/projects/LESOpt/talnikar/local/'
+else:
+    home = os.path.expanduser('~')
 if user.use_temp:
     home = parallel.copyToTemp(home, user.coresPerNode)
 #os.environ['THEANO_FLAGS'] = 'compiledir='+home+'/.theano/{0}-{1}-{2}-{3}.{4}'.format(project, device, dtype, parallel.nProcessors, parallel.rank)

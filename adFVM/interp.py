@@ -51,6 +51,7 @@ class Reconstruct(object):
         indices = np.concatenate(indices).astype(np.int32)
         self.indices = ad.ivector()
         solver.postpro.append((self.indices, indices))
+        #print(indices.shape, meshO.nInternalFaces)
 
         self.boundary = len(Bindices) > 0
         if self.boundary:
@@ -270,7 +271,7 @@ class ENO(Reconstruct):
         nIF = self.mesh.nInternalFaces
         for index in range(0, 2):
             self.faceOptions[1][index] = self.faceOptions[1][index][:nIF]
-        self.Iindices = [self.indices, self.indices[:nIF]]
+        self.Iindices = [ad.arange(0, self.indices.shape[0]), ad.arange(0, nIF)]
         self.BCUpdate = True
         
         self.enoStartCount = []
@@ -307,8 +308,8 @@ class ENO(Reconstruct):
 
 
 class WENO(ENO):
-    def __init__(self, solver):
-        super(WENO, self).__init__(solver)
+    #def __init__(self, solver):
+    #    super(WENO, self).__init__(solver)
         #self.enoSparseCount = []
         #for index in range(0, 2):
         #    for symbolic, value in solver.postpro:

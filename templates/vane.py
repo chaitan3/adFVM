@@ -6,7 +6,7 @@ from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
 #primal = RCF('/home/talnikar/foam/blade/les-turb/')
-primal = RCF('/home/talnikar/foam/vane/laminar/', faceReconstructor='AnkitENO')#, timeIntegrator='euler')
+primal = RCF('/home/talnikar/foam/vane/laminar/', faceReconstructor='ENO')#, timeIntegrator='euler')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 
