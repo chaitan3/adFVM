@@ -18,7 +18,7 @@ logger = config.Logger(__name__)
 class Solver(object):
     defaultConfig = {
                         'timeIntegrator': 'euler',
-                        'objective': lambda x: 0,
+                        'objective': lambda *x: 0,
                         'adjoint': False,
                         'dynamicMesh': False,
                         'localTimeStep': False,

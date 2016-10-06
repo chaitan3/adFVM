@@ -4,8 +4,8 @@ from __future__ import print_function
 from adFVM import config, parallel
 from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
-#from adFVM.matop_petsc import laplacian, ddt
-from adFVM.matop import laplacian, ddt
+from adFVM.matop_petsc import laplacian, ddt
+#from adFVM.matop import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointNorm, computeGradients, getAdjointEnergy
@@ -50,12 +50,9 @@ class Adjoint(Solver):
 
         return
 
-    def viscosity(self, solution):
-        rho = Field('rho', solution[:,[0]], (1,))
-        rhoU = Field('rhoU', solution[:,1:4], (3,))
-        rhoE = Field('rhoE', solution[:,[4]], (1,))
+    def viscosity(self, rho, rhoU, rhoE):
         U, T, p = primal.primitive(rho, rhoU, rhoE)
-        outputs = self.computer(U.field, T.field, p.field)
+        outputs = self.computer(U, T, p)
         M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)[0]
         M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
         viscosityScale = float(self.scaling)
@@ -141,23 +138,25 @@ class Adjoint(Solver):
                 gradient = outputs[:len(fields)]
                 paramGradient = outputs[len(fields):]
                 objGradient = objectiveGradient(*previousSolution)
-                objGradient  = [phi/(nSteps + 1) for phi in objGradient]
+                objGradient = [phi/(nSteps + 1) for phi in objGradient]
                 for index in range(0, len(fields)):
                     fields[index].field = gradient[index] + objGradient[index]
 
                 if self.scaling:
                     pprint('Smoothing adjoint field')
-                    #weight = adjointViscosity(previousSolution).field
-                    #stackedAdjointFields[:mesh.origMesh.nInternalCells] += dt*adjointSmoother(stackedAdjointFields, weight)
-                    stackedPhi = Field('a', stackedFields, (5,))
-                    stackedPhi.old = stackedFields
-                    start2 = time.time() 
-                    weight = central(self.viscosity(previousSolution), mesh.origMesh)
-                    start3 = time.time()
-                    #stackedAdjointFields[:mesh.origMesh.nLocalCells] = BCs(stackedPhi, ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
-                    stackedFields[:mesh.origMesh.nInternalCells] = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
-                    start4 = time.time()
-                    pprint('Timers 1:', start3-start2, '2:', start4-start3)
+                    nInternalCells = mesh.origMesh.nInternalCells
+                    #start2 = time.time() 
+                    weight = central(self.viscosity(*previousSolution), mesh.origMesh)
+                    #start3 = time.time()
+
+                    stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
+                    newStackedFields = (ddt(stackedFields, dt) - laplacian(stackedFields, weight)).solve()
+                    fields[0][:nInternalCells] = newStackFields[:, [0]]
+                    fields[1][:nInternalCells] = newStackFields[:, [1,2,3]]
+                    fields[2][:nInternalCells] = newStackFields[:, [4]]
+
+                    #start4 = time.time()
+                    #pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
                 # compute sensitivity using adjoint solution
                 for index, perturbation in enumerate(perturb):
