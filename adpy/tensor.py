@@ -16,6 +16,9 @@ _tensor_id = 0
 
 class tensor(object):
     def __init__(self, parent=None):
+        assert hasattr(self, 'dims')
+        if not hasattr(self, 'broadcastable'):
+            self.broadcastable = tuple([False]*self.dims)
         global _tensor_id
         self.parent = parent
         self._value = None
@@ -61,8 +64,9 @@ class tensor(object):
     def __neg__(self, a):
         return ops.NegOp([self]).outputs[0]
 
-scalar = type('vector', (tensor,), {'dims':0})
+scalar = type('scalar', (tensor,), {'dims':0})
 vector = type('vector', (tensor,), {'dims':1})
-matrix = type('vector', (tensor,), {'dims':2})
+matrix = type('matrix', (tensor,), {'dims':2})
+col = type('col', (tensor,), {'dims':2, 'broadcastable': (False, True)})
 
 tensor_dims = {0:scalar, 1:vector, 2:matrix}

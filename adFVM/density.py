@@ -115,7 +115,7 @@ class RCF(Solver):
     def initFields(self, t, **kwargs):
         self.readFields(t, **kwargs)
         self.U.field, self.T.field, self.p.field = self.init(self.U.field, self.T.field, self.p.field)
-        return self.conservative(self.U, self.T, self.p)
+        return list(self.conservative(self.U, self.T, self.p))
     
     @config.timeFunction('Time for writing fields')
     def writeFields(self, fields, t):
@@ -269,5 +269,5 @@ class RCF(Solver):
         U.setInternalField(UN.field)
         T.setInternalField(TN.field)
         p.setInternalField(pN.field)
-        return self.conservative(U, T, p)
+        return list(self.conservative(U, T, p))
     

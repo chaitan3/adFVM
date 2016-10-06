@@ -33,12 +33,11 @@ def SSPRK():
     gamma = np.array([0.,1,0.5], config.precision)
     return [alpha, beta, gamma]
 
-def timeStepper(equation, boundary, stackedFields, solver):
+def timeStepper(equation, boundary, initFields, solver):
     alpha, beta, gamma = solver.timeStepCoeff
     nStages = alpha.shape[0]
     LHS = []
-    fields = []
-    fields.append(solver.unstackFields(stackedFields, CellField))
+    fields = [solver.getFields(initFields, CellField)]
     nFields = len(fields[0])
     for i in range(0, nStages):
         solver.stage += 1
@@ -51,7 +50,7 @@ def timeStepper(equation, boundary, stackedFields, solver):
         internalFields = createFields(internalFields, solver)
         fields.append(boundary(*internalFields))
         
-    return solver.stackFields(fields[-1], ad)
+    return [phi.field for phi in fields[-1]]
 
 # DOES NOT WORK
 #def implicit(equation, boundary, fields, garbage):

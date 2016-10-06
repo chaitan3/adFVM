@@ -54,7 +54,7 @@ PyObject *interface(PyObject* self, PyObject *args) {{
 
     int n_inputs = PyTuple_Size(args);
     int n_outputs = %(n_outputs)s;
-    int64_t i, j, k;
+    int64_t i0, i1, i2, i3;
 
     {init_code}    
 
