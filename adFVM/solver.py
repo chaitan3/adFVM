@@ -63,21 +63,21 @@ class Solver(object):
         self.dtc = self.dt
         self.local, self.remote = self.mesh.nCells, self.mesh.nFaces
 
-        stackedFields = ad.matrix()
-        newStackedFields = timestep.timeStepper(self.equation, self.boundary, stackedFields, self)
-        self.map = self.function([stackedFields, self.dt, self.t0], \
-                       [newStackedFields, self.dtc, self.local, self.remote], 'forward')
+        fields = self.getSymbolicFields(False)
+
+        newFields = timestep.timeStepper(self.equation, self.boundary, fields, self)
+        self.map = self.function(fields + [self.dt, self.t0], \
+                       newFields + [self.dtc, self.local, self.remote], 'forward')
         if adjoint:
             mesh = self.mesh
-            stackedAdjointFields = ad.matrix()
-            scalarFields = ad.sum(newStackedFields*stackedAdjointFields)
-            gradientInputs = [stackedFields]
+            adjointFields = self.getSymbolicFields(False)
+            scalarFields = sum([ad.sum(newFields[index]*adjointFields[index]) for index in range(0, len(fields))])
             if adjoint.gradType == 'source':
-                gradientInputs += list(zip(*self.sourceTerms)[0])
+                gradientInputs = fields + list(zip(*self.sourceTerms)[0])
             else:
-                gradientInputs += [getattr(mesh, field) for field in Mesh.gradFields]
+                gradientInputs = fields + [getattr(mesh, field) for field in Mesh.gradFields]
             gradients = ad.grad(scalarFields, gradientInputs)
-            self.adjoint = self.function([stackedFields, stackedAdjointFields, self.dt, self.t0], \
+            self.adjoint = self.function(fields + adjointFields + [self.dt, self.t0], \
                             gradients, 'adjoint')
             #self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \
             #                ad.Rop(newStackedFields, stackedFields, stackedAdjointFields), 'tangent')
@@ -101,21 +101,29 @@ class Solver(object):
     def function(self, inputs, outputs, name, **kwargs):
         return SolverFunction(inputs, outputs, self, name, **kwargs)
 
-    def stackFields(self, fields, mod): 
-        return mod.concatenate([phi.field for phi in fields], axis=1)
-
-    def unstackFields(self, stackedFields, mod, names=None, **kwargs):
+    def getFields(self, fields, mod, names=None):
         if names is None:
             names = self.names
-        fields = []
-        nDimensions = np.concatenate(([0], np.cumsum(np.array(self.dimensions))))
-        nDimensions = zip(nDimensions[:-1], nDimensions[1:])
-        for name, dim, dimRange in zip(names, self.dimensions, nDimensions):
-            phi = stackedFields[:, range(*dimRange)]
-            fields.append(mod(name, phi, dim, **kwargs))
-        return fields
+        cellFields = []
+        for phi, name, dim in zip(fields, names, self.dimensions):
+            cellFields.append(mod(name, phi, dim))
+        return cellFields
 
-    def getSymbolicFields(self, field=True):
+    #def stackFields(self, fields, mod): 
+    #    return mod.concatenate([phi.field for phi in fields], axis=1)
+
+    #def unstackFields(self, stackedFields, mod, names=None, **kwargs):
+    #    if names is None:
+    #        names = self.names
+    #    fields = []
+    #    nDimensions = np.concatenate(([0], np.cumsum(np.array(self.dimensions))))
+    #    nDimensions = zip(nDimensions[:-1], nDimensions[1:])
+    #    for name, dim, dimRange in zip(names, self.dimensions, nDimensions):
+    #        phi = stackedFields[:, range(*dimRange)]
+    #        fields.append(mod(name, phi, dim, **kwargs))
+    #    return fields
+
+    def getSymbolicFields(self, returnField=True):
         names = self.names
         fields = []
         for index, dim in enumerate(self.dimensions):
@@ -123,7 +131,9 @@ class Solver(object):
                 field = ad.bcmatrix()
             else:
                 field = ad.matrix()
-            fields.append(CellField(names[index], field, dim))
+            if returnField:
+                field = CellField(names[index], field, dim)
+            fields.append(field)
         return fields
 
     def initSource(self):
@@ -245,10 +255,9 @@ class Solver(object):
             dt = dts*np.ones_like(mesh.origMesh.volumes)
         elif isinstance(dts, np.ndarray):
             dt = dts[timeIndex]
-        stackedFields = self.stackFields(fields, np)
 
         # objective is local
-        instObjective = self.objective(stackedFields)
+        instObjective = self.objective(*fields)
         result += instObjective
         timeSeries = [parallel.sum(instObjective)]
         timeSteps = []
@@ -258,9 +267,9 @@ class Solver(object):
             if self.dynamicMesh:
                 instMesh = Mesh()
                 instMesh.boundary = copy.deepcopy(self.mesh.origMesh.boundary)
-                solutions = [(instMesh, stackedFields)]
+                solutions = [[instMesh] + fields]
             else:
-                solutions = [stackedFields]
+                solutions = [fields]
 
         # source term update
         self.updateSource(source(fields, mesh.origMesh, t))
@@ -274,19 +283,20 @@ class Solver(object):
             start = time.time()
 
             for index in range(0, len(fields)):
-                #fields[index].info()
-                try:
-                    fields[index].info()
-                except:
-                    with IOField.handle(t):
-                        fields[index].write()
-                    exit(1)
-
+                fields[index].info()
+                #try:
+                #    fields[index].info()
+                #except:
+                #    with IOField.handle(t):
+                #        fields[index].write()
+                #    exit(1)
             mesh.reset = True
             pprint('Time step', timeIndex)
 
-            #stackedFields, dtc = self.map(stackedFields)
-            stackedFields, dtc, local, remote = self.map(stackedFields, dt, t)
+            inputs = fields + [dt, t]
+            outputs = self.map(*inputs)
+            fields, dtc, local, remote = outputs[:-3], outputs[-3], outputs[-2], outputs[-1]
+
             #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()
             #print remote.shape, remote.dtype, (remote).max(), (remote).min(), np.isnan(remote).any()
             pprint('Percent shock capturing: {0:.2f}%'.format(float(parallel.max(local))*100))
@@ -298,7 +308,7 @@ class Solver(object):
             #    local.write()
             #exit(1)
 
-            fields = self.unstackFields(stackedFields, IOField)
+            fields = self.getFields(fields, IOField)
             # TODO: fix unstacking F_CONTIGUOUS
             for phi in fields:
                 phi.field = np.ascontiguousarray(phi.field)
@@ -330,7 +340,7 @@ class Solver(object):
             self.updateSource(source(fields, mesh.origMesh, t))
 
             # objective management
-            instObjective = self.objective(stackedFields)
+            instObjective = self.objective(*fields)
             result += instObjective
             timeSeries.append(parallel.sum(instObjective))
 
@@ -339,9 +349,9 @@ class Solver(object):
                 if self.dynamicMesh:
                     instMesh = Mesh()
                     instMesh.boundary = copy.deepcopy(self.mesh.origMesh.boundary)
-                    solutions.append((instMesh, stackedFields))
+                    solutions.append([instMesh] + fields)
                 else:
-                    solutions.append(stackedFields)
+                    solutions.append(fields)
             elif (timeIndex % writeInterval == 0) or not iterate(t, timeIndex):
                 # write mesh, fields, status
                 dtc = IOField.internalField('dtc', dtc, (1,))
@@ -408,7 +418,7 @@ class SolverFunction(object):
     def generate(self, inputs, outputs, caseDir, name):
         SolverFunction.counter += 1
         pklFile = caseDir + '{0}_func_{1}.pkl'.format(config.device, name)
-        inputs.extend(self.symbolic)
+        inputs = inputs + self.symbolic
 
         fn = None
         pklData = None
@@ -456,7 +466,14 @@ class SolverFunction(object):
     def __call__(self, *inputs):
         logger.info('running function')
         inputs = list(inputs)
+        for index, inp in enumerate(inputs):
+            if isinstance(inp, Field):
+                inputs[index] = inp.field
+                
+        inputs = inputs + self.values
         #print 'get', id(self.values[29].data)
-        inputs.extend(self.values)
-        return self.fn(*inputs)
+        outputs = self.fn(*inputs)
+        if isinstance(outputs, tuple):
+            outputs = list(outputs)
+        return outputs
 

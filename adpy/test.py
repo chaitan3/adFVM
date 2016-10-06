@@ -8,16 +8,16 @@ from func import Function
 #a = np.ones(4)
 #print function.test_interface(a)
 
-a = tensor.vector()
-b = tensor.vector()
+a = tensor.matrix()
+b = tensor.col()
 c = a+b
-d = tensor.vector()
+d = tensor.matrix()
 
 #f = Function([a, b, d], [d*c])
 f = Function([a, b], [2.*c], mode='c')
 
-a = np.ones(4)
-b = 2*np.ones(4)
-d = 40*np.ones(4)
+a = np.ones((3,4))
+b = 2*np.ones((3,1))
+d = 40*np.ones((3,4))
 #print f(np.random.rand(2), np.random.rand(2), np.random.rand(2))
 print f(a, b)

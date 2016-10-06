@@ -87,7 +87,6 @@ class Adjoint(Solver):
             fields = self.initFields(startTime, read=False)
         else:
             fields = self.initFields(startTime)
-        stackedFields = self.stackFields(fields, np)
 
         pprint('STARTING ADJOINT')
         pprint('Number of steps:', nSteps)
@@ -112,10 +111,10 @@ class Adjoint(Solver):
                     mesh.origMesh.boundary = lastMesh.boundarydata[m:].reshape(-1,1)
                 else:
                     lastSolution = solutions[-1]
-                stackedFields  = np.ascontiguousarray(objectiveGradient(lastSolution)/(nSteps + 1))
-                fields = self.unstackFields(stackedFields, IOField)
+                fields  = objectiveGradient(*lastSolution)
+                fields  = [phi/(nSteps + 1) for phi in fields]
+                fields = self.getFields(fields, IOField)
                 for phi in fields:
-                    phi.field = np.ascontiguousarray(phi.field)
                     phi.info()
                 pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
                 self.writeFields(fields, t)
@@ -123,7 +122,6 @@ class Adjoint(Solver):
             for step in range(0, writeInterval):
                 printMemUsage()
                 start = time.time()
-                fields = self.unstackFields(stackedFields, IOField)
                 for phi in fields:
                     phi.info()
                 pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
@@ -137,14 +135,15 @@ class Adjoint(Solver):
                     mesh.origMesh.boundary = previousMesh.boundary
                 else:
                     previousSolution = solutions[adjointIndex]
-                #paddedPreviousSolution = parallel.getRemoteCells(previousSolution, mesh)
-                ## adjoint time stepping
-                #paddedJacobian = np.ascontiguousarray(primal.gradient(paddedPreviousSolution, stackedAdjointFields))
-                #jacobian = parallel.getAdjointRemoteCells(paddedJacobian, mesh)
-                gradients = self.map(previousSolution, stackedFields, dt, t)
-                gradient = gradients[0]
-                paramGradient = gradients[1:]
-                stackedFields = np.ascontiguousarray(gradient) + np.ascontiguousarray(objectiveGradient(previousSolution)/(nSteps + 1))
+
+                inputs = previousSolution + fields + [dt, t]
+                outputs = self.map(*inputs)
+                gradient = outputs[:len(fields)]
+                paramGradient = outputs[len(fields):]
+                objGradient = objectiveGradient(*previousSolution)
+                objGradient  = [phi/(nSteps + 1) for phi in objGradient]
+                for index in range(0, len(fields)):
+                    fields[index].field = gradient[index] + objGradient[index]
 
                 if self.scaling:
                     pprint('Smoothing adjoint field')
@@ -163,7 +162,7 @@ class Adjoint(Solver):
                 # compute sensitivity using adjoint solution
                 for index, perturbation in enumerate(perturb):
                     for derivative, delphi in zip(paramGradient, perturbation(None, mesh.origMesh, t)):
-                        result[index] += np.sum(np.ascontiguousarray(derivative) * delphi)
+                        result[index] += np.sum(derivative * delphi)
 
                 #parallel.mpi.Barrier()
                 end = time.time()
@@ -172,9 +171,6 @@ class Adjoint(Solver):
                 pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
             #exit(1)
-            fields = self.unstackFields(stackedFields, IOField)
-            for phi in fields:
-                phi.field = np.ascontiguousarray(phi.field)
             self.writeFields(fields, t)
             self.writeStatusFile([checkpoint + 1, result])
 
