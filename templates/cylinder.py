@@ -8,7 +8,7 @@ from adFVM.density import RCF
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('cases/cylinder/chaotic/adjoint_1e-3/', 
+primal = RCF('cases/cylinder/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*2.5e-5,
@@ -84,5 +84,5 @@ def perturb(fields, mesh, t):
 
 nSteps = 100000
 writeInterval = 200
-startTime = 2.0
+startTime = 3.0
 dt = 8e-8
