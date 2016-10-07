@@ -2,16 +2,23 @@
 #include <numpy/arrayobject.h>
 #include <stdio.h>
 
-typedef double scalar;
-typedef int32_t integer;
+
+typedef double scalar_t;
+typedef int64_t index_t;
+typedef int32_t int_t;
+
+
+//#define FOR_LOOP (i, n) for(index_t i=0;i<n; i++)
 
 typedef struct {
     char * data;
-    int64_t *shape;
+    index_t *shape;
+    index_t *strides;
+
     int dims;
-    int64_t size;
     int type;
     int bytes;
+    index_t size;
 } ndarray;
 
 ndarray* ndarray_from_numpy(PyArrayObject *arr) {
@@ -19,25 +26,54 @@ ndarray* ndarray_from_numpy(PyArrayObject *arr) {
     ndarr -> data = arr -> data;
     ndarr -> dims = arr -> nd;
     ndarr -> shape = arr -> dimensions;
-    ndarr -> size = 1;
+    ndarr -> strides = arr -> strides;
     ndarr -> type = arr -> descr -> type_num;
     ndarr -> bytes = arr -> descr -> elsize;
-    for (int64_t i = 0; i < ndarr -> dims; i++) {
+    ndarr -> size = 1;
+    for (index_t i = 0; i < ndarr -> dims; i++) {
         ndarr -> size *= ndarr -> shape[i];
     }
     //printf("%d %f\n", ndarr->size, ((double*)ndarr->data)[0]);
     return ndarr;
 }
 
-ndarray* ndarray_alloc(ndarray* ndarr_ref) {
+ndarray* ndarray_alloc_new(index_t *shape, int dims, int type) {
+    ndarray *ndarr = malloc(sizeof(ndarray));
+    ndarr -> shape = shape;
+    ndarr -> dims = dims;
+    ndarr -> type = type;
+
+    ndarr -> bytes = 8;
+
+    ndarr -> size = 1;
+    if (dims > 0) {
+        ndarr -> strides = malloc(sizeof(index_t)*dims);
+        ndarr -> strides [dims-1] = ndarr -> bytes;
+        for (index_t i = 0; i < dims; i++) {
+            index_t j = dims-i-2;
+            if (j >= 0) {
+                ndarr -> strides[j] = ndarr -> strides[j+1] * ndarr -> shape[j+1];
+            }
+            ndarr -> size *= ndarr -> shape[i];
+        }
+    } else {
+        ndarr -> strides = NULL;
+    }
+    ndarr -> data = malloc(ndarr->size*ndarr->bytes);
+    return ndarr; 
+}
+
+ndarray* ndarray_alloc_from(ndarray* ndarr_ref) {
     ndarray *ndarr = malloc(sizeof(ndarray));
     memcpy(ndarr, ndarr_ref, sizeof(ndarray));
 
-    int shape_size = sizeof(int64_t)*ndarr->dims;
+    index_t shape_size = sizeof(index_t)*ndarr->dims;
     ndarr -> shape = malloc(shape_size);
+    ndarr -> strides = malloc(shape_size);
     memcpy(ndarr->shape, ndarr_ref->shape, shape_size);
+    memcpy(ndarr->strides, ndarr_ref->strides, shape_size);
 
-    int64_t data_size = ndarr -> size * ndarr -> bytes;
+    index_t data_size = ndarr -> size * ndarr -> bytes;
     ndarr -> data = malloc(data_size);
     memset(ndarr->data, 0, data_size);
 
@@ -62,18 +98,19 @@ ndarray* ndarray_alloc(ndarray* ndarr_ref) {
 void ndarray_free(ndarray* ndarr) {
     free(ndarr->data);
     free(ndarr->shape);
+    free(ndarr->strides);
     free(ndarr);
 }
 
-ndarray* ndarray_multiply(ndarray *ndarr, scalar constant) {
-    ndarray* ndarr2 = ndarray_alloc(ndarr);
-    scalar *data0 = ndarr -> data;
-    scalar *data1 = ndarr2 -> data;
+ndarray* ndarray_multiply(ndarray *ndarr, float constant) {
+    ndarray* ndarr2 = ndarray_alloc_from(ndarr);
+    float *data0 = ndarr -> data;
+    float *data1 = ndarr2 -> data;
     int64_t i;
     for (i = 0; i < ndarr -> size; i++) {
         data1[i] = data0[i]*constant;
     }
-    //printf("data1[0] %f\n", ((scalar *)ndarr2->data)[0]);
+    //printf("data1[0] %f\n", ((float *)ndarr2->data)[0]);
     return ndarr2;
 }
 
