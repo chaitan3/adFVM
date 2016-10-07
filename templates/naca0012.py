@@ -5,12 +5,12 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-primal = RCF('/home/talnikar/adFVM/cases/naca0012/', 
+primal = RCF('/home/talnikar/adFVM/cases/naca0012/adjoint_weno/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*3.4e-5,
-             faceReconstructor='SecondOrder',
-             #faceReconstructor='FirstOrder',
+             #faceReconstructor='SecondOrder',
+             faceReconstructor='WENO',
              boundaryRiemannSolver='eulerLaxFriedrichs'
 )
 

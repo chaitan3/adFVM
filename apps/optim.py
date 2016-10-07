@@ -1,14 +1,13 @@
 #!/usr/bin/python2
 
 import numpy as np
-import subprocess
 import os, sys, glob, shutil
 
 from adFVM import config
 
 caseFile = sys.argv[1]
 config.importModule(locals(), caseFile)
-#assert all(key in locals() for key in ['caseDir, genMeshParam, nParam'])
+#assert all(key in locals() for key in ['caseDir, genMeshParam, nParam, spawnJob'])
 
 appsDir = os.path.dirname(os.path.realpath(__file__))
 primal = os.path.join(appsDir, 'problem.py')
@@ -35,12 +34,11 @@ def evaluate(param):
     paramHistory.append(param)
     paramDir = os.path.join(caseDir, 'param{}'.format(index))
 
-    if not os.path.exists(paramDir):
-        os.makedirs(paramDir)
+    os.makedirs(paramDir)
     for pkl in glob.glob(os.path.join(caseDir, '*.pkl')):
         shutil.copy(pkl, paramDir)
     for hdf in glob.glob(os.path.join(caseDir,'*.hdf5')):
-        shutil.copy(pkl, paramDir)
+        shutil.copy(hdf, paramDir)
     
     shutil.copy(caseFile, paramDir)
     problemFile = os.path.join(paramDir, os.path.basename(caseFile))
@@ -52,13 +50,16 @@ def evaluate(param):
             f.write(writeLine)
 
     genMeshParam(param, paramDir)
-    subprocess.call([sys.executable, primal, problemFile])
+    exit(1)
+    spawnJob([sys.executable, primal, problemFile])
 
     for index in range(0, len(param)):
         perturbedParam = param.copy()
         perturbedParam[index] += eps
-        genMeshParam(perturbedParam, os.path.join(paramDir, 'grad{}'.format(index)))
-    subprocess.call([sys.executable, adjoint, problemFile])
+        gradDir = os.path.join(paramDir, 'grad{}'.format(index))
+        os.makedirs(gradDir)
+        genMeshParam(perturbedParam, gradDir)
+    spawnJob([sys.executable, adjoint, problemFile])
 
     return readObjectiveFile(os.path.join(paramDir, 'objective.txt'))
 

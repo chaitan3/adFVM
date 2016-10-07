@@ -1,26 +1,50 @@
 import numpy as np
-import sys
+import sys, os
 
 from adFVM import config
 from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-caseDir = '/home/talnikar/adFVM/cases/vane_optim/'
-foamDir = caseDir
+caseDir = '/projects/LESOpt/talnikar/vane-optim/'
 nParam = 4
 
 if not sys.argv[0].endswith('optim.py'):
     primal = RCF(CASEDIR, faceReconstructor='AnkitENO')
-else:
-    sys.path.append(foamDir)
-    from profile import gen_mesh_param
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
 
+def spawnJob(args, parallel=True, cwd='.'):
+    import subprocess
+    #subprocess.call(args)
+    if parallel:
+        nProcs = 4096
+        #nProcs = 16
+        nProcsPerNode = 16
+    else:
+        nProcs = 1
+        nProcsPerNode = 1
+    #subprocess.check_call(['mpirun', '-np', nProcs] + args, cwd=cwd)
+    with open('output.log', 'w') as f:
+        subprocess.check_call(['runjob', 
+                         '-n', str(nProcs), 
+                         '-p', str(nProcsPerNode),
+                         '--block', os.environ['COBALT_PARTNAME'],
+                         #'--exp-env', 'BGLOCKLESSMPIO_F_TYPE', 
+                         #'--exp-env', 'PYTHONPATH',
+                         '--env_all',
+                         '--verbose', 'INFO',
+                         ':'] 
+                        + args, stdout=f, stderr=f)
+
 def genMeshParam(param, paramDir):
-    gen_mesh_param(param, foamDir, paramDir)
+    foamDir = caseDir + '/foam/'
+    sys.path.append(foamDir)
+    from vane_profile import gen_mesh_param
+    gen_mesh_param(param, foamDir, paramDir + '/foam/', spawnJob)
+    import shutil
+    shutil.move(paramDir + 'foam/mesh.hdf5', paramDir + 'mesh.hdf5')
     return
 
 # heat transfer

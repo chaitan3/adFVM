@@ -1,0 +1,102 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.4.0                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+8
+(
+    midplane1
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          598;
+        startFace       154243;
+        matchTolerance  1;
+        transform       translational;
+        neighbourPatch  midplane2;
+        separationVector (0 -0.0575 0);
+    }
+    midplane2
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          598;
+        startFace       154841;
+        matchTolerance  1;
+        transform       translational;
+        neighbourPatch  midplane1;
+        separationVector (0 0.0575 0);
+    }
+    z1plane
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          77672;
+        startFace       155439;
+        matchTolerance  1e-06;
+        transform       unknown;
+        neighbourPatch  z2plane;
+    }
+    z2plane
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          77672;
+        startFace       233111;
+        matchTolerance  1e-06;
+        transform       unknown;
+        neighbourPatch  z1plane;
+    }
+    inlet
+    {
+        type            patch;
+        nFaces          102;
+        startFace       310783;
+    }
+    outlet
+    {
+        type            patch;
+        nFaces          25;
+        startFace       310885;
+    }
+    pressure
+    {
+        type            wall;
+        inGroups        
+2
+(
+walls
+wall
+)
+;
+        nFaces          230;
+        startFace       310910;
+    }
+    suction
+    {
+        type            wall;
+        inGroups        
+2
+(
+walls
+wall
+)
+;
+        nFaces          649;
+        startFace       311140;
+    }
+)
+
+// ************************************************************************* //
