@@ -346,6 +346,8 @@ class IOField(Field):
                         match = re.search(re.compile('[ ]+(.*?);', re.DOTALL), content[start:])
                         start += match.end() 
                         boundary[patchID][key] = match.group(1)
+                if boundary[patchID]['type'] == 'cyclicAMI':
+                    boundary[patchID]['type'] = 'cyclic'
             except Exception as e:
                 config.exceptInfo(e, (timeDir + name, patchID))
         if vector:

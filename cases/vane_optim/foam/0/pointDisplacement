@@ -8,7 +8,7 @@
 FoamFile
 {
     version     2.0;
-    format      ascii;
+    format      binary;
     class       pointVectorField;
     location    "0";
     object      pointDisplacement;
@@ -23,11 +23,11 @@ boundaryField
 {
     midplane1
     {
-        type            cyclic;
+        type            cyclicAMI;
     }
     midplane2
     {
-        type            cyclic;
+        type            cyclicAMI;
     }
     z1plane
     {
@@ -50,12 +50,12 @@ boundaryField
     pressure
     {
         type            fixedValue;
-        PRESSURE
+        value           uniform ( 111 0 0 );
     }
     suction
     {
         type            fixedValue;
-        SUCTION
+        value           uniform ( 222 0 0 );
     }
 }
 

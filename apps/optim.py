@@ -2,24 +2,25 @@
 
 import numpy as np
 import os, sys, glob, shutil
+import subprocess
 
 from adFVM import config
 
 caseFile = sys.argv[1]
 config.importModule(locals(), caseFile)
-#assert all(key in locals() for key in ['caseDir, genMeshParam, nParam, spawnJob'])
+#assert all(key in locals() for key in ['caseDir, genMeshParam, nParam, spawnJob, paramBounds'])
 
 appsDir = os.path.dirname(os.path.realpath(__file__))
 primal = os.path.join(appsDir, 'problem.py')
 adjoint = os.path.join(appsDir, 'adjoint.py')
 paramHistory = []
-eps = 1e-6
+eps = 1e-5
 
 def readObjectiveFile(objectiveFile):
     objective = None
     gradient = []
     with open(objectiveFile, 'r') as f:
-        for line in f.readlines():
+        for line in f.readlines(): 
             words = line.split(' ')
             if words[0] == 'objective':
                 objective = float(words[-1])
@@ -29,7 +30,7 @@ def readObjectiveFile(objectiveFile):
     assert len(gradient) > 0
     return objective, gradient
 
-def evaluate(param):
+def evaluate(param, runSimulation=True):
     index = len(paramHistory)
     paramHistory.append(param)
     paramDir = os.path.join(caseDir, 'param{}'.format(index))
@@ -49,19 +50,30 @@ def evaluate(param):
             writeLine = line.replace('CASEDIR', '\'{}\''.format(paramDir))
             f.write(writeLine)
 
-    genMeshParam(param, paramDir)
-    exit(1)
-    spawnJob([sys.executable, primal, problemFile])
+    try:
+        genMeshParam(param, paramDir)
+    except (OSError, subprocess.CalledProcessError) as e:
+        print('Gen primal mesh param failed')
+        raise
+    return
 
     for index in range(0, len(param)):
         perturbedParam = param.copy()
         perturbedParam[index] += eps
         gradDir = os.path.join(paramDir, 'grad{}'.format(index))
         os.makedirs(gradDir)
-        genMeshParam(perturbedParam, gradDir)
-    spawnJob([sys.executable, adjoint, problemFile])
+        try:
+            genMeshParam(perturbedParam, gradDir)
+        except (OSError, subprocess.CalledProcessError) as e:
+            print('Gen adjoint mesh param failed')
+            raise
 
-    return readObjectiveFile(os.path.join(paramDir, 'objective.txt'))
+    if runSimulation:
+        spawnJob([sys.executable, primal, problemFile])
+        spawnJob([sys.executable, adjoint, problemFile])
 
-#from adFVM.optim import stochastic as optimizer
-evaluate([1.0])
+        return readObjectiveFile(os.path.join(paramDir, 'objective.txt'))
+    return
+
+from adFVM.optim import designOfExperiment
+print designOfExperiment(lambda x: evaluate(x, False), paramBounds, 2*nParam)

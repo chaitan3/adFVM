@@ -6,8 +6,12 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-caseDir = '/projects/LESOpt/talnikar/vane-optim/'
-nParam = 4
+#caseDir = '/projects/LESOpt/talnikar/vane-optim/'
+caseDir = '/home/talnikar/adFVM/cases/vane_optim/'
+
+nParam = 8
+paramBounds = 1e-3*np.ones(nParam).reshape(-1,1)
+paramBounds = np.hstack((-paramBounds, paramBounds))
 
 if not sys.argv[0].endswith('optim.py'):
     primal = RCF(CASEDIR, faceReconstructor='AnkitENO')
@@ -15,16 +19,13 @@ if not sys.argv[0].endswith('optim.py'):
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
 
-def spawnJob(args, parallel=True, cwd='.'):
+def spawnJob(args, cwd='.'):
     import subprocess
+    #return subprocess.check_call(args, cwd=cwd)
     #subprocess.call(args)
-    if parallel:
-        nProcs = 4096
-        #nProcs = 16
-        nProcsPerNode = 16
-    else:
-        nProcs = 1
-        nProcsPerNode = 1
+    nProcs = 4096
+    #nProcs = 16
+    nProcsPerNode = 16
     #subprocess.check_call(['mpirun', '-np', nProcs] + args, cwd=cwd)
     with open('output.log', 'w') as f:
         subprocess.check_call(['runjob', 

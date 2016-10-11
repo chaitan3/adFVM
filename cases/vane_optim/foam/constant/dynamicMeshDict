@@ -20,10 +20,12 @@ dynamicFvMesh dynamicMotionSolverFvMesh;
 
 motionSolverLibs ("libfvMotionSolvers.so");
 
-solver displacementSBRStress;   //displacementLaplacian;
+solver displacementSBRStress;
+//solver displacementLaplacian;
 //solver velocityComponentLaplacian z;
 
 displacementSBRStressCoeffs
+//displacementLaplacianCoeffs
 {
     // diffusivity  uniform;
     // diffusivity  directional (1 200 0);

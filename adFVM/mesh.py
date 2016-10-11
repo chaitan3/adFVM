@@ -175,19 +175,26 @@ class Mesh(object):
             timeDir = self.getTimeDir(currTime) + '/'
         else:
             timeDir = self.case + currTime + '/'
-
         meshDir = timeDir + 'polyMesh/'
-        faces = self.readFoamFile(meshDir + 'faces', np.int32)
-        points = self.readFoamFile(meshDir + 'points', np.float64).astype(config.precision)
-        owner = self.readFoamFile(meshDir + 'owner', np.int32).ravel()
-        neighbour = self.readFoamFile(meshDir + 'neighbour', np.int32).ravel()
+        constantMeshDir = self.case + 'constant/polyMesh/'
+
+        faces = self.readFoamFile(constantMeshDir + 'faces', np.int32)
+        pointsFile = meshDir + 'points'
+        if not os.path.exists(pointsFile):
+            pointsFile = constantMeshDir + 'points'
+        points = self.readFoamFile(pointsFile, np.float64).astype(config.precision)
+        owner = self.readFoamFile(constantMeshDir + 'owner', np.int32).ravel()
+        neighbour = self.readFoamFile(constantMeshDir + 'neighbour', np.int32).ravel()
         addressing = []
         if parallel.nProcessors > 1:
-            addressing.append(self.readFoamFile(meshDir + 'pointProcAddressing', np.int32).ravel())
-            addressing.append(self.readFoamFile(meshDir + 'faceProcAddressing', np.int32).ravel())
-            addressing.append(self.readFoamFile(meshDir + 'cellProcAddressing', np.int32).ravel())
+            addressing.append(self.readFoamFile(constantMeshDir + 'pointProcAddressing', np.int32).ravel())
+            addressing.append(self.readFoamFile(constantMeshDir + 'faceProcAddressing', np.int32).ravel())
+            addressing.append(self.readFoamFile(constantMeshDir + 'cellProcAddressing', np.int32).ravel())
         
-        boundary = self.readFoamBoundary(meshDir + 'boundary')
+        boundaryFile = meshDir + 'boundary'
+        if not os.path.exists(boundaryFile):
+            boundaryFile = constantMeshDir + 'boundary'
+        boundary = self.readFoamBoundary(boundaryFile)
         return points, faces, owner, neighbour, addressing, boundary
 
     def readFoamFile(self, foamFile, dtype):
@@ -254,6 +261,9 @@ class Mesh(object):
             for field in nonuniform:
                 #print patch[0], field[0], len(field[1])
                 boundary[patch[0]][field[0]] = field[1]
+            # cyclicAMI HACK
+            if boundary[patch[0]]['type'] == 'cyclicAMI':
+                boundary[patch[0]]['type'] = 'cyclic'
             boundary[patch[0]]['nFaces'] = int(boundary[patch[0]]['nFaces'])
             boundary[patch[0]]['startFace'] = int(boundary[patch[0]]['startFace'])
         return boundary

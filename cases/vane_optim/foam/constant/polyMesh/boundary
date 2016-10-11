@@ -19,8 +19,7 @@ FoamFile
 (
     midplane1
     {
-        type            cyclic;
-        inGroups        1(cyclic);
+        type            cyclicAMI;
         nFaces          598;
         startFace       154243;
         matchTolerance  1;
@@ -30,8 +29,7 @@ FoamFile
     }
     midplane2
     {
-        type            cyclic;
-        inGroups        1(cyclic);
+        type            cyclicAMI;
         nFaces          598;
         startFace       154841;
         matchTolerance  1;
