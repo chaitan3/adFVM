@@ -13,8 +13,8 @@ from adFVM import config
 
 foam_dir = os.environ['FOAM_APPBIN'] + '/'
 apps_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
-#scripts_dir = os.path.join(apps_dir, '..', 'scripts')
-scripts_dir = os.path.join('/home/talnikar/adFVM/scripts/')
+scripts_dir = os.path.join(apps_dir, '..', 'scripts')
+#scripts_dir = os.path.join('/home/talnikar/adFVM/scripts/')
 
 def fit_bspline(coords, mesh):
     t, u = interpolate.splprep(coords, s=0)

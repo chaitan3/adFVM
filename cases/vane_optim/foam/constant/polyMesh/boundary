@@ -8,7 +8,7 @@
 FoamFile
 {
     version     2.0;
-    format      ascii;
+    format      binary;
     class       polyBoundaryMesh;
     location    "constant/polyMesh";
     object      boundary;
@@ -20,8 +20,9 @@ FoamFile
     midplane1
     {
         type            cyclicAMI;
-        nFaces          598;
-        startFace       154243;
+        inGroups        1(cyclicAMI);
+        nFaces          119600;
+        startFace       46305328;
         matchTolerance  1;
         transform       translational;
         neighbourPatch  midplane2;
@@ -30,8 +31,9 @@ FoamFile
     midplane2
     {
         type            cyclicAMI;
-        nFaces          598;
-        startFace       154841;
+        inGroups        1(cyclicAMI);
+        nFaces          119600;
+        startFace       46424928;
         matchTolerance  1;
         transform       translational;
         neighbourPatch  midplane1;
@@ -42,7 +44,7 @@ FoamFile
         type            cyclic;
         inGroups        1(cyclic);
         nFaces          77672;
-        startFace       155439;
+        startFace       46544528;
         matchTolerance  1e-06;
         transform       unknown;
         neighbourPatch  z2plane;
@@ -52,7 +54,7 @@ FoamFile
         type            cyclic;
         inGroups        1(cyclic);
         nFaces          77672;
-        startFace       233111;
+        startFace       46622200;
         matchTolerance  1e-06;
         transform       unknown;
         neighbourPatch  z1plane;
@@ -60,14 +62,14 @@ FoamFile
     inlet
     {
         type            patch;
-        nFaces          102;
-        startFace       310783;
+        nFaces          20400;
+        startFace       46699872;
     }
     outlet
     {
         type            patch;
-        nFaces          25;
-        startFace       310885;
+        nFaces          5000;
+        startFace       46720272;
     }
     pressure
     {
@@ -79,8 +81,8 @@ walls
 wall
 )
 ;
-        nFaces          230;
-        startFace       310910;
+        nFaces          46000;
+        startFace       46725272;
     }
     suction
     {
@@ -92,8 +94,8 @@ walls
 wall
 )
 ;
-        nFaces          649;
-        startFace       311140;
+        nFaces          129800;
+        startFace       46771272;
     }
 )
 

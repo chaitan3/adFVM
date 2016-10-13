@@ -1,9 +1,5 @@
 #!/bin/sh
 
-if [ -z "$1" ] then
-    cd $1
-fi
-
 cp system/createPatchDict.patch system/createPatchDict
 createPatch -overwrite
 rm -f *.obj

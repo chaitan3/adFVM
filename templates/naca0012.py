@@ -5,12 +5,12 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-primal = RCF('/home/talnikar/adFVM/cases/naca0012/adjoint_weno/', 
+primal = RCF('/home/talnikar/adFVM/cases/naca0012/', #adjoint_eno/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*3.4e-5,
              #faceReconstructor='SecondOrder',
-             faceReconstructor='WENO',
+             faceReconstructor='ENO',
              boundaryRiemannSolver='eulerLaxFriedrichs'
 )
 
@@ -78,7 +78,9 @@ def perturb(fields, mesh, t):
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 100000
-writeInterval = 200
+nSteps = 20000
+writeInterval = 5000
+#nSteps = 100000
+#writeInterval = 200
 startTime = 3.0
 dt = 6e-9
