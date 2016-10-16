@@ -114,7 +114,7 @@ class Adjoint(Solver):
                 for phi in fields:
                     phi.info()
                 pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
-                self.writeFields(fields, t, skipProcess=True)
+                self.writeFields(fields, t, skipProcessor=True)
 
             for step in range(0, writeInterval):
                 printMemUsage()
