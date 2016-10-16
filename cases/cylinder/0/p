@@ -1,14 +1,14 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  2.3.1                                 |
+|  \\    /   O peration     | Version:  2.4.0                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
     version     2.0;
-    format      binary;
+    format      ascii;
     class       volScalarField;
     location    "0";
     object      p;
@@ -37,7 +37,7 @@ boundaryField
     {
         type            CBC_UPT;
         T0              uniform 300;
-        U0              uniform (33 0 0);
+        U0              uniform ( 33 0 0 );
         p0              uniform 102325;
         value           uniform 102325;
     }

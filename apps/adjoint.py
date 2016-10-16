@@ -114,7 +114,7 @@ class Adjoint(Solver):
                 for phi in fields:
                     phi.info()
                 pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
-                self.writeFields(fields, t)
+                self.writeFields(fields, t, skipProcess=True)
 
             for step in range(0, writeInterval):
                 printMemUsage()
@@ -170,7 +170,7 @@ class Adjoint(Solver):
                 pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
             #exit(1)
-            self.writeFields(fields, t)
+            self.writeFields(fields, t, skipProcessor=True)
             self.writeStatusFile([checkpoint + 1, result])
 
         for index in range(0, nPerturb):

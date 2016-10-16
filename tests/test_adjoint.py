@@ -11,7 +11,6 @@ from adFVM.field import IOField
 
 class TestAdjoint(unittest.TestCase):
     def test_adjoint(self):
-        return
         case_path = os.path.join(cases_path, 'cylinder')
         problem = os.path.join(templates_path, 'cylinder_test')
         primal = os.path.join(apps_path, 'problem.py')

@@ -194,11 +194,11 @@ class Solver(object):
                         value[1][:] = extractField(phiB[patchID][key], nFaces, phi.dimensions)
         return
 
-    def writeFields(self, fields, t):
+    def writeFields(self, fields, t, **kwargs):
         self.setFields(fields) 
         with IOField.handle(t):
             for phi in self.fields:
-                phi.write()
+                phi.write(**kwargs)
         return
 
     def readStatusFile(self):

@@ -5,12 +5,12 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-primal = RCF('/home/talnikar/adFVM/cases/naca0012/', #adjoint_eno/', 
+primal = RCF('/home/talnikar/adFVM/cases/naca0012/adjoint_ankitweno/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*3.4e-5,
              #faceReconstructor='SecondOrder',
-             faceReconstructor='ENO',
+             faceReconstructor='AnkitWENO',
              boundaryRiemannSolver='eulerLaxFriedrichs'
 )
 
@@ -71,16 +71,16 @@ def perturb(fields, mesh, t):
     #mid = np.array([-0.012, 0.0, 0.])
     #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     mid = np.array([-0.01, 0.0, 0.])
-    G = 1e1*np.exp(-1e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 1e0*np.exp(-1e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     rho = G
     rhoU = np.zeros((mesh.nInternalCells, 3))
     rhoU[:, 0] += G.flatten()*100
     rhoE = G*2e5
     return rho, rhoU, rhoE
 
-nSteps = 20000
-writeInterval = 5000
-#nSteps = 100000
-#writeInterval = 200
+#nSteps = 20000
+#writeInterval = 5000
+nSteps = 100000
+writeInterval = 200
 startTime = 3.0
 dt = 6e-9
