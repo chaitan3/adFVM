@@ -18,9 +18,11 @@ user, args = parser.parse_known_args(config.args)
 source = lambda *args: []
 perturb = []
 
+locals()['reportInterval'] = 1
 config.importModule(locals(), user.caseFile)
 #print(locals().keys())
-#assert all(key in locals() for key in ['primal', 'objective', 'perturb', 'nSteps', 'writeInterval', 'startTime', 'dt'])
+#assert all(key in locals() for key in ['primal', 'objective', 'perturb', 'nSteps', 'writeInterval', 'reportInterval', 'startTime', 'dt'])
+assert writeInterval >= reportInterval
 
 if not isinstance(perturb, list):
     perturb = [perturb]
@@ -94,7 +96,9 @@ if __name__ == "__main__":
     for sim in range(0, nSims):
         if user.option == 'perturb':
             source = perturb[sim]
-        result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, writeInterval=writeInterval, mode=user.option, startIndex=startIndex, source=source)
+        result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, 
+                            writeInterval=writeInterval, reportInterval=reportInterval, 
+                            mode=user.option, startIndex=startIndex, source=source)
         writeResult(user.option, result/(nSteps + 1), '{}'.format(sim))
         primal.removeStatusFile()
         

@@ -236,7 +236,7 @@ class Solver(object):
             phiB.setInternalField(phiN.field)
         return boundaryFields
 
-    def run(self, endTime=np.inf, writeInterval=config.LARGE, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
+    def run(self, endTime=np.inf, writeInterval=config.LARGE, reportInterval=1, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
             startIndex=0, result=0., mode='simulation', source=lambda *args: []):
 
         logger.info('running solver for {0}'.format(nSteps))
@@ -279,55 +279,59 @@ class Solver(object):
         def iterate(t, timeIndex):
             return t < endTime and timeIndex < nSteps
         while iterate(t, timeIndex):
-            printMemUsage()
-            start = time.time()
+            # add reporting interval
+            mesh.reset = True
+            report = (timeIndex % reportInterval) == 0
 
-            for index in range(0, len(fields)):
-                fields[index].info()
+            if report:
+                printMemUsage()
+                start = time.time()
+                for index in range(0, len(fields)):
+                    fields[index].info()
+                pprint('Time step', timeIndex)
                 #try:
                 #    fields[index].info()
                 #except:
                 #    with IOField.handle(t):
                 #        fields[index].write()
                 #    exit(1)
-            mesh.reset = True
-            pprint('Time step', timeIndex)
 
             inputs = fields + [dt, t]
             outputs = self.map(*inputs)
             fields, dtc, local, remote = outputs[:-3], outputs[-3], outputs[-2], outputs[-1]
-
-            #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()
-            #print remote.shape, remote.dtype, (remote).max(), (remote).min(), np.isnan(remote).any()
-            pprint('Percent shock capturing: {0:.2f}%'.format(float(parallel.max(local))*100))
-            #diff = local-remote
-            #print diff.min(), diff.max()
-
-            #local = IOField.internalField('local', local.reshape(-1,1), (1,))
-            #with IOField.handle(t):
-            #    local.write()
-            #exit(1)
-
             fields = self.getFields(fields, IOField)
-            # TODO: fix unstacking F_CONTIGUOUS
-            for phi in fields:
-                phi.field = np.ascontiguousarray(phi.field)
 
-            #parallel.mpi.Barrier()
-            end = time.time()
-            pprint('Time for iteration:', end-start)
-            pprint('Time since beginning:', end-config.runtime)
-            pprint('Running average objective: ', parallel.sum(result)/(timeIndex + 1))
+            if report:
+                #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()
+                #print remote.shape, remote.dtype, (remote).max(), (remote).min(), np.isnan(remote).any()
+                pprint('Percent shock capturing: {0:.2f}%'.format(float(parallel.max(local))*100))
+                #diff = local-remote
+                #print diff.min(), diff.max()
+
+                #local = IOField.internalField('local', local.reshape(-1,1), (1,))
+                #with IOField.handle(t):
+                #    local.write()
+                #exit(1)
+
+
+                #parallel.mpi.Barrier()
+                end = time.time()
+                pprint('Time for iteration:', end-start)
+                pprint('Time since beginning:', end-config.runtime)
+                pprint('Running average objective: ', parallel.sum(result)/(timeIndex + 1))
+
+                if self.localTimeStep:
+                    pprint('Simulation Time:', t, 'Time step: min', parallel.min(dt), 'max', parallel.max(dt))
+                else self.localTimeStep:
+                    pprint('Simulation Time:', t, 'Time step:', dt)
 
             # time management
-            timeSteps.append([t, dt])
-            timeIndex += 1
             if self.localTimeStep:
-                pprint('Simulation Time:', t, 'Time step: min', parallel.min(dt), 'max', parallel.max(dt))
                 t += 1
             else:
-                pprint('Simulation Time:', t, 'Time step:', dt)
                 t = round(t+dt, 9)
+            timeSteps.append([t, dt])
+            timeIndex += 1
             if self.localTimeStep:
                 dt = dtc
             elif isinstance(dts, np.ndarray):
