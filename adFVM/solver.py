@@ -326,12 +326,12 @@ class Solver(object):
                     pprint('Simulation Time:', t, 'Time step:', dt)
 
             # time management
+            timeSteps.append([t, dt])
+            timeIndex += 1
             if self.localTimeStep:
                 t += 1
             else:
                 t = round(t+dt, 9)
-            timeSteps.append([t, dt])
-            timeIndex += 1
             if self.localTimeStep:
                 dt = dtc
             elif isinstance(dts, np.ndarray):
