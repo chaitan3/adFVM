@@ -322,7 +322,7 @@ class Solver(object):
 
                 if self.localTimeStep:
                     pprint('Simulation Time:', t, 'Time step: min', parallel.min(dt), 'max', parallel.max(dt))
-                else self.localTimeStep:
+                else:
                     pprint('Simulation Time:', t, 'Time step:', dt)
 
             # time management
