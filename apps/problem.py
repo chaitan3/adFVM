@@ -96,6 +96,7 @@ if __name__ == "__main__":
     for sim in range(0, nSims):
         if user.option == 'perturb':
             source = perturb[sim]
+            primal.timeStepFile = primal.mesh.case + 'timeSeries_{}.txt'.format(sim)
         result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, 
                             writeInterval=writeInterval, reportInterval=reportInterval, 
                             mode=user.option, startIndex=startIndex, source=source)

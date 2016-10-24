@@ -47,7 +47,7 @@ def perturb_bspline(param, c, t, index):
         c[1][0] += per[n,0]*factor
         c[1][1] += per[n,1]*factor
         n += 1
-    return 
+    return c[1][0][c_index], c[1][1][c_index]
 
 def create_displacement(param, base, case):
     from mpi4py import MPI
@@ -99,6 +99,9 @@ def create_displacement(param, base, case):
         if points.shape[0] == 0:
             points = points.reshape((0, 3))
         t, tn = fit_bspline(coords, points[:,[0,1]])
+        index = np.argsort(tn)
+        tn = tn[index]
+        points = points[index]
         spline_points.append(points)
         spline_coeffs.append((t, tn))
 
@@ -110,10 +113,12 @@ def create_displacement(param, base, case):
         if points.shape[0] > 0:
             c = copy.deepcopy(t)
             perturb_bspline(param, c, spline_coeffs[0][0], 0)
-            perturb_bspline(param, c, spline_coeffs[1][0], 1)
+            xc, yc = perturb_bspline(param, c, spline_coeffs[1][0], 1)
             newPoints = interpolate.splev(tn, c)
-                #if rank == 0:
-            #    plt.plot(newPoints[0], newPoints[1], 'b.', label='perturbed')
+            if rank == 0:
+                #plt.plot(newPoints[0], newPoints[1], 'b.', label='perturbed')
+                plt.scatter(xc, yc, s=80, marker='*', c='k')
+                plt.plot(newPoints[0], newPoints[1], 'k')
         else:
             newPoints = [np.zeros((0.,)), np.zeros((0.,))]
         pointDisplacement = np.vstack((newPoints[0]-points[:,0], newPoints[1]-points[:,1], 0*points[:,2])).T
@@ -124,13 +129,14 @@ def create_displacement(param, base, case):
         index += 1
     
     if rank == 0:
-    #    plt.axis('scaled')
-    #    plt.xlim([0.026,0.040])
-    #    plt.ylim([-0.055,-0.030])
-    #    plt.legend()
-    #    #plt.show()
+        plt.axis('scaled')
+        plt.axis('off')
+        plt.xlim([0.026,0.040])
+        plt.ylim([-0.055,-0.030])
+        plt.legend()
+        #plt.show()
         np.savetxt(case + 'params.txt', param)
-    #    plt.savefig(case + 'perturbation.png')
+        plt.savefig(case + 'perturbation.png')
 
     dispFile = case + '1/pointDisplacement'
     with open(dispFile) as f:
@@ -167,7 +173,7 @@ def perturb_mesh(case, spawn_job):
     spawn_job([sys.executable, os.path.join(scripts_dir, 'conversion', 'hdf5mesh.py'), case, '1.0001'])
     return
 
-def gen_mesh_param(param, base, case, spawn_job):
+def gen_mesh_param(param, base, case, spawn_job, perturb=True):
     case = case +'/'
     shutil.copytree(base + 'constant', case + 'constant')
     shutil.copytree(base + '0', case + '0')
@@ -181,7 +187,8 @@ def gen_mesh_param(param, base, case, spawn_job):
         pickle.dump([param, base, case], f)
     #create_displacement(param, base, case)
     spawn_job([sys.executable, __file__, 'create_displacement', 'params.pkl'])
-    perturb_mesh(case, spawn_job)
+    if perturb:
+        perturb_mesh(case, spawn_job)
 
     map(os.remove, glob.glob('*.obj'))
     return

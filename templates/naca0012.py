@@ -5,12 +5,12 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-primal = RCF('/home/talnikar/adFVM/cases/naca0012/adjoint_ankitweno/', 
+primal = RCF('/home/talnikar/adFVM/cases/naca0012/adjoint_weno/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*3.4e-5,
              #faceReconstructor='SecondOrder',
-             faceReconstructor='AnkitWENO',
+             faceReconstructor='WENO',
              boundaryRiemannSolver='eulerLaxFriedrichs'
 )
 
@@ -31,9 +31,11 @@ def objectiveDrag(fields, mesh):
     p = rhoE.field[start:end]*(primal.gamma-1)
     #deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1, keepdims=True)
     deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nF,1))
-    T = rhoE/(rho*primal.Cv)
+    #T = rhoE/(rho*primal.Cv)
     #mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
-    mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
+    mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]
+              -rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])\
+              *3.4e-5/deltas
     return ad.sum((p*nx-mungUx)*areas)
 
 def getPlane(solver):
