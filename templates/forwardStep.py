@@ -25,6 +25,8 @@ def perturb(fields, mesh, t):
     rhoU[mesh.owner[startFace:endFace], 0] += 0.1
     return rho, rhoU, rhoE
 
+parameters = 'source'
+
 def perturb(fields, mesh, t):
     if not hasattr(perturb, 'perturbation'):
         ## do the perturbation based on param and eps
@@ -33,6 +35,12 @@ def perturb(fields, mesh, t):
         points[0] = 1e-6
         perturb.perturbation = mesh.parent.getPointsPerturbation(points)
     return perturb.perturbation
+parameters = 'mesh'
+
+def perturb(fields, mesh, t):
+    return 1e-3
+
+parameters = ('BCs', 'U', 'inlet', 'value')
 
 #nSteps = 4000
 #writeInterval = 100

@@ -72,10 +72,7 @@ class Solver(object):
             mesh = self.mesh
             adjointFields = self.getSymbolicFields(False)
             scalarFields = sum([ad.sum(newFields[index]*adjointFields[index]) for index in range(0, len(fields))])
-            if adjoint.gradType == 'source':
-                gradientInputs = fields + list(zip(*self.sourceTerms)[0])
-            else:
-                gradientInputs = fields + [getattr(mesh, field) for field in Mesh.gradFields]
+            gradientInputs = fields + adjoint.getGradFields()
             gradients = ad.grad(scalarFields, gradientInputs)
             self.adjoint = self.function(fields + adjointFields + [self.dt, self.t0], \
                             gradients, 'adjoint')
@@ -143,13 +140,16 @@ class Solver(object):
         self.sourceTerms = zip(symbolics, values)
         return
 
-    def updateSource(self, source):
+    def updateSource(self, source, perturb=False):
         for index, value in enumerate(source):
             #if index == 1:
             #    phi = IOField.internalField('rhoUS', value, (3,))
             #    with IOField.handle(startTime):
             #        phi.write()
-            self.sourceTerms[index][1][:] = value
+            if perturb:
+                self.sourceTerms[index][1][:] += value
+            else:
+                self.sourceTerms[index][1][:] = value
         return
 
     def readFields(self, t):
@@ -237,7 +237,7 @@ class Solver(object):
         return boundaryFields
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, reportInterval=1, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
-            startIndex=0, result=0., mode='simulation', source=lambda *args: []):
+            startIndex=0, result=0., mode='simulation', source=lambda *args: [], perturbation=None):
 
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
@@ -273,6 +273,31 @@ class Solver(object):
 
         # source term update
         self.updateSource(source(fields, mesh.origMesh, t))
+        # perturbation
+        if perturbation:
+            parameters, perturb = perturbation
+            values = perturb(fields, mesh.origMesh, t)
+            if not isinstance(values, list) or (len(parameters) == 1 and len(values) > 1):
+                values = [values]
+            for param, value in zip(parameters, values):
+                if param == 'source':
+                    pprint('Perturbing source')
+                    self.updateSource(value, perturb=True)
+                elif param == 'mesh':
+                    pprint('Perturbing mesh')
+                    for attr, delta in zip(Mesh.gradFields, value):
+                        field = getattr(mesh.origMesh, attr)
+                        field += delta
+                        assert field is getattr(mesh.origMesh, attr)
+                elif isinstance(param, tuple):
+                    assert param[0] == 'BCs'
+                    pprint('Perturbing', param)
+                    _, phi, patchID, key = param
+                    patch = getattr(self, phi).phi.BC[patchID]
+                    index = patch.keys.index(key)
+                    patch.inputs[index][1][:] += value
+                elif isinstance(param, ad.TensorType):
+                    raise NotImplementedError
 
         pprint('Time marching for', ' '.join(self.names))
 
@@ -341,7 +366,7 @@ class Solver(object):
 
             if self.dynamicMesh:
                 mesh.update(t, dt)
-            self.updateSource(source(fields, mesh.origMesh, t))
+            #self.updateSource(source(fields, mesh.origMesh, t))
 
             # objective management
             instObjective = self.objective(*fields)

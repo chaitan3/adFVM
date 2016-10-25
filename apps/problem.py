@@ -17,13 +17,16 @@ user, args = parser.parse_known_args(config.args)
 
 source = lambda *args: []
 perturb = []
-
 locals()['reportInterval'] = 1
+parameters = []
+
 config.importModule(locals(), user.caseFile)
 #print(locals().keys())
-#assert all(key in locals() for key in ['primal', 'objective', 'perturb', 'nSteps', 'writeInterval', 'reportInterval', 'startTime', 'dt'])
+#assert all(key in locals() for key in ['primal', 'objective', 'perturb', 'nSteps', 'writeInterval', 'reportInterval', 'startTime', 'dt', 'paramters'])
 assert writeInterval >= reportInterval
 
+if not isinstance(parameters, list):
+    parameters = [parameters]
 if not isinstance(perturb, list):
     perturb = [perturb]
 nPerturb = len(perturb)
@@ -74,7 +77,6 @@ if __name__ == "__main__":
         nSims = 1
 
     elif user.option == 'perturb':
-        pprint('Perturbing fields')
         if parallel.rank == 0:
             timeSteps = np.loadtxt(timeStepFile)
             timeSteps = np.concatenate((timeSteps, np.array([[0, 0]])))
@@ -95,11 +97,13 @@ if __name__ == "__main__":
     # restarting perturb not fully supported
     for sim in range(0, nSims):
         if user.option == 'perturb':
-            source = perturb[sim]
+            perturbation = (parameters, perturb[sim])
             primal.timeStepFile = primal.mesh.case + 'timeSeries_{}.txt'.format(sim)
+        else:
+            perturbation = None
         result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, 
                             writeInterval=writeInterval, reportInterval=reportInterval, 
-                            mode=user.option, startIndex=startIndex, source=source)
+                            mode=user.option, startIndex=startIndex, source=source, perturbation=perturbation)
         writeResult(user.option, result/(nSteps + 1), '{}'.format(sim))
         primal.removeStatusFile()
         

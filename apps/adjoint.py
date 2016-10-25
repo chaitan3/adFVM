@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 from adFVM import config, parallel
+from adFVM.config import ad
 from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
 from adFVM.matop_petsc import laplacian, ddt
@@ -11,7 +12,7 @@ from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointNorm, computeGradients, getAdjointEnergy
 from adFVM.solver import Solver
 
-from problem import primal, nSteps, writeInterval, reportInterval, objectiveGradient, perturb, writeResult, nPerturb
+from problem import primal, nSteps, writeInterval, reportInterval, objectiveGradient, perturb, writeResult, nPerturb, parameters
 
 import numpy as np
 import time
@@ -20,10 +21,8 @@ import argparse
 
 
 class Adjoint(Solver):
-    def __init__(self, primal, scaling, gradType):
-        self.primal = primal
+    def __init__(self, primal, scaling):
         self.scaling = scaling
-        self.gradType = gradType
         self.mesh = primal.mesh
         self.statusFile = primal.statusFile
         self.names = [name + 'a' for name in primal.names]
@@ -38,8 +37,6 @@ class Adjoint(Solver):
         self.fields = fields
 
     def compile(self):
-        primal = self.primal
-
         self.compileInit(functionName='adjoint_init')
 
         if self.scaling:
@@ -49,6 +46,26 @@ class Adjoint(Solver):
         self.map = primal.adjoint
 
         return
+
+    def getGradFields(self):
+        variables = []
+        for param in parameters:
+            if param == 'source':
+                pprint('Gradient wrt source')
+                variables.extend(list(zip(*self.sourceTerms)[0]))
+            elif param == 'mesh':
+                pprint('Gradient wrt mesh')
+                variables.extend([getattr(self.mesh, field) for field in Mesh.gradFields])
+            elif isinstance(param, tuple):
+                assert param[0] == 'BCs'
+                pprint('Gradient wrt', param)
+                _, phi, patchID, key = param
+                patch = getattr(primal, phi).phi.BC[patchID]
+                index = patch.keys.index(key)
+                variables.append(patch.inputs[index][0])
+            elif isinstance(param, ad.TensorType):
+                variables.append(param)
+        return variables
 
     def viscosity(self, rho, rhoU, rhoE):
         U, T, p = primal.primitive(rho, rhoU, rhoE)
@@ -75,7 +92,7 @@ class Adjoint(Solver):
         return
     
     def run(self):
-        primal, mesh = self.primal, self.mesh
+        mesh = self.mesh
         result, firstCheckpoint = self.result, self.firstCheckpoint
         timeSteps = self.timeSteps
 
@@ -149,9 +166,9 @@ class Adjoint(Solver):
                     if report:
                         pprint('Smoothing adjoint field')
                     nInternalCells = mesh.origMesh.nInternalCells
-                    #start2 = time.time() 
+                    start2 = time.time() 
                     weight = central(self.viscosity(*previousSolution), mesh.origMesh)
-                    #start3 = time.time()
+                    start3 = time.time()
 
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
                     stackedPhi = Field('a', stackedFields, (5,))
@@ -161,12 +178,15 @@ class Adjoint(Solver):
                     fields[1].field[:nInternalCells] = newStackedFields[:, [1,2,3]]
                     fields[2].field[:nInternalCells] = newStackedFields[:, [4]]
 
-                    #start4 = time.time()
-                    #pprint('Timers 1:', start3-start2, '2:', start4-start3)
+                    start4 = time.time()
+                    pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
                 # compute sensitivity using adjoint solution
-                for index, perturbation in enumerate(perturb):
-                    for derivative, delphi in zip(paramGradient, perturbation(None, mesh.origMesh, t)):
+                for index in range(0, len(perturb)):
+                    perturbation = perturb[index](None, mesh.origMesh, t)
+                    if not isinstance(perturbation, list) or (len(parameters) == 1 and len(perturbation) > 1):
+                        perturbation = [perturbation]
+                    for derivative, delphi in zip(paramGradient, perturbation):
                         result[index] += np.sum(derivative * delphi)
 
                 #parallel.mpi.Barrier()
@@ -188,10 +208,9 @@ class Adjoint(Solver):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--scaling', required=False)
-    parser.add_argument('--grad_type', required=False, default='source')
     user, args = parser.parse_known_args()
 
-    adjoint = Adjoint(primal, user.scaling, user.grad_type)
+    adjoint = Adjoint(primal, user.scaling)
     adjoint.initPrimalData()
 
     adjoint.createFields()

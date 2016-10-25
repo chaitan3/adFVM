@@ -57,7 +57,6 @@ class Matrix(object):
         return self.__class__(b * self.A, b * self.b)
 
     def solve(self):
-        start = time.time()
         ksp = PETSc.KSP()
         ksp.create(PETSc.COMM_WORLD)
 
@@ -74,21 +73,22 @@ class Matrix(object):
         #ksp.getPC().setType('jacobi')
         #ksp.getPC().setType('asm')
         #ksp.getPC().setType('mg')
-        ksp.getPC().setType('gamg')
+        #ksp.getPC().setType('gamg')
         # which one is used?
-        #ksp.getPC().setType('hypre')
+        ksp.getPC().setType('hypre')
 
         x = self.A.createVecRight()
         X = []
 
         ksp.setOperators(self.A)
         ksp.setFromOptions()
+        start = time.time()
         for i in range(0, self.b.getSize()[1]):
             x.set(0)
             b = self.b.getColumnVector(i)
-            ksp.setConvergenceHistory()
+            #ksp.setConvergenceHistory()
             ksp.solve(-b, x)
-            conv = ksp.getConvergenceHistory()
+            #conv = ksp.getConvergenceHistory()
             #pprint('convergence{0}:'.format(i), end='')
             #pprint(' '.join([str(y) for y in conv]))
             X.append(x.getArray().copy().reshape(-1,1))
@@ -153,6 +153,7 @@ def laplacian(phi, DT):
     uniqData = np.zeros((indices.shape[0], 1), config.precision)
     add_at(uniqData, inverse, data)
     indices = indices.reshape(-1,1)
+    A.assemble()
     A.setValuesRCV(il + indices, jl + indices, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
 
     # TESTING
