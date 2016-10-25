@@ -52,7 +52,7 @@ class Adjoint(Solver):
         for param in parameters:
             if param == 'source':
                 pprint('Gradient wrt source')
-                variables.extend(list(zip(*self.sourceTerms)[0]))
+                variables.extend(list(zip(*primal.sourceTerms)[0]))
             elif param == 'mesh':
                 pprint('Gradient wrt mesh')
                 variables.extend([getattr(self.mesh, field) for field in Mesh.gradFields])
