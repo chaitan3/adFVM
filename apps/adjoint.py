@@ -166,9 +166,9 @@ class Adjoint(Solver):
                     if report:
                         pprint('Smoothing adjoint field')
                     nInternalCells = mesh.origMesh.nInternalCells
-                    #start2 = time.time() 
+                    start2 = time.time() 
                     weight = central(self.viscosity(*previousSolution), mesh.origMesh)
-                    #start3 = time.time()
+                    start3 = time.time()
 
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
                     stackedPhi = Field('a', stackedFields, (5,))
@@ -178,8 +178,8 @@ class Adjoint(Solver):
                     fields[1].field[:nInternalCells] = newStackedFields[:, [1,2,3]]
                     fields[2].field[:nInternalCells] = newStackedFields[:, [4]]
 
-                    #start4 = time.time()
-                    #pprint('Timers 1:', start3-start2, '2:', start4-start3)
+                    start4 = time.time()
+                    pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
                 # compute sensitivity using adjoint solution
                 for index in range(0, len(perturb)):
