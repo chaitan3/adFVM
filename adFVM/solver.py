@@ -395,7 +395,10 @@ class Solver(object):
                         np.savetxt(f, timeSteps[lastIndex:])
                 if mode != 'simulation' and parallel.rank == 0:
                     with open(self.timeSeriesFile, 'a') as f:
-                        np.savetxt(f, timeSeries[lastIndex:])
+                        if lastIndex == 0:
+                            np.savetxt(f, timeSeries[lastIndex:])
+                        else:
+                            np.savetxt(f, timeSeries[lastIndex + 1:])
                 lastIndex = len(timeSteps)
             pprint()
 
