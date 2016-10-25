@@ -157,9 +157,9 @@ class Adjoint(Solver):
                     stackedPhi = Field('a', stackedFields, (5,))
                     stackedPhi.old = stackedFields
                     newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
-                    fields[0][:nInternalCells] = newStackFields[:, [0]]
-                    fields[1][:nInternalCells] = newStackFields[:, [1,2,3]]
-                    fields[2][:nInternalCells] = newStackFields[:, [4]]
+                    fields[0].field[:nInternalCells] = newStackedFields[:, [0]]
+                    fields[1].field[:nInternalCells] = newStackedFields[:, [1,2,3]]
+                    fields[2].field[:nInternalCells] = newStackedFields[:, [4]]
 
                     #start4 = time.time()
                     #pprint('Timers 1:', start3-start2, '2:', start4-start3)
