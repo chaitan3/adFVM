@@ -29,6 +29,8 @@ def source(fields, mesh, t):
     rhoE[:,0] = 2e5*G
     return rho, rhoU, rhoE
 
+parameters = 'source'
+
 nSteps = 20000
 writeInterval = 500
 #nSteps = 10

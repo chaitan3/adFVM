@@ -82,6 +82,8 @@ def makePerturb(param, eps=1e-6):
     return perturbMesh
 perturb = [makePerturb(1), makePerturb(2)]
 
+parameters = 'mesh'
+
 #def makePerturb(mid):
 #    def perturb(fields, mesh, t):
 #        G = 10*np.exp(-1e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
@@ -94,6 +96,8 @@ perturb = [makePerturb(1), makePerturb(2)]
 #    return perturb
 #perturb = [makePerturb(np.array([-0.02, 0.01, 0.005])),
 #           makePerturb(np.array([-0.08, -0.01, 0.005]))]
+
+#parameters = 'source'
 
 #nSteps = 10
 #writeInterval = 5
