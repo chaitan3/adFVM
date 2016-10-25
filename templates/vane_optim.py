@@ -7,7 +7,9 @@ from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
 #caseDir = '/projects/LESOpt/talnikar/vane-optim/'
-caseDir = '/home/talnikar/adFVM/cases/vane_optim/'
+#foamDir = caseDir + '/foam/'
+caseDir = '/home/talnikar/adFVM/cases/vane_optim/foam/laminar/'
+foamDir = caseDir
 
 nParam = 8
 paramBounds = 1e-3*np.ones(nParam).reshape(-1,1)
@@ -21,7 +23,7 @@ def dot(a, b):
 
 def spawnJob(args, cwd='.'):
     import subprocess
-    #return subprocess.check_call(args, cwd=cwd)
+    return subprocess.check_call(args, cwd=cwd)
     #subprocess.call(args)
     nProcs = 4096
     #nProcs = 16
@@ -40,12 +42,11 @@ def spawnJob(args, cwd='.'):
                         + args, stdout=f, stderr=f)
 
 def genMeshParam(param, paramDir):
-    foamDir = caseDir + '/foam/'
     sys.path.append(foamDir)
     from vane_profile import gen_mesh_param
-    gen_mesh_param(param, foamDir, paramDir + '/foam/', spawnJob)
-    import shutil
-    shutil.move(paramDir + 'foam/mesh.hdf5', paramDir + 'mesh.hdf5')
+    gen_mesh_param(param, foamDir, paramDir + '/foam/', spawnJob, perturb=False)
+    #import shutil
+    #shutil.move(paramDir + 'foam/mesh.hdf5', paramDir + 'mesh.hdf5')
     return
 
 # heat transfer

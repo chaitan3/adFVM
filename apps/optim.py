@@ -76,4 +76,4 @@ def evaluate(param, runSimulation=True):
     return
 
 from adFVM.optim import designOfExperiment
-print designOfExperiment(lambda x: evaluate(x, False), paramBounds, 2*nParam)
+print designOfExperiment(lambda x: evaluate(x), paramBounds, 2*nParam)

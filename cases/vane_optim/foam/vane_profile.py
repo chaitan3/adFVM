@@ -17,6 +17,7 @@ scripts_dir = os.path.join(apps_dir, '..', 'scripts')
 #scripts_dir = os.path.join('/home/talnikar/adFVM/scripts/')
 
 def fit_bspline(coords, mesh):
+
     t, u = interpolate.splprep(coords, s=0)
     tev = np.linspace(0, 1, 10000)
     x = interpolate.splev(tev, t)
@@ -25,12 +26,13 @@ def fit_bspline(coords, mesh):
     tn = tev[indices]
     #plt.plot(x[0][indices], x[1][indices], 'b.')
     #plt.plot(coords[0], coords[1], 'r.')
-    #plt.plot(mesh[:,0], mesh[:,1], 'k.')
     #plt.axis('scaled')
     return t, tn
 
 c_index = [-2, -4]
-c_scale = [1e-3, 4e-3]
+#c_scale = [1e-3, 4e-3]
+c_scale = [1e-3, 6e-3]
+c_bound = [1., 0.5]
 c_count = len(c_index)
 
 def perturb_bspline(param, c, t, index):
@@ -38,10 +40,10 @@ def perturb_bspline(param, c, t, index):
     param_index = param[index*n_param:(index+1)*n_param]
     per = np.array(param_index).reshape(c_count, 2)
     n = 0
-    for i, s in zip(c_index, c_scale):
+    for i, s, b in zip(c_index, c_scale, c_bound):
         coord0 = t[1][0][i]
         coord1 = t[1][1][i]
-        factor = np.exp((-(coord0-c[1][0])**2
+        factor = b*np.exp((-(coord0-c[1][0])**2
                         -(coord1-c[1][1])**2)
                         /s**2)
         c[1][0] += per[n,0]*factor
@@ -109,7 +111,6 @@ def create_displacement(param, base, case):
         points = spline_points[index]
         t, tn = spline_coeffs[index]
         #if rank == 0:
-        #    plt.plot(points[:,0], points[:,1], 'k.', label='orig')
         if points.shape[0] > 0:
             c = copy.deepcopy(t)
             perturb_bspline(param, c, spline_coeffs[0][0], 0)
@@ -118,6 +119,7 @@ def create_displacement(param, base, case):
             if rank == 0:
                 #plt.plot(newPoints[0], newPoints[1], 'b.', label='perturbed')
                 plt.scatter(xc, yc, s=80, marker='*', c='k')
+                plt.plot(points[:,0], points[:,1], 'b.')
                 plt.plot(newPoints[0], newPoints[1], 'k')
         else:
             newPoints = [np.zeros((0.,)), np.zeros((0.,))]
@@ -132,9 +134,8 @@ def create_displacement(param, base, case):
         plt.axis('scaled')
         plt.axis('off')
         plt.xlim([0.026,0.040])
-        plt.ylim([-0.055,-0.030])
+        plt.ylim([-0.055,-0.040])
         plt.legend()
-        #plt.show()
         np.savetxt(case + 'params.txt', param)
         plt.savefig(case + 'perturbation.png')
 
