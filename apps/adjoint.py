@@ -11,7 +11,7 @@ from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointNorm, computeGradients, getAdjointEnergy
 from adFVM.solver import Solver
 
-from problem import primal, nSteps, writeInterval, objectiveGradient, perturb, writeResult, nPerturb
+from problem import primal, nSteps, writeInterval, reportInterval, objectiveGradient, perturb, writeResult, nPerturb
 
 import numpy as np
 import time
@@ -108,23 +108,18 @@ class Adjoint(Solver):
                     mesh.origMesh.boundary = lastMesh.boundarydata[m:].reshape(-1,1)
                 else:
                     lastSolution = solutions[-1]
-                fields  = objectiveGradient(*lastSolution)
-                fields  = [phi/(nSteps + 1) for phi in fields]
+                fields = objectiveGradient(*lastSolution)
+                fields = [phi/(nSteps + 1) for phi in fields]
                 fields = self.getFields(fields, IOField)
-                for phi in fields:
-                    phi.info()
-                pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
+                #for phi in fields:
+                #    phi.info()
+                #pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
                 self.writeFields(fields, t, skipProcessor=True)
 
             for step in range(0, writeInterval):
-                printMemUsage()
-                start = time.time()
-                for phi in fields:
-                    phi.info()
-                pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
-
+                report = (step % reportInterval) == 0
+                
                 adjointIndex = writeInterval-1 - step
-                pprint('Time step', adjointIndex)
                 t, dt = timeSteps[primalIndex + adjointIndex]
                 if primal.dynamicMesh:
                     previousMesh, previousSolution = solutions[adjointIndex]
@@ -132,6 +127,14 @@ class Adjoint(Solver):
                     mesh.origMesh.boundary = previousMesh.boundary
                 else:
                     previousSolution = solutions[adjointIndex]
+
+                if report:
+                    printMemUsage()
+                    start = time.time()
+                    for phi in fields:
+                        phi.info()
+                    pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
+                    pprint('Time step', adjointIndex)
 
                 inputs = previousSolution + fields + [dt, t]
                 outputs = self.map(*inputs)
@@ -143,7 +146,8 @@ class Adjoint(Solver):
                     fields[index].field = gradient[index] + objGradient[index]
 
                 if self.scaling:
-                    pprint('Smoothing adjoint field')
+                    if report:
+                        pprint('Smoothing adjoint field')
                     nInternalCells = mesh.origMesh.nInternalCells
                     #start2 = time.time() 
                     weight = central(self.viscosity(*previousSolution), mesh.origMesh)
@@ -166,10 +170,11 @@ class Adjoint(Solver):
                         result[index] += np.sum(derivative * delphi)
 
                 #parallel.mpi.Barrier()
-                end = time.time()
-                pprint('Time for adjoint iteration: {0}'.format(end-start))
-                pprint('Time since beginning:', end-config.runtime)
-                pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
+                if report:
+                    end = time.time()
+                    pprint('Time for adjoint iteration: {0}'.format(end-start))
+                    pprint('Time since beginning:', end-config.runtime)
+                    pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
             #exit(1)
             self.writeFields(fields, t, skipProcessor=True)

@@ -7,11 +7,12 @@ plt.rcParams.update({'legend.fontsize': 18,
                      'ytick.labelsize': 14,
                      'axes.labelsize': 16
                     })
-if len(sys.argv) > 2:
-    n = int(sys.argv[2])
-else:
-    n = 1
-y = np.loadtxt(sys.argv[1])[::n]
+#if len(sys.argv) > 2:
+#    n = int(sys.argv[2])
+#else:
+#    n = 1
+#y = np.loadtxt(sys.argv[1])[::n]
+y = np.loadtxt(sys.argv[1])
 x = np.arange(0, len(y))
 s = np.cumsum(y)/np.arange(1,len(y)+1)
 #plt.xlabel('time (T)')
