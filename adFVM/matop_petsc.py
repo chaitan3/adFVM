@@ -1,3 +1,4 @@
+from . import config
 from .parallel import pprint
 from .compat import add_at
 
@@ -66,16 +67,16 @@ class Matrix(object):
         #pc.setFactorSolverPackage('mumps')
         #pc.setFactorSolverPackage('superlu_dist')
 
-        #ksp.setType('gmres')
-        ksp.setType('gcr')
+        ksp.setType('gmres')
+        #ksp.setType('gcr')
         #ksp.setType('bcgs')
         #ksp.setType('tfqmr')
         #ksp.getPC().setType('jacobi')
         #ksp.getPC().setType('asm')
         #ksp.getPC().setType('mg')
-        #ksp.getPC().setType('gamg')
+        ksp.getPC().setType('gamg')
         # which one is used?
-        ksp.getPC().setType('hypre')
+        #ksp.getPC().setType('hypre')
 
         x = self.A.createVecRight()
         X = []
@@ -112,7 +113,7 @@ def laplacian(phi, DT):
     jl, jh = A.getOwnershipRangeColumn()
     faceData = (mesh.areas*DT.field/mesh.deltas).flatten()
 
-    neighbourData = faceData[meshC.cellFaces]
+    neighbourData = faceData[mesh.cellFaces]
     neighbourData /= mesh.volumes
     row = np.arange(0, n, dtype=np.int32).reshape(-1,1)
     

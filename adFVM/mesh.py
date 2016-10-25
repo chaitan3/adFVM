@@ -110,7 +110,7 @@ class Mesh(object):
         self.weights, self.linearWeights, self.quadraticWeights = self.getWeights()   # nFaces
 
         # uses neighbour
-        self.cellNeighboursMapOp = self.getCellNeighbours(boundary=False)
+        self.cellNeighboursMatOp = self.getCellNeighbours(boundary=False)
         self.cellNeighbours = self.getCellNeighbours()
         self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
         self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)

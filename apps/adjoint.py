@@ -150,7 +150,9 @@ class Adjoint(Solver):
                     #start3 = time.time()
 
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
-                    newStackedFields = (ddt(stackedFields, dt) - laplacian(stackedFields, weight)).solve()
+                    stackedPhi = Field('a', stackedFields, (5,))
+                    stackedPhi.old = stackedFields
+                    newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
                     fields[0][:nInternalCells] = newStackFields[:, [0]]
                     fields[1][:nInternalCells] = newStackFields[:, [1,2,3]]
                     fields[2][:nInternalCells] = newStackFields[:, [4]]
