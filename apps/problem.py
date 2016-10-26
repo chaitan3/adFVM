@@ -84,7 +84,6 @@ if __name__ == "__main__":
             timeSteps = np.zeros((nSteps+1, 2))
         parallel.mpi.Bcast(timeSteps, root=0)
         dts = timeSteps[startIndex:,1]
-        writeInterval = config.LARGE
 
         nSims = nPerturb
     else:

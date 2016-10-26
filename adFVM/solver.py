@@ -383,22 +383,23 @@ class Solver(object):
                     solutions.append(fields)
             elif (timeIndex % writeInterval == 0) or not iterate(t, timeIndex):
                 # write mesh, fields, status
-                dtc = IOField.internalField('dtc', dtc, (1,))
-                self.writeFields(fields + [dtc], t)
-                #self.writeFields(fields + [dtc, local], t)
-                if mode != 'simulation':
-                    self.writeStatusFile([timeIndex, t, dt, result])
+                self.writeStatusFile([timeIndex, t, dt, result])
+                if mode == 'orig' or mode == 'simulation':
+                    dtc = IOField.internalField('dtc', dtc, (1,))
+                    self.writeFields(fields + [dtc], t)
+                    #self.writeFields(fields + [dtc, local], t)
 
                 # write timeSeries if in orig mode (problem.py)
-                if mode == 'orig' and parallel.rank == 0:
-                    with open(self.timeStepFile, 'a') as f:
-                        np.savetxt(f, timeSteps[lastIndex:])
-                if mode != 'simulation' and parallel.rank == 0:
-                    with open(self.timeSeriesFile, 'a') as f:
-                        if lastIndex == 0:
-                            np.savetxt(f, timeSeries[lastIndex:])
-                        else:
-                            np.savetxt(f, timeSeries[lastIndex + 1:])
+                if parallel.rank == 0:
+                    if mode == 'orig':
+                        with open(self.timeStepFile, 'a') as f:
+                            np.savetxt(f, timeSteps[lastIndex:])
+                    if mode == 'orig' or mode == 'perturb':
+                        with open(self.timeSeriesFile, 'a') as f:
+                            if lastIndex == 0:
+                                np.savetxt(f, timeSeries[lastIndex:])
+                            else:
+                                np.savetxt(f, timeSeries[lastIndex + 1:])
                 lastIndex = len(timeSteps)
             pprint()
 
