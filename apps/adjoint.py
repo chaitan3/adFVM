@@ -184,8 +184,8 @@ class Adjoint(Solver):
                 # compute sensitivity using adjoint solution
                 for index in range(0, len(perturb)):
                     perturbation = perturb[index](None, mesh.origMesh, t)
-                    if not isinstance(perturbation, list) or (len(parameters) == 1 and len(perturbation) > 1):
-                        perturbation = [perturbation]
+                    #if not isinstance(perturbation, list) or (len(parameters) == 1 and len(perturbation) > 1):
+                    #    perturbation = [perturbation]
                     for derivative, delphi in zip(paramGradient, perturbation):
                         result[index] += np.sum(derivative * delphi)
 
