@@ -171,12 +171,15 @@ class Adjoint(Solver):
                     start3 = time.time()
 
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
+                    stackedFields = np.ascontiguousarray(stackedFields)
                     stackedPhi = Field('a', stackedFields, (5,))
                     stackedPhi.old = stackedFields
                     newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
                     fields[0].field[:nInternalCells] = newStackedFields[:, [0]]
                     fields[1].field[:nInternalCells] = newStackedFields[:, [1,2,3]]
                     fields[2].field[:nInternalCells] = newStackedFields[:, [4]]
+                    for phi in fields:
+                        phi.field = np.ascontiguousarray(phi.field)
 
                     start4 = time.time()
                     pprint('Timers 1:', start3-start2, '2:', start4-start3)

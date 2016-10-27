@@ -349,6 +349,7 @@ class Solver(object):
                     pprint('Simulation Time:', t, 'Time step: min', parallel.min(dt), 'max', parallel.max(dt))
                 else:
                     pprint('Simulation Time:', t, 'Time step:', dt)
+                pprint()
 
             # time management
             timeSteps.append([t, dt])
@@ -401,7 +402,6 @@ class Solver(object):
                             else:
                                 np.savetxt(f, timeSeries[lastIndex + 1:])
                 lastIndex = len(timeSteps)
-            pprint()
 
         if mode == 'forward':
             return solutions
