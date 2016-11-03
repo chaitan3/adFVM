@@ -448,14 +448,22 @@ class IOField(Field):
         self.field = np.vstack((self.field, value*np.ones((mesh.nGhostCells,) + self.dimensions, config.precision)))
         for patchID in self.boundary:
             patch = boundary[patchID]
+            startFace, endFace, cellStartFace, cellEndFace, nFaces = mesh.getPatchFaceCellRange(patchID)
             if patch['type'] in BCs.valuePatches:
-                cellStartFace, cellEndFace, nFaces = mesh.getPatchCellRange(patchID)
                 try:
                     value = extractField(patch['value'], nFaces, self.dimensions)
                     patch['value'] = value
                     self.field[cellStartFace:cellEndFace] = value
                 except:
                     pass
+            elif patch['type'] == 'cyclic':
+                neighbour = mesh.boundary[patchID]['neighbourPatch']
+                startFace, endFace, _ = mesh.getPatchFaceRange(neighbour)
+                internalCells = mesh.owner[startFace:endFace]
+                self.field[cellStartFace:cellEndFace] = self.field[internalCells]
+            elif patch['type'] == 'zeroGradient':
+                internalCells = mesh.owner[startFace:endFace]
+                self.field[cellStartFace:cellEndFace] = self.field[internalCells]
    
     def write(self, name=None, skipProcessor=False):
         if name:

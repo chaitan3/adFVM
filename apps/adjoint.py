@@ -9,7 +9,7 @@ from adFVM.matop_petsc import laplacian, ddt
 #from adFVM.matop import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
-from adFVM.postpro import getAdjointNorm, computeGradients, getAdjointEnergy
+from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
 from adFVM.solver import Solver
 
 from problem import primal, nSteps, writeInterval, reportInterval, objectiveGradient, perturb, writeResult, nPerturb, parameters
@@ -35,16 +35,12 @@ class Adjoint(Solver):
             phi = np.zeros((self.mesh.origMesh.nInternalCells, dims[0]), config.precision)
             fields.append(IOField(name, phi, dims, self.mesh.calculatedBoundary))
         self.fields = fields
+        return
 
     def compile(self):
         self.compileInit(functionName='adjoint_init')
-
-        if self.scaling:
-            self.computer = computeGradients(primal)
-
         primal.compile(adjoint=self)
         self.map = primal.adjoint
-
         return
 
     def getGradFields(self):
@@ -67,15 +63,7 @@ class Adjoint(Solver):
                 variables.append(param)
         return variables
 
-    def viscosity(self, rho, rhoU, rhoE):
-        U, T, p = primal.primitive(rho, rhoU, rhoE)
-        outputs = self.computer(U, T, p)
-        M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)[0]
-        M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
-        viscosityScale = float(self.scaling)
-        pprint('M_2norm: ' +  str(M_2normScale))
-        return M_2norm*(viscosityScale/M_2normScale)
-
+    
     def initPrimalData(self):
         if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
             self.firstCheckpoint, self.result  = primal.readStatusFile()
@@ -167,7 +155,8 @@ class Adjoint(Solver):
                         pprint('Smoothing adjoint field')
                     nInternalCells = mesh.origMesh.nInternalCells
                     start2 = time.time() 
-                    weight = central(self.viscosity(*previousSolution), mesh.origMesh)
+                    inputs = previousSolution + [self.scaling]
+                    weight = central(getAdjointViscosity(*inputs), mesh.origMesh)
                     start3 = time.time()
 
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)

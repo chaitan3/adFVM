@@ -56,7 +56,7 @@ class Matrix(object):
     def __rmul__(self, b):
         return self.__class__(b * self.A, b * self.b)
 
-    def solve(self):
+    def _getKSP(self, eigenvalues=False):
         ksp = PETSc.KSP()
         ksp.create(PETSc.COMM_WORLD)
 
@@ -76,12 +76,33 @@ class Matrix(object):
         #ksp.getPC().setType('gamg')
         # which one is used?
         ksp.getPC().setType('hypre')
+        ksp.setOperators(self.A)
+        #ksp.setComputeSingularValues(eigenvalues)
+        ksp.setFromOptions()
+        return ksp
 
+    def eigenvalues(self):
+        import slepc4py
+        slepc4py.init()
+        from slepc4py import SLEPc
+        E = SLEPc.EPS(); E.create()
+
+        E.setOperators(self.A)
+        E.setProblemType(SLEPc.EPS.ProblemType.NHEP)
+        E.setDimensions(1)
+        E.setWhichEigenpairs(SLEPc.EPS.Which.SMALLEST_REAL)
+        E.setFromOptions()
+        E.solve()
+        n = E.getConverged()
+        for i in range(0, n):
+            print E.getEigenvalue(0)
+        return 
+
+    def solve(self):
+        ksp = self._getKSP()
         x = self.A.createVecRight()
         X = []
 
-        ksp.setOperators(self.A)
-        ksp.setFromOptions()
         start = time.time()
         for i in range(0, self.b.getSize()[1]):
             x.set(0)
@@ -99,8 +120,8 @@ class Matrix(object):
 # cyclic and BC support
 def laplacian(phi, DT):
 #def laplacian_new(phi, DT):
-    mesh = phi.mesh.origMesh
     meshC = phi.mesh
+    mesh = meshC.origMesh
     nrhs = phi.dimensions[0]
     n = mesh.nInternalCells
     m = mesh.nInternalFaces
@@ -125,7 +146,7 @@ def laplacian(phi, DT):
     A.setValuesRCV(il + row, jl + row, cellData)
 
     ranges = A.getOwnershipRangesColumn()
-    for patchID in phi.mesh.remotePatches:
+    for patchID in meshC.remotePatches:
         patch = mesh.boundary[patchID]
         startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
         proc = patch['neighbProcNo']

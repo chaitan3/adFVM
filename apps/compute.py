@@ -44,11 +44,8 @@ for index, time in enumerate(times):
         if len(dim) != 2:
             outputsF[-1].write()
     pprint()
-    # adjoint blowup
-    fields = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
-    for phi in fields:
-        phi.write()#, skipProcessor=True)
-    pprint()
+
+
     enstrophy, Q = getEnstrophyAndQ(outputsF[1])
     enstrophy.write(name='enstrophy') 
     Q.write(name='Q')
@@ -67,7 +64,12 @@ for index, time in enumerate(times):
     #uplus.write()
     #yplus.write()
 
-    ### rhoaByV
+    ## adjoint norm
+    adjNorm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+    adjNorm.write()
+    pprint()
+
+    ## adjoint by volume
     #rhoa = IOField.read('rhoa')
     #rhoaByV = getFieldByVolume(rhoa)
     #rhoaByV.write()
@@ -79,6 +81,10 @@ for index, time in enumerate(times):
     #adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
     #pprint('L2 norm adjoint', time, adjEnergy)
     #pprint()
+
+    ## adjoint viscosity
+    mua = getAdjointViscosity(rho, rhoU, rhoE, 1e-3, outputs=outputs)
+    mua.write()
 
     IOField.closeHandle()
 

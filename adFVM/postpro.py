@@ -174,4 +174,22 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     #M_2norm = np.linalg.eigh(MS, eigvals=(4), eigvals_only=True).reshape(-1,1)
 
     M_2norm = IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary)
-    return [M_2norm]
+    return M_2norm
+
+def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None):
+    self = getAdjointViscosity
+    solver = rho.solver
+    mesh = rho.mesh
+    U, T, p = solver.primitive(rho, rhoU, rhoE)
+    if not outputs:
+        if not hasattr(self, 'computer'):
+            self.computer = computeGradients(solver)
+        outputs = self.computer(U, T, p)
+    M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+    M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
+    viscosityScale = float(scaling)
+    #pprint('M_2norm: ' +  str(M_2normScale))
+    viscosity = M_2norm*(viscosityScale/M_2normScale)
+    viscosity.name = 'mua'
+    viscosity.boundary = mesh.calculatedBoundary
+    return viscosity
