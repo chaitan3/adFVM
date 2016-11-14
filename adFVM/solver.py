@@ -250,7 +250,6 @@ class Solver(object):
         t = startTime
         dts = dt
         timeIndex = startIndex
-        lastIndex = 0
         if self.localTimeStep:
             dt = dts*np.ones_like(mesh.origMesh.volumes)
         elif isinstance(dts, np.ndarray):
@@ -259,7 +258,9 @@ class Solver(object):
         # objective is local
         instObjective = self.objective(*fields)
         result += instObjective
-        timeSeries = [parallel.sum(instObjective)]
+        timeSeries = []
+        if timeIndex == 0:
+            timeSeries.append(parallel.sum(instObjective))
         timeSteps = []
 
         # writing and returning local solutions
@@ -392,16 +393,16 @@ class Solver(object):
 
                 # write timeSeries if in orig mode (problem.py)
                 if parallel.rank == 0:
+                    lastIndex = timeIndex - (startIndex + writeInterval)
                     if mode == 'orig':
                         with open(self.timeStepFile, 'a') as f:
                             np.savetxt(f, timeSteps[lastIndex:])
                     if mode == 'orig' or mode == 'perturb':
                         with open(self.timeSeriesFile, 'a') as f:
-                            if lastIndex == 0:
-                                np.savetxt(f, timeSeries[lastIndex:])
-                            else:
+                            if startIndex == 0 and timeIndex > writeInterval:
                                 np.savetxt(f, timeSeries[lastIndex + 1:])
-                lastIndex = len(timeSteps)
+                            else:
+                                np.savetxt(f, timeSeries[lastIndex:])
 
         if mode == 'forward':
             return solutions
