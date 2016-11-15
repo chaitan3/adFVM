@@ -94,6 +94,7 @@ elif user.bw:
     os.environ['THEANO_FLAGS'] += ',gcc.cxxflags=-march=native'
 elif user.mira and not user.no_compile:
     os.environ['THEANO_FLAGS'] += ',cxx=powerpc64-bgq-linux-g++'
+    os.environ['THEANO_FLAGS'] += ',gcc.cxxflags=-L'+home+'lib'
 elif user.no_compile:
     # needs modification to theano/gof/cmodule.py version_str
     # and maybe gcc.cxxflags
