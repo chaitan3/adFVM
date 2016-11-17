@@ -7,13 +7,13 @@ from adFVM.parallel import pprint
 case = '../cases/cylinder/'
 time = 3.0
 field = 'mua'
-case = '../cases/convection/'
+case = '../cases/naca0012/test_laplacian/'
 time = 0.0
 field = 'T'
 
 DT = 0.01
-dt = 0.001
-nSteps = 100
+dt = 1e-8
+nSteps = 1000
 
 mesh = Mesh.create(case)
 IOField.setMesh(mesh)
@@ -23,8 +23,8 @@ with IOField.handle(time):
     T.partialComplete()
 weight = central(T, mesh.origMesh)
 weight.field[:] = DT
-op = laplacian(T, weight)
-op.eigenvalues()
+#op = laplacian(T, weight)
+#op.eigenvalues()
 
 for index in range(0, nSteps):
     pprint(index)
