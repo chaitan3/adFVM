@@ -3,9 +3,10 @@ import numpy as np
 
 from . import config
 from .config import ad, adsparse
-from .field import Field, CellField
+from .field import Field, CellField, IOField
 
 logger = config.Logger(__name__)
+
 
 def internal_sum(phi, mesh, absolute=False):
     if config.device == "cpu":
@@ -29,6 +30,10 @@ def internal_sum(phi, mesh, absolute=False):
     x = ad.patternbroadcast(x, phi.field.broadcastable)
     return x
 
+
+def internal_sum_numpy(phi, mesh):
+    return (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
+
 def div(phi, U=None, ghost=False):
     logger.info('divergence of {0}'.format(phi.name))
     mesh = phi.mesh
@@ -43,36 +48,6 @@ def div(phi, U=None, ghost=False):
     else:
         return Field('div({0})'.format(phi.name), divField, phi.dimensions)
 
-def grad(phi, ghost=False, op=False):
-    assert len(phi.dimensions) == 1
-    logger.info('gradient of {0}'.format(phi.name))
-    mesh = phi.mesh
-    dimensions = (3,) + phi.dimensions
-    if phi.dimensions == (1,):
-        dimensions = (3,)
-
-    if op and config.device == 'cpu':
-        gradField = adsparse.basic.dot(mesh.gradOp, phi.field)
-        gradField = gradField.reshape((mesh.nInternalCells,) + dimensions)
-        if dimensions == (3,3):
-            gradField = gradField.transpose((0, 2, 1))
-    else:
-        if dimensions == (3,):
-            product = phi * mesh.Normals
-        else:
-            product = phi.outer(mesh.Normals)
-            product.field = product.field.reshape((mesh.nFaces, 9))
-        gradField = internal_sum(product, mesh)
-        # if grad of vector
-        if dimensions == (3,3):
-            gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
-
-    if ghost:
-        gradPhi = CellField('grad({0})'.format(phi.name), gradField, dimensions, ghost=True)
-        return gradPhi
-    else:
-        return Field('grad({0})'.format(phi.name), gradField, dimensions)
-
 def snGrad(phi):
     logger.info('snGrad of {0}'.format(phi.name))
     mesh = phi.mesh
@@ -85,6 +60,48 @@ def laplacian(phi, DT):
     gradFdotn = snGrad(phi)
     laplacian2 = internal_sum(gradFdotn*DT, mesh)
     return Field('laplacian({0})'.format(phi.name), laplacian2, phi.dimensions)
+
+# dual defined 
+def grad(phi, ghost=False, op=False, numpy=False):
+    assert len(phi.dimensions) == 1
+    logger.info('gradient of {0}'.format(phi.name))
+    mesh = phi.mesh
+    dimensions = (3,) + phi.dimensions
+    if phi.dimensions == (1,):
+        dimensions = (3,)
+
+    if numpy:
+        assert not op
+        loc_internal_sum = internal_sum_numpy
+        mod = IOField
+        mesh = mesh.origMesh
+    else:
+        loc_internal_sum = internal_sum
+        mod = CellField
+
+    if op and config.device == 'cpu':
+        gradField = adsparse.basic.dot(mesh.gradOp, phi.field)
+        gradField = gradField.reshape((mesh.nInternalCells,) + dimensions)
+        if dimensions == (3,3):
+            gradField = gradField.transpose((0, 2, 1))
+    else:
+        if dimensions == (3,):
+            product = phi * mesh.Normals
+        else:
+            product = phi.outer(mesh.Normals)
+            product.field = product.field.reshape((mesh.nFaces, 9))
+        gradField = loc_internal_sum(product, mesh)
+        # if grad of vector
+        if dimensions == (3,3):
+            gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
+
+    if ghost:
+        gradPhi = mod('grad({0})'.format(phi.name), gradField, dimensions, ghost=True)
+        return gradPhi
+    else:
+        return Field('grad({0})'.format(phi.name), gradField, dimensions)
+
+
 
 # only defined for ndarray
 def curl(phi):

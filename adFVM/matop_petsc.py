@@ -2,6 +2,10 @@ from . import config
 from .parallel import pprint
 from .compat import add_at
 
+from .interp import central
+from .op import grad, internal_sum_numpy
+from .field import Field
+
 import numpy as np
 import time
 
@@ -118,7 +122,7 @@ class Matrix(object):
         return np.hstack(X)
 
 # cyclic and BC support
-def laplacian(phi, DT):
+def laplacian(phi, DT, correction=True):
 #def laplacian_new(phi, DT):
     meshC = phi.mesh
     mesh = meshC.origMesh
@@ -133,6 +137,11 @@ def laplacian(phi, DT):
     il, ih = A.getOwnershipRange()
     jl, jh = A.getOwnershipRangeColumn()
     faceData = (mesh.areas*DT.field/mesh.deltas).flatten()
+    if correction:
+        s = mesh.cellCentres[mesh.neighbour]-mesh.cellCentres[mesh.owner]
+        S = Field('S', s/np.linalg.norm(s, axis=1, keepdims=1), (3,))
+        C = S.dot(mesh.Normals)
+        faceData /= C.field.flatten()
 
     neighbourData = faceData[mesh.cellFaces]
     neighbourData /= mesh.volumes
@@ -167,7 +176,7 @@ def laplacian(phi, DT):
     #add_at(uniqData, inverse, data)
     #b.setValues(il + indices, cols, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
 
-    # neumann
+    # neumann, how does this affect processor?
     indices = mesh.owner[m:o]
     data = faceData[m:o].reshape(-1,1)/mesh.volumes[indices]
     indices, inverse = np.unique(indices, return_inverse=True)
@@ -182,6 +191,14 @@ def laplacian(phi, DT):
     #cols = np.arange(0, nrhs).astype(np.int32)
     #data = 1e10*np.ones((mesh.nInternalCells, nrhs), np.int32)
     #b.setValues(il + indices, cols, data, addv=PETSc.InsertMode.ADD_VALUES)
+
+    if correction:
+        indices = np.arange(0, mesh.nInternalCells).astype(np.int32)
+        cols = np.arange(0, nrhs).astype(np.int32)
+
+        gradPhi = central(grad(central(phi, mesh), ghost=True, numpy=True), mesh)
+        data = internal_sum_numpy(DT*gradPhi.dot(mesh.Normals-S/C), mesh)
+        b.setValues(il + indices, cols, data, addv=PETSc.InsertMode.ADD_VALUES)
 
     A.assemble()
     b.assemble()

@@ -26,6 +26,7 @@ def central(phi, mesh):
         faceField.field = ad.patternbroadcast(faceField.field, phi.field.broadcastable)
     return faceField
 
+# only defined on ad
 class Reconstruct(object):
     def __init__(self, solver):
         self.solver = solver

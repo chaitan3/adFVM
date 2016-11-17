@@ -1,7 +1,7 @@
 from adFVM.matop_petsc import laplacian, ddt
 from adFVM.mesh import Mesh
 from adFVM.interp import central
-from adFVM.field import IOField
+from adFVM.field import IOField, Field
 from adFVM.parallel import pprint
 
 case = '../cases/cylinder/'
@@ -16,7 +16,7 @@ dt = 1e-8
 nSteps = 1000
 
 mesh = Mesh.create(case)
-IOField.setMesh(mesh)
+Field.setMesh(mesh)
 
 with IOField.handle(time):
     T = IOField.read(field)

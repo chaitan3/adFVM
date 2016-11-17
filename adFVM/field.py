@@ -22,14 +22,14 @@ class Field(object):
     def setSolver(cls, solver):
         cls.solver = solver
         cls.setMesh(solver.mesh)
-        # why is this needed?
-        mesh = solver.mesh
-        if not hasattr(mesh, 'Normals'):
-            mesh.Normals = Field('nF', mesh.normals, (3,))
 
     @classmethod
     def setMesh(cls, mesh):
         cls.mesh = mesh
+        if not hasattr(mesh, 'Normals'):
+            mesh.Normals = Field('nF', mesh.normals, (3,))
+        if not hasattr(mesh.origMesh, 'Normals'):
+            mesh.origMesh.Normals = Field('nF', mesh.origMesh.normals, (3,))
 
     def __init__(self, name, field, dimensions):
         self.name = name
@@ -260,13 +260,16 @@ class CellField(Field):
 class IOField(Field):
     _handle = None
 
-    def __init__(self, name, field, dimensions, boundary={}):
+    def __init__(self, name, field, dimensions, boundary={}, ghost=False):
         super(self.__class__, self).__init__(name, field, dimensions)
         logger.debug('initializing IOField {0}'.format(name))
         self.boundary = boundary
         if len(list(boundary.keys())) == 0:
             self.boundary = self.mesh.defaultBoundary
         self.phi = None
+        if ghost:
+            assert self.boundary == self.mesh.defaultBoundary
+            self.defaultComplete()
 
     @classmethod
     def internalField(self, name, field, dimensions):
@@ -431,9 +434,28 @@ class IOField(Field):
         yield
         self.closeHandle()
 
-
     def getInternalField(self):
         return self.field[:self.mesh.origMesh.nInternalCells]
+
+    def defaultComplete(self):
+        mesh = self.mesh.origMesh
+        field = np.zeros((mesh.nCells,) + self.dimensions)
+        field[:mesh.nInternalCells] = self.field
+        for patchID in self.boundary:
+            patch = self.boundary[patchID]
+            startFace, endFace, cellStartFace, cellEndFace, nFaces = mesh.getPatchFaceCellRange(patchID)
+            if patch['type'] == 'cyclic':
+                neighbour = mesh.boundary[patchID]['neighbourPatch']
+                startFace, endFace, _ = mesh.getPatchFaceRange(neighbour)
+                internalCells = mesh.owner[startFace:endFace]
+                field[cellStartFace:cellEndFace] = field[internalCells]
+            elif patch['type'] == 'zeroGradient' or patch['type'] == 'empty':
+                internalCells = mesh.owner[startFace:endFace]
+                field[cellStartFace:cellEndFace] = field[internalCells]
+            else:
+                assert patch['type'] in config.processorPatches
+        self.field = parallel.getRemoteCells(field, self.mesh)
+        return
 
     def completeField(self):
         logger.debug('completing field {0}'.format(self.name))
