@@ -89,10 +89,11 @@ def grad(phi, ghost=False, op=False, numpy=False):
             product = phi * mesh.Normals
         else:
             product = phi.outer(mesh.Normals)
-            product.field = product.field.reshape((mesh.nFaces, 9))
+            if not numpy:
+                product.field = product.field.reshape((mesh.nFaces, 9))
         gradField = loc_internal_sum(product, mesh)
         # if grad of vector
-        if dimensions == (3,3):
+        if not numpy and dimensions == (3,3):
             gradField = gradField.reshape((mesh.nInternalCells, 3, 3))
 
     if ghost:
