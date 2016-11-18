@@ -5,12 +5,12 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-primal = RCF('/home/talnikar/adFVM/cases/naca0012/adjoint_weno/', 
+primal = RCF('/master/home/talnikar/adFVM/cases/naca0012/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*3.4e-5,
-             #faceReconstructor='SecondOrder',
-             faceReconstructor='WENO',
+             faceReconstructor='SecondOrder',
+             #faceReconstructor='AnkitWENO',
              boundaryRiemannSolver='eulerLaxFriedrichs'
 )
 
@@ -31,11 +31,9 @@ def objectiveDrag(fields, mesh):
     p = rhoE.field[start:end]*(primal.gamma-1)
     #deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1, keepdims=True)
     deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nF,1))
-    #T = rhoE/(rho*primal.Cv)
+    T = rhoE/(rho*primal.Cv)
     #mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
-    mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]
-              -rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])\
-              *3.4e-5/deltas
+    mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*3.4e-5/deltas
     return ad.sum((p*nx-mungUx)*areas)
 
 def getPlane(solver):
@@ -69,22 +67,31 @@ def objectivePressureLoss(fields, mesh):
 objective = objectiveDrag
 #objective = objectivePressureLoss
 
-def perturb(fields, mesh, t):
-    #mid = np.array([-0.012, 0.0, 0.])
-    #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    mid = np.array([-0.01, 0.0, 0.])
-    G = 1e-1*np.exp(-1e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    rho = G
-    rhoU = np.zeros((mesh.nInternalCells, 3))
-    rhoU[:, 0] += G.flatten()*100
-    rhoE = G*2e5
-    return rho, rhoU, rhoE
+#def makePerturb(scale):
+#    def perturb(fields, mesh, t):
+#        #mid = np.array([-0.012, 0.0, 0.])
+#        #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+#        mid = np.array([-0.01, 0.0, 0.])
+#        G = scale*np.exp(-1e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+#        rho = G
+#        rhoU = np.zeros((mesh.nInternalCells, 3))
+#        rhoU[:, 0] += G.flatten()*100
+#        rhoE = G*2e5
+#        return rho, rhoU, rhoE
+#    return perturb
 
-parameters = 'source'
+def makePerturb(pt_per):
+    def perturb(fields, mesh, t):
+        return pt_per
+    return perturb
+
+#perturb = [makePerturb(0.1), makePerturb(0.2), makePerturb(0.4)]
+perturb = [makePerturb(0.4)]
+parameters = ('BCs', 'p', 'inlet', 'pt')
 
 #nSteps = 20000
 #writeInterval = 5000
-nSteps = 100000
-writeInterval = 200
+nSteps = 2000000
+writeInterval = 100000
 startTime = 3.0
 dt = 6e-9

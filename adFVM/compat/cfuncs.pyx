@@ -1,6 +1,6 @@
 cimport numpy as np
 cimport cython
-cimport part_mesh
+#cimport part_mesh
 from libcpp.vector cimport vector
 from libcpp.set cimport set
 from libcpp.map cimport map
@@ -182,14 +182,14 @@ def decompose(object mesh, int nprocs):
     cdef int c_nn = nn
     cdef int objval
     cdef int[40] options
-    part_mesh.METIS_SetDefaultOptions(options)
-    options[0] = 1
-    options[1] = 0
-    options[2] = 1
-    options[3] = 4
-    options[4] = 1
-    options[16] = 30
-    part_mesh.METIS_PartMeshDual(&c_ne, &c_nn, &eptr[0], &eind[0,0], NULL, NULL, &ncommon, &nprocs, NULL, options, &objval, &epart[0], &npart[0])
+    #part_mesh.METIS_SetDefaultOptions(options)
+    #options[0] = 1
+    #options[1] = 0
+    #options[2] = 1
+    #options[3] = 4
+    #options[4] = 1
+    #options[16] = 30
+    #part_mesh.METIS_PartMeshDual(&c_ne, &c_nn, &eptr[0], &eind[0,0], NULL, NULL, &ncommon, &nprocs, NULL, options, &objval, &epart[0], &npart[0])
 
     print 'metis completed'
 

@@ -63,7 +63,16 @@ class Adjoint(Solver):
                 variables.append(param)
         return variables
 
-    
+    def viscosity(self, rho, rhoU, rhoE):
+        #U, T, p = primal.primitive(rho, rhoU, rhoE)
+        #outputs = self.computer(U, T, p)
+        #M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)[0]
+        #M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
+        #pprint('M_2norm: ' +  str(M_2normScale))
+        viscosityScale = float(self.scaling)
+        return viscosityScale*rho/rho
+        #return M_2norm*(viscosityScale/M_2normScale)
+
     def initPrimalData(self):
         if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
             self.firstCheckpoint, self.result  = primal.readStatusFile()

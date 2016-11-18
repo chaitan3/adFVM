@@ -8,11 +8,11 @@ from adFVM.density import RCF
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('cases/cylinder/', 
+primal = RCF('/master/home/talnikar/adFVM/cases/cylinder/chaotic/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*2.5e-5,
-             faceReconstructor='AnkitENO',
+             faceReconstructor='SecondOrder',
              boundaryRiemannSolver='eulerLaxFriedrichs'
 
 )
@@ -71,20 +71,22 @@ def objectivePressureLoss(fields, mesh):
 #objective = objectiveDrag
 objective = objectivePressureLoss
 
-def perturb(fields, mesh, t):
-    #mid = np.array([-0.012, 0.0, 0.])
-    #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    mid = np.array([-0.01, 0.0, 0.])
-    G = 1e1*np.exp(-1e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-    rho = G
-    rhoU = np.zeros((mesh.nInternalCells, 3))
-    rhoU[:, 0] += G.flatten()*100
-    rhoE = G*2e5
-    return rho, rhoU, rhoE
+def makePerturb(scale):
+    def perturb(fields, mesh, t):
+        #mid = np.array([-0.012, 0.0, 0.])
+        #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+        mid = np.array([-0.01, 0.0, 0.])
+        G = scale*np.exp(-1e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+        rho = G
+        rhoU = np.zeros((mesh.nInternalCells, 3))
+        rhoU[:, 0] += G.flatten()*100
+        rhoE = G*2e5
+        return rho, rhoU, rhoE
+    return perturb
+ 
+perturb = [makePerturb(1e-5)]
 
-parameters = 'source'
-
-nSteps = 100000
-writeInterval = 200
-startTime = 3.0
+nSteps = 200000
+writeInterval = 5000
+startTime = 2.0
 dt = 8e-8

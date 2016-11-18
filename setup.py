@@ -1,5 +1,7 @@
 import numpy as np
 import os
+import sys
+sys.path.insert(0, '/master/home/talnikar/.local/lib/python2.7/site-packages/')
 from setuptools import setup, Extension, Command
 from Cython.Build import cythonize
 
@@ -17,7 +19,7 @@ class CleanCommand(Command):
 compatDir = 'adFVM/compat/'
 cfuncs = cythonize(
         [Extension(compatDir + 'cfuncs', [compatDir + 'cfuncs.pyx'], 
-        libraries=['metis'], language='c++')])
+        language='c++')])
 
 setup(name='adFVM',
       version='0.1.1',
