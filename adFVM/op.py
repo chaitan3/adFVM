@@ -66,9 +66,10 @@ def grad(phi, ghost=False, op=False, numpy=False):
     assert len(phi.dimensions) == 1
     logger.info('gradient of {0}'.format(phi.name))
     mesh = phi.mesh
-    dimensions = (3,) + phi.dimensions
     if phi.dimensions == (1,):
         dimensions = (3,)
+    else:
+        dimensions = phi.dimensions + (3,)
 
     if numpy:
         assert not op

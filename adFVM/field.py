@@ -136,13 +136,15 @@ class Field(object):
         return self.__class__('abs({0})'.format(self.name), ad.abs_(self.field), self.dimensions)
 
     def dot(self, phi):
-        assert self.dimensions[0] == 3
+        assert phi.dimensions == (3,)
         ad = self._getType()
         # if tensor
-        if len(self.dimensions) > 1:
+        if len(self.dimensions) == 2:
+            assert self.dimensions[1] == 3
             phi = self.__class__(phi.name, phi.field[:,np.newaxis,:], (1,3))
-            dimensions = (3,)
+            dimensions = (self.dimensions[0],)
         else:
+            assert self.dimensions == (3,)
             dimensions = (1,)
         product = ad.sum(self.field * phi.field, axis=-1)
         # if summed over vector
@@ -449,7 +451,7 @@ class IOField(Field):
                 startFace, endFace, _ = mesh.getPatchFaceRange(neighbour)
                 internalCells = mesh.owner[startFace:endFace]
                 field[cellStartFace:cellEndFace] = field[internalCells]
-            elif patch['type'] == 'zeroGradient' or patch['type'] == 'empty':
+            elif patch['type'] == 'zeroGradient' or patch['type'] == 'empty' or patch['type'] == 'symmetryPlane': 
                 internalCells = mesh.owner[startFace:endFace]
                 field[cellStartFace:cellEndFace] = field[internalCells]
             else:
