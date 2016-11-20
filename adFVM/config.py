@@ -80,7 +80,7 @@ pickleFunction = not user.no_pickle
 #os.environ['THEANO_FLAGS'] += ',allow_gc=False'
 #os.environ['THEANO_FLAGS'] += ',warn_float64=raise'
 #os.environ['THEANO_FLAGS'] += ',nocleanup=True'
-os.environ['THEANO_FLAGS'] += ',exception_verbosity=high'
+#os.environ['THEANO_FLAGS'] += ',exception_verbosity=high'
 os.environ['THEANO_FLAGS'] += ',profile=' + str(user.profile)
 if user.profile:
     os.environ['THEANO_FLAGS'] += ',profiling.destination=profile_{}_{}.out'.format(device, parallel.rank)

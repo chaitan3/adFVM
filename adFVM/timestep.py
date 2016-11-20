@@ -37,7 +37,6 @@ def timeStepper(equation, boundary, initFields, solver):
     alpha, beta, gamma = solver.timeStepCoeff
     nStages = alpha.shape[0]
     LHS = []
-    #fields = [solver.getFields(initFields, CellField)]
     fields = [initFields]
     nFields = len(fields[0])
     for i in range(0, nStages):

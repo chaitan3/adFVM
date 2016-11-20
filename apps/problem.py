@@ -94,6 +94,6 @@ if __name__ == "__main__":
         result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, 
                             writeInterval=writeInterval, reportInterval=reportInterval, 
                             mode=user.option, startIndex=startIndex, source=source, perturbation=perturbation)
-        writeResult(user.option, result/(nSteps + 1), '{}'.format(sim))
+        writeResult(user.option, result/nSteps, '{}'.format(sim))
         primal.removeStatusFile()
         

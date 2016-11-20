@@ -180,7 +180,9 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None):
     self = getAdjointViscosity
     solver = rho.solver
     mesh = rho.mesh
-    U, T, p = solver.primitive(rho, rhoU, rhoE)
+    #U, T, p = solver.primitive(rho, rhoU, rhoE)
+    U, T, p = solver.initFields((rho, rhoU, rhoE))
+    rho, rhoU, rhoE = solver.conservative(U, T, p)
     if not outputs:
         if not hasattr(self, 'computer'):
             self.computer = computeGradients(solver)

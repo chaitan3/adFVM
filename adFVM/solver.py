@@ -79,7 +79,7 @@ class Solver(object):
                                  newFields + [objective, self.dtc, self.local, self.remote], 'forward')
 
         if adjoint:
-            objGrad = [phi/mesh.volumes for phi in ad.grad(objectiveValue, fields)]
+            objGrad = [phi/mesh.volumes for phi in ad.grad(objective, fields)]
             adjointFields = self.getSymbolicFields(False)
             gradientInputs = fields + adjoint.getGradFields()
             scalarFields = sum([ad.sum(newFields[index]*adjointFields[index]*mesh.volumes) \
@@ -109,11 +109,14 @@ class Solver(object):
     def function(self, inputs, outputs, name, **kwargs):
         return SolverFunction(inputs, outputs, self, name, **kwargs)
 
-    def getFields(self, fields, mod, names=None):
-        if names is None:
-            names = self.names
+    def getFields(self, fields, mod, refFields=None):
         cellFields = []
-        for phi, name, dim in zip(fields, names, self.dimensions):
+        if refFields is None:
+            refFields = self.fields
+        for phi, phiO in zip(fields, refFields):
+            if isinstance(phi, Field):
+                phi = phi.field
+            name, dim = phiO.name, phiO.dimensions
             cellFields.append(mod(name, phi, dim))
         return cellFields
 
@@ -172,7 +175,7 @@ class Solver(object):
             self.fields = fields
         else:
             self.updateFields(fields)
-        return self.fields
+        return self.getFields(self.fields, IOField)
     
     def updateFields(self, fields):
         for phi, phiN in zip(self.fields, fields):
@@ -196,8 +199,8 @@ class Solver(object):
         return
 
     def initFields(self, fields):
-        fields = self.init(*[phi.field for phi in fields])
-        return list(fields)
+        newFields = self.init(*[phi.field for phi in fields])
+        return self.getFields(newFields, IOField)
 
     def writeFields(self, fields, t, **kwargs):
         fields = self.initFields(fields)
@@ -270,7 +273,6 @@ class Solver(object):
 
         # writing and returning local solutions
         if mode == 'forward':
-            fields = self.getFields([phi.field for phi in fields], IOField)
             if self.dynamicMesh:
                 instMesh = Mesh()
                 instMesh.boundary = copy.deepcopy(self.mesh.origMesh.boundary)
@@ -331,7 +333,7 @@ class Solver(object):
             inputs = fields + [dt, t]
             outputs = self.map(*inputs)
             newFields, objective, dtc, local, remote = outputs[:-4], outputs[-4], outputs[-3], outputs[-2], outputs[-1]
-            fields = self.getFields(newFields, IOField)
+            fields = self.getFields(newFields, IOField, refFields=fields)
 
             if report:
                 #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()

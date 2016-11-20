@@ -12,13 +12,12 @@ from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
 from adFVM.solver import Solver
 
-from problem import primal, nSteps, writeInterval, reportInterval, objectiveGradient, perturb, writeResult, nPerturb, parameters
+from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters
 
 import numpy as np
 import time
 import os
 import argparse
-
 
 class Adjoint(Solver):
     def __init__(self, primal, scaling):
@@ -33,14 +32,14 @@ class Adjoint(Solver):
         fields = []
         for name, dims in zip(self.names, self.dimensions):
             phi = np.zeros((self.mesh.origMesh.nInternalCells, dims[0]), config.precision)
-            fields.append(IOField(name, phi, dims, self.mesh.calculatedBoundary))
+            fields.append(IOField(name, phi, dims, self.mesh.defaultBoundary))
         self.fields = fields
         return
 
     def compile(self):
         self.compileInit(functionName='adjoint_init')
         primal.compile(adjoint=self)
-        self.map = primal.adjoint
+        self.map = primal.gradient
         return
 
     def getGradFields(self):
@@ -95,9 +94,9 @@ class Adjoint(Solver):
 
         startTime = timeSteps[nSteps - firstCheckpoint*writeInterval][0]
         if firstCheckpoint == 0:
-            fields = self.initFields(startTime, read=False)
+            fields = self.getFields(self.fields, IOField)
         else:
-            fields = self.initFields(startTime)
+            fields = self.readFields(startTime)
 
         pprint('STARTING ADJOINT')
         pprint('Number of steps:', nSteps)
@@ -109,7 +108,6 @@ class Adjoint(Solver):
             pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
             primalIndex = nSteps - (checkpoint + 1)*writeInterval
             t, dt = timeSteps[primalIndex]
-            #writeInterval = 1
             solutions = primal.run(startTime=t, dt=dt, nSteps=writeInterval, mode='forward')
 
             pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
@@ -122,13 +120,10 @@ class Adjoint(Solver):
                     mesh.origMesh.boundary = lastMesh.boundarydata[m:].reshape(-1,1)
                 else:
                     lastSolution = solutions[-1]
-                fields = objectiveGradient(*lastSolution)
-                fields = [phi/(nSteps + 1) for phi in fields]
-                fields = self.getFields(fields, IOField)
-                #for phi in fields:
-                #    phi.info()
-                #pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
-                self.writeFields(fields, t, skipProcessor=True)
+                #fields = objectiveGradient(*lastSolution)
+                #fields = [phi/(nSteps + 1) for phi in fields]
+                #fields = self.getFields(fields, IOField)
+                self.writeFields(fields, t)
 
             for step in range(0, writeInterval):
                 report = (step % reportInterval) == 0
@@ -153,10 +148,10 @@ class Adjoint(Solver):
                 inputs = previousSolution + fields + [dt, t]
                 outputs = self.map(*inputs)
                 n = len(fields)
-                gradient, paramGradient, objGradient = outputs[:n],
-                                                       outputs[n:-n]
+                gradient, paramGradient, objGradient = outputs[:n], \
+                                                       outputs[n:-n], \
                                                        outputs[-n:]
-                objGradient = [phi/(nSteps + 1) for phi in objGradient]
+                objGradient = [phi/nSteps for phi in objGradient]
                 for index in range(0, len(fields)):
                     fields[index].field = gradient[index] + objGradient[index]
 
@@ -173,10 +168,8 @@ class Adjoint(Solver):
                     stackedFields = np.ascontiguousarray(stackedFields)
                     stackedPhi = Field('a', stackedFields, (5,))
                     stackedPhi.old = stackedFields
-                    newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight)).solve()
-                    fields[0].field[:nInternalCells] = newStackedFields[:, [0]]
-                    fields[1].field[:nInternalCells] = newStackedFields[:, [1,2,3]]
-                    fields[2].field[:nInternalCells] = newStackedFields[:, [4]]
+                    newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight, correction=False)).solve()
+                    fields = self.getFields(newStackedFields, IOField)
                     for phi in fields:
                         phi.field = np.ascontiguousarray(phi.field)
 
@@ -199,7 +192,7 @@ class Adjoint(Solver):
                     pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
             #exit(1)
-            self.writeFields(fields, t, skipProcessor=True)
+            self.writeFields(fields, t)
             self.writeStatusFile([checkpoint + 1, result])
 
         for index in range(0, nPerturb):
