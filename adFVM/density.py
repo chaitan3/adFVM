@@ -109,18 +109,23 @@ class RCF(Solver):
             self.fields = fields
         else:
             self.updateFields(fields)
-        return
+        return list(self.conservative(*self.fields))
 
     # reads and updates ghost cells
-    def initFields(self, t, **kwargs):
-        self.readFields(t, **kwargs)
-        self.U.field, self.T.field, self.p.field = self.init(self.U.field, self.T.field, self.p.field)
-        return list(self.conservative(self.U, self.T, self.p))
+    def initFields(self, fields):
+        primitiveFields = self.primitive(*fields)
+        newFields = self.init(*primitiveFields)
+        for phi, phiN in zip(primitiveFields, newFields):
+            phi.field = phiN
+        return list(primitiveFields)
     
     @config.timeFunction('Time for writing fields')
     def writeFields(self, fields, t):
-        U, T, p = self.primitive(*fields[:3])
-        self.setFields([U, T, p])
+        fields, dtc = fields[:-1], fields[-1]
+        U, T, p = self.initFields(fields)
+        for phi, phiN in zip(self.fields, [U, T, p]):
+            phi.field = phiN.field
+        fields = list(self.conservative(*self.fields))
 
         with IOField.handle(t):
             for phi in fields + self.fields:
@@ -134,7 +139,7 @@ class RCF(Solver):
         mesh = self.mesh
 
         U, T, p = self.primitive(rho, rhoU, rhoE)
-        self.setBCFields([U, T, p])
+        #self.setBCFields([U, T, p])
 
         ## face reconstruction
         #rhoLF, rhoRF = TVD_dual(rho, gradRho)

@@ -152,9 +152,10 @@ class Adjoint(Solver):
 
                 inputs = previousSolution + fields + [dt, t]
                 outputs = self.map(*inputs)
-                gradient = outputs[:len(fields)]
-                paramGradient = outputs[len(fields):]
-                objGradient = objectiveGradient(*previousSolution)
+                n = len(fields)
+                gradient, paramGradient, objGradient = outputs[:n],
+                                                       outputs[n:-n]
+                                                       outputs[-n:]
                 objGradient = [phi/(nSteps + 1) for phi in objGradient]
                 for index in range(0, len(fields)):
                     fields[index].field = gradient[index] + objGradient[index]

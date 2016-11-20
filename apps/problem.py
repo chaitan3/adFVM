@@ -31,16 +31,7 @@ if not isinstance(perturb, list):
     perturb = [perturb]
 nPerturb = len(perturb)
 
-pprint('Compiling objective')
-fields = primal.getSymbolicFields()
-objectiveValue = objective(fields, primal.mesh)
-fields = [phi.field for phi in fields]
-objectiveFunction = primal.function(fields, objectiveValue, 'objective', BCs=False, source=False)
-# objective is anyways going to be a sum over all processors
-# so no additional code req to handle parallel case
-gradient = ad.grad(objectiveValue, fields, disconnected_inputs='warn')
-objectiveGradient = primal.function(fields, gradient, 'objective_grad', BCs=False, source=False)
-primal.objective = objectiveFunction
+primal.objective = objective
 primal.timeStepFile = primal.mesh.case + '{0}.{1}.txt'.format(nSteps, writeInterval)
 pprint('')
 

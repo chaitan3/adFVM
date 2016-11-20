@@ -46,12 +46,17 @@ class Solver(object):
         self.nStages = self.timeStepCoeff[0].shape[0]
         self.stage = 0
         self.init = None
+        self.objective = None
         return
 
     def compile(self, adjoint=None):
-        self.compileInit()
-
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
+        mesh = self.mesh
+
+        self.compileInit()
+        for phi in self.getBCFields():
+            phi.resetField()
+
         if self.localTimeStep:
             self.dt = ad.bcmatrix()
         else:
@@ -64,17 +69,23 @@ class Solver(object):
         self.local, self.remote = self.mesh.nCells, self.mesh.nFaces
 
         fields = self.getSymbolicFields(False)
-
-        newFields = timestep.timeStepper(self.equation, self.boundary, fields, self)
+        initFields = self.boundary(*timestep.createFields(fields, self))
+        newFields = timestep.timeStepper(self.equation, self.boundary, initFields, self)
+        if self.objective:
+            objective = self.objective(initFields, mesh)
+        else:
+            objective = 0.
         self.map = self.function(fields + [self.dt, self.t0], \
-                       newFields + [self.dtc, self.local, self.remote], 'forward')
+                                 newFields + [objective, self.dtc, self.local, self.remote], 'forward')
+
         if adjoint:
-            mesh = self.mesh
+            objGrad = [phi/mesh.volumes for phi in ad.grad(objectiveValue, fields)]
             adjointFields = self.getSymbolicFields(False)
-            scalarFields = sum([ad.sum(newFields[index]*adjointFields[index]) for index in range(0, len(fields))])
             gradientInputs = fields + adjoint.getGradFields()
-            gradients = ad.grad(scalarFields, gradientInputs)
-            self.adjoint = self.function(fields + adjointFields + [self.dt, self.t0], \
+            scalarFields = sum([ad.sum(newFields[index]*adjointFields[index]*mesh.volumes) \
+                                for index in range(0, len(fields))])
+            gradients = ad.grad(scalarFields, gradientInputs) + objGrad
+            self.gradient = self.function(fields + adjointFields + [self.dt, self.t0], \
                             gradients, 'adjoint')
             #self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \
             #                ad.Rop(newStackedFields, stackedFields, stackedAdjointFields), 'tangent')
@@ -161,30 +172,11 @@ class Solver(object):
             self.fields = fields
         else:
             self.updateFields(fields)
-        return 
-
-    def getBCFields(self):
-        return [phi.phi for phi in self.fields]
-
-    def setBCFields(self, fields):
-        for phi, phiN in zip(self.getBCFields(), fields):
-            phi.field = phiN.field
-
-    def setFields(self, fields):
-        for phi, phiN in zip(self.fields, fields):
-            phi.field = phiN.field
-        return
-
-    def initFields(self, t, read=True):
-        if read:
-            self.readFields(t)
-        fields = self.init(*[phi.field for phi in self.fields])
-        for phi, phiN in zip(self.fields, fields):
-            phi.field = phiN
         return self.fields
-
+    
     def updateFields(self, fields):
-        self.setFields(fields)
+        for phi, phiN in zip(self.fields, fields):
+            phi.field = phiN.field
         for phi, phiB in zip(self.getBCFields(), [phi.boundary for phi in fields]):
             for patchID in self.mesh.sortedPatches:
                 patch = phi.BC[patchID]
@@ -194,12 +186,27 @@ class Solver(object):
                         value[1][:] = extractField(phiB[patchID][key], nFaces, phi.dimensions)
         return
 
+
+    def getBCFields(self):
+        return [phi.phi for phi in self.fields]
+
+    def setBCFields(self, fields):
+        for phi, phiN in zip(self.getBCFields(), fields):
+            phi.field = phiN.field
+        return
+
+    def initFields(self, fields):
+        fields = self.init(*[phi.field for phi in fields])
+        return list(fields)
+
     def writeFields(self, fields, t, **kwargs):
-        self.setFields(fields) 
+        fields = self.initFields(fields)
+        for phi, phiN in zip(self.fields, fields):
+            phi.field = phiN.field
         with IOField.handle(t):
             for phi in self.fields:
                 phi.write(**kwargs)
-        return
+        return 
 
     def readStatusFile(self):
         data = None
@@ -242,8 +249,9 @@ class Solver(object):
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
         mesh.reset = True
+        # TODO: re-read optimization
         #initialize
-        fields = self.initFields(startTime)
+        fields = self.readFields(startTime)
         pprint()
 
         # time management
@@ -256,15 +264,13 @@ class Solver(object):
             dt = dts[timeIndex]
 
         # objective is local
-        instObjective = self.objective(*fields)
-        result += instObjective
+        result = 0.
         timeSeries = []
-        if timeIndex == 0:
-            timeSeries.append(parallel.sum(instObjective))
         timeSteps = []
 
         # writing and returning local solutions
         if mode == 'forward':
+            fields = self.getFields([phi.field for phi in fields], IOField)
             if self.dynamicMesh:
                 instMesh = Mesh()
                 instMesh.boundary = copy.deepcopy(self.mesh.origMesh.boundary)
@@ -324,8 +330,8 @@ class Solver(object):
 
             inputs = fields + [dt, t]
             outputs = self.map(*inputs)
-            fields, dtc, local, remote = outputs[:-3], outputs[-3], outputs[-2], outputs[-1]
-            fields = self.getFields(fields, IOField)
+            newFields, objective, dtc, local, remote = outputs[:-4], outputs[-4], outputs[-3], outputs[-2], outputs[-1]
+            fields = self.getFields(newFields, IOField)
 
             if report:
                 #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()
@@ -371,9 +377,8 @@ class Solver(object):
             #self.updateSource(source(fields, mesh.origMesh, t))
 
             # objective management
-            instObjective = self.objective(*fields)
-            result += instObjective
-            timeSeries.append(parallel.sum(instObjective))
+            result += objective
+            timeSeries.append(parallel.sum(objective))
 
             # write management
             if mode == 'forward':
@@ -388,6 +393,7 @@ class Solver(object):
                 self.writeStatusFile([timeIndex, t, dt, result])
                 if mode == 'orig' or mode == 'simulation':
                     dtc = IOField.internalField('dtc', dtc, (1,))
+                    # how do i do value BC patches?
                     self.writeFields(fields + [dtc], t)
                     #self.writeFields(fields + [dtc, local], t)
 
@@ -399,10 +405,7 @@ class Solver(object):
                             np.savetxt(f, timeSteps[lastIndex:])
                     if mode == 'orig' or mode == 'perturb':
                         with open(self.timeSeriesFile, 'a') as f:
-                            if startIndex == 0 and timeIndex > writeInterval:
-                                np.savetxt(f, timeSeries[lastIndex + 1:])
-                            else:
-                                np.savetxt(f, timeSeries[lastIndex:])
+                            np.savetxt(f, timeSeries[lastIndex:])
 
         if mode == 'forward':
             return solutions

@@ -517,6 +517,7 @@ class IOField(Field):
             if patch['type'] in BCs.valuePatches:
                 cellStartFace, cellEndFace, _ = mesh.getPatchCellRange(patchID)
                 patch['value'] = field[cellStartFace:cellEndFace]
+                
 
         self.writeFoamField(internalField, boundary)
 
