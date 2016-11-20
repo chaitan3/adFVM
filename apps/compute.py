@@ -32,8 +32,10 @@ if config.compile:
 for index, time in enumerate(times):
     pprint('Time:', time)
     start = timer.time()
-    rho, rhoU, rhoE = solver.initFields(time)
-    U, T, p = solver.U, solver.T, solver.p
+
+    rho, rhoU, rhoE = solver.readFields(time)  
+    U, T, p = solver.initFields(rho, rhoU, rhoE)
+    rho, rhoU, rhoE = solver.conservative(U, T, p)
 
     IOField.openHandle(time)
 
