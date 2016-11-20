@@ -116,15 +116,15 @@ class RCF(Solver):
         primitiveFields = self.primitive(*fields)
         newFields = self.init(*primitiveFields)
         primitiveFields = self.getFields(newFields, IOField)
-        return primitiveFields
+        return list(self.conservative(*primitiveFields))
     
     @config.timeFunction('Time for writing fields')
     def writeFields(self, fields, t):
         fields, dtc = fields[:-1], fields[-1]
-        U, T, p = self.initFields(fields)
+        fields = self.initFields(fields)
+        U, T, p = self.primitive(*fields)
         for phi, phiN in zip(self.fields, [U, T, p]):
             phi.field = phiN.field
-        fields = list(self.conservative(*self.fields))
 
         with IOField.handle(t):
             for phi in fields + self.fields:

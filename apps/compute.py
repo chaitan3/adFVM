@@ -33,9 +33,9 @@ for index, time in enumerate(times):
     pprint('Time:', time)
     start = timer.time()
 
-    rho, rhoU, rhoE = solver.readFields(time)  
-    U, T, p = solver.initFields(rho, rhoU, rhoE)
-    rho, rhoU, rhoE = solver.conservative(U, T, p)
+    fields = solver.readFields(time)  
+    rho, rhoU, rhoE = solver.initFields(*fields)
+    U, T, p = solver.primitive(rho, rhoU, rhoE)
 
     IOField.openHandle(time)
 
