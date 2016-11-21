@@ -177,6 +177,7 @@ def laplacian(phi, DT, correction=True):
     #b.setValues(il + indices, cols, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
 
     # neumann, how does this affect processor?
+    # cyclic support?
     indices = mesh.owner[m:o]
     data = faceData[m:o].reshape(-1,1)/mesh.volumes[indices]
     indices, inverse = np.unique(indices, return_inverse=True)

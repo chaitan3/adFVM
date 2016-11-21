@@ -54,8 +54,6 @@ class Solver(object):
         mesh = self.mesh
 
         self.compileInit()
-        for phi in self.getBCFields():
-            phi.resetField()
 
         if self.localTimeStep:
             self.dt = ad.bcmatrix()
@@ -84,7 +82,7 @@ class Solver(object):
             gradientInputs = fields + adjoint.getGradFields()
             scalarFields = sum([ad.sum(newFields[index]*adjointFields[index]*mesh.volumes) \
                                 for index in range(0, len(fields))])
-            gradients = ad.grad(scalarFields, gradientInputs) + objGrad
+            gradients = list(ad.grad(scalarFields, gradientInputs)) + objGrad
             self.gradient = self.function(fields + adjointFields + [self.dt, self.t0], \
                             gradients, 'adjoint')
             #self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \

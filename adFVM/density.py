@@ -270,8 +270,11 @@ class RCF(Solver):
         logger.info('correcting boundary')
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
         U, T, p = self.getBCFields()
+        U.resetField()
         U.setInternalField(UN.field)
+        T.resetField()
         T.setInternalField(TN.field)
+        p.resetField()
         p.setInternalField(pN.field)
         return list(self.conservative(U, T, p))
     
