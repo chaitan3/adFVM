@@ -80,11 +80,11 @@ class Solver(object):
             objGrad = [phi/mesh.volumes for phi in ad.grad(objective, fields)]
             adjointFields = self.getSymbolicFields(False)
             gradientInputs = fields + adjoint.getGradFields()
-            #scalarFields = sum([ad.sum(newFields[index]*adjointFields[index]*mesh.volumes) \
-            #                    for index in range(0, len(fields))])
-            scalarFields = sum([ad.sum(newFields[index]*adjointFields[index]) \
+            scalarFields = sum([ad.sum(newFields[index]*adjointFields[index]*mesh.volumes) \
                                 for index in range(0, len(fields))])
             gradients = list(ad.grad(scalarFields, gradientInputs)) + objGrad
+            for index in range(0, len(fields)):
+                gradients[index] /= mesh.volumes
             self.gradient = self.function(fields + adjointFields + [self.dt, self.t0], \
                             gradients, 'adjoint')
             #self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \
