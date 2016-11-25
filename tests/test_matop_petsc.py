@@ -9,7 +9,7 @@ time = 3.0
 field = 'mua'
 case = '../cases/naca0012/test_laplacian/'
 time = 0.0
-field = 'U'
+field = 'T'
 
 DT = 0.01
 dt = 1e-8
@@ -21,7 +21,7 @@ Field.setMesh(mesh)
 with IOField.handle(time):
     T = IOField.read(field)
     T.partialComplete()
-weight = central(T.mag(), mesh.origMesh)
+weight = central(T, mesh.origMesh)
 weight.field[:] = DT
 #op = laplacian(T, weight)
 #op.eigenvalues()
@@ -31,7 +31,7 @@ for index in range(0, nSteps):
     T.old = T.field
     equation = ddt(T, dt) - laplacian(T, weight)
     T.field = equation.solve()
-    T.partialComplete()
+    T.defaultComplete()
     time += dt
 
 with IOField.handle(time):

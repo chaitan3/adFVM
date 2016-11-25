@@ -27,20 +27,20 @@ def perturb(fields, mesh, t):
 
 parameters = 'source'
 
-def perturb(fields, mesh, t):
-    if not hasattr(perturb, 'perturbation'):
-        ## do the perturbation based on param and eps
-        #perturbMesh.perturbation = mesh.getPerturbation()
-        points = np.zeros_like(mesh.parent.points)
-        points[0] = 1e-6
-        perturb.perturbation = mesh.parent.getPointsPerturbation(points)
-    return perturb.perturbation
-parameters = 'mesh'
-
-def perturb(fields, mesh, t):
-    return 1e-3
-
-parameters = ('BCs', 'U', 'inlet', 'value')
+#def perturb(fields, mesh, t):
+#    if not hasattr(perturb, 'perturbation'):
+#        ## do the perturbation based on param and eps
+#        #perturbMesh.perturbation = mesh.getPerturbation()
+#        points = np.zeros_like(mesh.parent.points)
+#        points[0] = 1e-6
+#        perturb.perturbation = mesh.parent.getPointsPerturbation(points)
+#    return perturb.perturbation
+#parameters = 'mesh'
+#
+#def perturb(fields, mesh, t):
+#    return 1e-3
+#
+#parameters = ('BCs', 'U', 'inlet', 'value')
 
 #nSteps = 4000
 #writeInterval = 100
