@@ -128,13 +128,14 @@ def getFieldByVolume(phi):
 
 def getAdjointEnergy(solver, rhoa, rhoUa, rhoEa):
     # J = rhohV*rho/t
+    mesh = solver.mesh.origMesh
     Uref, Tref, pref = solver.Uref, solver.Tref, solver.pref
     rhoref = pref/(Tref*solver.R)
     rhoUref = Uref*rhoref
     rhoEref = (solver.Cv*Tref + Uref**2/2)*rhoref
-    adjEnergy = (rhoref*rhoa.getInternalField()**2).sum(axis=1)
-    adjEnergy += (rhoUref*rhoUa.getInternalField()**2).sum(axis=1)
-    adjEnergy += (rhoEref*rhoEa.getInternalField()**2).sum(axis=1)
+    adjEnergy = (rhoref*rhoa.getInternalField()**2*mesh.volumes).sum(axis=1)
+    adjEnergy += (rhoUref*rhoUa.getInternalField()**2*mesh.volumes).sum(axis=1)
+    adjEnergy += (rhoEref*rhoEa.getInternalField()**2*mesh.volumes).sum(axis=1)
     adjEnergy = (parallel.sum(adjEnergy)**0.5)/(solver.Jref*solver.tref)
     return adjEnergy
 

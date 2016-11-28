@@ -12,8 +12,8 @@ plt.rcParams.update({'legend.fontsize': 14,
 
 import os
 
-loc = '2d_vane/'
-names = filter(lambda name: name.startswith('adj') and name.endswith('txt'), os.listdir(loc))
+loc = 'cylinder/'
+names = filter(lambda name: name.startswith('norm') and name.endswith('txt'), os.listdir(loc))
 print names
 labels = [float(name.split('_')[1].split('.txt')[0]) for name in names]
 print labels
@@ -41,7 +41,7 @@ for name, label, l in zip(names, labels, lines):
     #    y.append(float(terms[-1]))
     #x = x[-1] - np.array(x)
     #x /= 0.001
-    y = np.loadtxt(f)
+    y = np.loadtxt(f)[::-1]
     x = np.linspace(0,1,len(y))
     plt.semilogy(x, y, 'k'+l, label=label)#, color=np.random.rand(3,1))
 

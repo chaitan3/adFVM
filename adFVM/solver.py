@@ -189,7 +189,6 @@ class Solver(object):
                         value[1][:] = extractField(phiB[patchID][key], nFaces, phi.dimensions)
         return
 
-
     def getBCFields(self):
         return [phi.phi for phi in self.fields]
 
