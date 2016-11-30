@@ -30,7 +30,6 @@ def fit_bspline(coords, mesh):
     return t, tn
 
 c_index = [-2, -4]
-#c_scale = [1e-3, 4e-3]
 c_scale = [1e-3, 6e-3]
 c_bound = [1., 0.5]
 c_count = len(c_index)
@@ -101,9 +100,6 @@ def create_displacement(param, base, case):
         if points.shape[0] == 0:
             points = points.reshape((0, 3))
         t, tn = fit_bspline(coords, points[:,[0,1]])
-        index = np.argsort(tn)
-        tn = tn[index]
-        points = points[index]
         spline_points.append(points)
         spline_coeffs.append((t, tn))
 
@@ -117,12 +113,15 @@ def create_displacement(param, base, case):
             xc, yc = perturb_bspline(param, c, spline_coeffs[1][0], 1)
             newPoints = interpolate.splev(tn, c)
             if rank == 0:
-                #plt.plot(newPoints[0], newPoints[1], 'b.', label='perturbed')
+                index = np.argsort(tn)
                 plt.scatter(xc, yc, s=80, marker='*', c='k')
                 plt.plot(points[:,0], points[:,1], 'b.')
-                plt.plot(newPoints[0], newPoints[1], 'k')
+                plt.plot(newPoints[0][index], newPoints[1][index], 'k')
+                #plt.quiver(points[:,0], points[:,1], newPoints[0]-points[:,0], newPoints[1]-points[:,1])
         else:
             newPoints = [np.zeros((0.,)), np.zeros((0.,))]
+        #if patch == 'pressure':
+        #    import pdb;pdb.set_trace()
         pointDisplacement = np.vstack((newPoints[0]-points[:,0], newPoints[1]-points[:,1], 0*points[:,2])).T
         pointDisplacement = np.ascontiguousarray(pointDisplacement)
         handle = StringIO()
@@ -138,6 +137,7 @@ def create_displacement(param, base, case):
         plt.legend()
         np.savetxt(case + 'params.txt', param)
         plt.savefig(case + 'perturbation.png')
+        #plt.show()
 
     dispFile = case + '1/pointDisplacement'
     with open(dispFile) as f:
@@ -160,18 +160,20 @@ def extrude_mesh(case, spawn_job):
     spawn_job([foam_dir + 'transformPoints', '-translate', '"(0 0 -0.1)"', '-case', case], False)
     shutil.copyfile(case + 'system/createPatchDict.cyclic', case + 'system/createPatchDict')
     spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case], False)
-    spawn_job([foam_dir + 'decomposePar', '-time', 'constant', '-case', case], False)
         
 def perturb_mesh(case, spawn_job):
     # serial 
-    #spawn_job([foam_dir + 'moveMesh', '-case', case], False)
-    #shutil.move(case + '1.0001/polyMesh/points', case + 'constant/polyMesh/points')
-    #extrude_mesh(case, spawn_job)
-    # parallel
-    #spawn_job([foam_dir + 'moveMesh', '-case', case])
-    spawn_job([foam_dir + 'moveMesh', '-case', case, '-parallel'])
+    spawn_job([foam_dir + 'moveMesh', '-case', case])
+    shutil.move(case + '1.0001/polyMesh/points', case + 'constant/polyMesh/points')
+    extrude_mesh(case, spawn_job)
+    spawn_job([foam_dir + 'decomposePar', '-time', 'constant', '-case', case], False)
+    spawn_job([sys.executable, os.path.join(scripts_dir, 'conversion', 'hdf5mesh.py'), case])
 
-    spawn_job([sys.executable, os.path.join(scripts_dir, 'conversion', 'hdf5mesh.py'), case, '1.0001'])
+    # serial for laminar
+    #spawn_job([foam_dir + 'moveMesh', '-case', case])
+    # parallel
+    #spawn_job([foam_dir + 'moveMesh', '-case', case, '-parallel'])
+    #spawn_job([sys.executable, os.path.join(scripts_dir, 'conversion', 'hdf5mesh.py'), case, '1.0001'])
     return
 
 def gen_mesh_param(param, base, case, spawn_job, perturb=True):

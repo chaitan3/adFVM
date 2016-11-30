@@ -30,7 +30,7 @@ def readObjectiveFile(objectiveFile):
     assert len(gradient) > 0
     return objective, gradient
 
-def evaluate(param, runSimulation=True):
+def evaluate(param, genAdjoint=True, runSimulation=True):
     index = len(paramHistory)
     paramHistory.append(param)
     paramDir = os.path.join(caseDir, 'param{}'.format(index))
@@ -57,16 +57,17 @@ def evaluate(param, runSimulation=True):
         raise
     return
 
-    for index in range(0, len(param)):
-        perturbedParam = param.copy()
-        perturbedParam[index] += eps
-        gradDir = os.path.join(paramDir, 'grad{}'.format(index))
-        os.makedirs(gradDir)
-        try:
-            genMeshParam(perturbedParam, gradDir)
-        except (OSError, subprocess.CalledProcessError) as e:
-            print('Gen adjoint mesh param failed')
-            raise
+    if genAdjoint:
+        for index in range(0, len(param)):
+            perturbedParam = param.copy()
+            perturbedParam[index] += eps
+            gradDir = os.path.join(paramDir, 'grad{}'.format(index))
+            os.makedirs(gradDir)
+            try:
+                genMeshParam(perturbedParam, gradDir)
+            except (OSError, subprocess.CalledProcessError) as e:
+                print('Gen adjoint mesh param failed')
+                raise
 
     if runSimulation:
         spawnJob([sys.executable, primal, problemFile])
@@ -76,4 +77,6 @@ def evaluate(param, runSimulation=True):
     return
 
 from adFVM.optim import designOfExperiment
-print designOfExperiment(lambda x: evaluate(x), paramBounds, 2*nParam)
+print designOfExperiment(lambda x: evaluate(x, False, False), paramBounds, 2*nParam)
+#print evaluate(np.zeros(8)*1., False, False)
+

@@ -44,7 +44,7 @@ def spawnJob(args, cwd='.'):
 def genMeshParam(param, paramDir):
     sys.path.append(foamDir)
     from vane_profile import gen_mesh_param
-    gen_mesh_param(param, foamDir, paramDir + '/foam/', spawnJob, perturb=False)
+    gen_mesh_param(param, foamDir, paramDir + '/foam/', spawnJob, perturb=True)
     #import shutil
     #shutil.move(paramDir + 'foam/mesh.hdf5', paramDir + 'mesh.hdf5')
     return
