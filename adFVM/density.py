@@ -120,14 +120,15 @@ class RCF(Solver):
     
     @config.timeFunction('Time for writing fields')
     def writeFields(self, fields, t):
-        fields, dtc = fields[:-1], fields[-1]
+        n = len(self.names)
+        fields, rest = fields[:n], fields[n:]
         fields = self.initFields(fields)
         U, T, p = self.primitive(*fields)
         for phi, phiN in zip(self.fields, [U, T, p]):
             phi.field = phiN.field
 
         with IOField.handle(t):
-            for phi in fields + self.fields:
+            for phi in fields + self.fields + rest:
                 phi.write()
             if self.dynamicMesh:
                 self.mesh.write(IOField._handle)

@@ -46,8 +46,8 @@ class TestInterp(TestAdFVM):
         t = 0.0
         solver.readFields(t)
         solver.setInitialCondition(solver.fields[0])
-        solver.writeFields(solver.fields, t)
         solver.compile()
+        solver.writeFields(solver.fields, t)
         solver.run(startTime=t, dt=0.001, nSteps=1000, writeInterval=100)
         solver.readFields(1.)
 

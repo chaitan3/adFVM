@@ -17,8 +17,8 @@ class TestTimeStep(unittest.TestCase):
         x = mesh.cellCentres[:n]
         T.field = np.sin(x[:,0]*2*np.pi).reshape(-1,1)
         ref = T.field.copy()
-        solver.writeFields(solver.fields, t)
         solver.compile()
+        solver.writeFields(solver.fields, t)
         solver.run(startTime=t, dt=0.001, nSteps=1000, writeInterval=100)
         solver.readFields(1.)
 

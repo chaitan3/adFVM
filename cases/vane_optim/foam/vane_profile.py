@@ -30,8 +30,8 @@ def fit_bspline(coords, mesh):
     return t, tn
 
 c_index = [-2, -4]
-c_scale = [1e-3, 6e-3]
-c_bound = [1., 0.5]
+c_scale = [1e-3, 4e-3]
+c_bound = [0.5, 0.5]
 c_count = len(c_index)
 
 def perturb_bspline(param, c, t, index):
@@ -136,7 +136,10 @@ def create_displacement(param, base, case):
         plt.ylim([-0.055,-0.040])
         plt.legend()
         np.savetxt(case + 'params.txt', param)
-        plt.savefig(case + 'perturbation.png')
+        #plt.savefig(case + 'perturbation.png')
+        import re
+        num = re.search('param[0-9]+', case).group(0)
+        plt.savefig(base + 'perturbation_{}.png'.format(num))
         #plt.show()
 
     dispFile = case + '1/pointDisplacement'
@@ -161,16 +164,18 @@ def extrude_mesh(case, spawn_job):
     shutil.copyfile(case + 'system/createPatchDict.cyclic', case + 'system/createPatchDict')
     spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case], False)
         
-def perturb_mesh(case, spawn_job):
+def perturb_mesh(base, case, spawn_job):
     # serial 
-    spawn_job([foam_dir + 'moveMesh', '-case', case])
-    shutil.move(case + '1.0001/polyMesh/points', case + 'constant/polyMesh/points')
-    extrude_mesh(case, spawn_job)
-    spawn_job([foam_dir + 'decomposePar', '-time', 'constant', '-case', case], False)
-    spawn_job([sys.executable, os.path.join(scripts_dir, 'conversion', 'hdf5mesh.py'), case])
-
-    # serial for laminar
     #spawn_job([foam_dir + 'moveMesh', '-case', case])
+    #shutil.move(case + '1.0001/polyMesh/points', case + 'constant/polyMesh/points')
+    #extrude_mesh(case, spawn_job)
+    #time = '3.0'
+    #spawn_job([scripts_dir + 'field/map_fields.py', base + '3d_baseline/', case, time, time])
+    #spawn_job([foam_dir + 'decomposePar', '-time', time, '-case', case], False)
+
+    # if done this way, no mapping and hdf5 conversion needed
+    # serial for laminar
+    spawn_job([foam_dir + 'moveMesh', '-case', case])
     # parallel
     #spawn_job([foam_dir + 'moveMesh', '-case', case, '-parallel'])
     #spawn_job([sys.executable, os.path.join(scripts_dir, 'conversion', 'hdf5mesh.py'), case, '1.0001'])
@@ -191,7 +196,7 @@ def gen_mesh_param(param, base, case, spawn_job, perturb=True):
     #create_displacement(param, base, case)
     spawn_job([sys.executable, __file__, 'create_displacement', 'params.pkl'])
     if perturb:
-        perturb_mesh(case, spawn_job)
+        perturb_mesh(base, case, spawn_job)
 
     map(os.remove, glob.glob('*.obj'))
     return

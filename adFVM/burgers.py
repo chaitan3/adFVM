@@ -26,7 +26,6 @@ class Burgers(Solver):
 
     def equation(self, U):
         mesh = self.mesh
-        self.setBCFields([U])
         #UF = central(U, self.mesh)
         #UFlux = self.getFlux(UF)
         gradU = grad(U, op=True, ghost=True)

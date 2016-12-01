@@ -6,6 +6,7 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
+config.hdf5 = True
 #caseDir = '/projects/LESOpt/talnikar/vane-optim/'
 #foamDir = caseDir + '/foam/'
 caseDir = '/home/talnikar/adFVM/cases/vane_optim/foam/laminar/'
@@ -16,7 +17,7 @@ paramBounds = 1e-3*np.ones(nParam).reshape(-1,1)
 paramBounds = np.hstack((-paramBounds, paramBounds))
 
 if not sys.argv[0].endswith('optim.py'):
-    primal = RCF(CASEDIR, faceReconstructor='AnkitENO')
+    primal = RCF(CASEDIR, faceReconstructor='SecondOrder')
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
@@ -118,6 +119,6 @@ for index in range(0, nParam):
 
 nSteps = 100000
 writeInterval = 5000
-startTime = 1.0
+startTime = 3.0
 dt = 1e-8
 

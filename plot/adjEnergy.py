@@ -41,7 +41,7 @@ for name, label, l in zip(names, labels, lines):
     #    y.append(float(terms[-1]))
     #x = x[-1] - np.array(x)
     #x /= 0.001
-    y = np.loadtxt(f)[::-1]
+    y = np.loadtxt(f)
     x = np.linspace(0,1,len(y))
     plt.semilogy(x, y, 'k'+l, label=label)#, color=np.random.rand(3,1))
 

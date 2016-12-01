@@ -72,7 +72,7 @@ class Solver(object):
         if self.objective:
             objective = self.objective(initFields, mesh)
         else:
-            objective = 0.
+            objective = ad.constant(0.)
         self.map = self.function(fields + [self.dt, self.t0], \
                                  newFields + [objective, self.dtc, self.local, self.remote], 'forward')
 
@@ -202,11 +202,13 @@ class Solver(object):
         return self.getFields(newFields, IOField)
 
     def writeFields(self, fields, t, **kwargs):
+        n = len(self.names)
+        fields, rest = fields[:n], fields[n:]
         fields = self.initFields(fields)
         for phi, phiN in zip(self.fields, fields):
             phi.field = phiN.field
         with IOField.handle(t):
-            for phi in self.fields:
+            for phi in self.fields + rest:
                 phi.write(**kwargs)
         return 
 
@@ -242,6 +244,7 @@ class Solver(object):
     def boundary(self, *newFields):
         boundaryFields = self.getBCFields()
         for phiB, phiN in zip(boundaryFields, newFields):
+            phiB.resetField()
             phiB.setInternalField(phiN.field)
         return boundaryFields
 
@@ -393,6 +396,8 @@ class Solver(object):
                 # write mesh, fields, status
                 self.writeStatusFile([timeIndex, t, dt, result])
                 if mode == 'orig' or mode == 'simulation':
+                    if len(dtc.shape) == 0:
+                        dtc = dtc*np.ones((mesh.origMesh.nInternalCells, 1))
                     dtc = IOField.internalField('dtc', dtc, (1,))
                     # how do i do value BC patches?
                     self.writeFields(fields + [dtc], t)

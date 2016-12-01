@@ -22,7 +22,6 @@ class LinearConvection(Solver):
 
     def equation(self, T):
         mesh = self.mesh
-        self.setBCFields([T])
         TF = central(T, self.mesh)
         TFlux = self.getFlux(TF)
         return [div(TFlux)]
