@@ -87,6 +87,9 @@ if __name__ == "__main__":
     # restarting perturb not fully supported
     for sim in range(0, nSims):
         if user.option == 'perturb':
+            # single set of parameters, but can have multiple sets of perturbation
+            if len(parameters) == 0:
+                raise Exception('parameter not given')
             perturbation = (parameters, perturb[sim])
             primal.timeSeriesFile = primal.mesh.case + 'timeSeries_{}.txt'.format(sim)
         else:

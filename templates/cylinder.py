@@ -85,6 +85,7 @@ def makePerturb(scale):
     return perturb
  
 perturb = [makePerturb(1e-5)]
+parameters = 'source'
 
 nSteps = 200000
 writeInterval = 5000

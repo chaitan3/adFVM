@@ -17,6 +17,7 @@ except:
     name = ''
     rank = 0
     mpi.bcast = lambda x, root: x
+    mpi.Bcast = lambda x, root: None
     mpi.Barrier = lambda : None
     mpi.scatter = lambda x, root: x[0]
     mpi.gather = lambda x, root: [x]

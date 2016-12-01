@@ -12,9 +12,7 @@ from adFVM.mesh import writeField
 from adFVM import config
 
 foam_dir = os.environ['FOAM_APPBIN'] + '/'
-apps_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
-scripts_dir = os.path.join(apps_dir, '..', 'scripts')
-#scripts_dir = os.path.join('/home/talnikar/adFVM/scripts/')
+scripts_dir = '/home/talnikar/adFVM/scripts/'
 
 def fit_bspline(coords, mesh):
 
@@ -158,24 +156,24 @@ def create_displacement(param, base, case):
 
 def extrude_mesh(case, spawn_job):
     shutil.copyfile(case + 'system/createPatchDict.patch', case + 'system/createPatchDict')
-    spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case], False)
-    spawn_job([foam_dir + 'extrudeMesh'], False, cwd=case)
-    spawn_job([foam_dir + 'transformPoints', '-translate', '"(0 0 -0.1)"', '-case', case], False)
+    spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case])
+    spawn_job([foam_dir + 'extrudeMesh'], cwd=case)
+    spawn_job([foam_dir + 'transformPoints', '-translate', '(0 0 -0.01)', '-case', case])
     shutil.copyfile(case + 'system/createPatchDict.cyclic', case + 'system/createPatchDict')
-    spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case], False)
+    spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case])
         
 def perturb_mesh(base, case, spawn_job):
     # serial 
-    #spawn_job([foam_dir + 'moveMesh', '-case', case])
-    #shutil.move(case + '1.0001/polyMesh/points', case + 'constant/polyMesh/points')
-    #extrude_mesh(case, spawn_job)
-    #time = '3.0'
-    #spawn_job([scripts_dir + 'field/map_fields.py', base + '3d_baseline/', case, time, time])
-    #spawn_job([foam_dir + 'decomposePar', '-time', time, '-case', case], False)
+    spawn_job([foam_dir + 'moveMesh', '-case', case])
+    shutil.move(case + '1.0001/polyMesh/points', case + 'constant/polyMesh/points')
+    extrude_mesh(case, spawn_job)
+    time = '3.0'
+    spawn_job([scripts_dir + 'field/map_fields.py', base + '3d_baseline/', case, time, time])
+    spawn_job([foam_dir + 'decomposePar', '-time', time, '-case', case])
 
     # if done this way, no mapping and hdf5 conversion needed
     # serial for laminar
-    spawn_job([foam_dir + 'moveMesh', '-case', case])
+    #spawn_job([foam_dir + 'moveMesh', '-case', case])
     # parallel
     #spawn_job([foam_dir + 'moveMesh', '-case', case, '-parallel'])
     #spawn_job([sys.executable, os.path.join(scripts_dir, 'conversion', 'hdf5mesh.py'), case, '1.0001'])
