@@ -16,150 +16,141 @@ processorDirs = glob.glob(case + 'processor*')
 ranks = [int(re.search('processor([0-9]+)', proc).group(1)) for proc in processorDirs]
 processorDirs = [proc for (rank, proc) in sorted(zip(ranks, processorDirs))]
 
-meshFile = h5py.File(case + '/mesh.hdf5', 'w')
+def genParallel(parallelInfo, group):
+    parallelInfo = np.array(parallelInfo)
+    parallelEnd = np.cumsum(parallelInfo, axis=0)
+    parallelStart = np.zeros_like(parallelEnd)
+    parallelStart[1:] = parallelEnd[:-1]
+    parallelGroup = group.create_group('parallel')
+    parallelGroup.create_dataset('start', data=parallelStart)
+    parallelGroup.create_dataset('end', data=parallelEnd)
 
-def meshWriteHDF5(self, rank, maxRank):
-    mesh = self
+def meshWriteHDF5(meshes):
     print('writing hdf5 mesh')
+    ranks = len(meshes)
+    parallelInfo = []
+    faces = []
+    points = []
+    owner = []
+    neighbour = []
+    cells = []
+    addressing = []
+    for mesh in meshes:
+        parallelInfo.append(np.array([mesh.faces.shape[0], mesh.points.shape[0], \
+                             mesh.owner.shape[0], mesh.neighbour.shape[0],
+                             mesh.cells.shape[0]
+                            ]))
+        parallelInfo[-1] = np.concatenate((parallelInfo[-1], [x.shape[0] for x in mesh.addressing]))
+        faces.append(mesh.faces)
+        points.append(mesh.points)
+        owner.append(mesh.owner)
+        neighbour.append(mesh.neighbour)
+        cells.append(mesh.cells)
+        addressing.append(mesh.addressing)
 
-    boundary = []
-    for patchID in mesh.boundary.keys():
-        for key, value in mesh.boundary[patchID].iteritems():
-            boundary.append([patchID, key, str(value)])
-    boundary = np.array(boundary, dtype='S100')
-    faces, points, owner, neighbour = self.faces, self.points, mesh.owner, mesh.neighbour
-    cells = self.cells
-
-    if mesh.nInternalFaces > 0:
-        neighbour = neighbour[:mesh.nInternalFaces]
-
-    parallelInfo = np.array([faces.shape[0], points.shape[0], \
-                             owner.shape[0], neighbour.shape[0],
-                             boundary.shape[0],
-                             cells.shape[0]
-                            ])
-
-    if rank == 0:
-        parallelGroup = meshFile.create_group('parallel')
-        parallelStartData = parallelGroup.create_dataset('start', (maxRank, len(parallelInfo)), np.int64)
-        parallelEndData = parallelGroup.create_dataset('end', (maxRank, len(parallelInfo)), np.int64)
-        parallelStart = np.zeros_like(parallelInfo)
-        parallelEnd = parallelInfo
-
-        facesData = meshFile.create_dataset('faces', (parallelInfo[0],) + faces.shape[1:], faces.dtype, maxshape=(None,) + faces.shape[1:])
-        pointsData = meshFile.create_dataset('points', (parallelInfo[1],) + points.shape[1:], np.float64, maxshape=(None,) + points.shape[1:])
-        ownerData = meshFile.create_dataset('owner', (parallelInfo[2],) + owner.shape[1:], owner.dtype, maxshape=(None,) + owner.shape[1:])
-        neighbourData = meshFile.create_dataset('neighbour', (parallelInfo[3],) + neighbour.shape[1:], neighbour.dtype, maxshape=(None,) + neighbour.shape[1:])
-        boundaryData = meshFile.create_dataset('boundary', (parallelInfo[4], 3), 'S100', maxshape=(None,3)) 
-        cellsData = meshFile.create_dataset('cells', (parallelInfo[5],) + cells.shape[1:], cells.dtype, maxshape=(None,) + cells.shape[1:])
-    else:
-        parallelStartData = meshFile['parallel/start']
-        parallelEndData = meshFile['parallel/end']
-        parallelStart = parallelEndData[rank-1]
-        parallelEnd = parallelStart + parallelInfo
-
-        facesData = meshFile['faces']
-        pointsData = meshFile['points']
-        ownerData = meshFile['owner']
-        neighbourData = meshFile['neighbour']
-        boundaryData = meshFile['boundary']
-        cellsData = meshFile['cells']
-        facesData.resize(facesData.shape[0] + faces.shape[0], axis=0)
-        pointsData.resize(pointsData.shape[0] + points.shape[0], axis=0)
-        ownerData.resize(ownerData.shape[0] + owner.shape[0], axis=0)
-        neighbourData.resize(neighbourData.shape[0] + neighbour.shape[0], axis=0)
-        boundaryData.resize(boundaryData.shape[0] + boundary.shape[0], axis=0)
-        cellsData.resize(cellsData.shape[0] + cells.shape[0], axis=0)
     
-    parallelStartData[rank] = parallelStart
-    parallelEndData[rank] = parallelEnd
+    genParallel(parallelInfo, meshFile)
+        
+    meshFile.create_dataset('faces', data=np.vstack(faces))
+    meshFile.create_dataset('points', data=np.vstack(points))
+    meshFile.create_dataset('owner', data=np.concatenate(owner))
+    meshFile.create_dataset('neighbour', data=np.concatenate(neighbour))
+    meshFile.create_dataset('cells', data=np.vstack(cells))
 
-    facesData[parallelStart[0]:parallelEnd[0]] = faces
-    pointsData[parallelStart[1]:parallelEnd[1]] = points.astype(np.float64)
-    ownerData[parallelStart[2]:parallelEnd[2]] = owner
-    neighbourData[parallelStart[3]:parallelEnd[3]] = neighbour
+    names = ['pointProcAddressing', 'faceProcAddressing', 'cellProcAddressing']
+    for index in range(len(addressing[0])):
+        addrData = [addr[index] for addr in addressing]
+        meshFile.create_dataset(names[index], data=np.concatenate(addrData))
 
-    boundaryData[parallelStart[4]:parallelEnd[4]] = boundary
 
-    cellsData[parallelStart[5]:parallelEnd[5]] = cells
-
-def fieldWriteHDF5(self, time, rank, maxRank):
-    # mesh values required outside theano
-    print('writing hdf5 field {0}, time {1}'.format(self.name, times[time]))
-
-    boundary = []
-    for patchID in self.boundary.keys():
-        #print rank, self.name, patchID
-        patch = self.boundary[patchID]
-        for key, value in patch.iteritems():
-            if not (key == 'value' and patch['type'] in BCs.valuePatches):
+    boundaries = []
+    parallelInfo = []
+    for mesh in meshes:
+        boundary = []
+        for patchID in mesh.boundary.keys():
+            for key, value in mesh.boundary[patchID].iteritems():
                 boundary.append([patchID, key, str(value)])
-    boundary = np.array(boundary, dtype='S100')
+        boundary = np.array(boundary, dtype='S100')
+        parallelInfo.append(np.array([boundary.shape[0]]))
 
-    # fetch processor information
-    field = self.field
+        boundaries.append(boundary)
 
-    global fieldsFiles
-    fieldsFile = fieldsFiles[time]
-    #fieldGroup.create_dataset('dimensions', data=self.dimensions)
+    boundaryGroup = meshFile.create_group('boundary')
+    genParallel(parallelInfo, boundaryGroup)
+    boundaryGroup.create_dataset('values', data=np.vstack(boundaries))
+    boundaryGroup.create_group('fields')
+    return
 
-    parallelInfo = np.array([field.shape[0], boundary.shape[0]])
 
-    if rank == 0:
-        fieldGroup = fieldsFile.create_group(self.name)
-        parallelGroup = fieldGroup.create_group('parallel')
-        parallelStartData = parallelGroup.create_dataset('start', (maxRank, len(parallelInfo)), np.int64)
-        parallelEndData = parallelGroup.create_dataset('end', (maxRank, len(parallelInfo)), np.int64)
-        parallelStart = np.zeros_like(parallelInfo)
-        parallelEnd = parallelInfo
+def fieldWriteHDF5(phis):
+    name = phis[0].name
+    # mesh values required outside theano
+    print('writing hdf5 field {0}'.format(name))
 
-        fieldData = fieldGroup.create_dataset('field', (parallelInfo[0],) + self.dimensions, np.float64, maxshape=(None,) + self.dimensions)
-        boundaryData = fieldGroup.create_dataset('boundary', (parallelInfo[1], 3), 'S100', maxshape=(None,3)) 
-    else:
-        fieldGroup = fieldsFile[self.name]
-        parallelStartData = fieldGroup['parallel/start']
-        parallelEndData = fieldGroup['parallel/end']
-        parallelStart = parallelEndData[rank-1]
-        parallelEnd = parallelStart + parallelInfo
+    boundaries = []
+    fields = []
+    parallelInfo = []
 
-        fieldData = fieldGroup['field']
-        boundaryData = fieldGroup['boundary']
-        fieldData.resize(fieldData.shape[0] + field.shape[0], axis=0)
-        boundaryData.resize(boundaryData.shape[0] + boundary.shape[0], axis=0)
+    for phi in phis:
+        boundary = []
+        for patchID in phi.boundary.keys():
+            patch = phi.boundary[patchID]
+            for key, value in patch.iteritems():
+                if not (key == 'value' and patch['type'] in BCs.valuePatches):
+                    boundary.append([patchID, key, str(value)])
+        boundary = np.array(boundary, dtype='S100')
+        field = phi.field
+        parallelInfo.append(np.array([field.shape[0], boundary.shape[0]]))
 
-    parallelStartData[rank] = parallelStart
-    parallelEndData[rank] = parallelEnd
+        fields.append(field)
+        boundaries.append(boundary)
 
-    fieldData[parallelStart[0]:parallelEnd[0]] = field.astype(np.float64)
+    fieldGroup = fieldsFile.create_group(name)
 
-    boundaryData[parallelStart[1]:parallelEnd[1]] = boundary
 
-fieldsFiles = []
-for time in times:
-    if time.is_integer():
-        time = int(time)
-    fieldsFiles.append(h5py.File(case + '/' + str(time) + '.hdf5', 'w'))
+    genParallel(parallelInfo, fieldGroup)
+    fieldGroup.create_dataset('field', data=np.vstack(fields))
+    fieldGroup.create_dataset('boundary', data=np.vstack(boundaries))
 
+config.hdf5 = False
+meshes = []
 for rank, processor in enumerate(processorDirs):
-    config.hdf5 = False
     print processor
     mesh = Mesh()
     mesh.points, mesh.faces, mesh.owner, \
-            mesh.neighbour, mesh.boundary = mesh.readFoam(processor, 'constant')
+            mesh.neighbour, mesh.addressing, mesh.boundary = mesh.readFoam(processor, 'constant')
     mesh.buildBeforeWrite()
 
     mesh.origMesh = mesh
-    meshWriteHDF5(mesh, rank, len(processorDirs))
+    meshes.append(mesh)
 
-    config.hdf5 = True
-    IOField.setMesh(mesh)
-    for index, time in enumerate(times):
-        fields = mesh.getFields(time)
-        for name in fields:
-            phi = IOField.readFoam(name, mesh, time)
-            phi.partialComplete()
-            fieldWriteHDF5(phi, index, rank, len(processorDirs))
 
+meshFile = h5py.File(case + '/mesh.hdf5', 'w')
+meshWriteHDF5(meshes)
 meshFile.close()
-for fieldsFile in fieldsFiles:
+
+for index, time in enumerate(times):
+    print 'writing time', time
+    if time.is_integer():
+        stime = int(time)
+    else:
+        stime = time
+    fields = {}
+    fieldsFile = h5py.File(case + '/' + str(stime) + '.hdf5', 'w')
+
+    mesh = meshes[0]
+    IOField.setMesh(mesh)
+    names = mesh.getFields(time)
+    for name in names:
+        fields = []
+        for rank, processor in enumerate(processorDirs):
+            print processor
+            mesh = meshes[rank]
+            IOField.setMesh(mesh)
+            with IOField.handle(time):
+                phi = IOField.readFoam(name)
+                phi.partialComplete()
+                fields.append(phi)
+
+        fieldWriteHDF5(fields)
     fieldsFile.close()

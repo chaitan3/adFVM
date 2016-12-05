@@ -186,7 +186,7 @@ class Mesh(object):
         owner = self.readFoamFile(constantMeshDir + 'owner', np.int32).ravel()
         neighbour = self.readFoamFile(constantMeshDir + 'neighbour', np.int32).ravel()
         addressing = []
-        if parallel.nProcessors > 1:
+        if os.path.exists(constantMeshDir + 'pointProcAddressing'):
             addressing.append(self.readFoamFile(constantMeshDir + 'pointProcAddressing', np.int32).ravel())
             addressing.append(self.readFoamFile(constantMeshDir + 'faceProcAddressing', np.int32).ravel())
             addressing.append(self.readFoamFile(constantMeshDir + 'cellProcAddressing', np.int32).ravel())
