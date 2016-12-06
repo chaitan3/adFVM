@@ -177,11 +177,12 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     M_2norm = IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary)
     return M_2norm
 
-def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None):
+def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True):
     self = getAdjointViscosity
     solver = rho.solver
     mesh = rho.mesh
-    rho, rhoU, rhoE = solver.initFields((rho, rhoU, rhoE))
+    if init:
+        rho, rhoU, rhoE = solver.initFields((rho, rhoU, rhoE))
     U, T, p = solver.primitive(rho, rhoU, rhoE)
 
     if not outputs:
