@@ -99,4 +99,7 @@ if __name__ == "__main__":
                             mode=user.option, startIndex=startIndex, source=source, perturbation=perturbation)
         writeResult(user.option, result/nSteps, '{}'.format(sim))
         primal.removeStatusFile()
+        # if running multiple sims reset starting index and result
+        startIndex = 0
+        initResult = 0.
         

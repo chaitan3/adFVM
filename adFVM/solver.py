@@ -269,7 +269,6 @@ class Solver(object):
             dt = dts[timeIndex]
 
         # objective is local
-        result = 0.
         timeSeries = []
         timeSteps = []
 
