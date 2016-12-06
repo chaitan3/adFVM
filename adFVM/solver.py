@@ -249,7 +249,7 @@ class Solver(object):
         return boundaryFields
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, reportInterval=1, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
-            startIndex=0, result=0., mode='simulation', source=lambda *args: [], perturbation=None):
+            startIndex=0, result=0., mode='simulation', source=lambda *args: [0.]*len(args[0]), perturbation=None):
 
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
