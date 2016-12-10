@@ -132,6 +132,11 @@ class Field(object):
         ad = self._getType()
         return self.__class__('log({0})'.format(self.name), ad.log(self.field), self.dimensions)
 
+    def exp(self):
+        ad = self._getType()
+        return self.__class__('exp({0})'.format(self.name), ad.exp(self.field), self.dimensions)
+
+
     def abs(self):
         return self.__class__('abs({0})'.format(self.name), ad.abs_(self.field), self.dimensions)
 

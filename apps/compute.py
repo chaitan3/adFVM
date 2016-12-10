@@ -39,13 +39,13 @@ for index, time in enumerate(times):
 
     with IOField.handle(time):
 
-        #outputs = computer(U.field, T.field, p.field)
-        #outputsF = []
-        #for field, name, dim in zip(outputs, names, dimensions):
-        #    outputsF.append(IOField(name, field, dim))
-        #    if len(dim) != 2:
-        #        outputsF[-1].write()
-        #pprint()
+        outputs = computer(U.field, T.field, p.field)
+        outputsF = []
+        for field, name, dim in zip(outputs, names, dimensions):
+            outputsF.append(IOField(name, field, dim))
+            if len(dim) != 2:
+                outputsF[-1].write()
+        pprint()
 
 
         #enstrophy, Q = getEnstrophyAndQ(outputsF[1])
@@ -79,8 +79,8 @@ for index, time in enumerate(times):
         pprint()
 
         ## adjoint viscosity
-        #mua = getAdjointViscosity(rho, rhoU, rhoE, 1e-2, outputs=outputs, init=False)
-        #mua.write()
+        mua = getAdjointViscosity(rho, rhoU, rhoE, 1e-2, outputs=outputs, init=False)
+        mua.write()
 
     end = timer.time()
     pprint('Time for computing: {0}'.format(end-start))
