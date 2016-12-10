@@ -20,10 +20,13 @@ for f in sys.argv[1:]:
     #plt.semilogy(x, y, label='instantaneous objective')
     #plt.plot(x, y, label='instantaneous objective')
     #plt.plot(x, s, label='cumulative averaged objective')
-    plt.plot(x, s, label=f)
+    plt.plot(x, s) #, label=f)
     plt.legend(loc='lower right')
+    print 'here'
+print 'here'
 plt.xlabel('iteration')
 plt.ylabel('objective')
-plt.show()
+plt.savefig('test.png')
+#plt.show()
 
 

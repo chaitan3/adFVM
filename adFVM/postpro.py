@@ -190,10 +190,13 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True):
             self.computer = computeGradients(solver)
         outputs = self.computer(U, T, p)
     M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
-    M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
+    M_2normLim = parallel.min(M_2norm.field), parallel.max(M_2norm.field)
+    assert M_2normLim[0] > 0.
     viscosityScale = float(scaling)
     #pprint('M_2norm: ' +  str(M_2normScale))
-    viscosity = M_2norm*(viscosityScale/M_2normScale)
+    factor = np.exp(M_2norm/M_2normLim[0]-1)-1
+    #factor = M2_norm/M_2normLim[1]
+    viscosity = viscosityScale * factor
     viscosity.name = 'mua'
     viscosity.boundary = mesh.calculatedBoundary
     return viscosity
