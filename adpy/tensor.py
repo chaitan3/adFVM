@@ -3,14 +3,13 @@ from numbers import Number
 
 import ops
 
-def _as_tensor_object(a):
-    if isinstance(a, tensor):
-        return a
-    elif isinstance(a, np.ndarray) or isinstance(a, Number):
-        ConstantOp = type('ConstantOp', (ops.ConstantOp,), {'constant':a})
-        return ConstantOp().outputs[0]
+def _as_tensor_object(obj):
+    if isinstance(obj, tensor):
+        return obj
+    elif isinstance(obj, np.ndarray) or isinstance(obj, Number):
+        return ops.ConstantOp(obj).outputs[0]
     else:
-        raise Exception('object not recognized', a)
+        raise Exception('object not recognized', obj)
 
 _tensor_id = 0
 
@@ -63,6 +62,9 @@ class tensor(object):
 
     def __neg__(self, a):
         return ops.NegOp([self]).outputs[0]
+
+    def __getitem__(self, a):
+        return ops.SubtensorOp([self, a]).outputs[0]
 
 scalar = type('scalar', (tensor,), {'dims':0})
 vector = type('vector', (tensor,), {'dims':1})

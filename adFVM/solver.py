@@ -393,7 +393,6 @@ class Solver(object):
                     solutions.append(fields)
             elif (timeIndex % writeInterval == 0) or not iterate(t, timeIndex):
                 # write mesh, fields, status
-                self.writeStatusFile([timeIndex, t, dt, result])
                 if mode == 'orig' or mode == 'simulation':
                     if len(dtc.shape) == 0:
                         dtc = dtc*np.ones((mesh.origMesh.nInternalCells, 1))
@@ -411,6 +410,7 @@ class Solver(object):
                     if mode == 'orig' or mode == 'perturb':
                         with open(self.timeSeriesFile, 'a') as f:
                             np.savetxt(f, timeSeries[lastIndex:])
+                self.writeStatusFile([timeIndex, t, dt, result])
 
         if mode == 'forward':
             return solutions
