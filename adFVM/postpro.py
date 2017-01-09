@@ -194,8 +194,8 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True):
     assert M_2normLim[0] > 0.
     viscosityScale = float(scaling)
     #pprint('M_2norm: ' +  str(M_2normScale))
-    factor = (M_2norm*(1./M_2normLim[0])-1).exp()-1
-    #factor = M2_norm/M_2normLim[1]
+    #factor = (M_2norm*(1./M_2normLim[0])-1).exp()-1
+    factor = M_2norm*(1./M_2normLim[1])
     viscosity = viscosityScale * factor
     viscosity.name = 'mua'
     viscosity.boundary = mesh.calculatedBoundary

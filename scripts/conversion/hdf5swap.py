@@ -26,3 +26,4 @@ for f in files:
     recurse(orig, swap, '')
     orig.close()
     swap.close()
+    os.remove(f)

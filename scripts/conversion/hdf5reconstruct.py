@@ -212,3 +212,4 @@ for time in times:
         parallelGroup.create_dataset('end', data=np.array([[dataSerial.shape[0],len(boundary)]], np.int64))
 
     fieldSerial.close()
+    os.remove(case + '/{}_parallel.hdf5'.format(time))

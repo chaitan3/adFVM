@@ -26,6 +26,7 @@ class Adjoint(Solver):
         self.statusFile = primal.statusFile
         self.names = [name + 'a' for name in primal.names]
         self.dimensions = primal.dimensions
+        self.sensTimeSeriesFile = self.mesh.case + 'sensTimeSeries.txt'
         return
 
     def createFields(self):
@@ -91,6 +92,7 @@ class Adjoint(Solver):
         mesh = self.mesh
         result, firstCheckpoint = self.result, self.firstCheckpoint
         timeSteps = self.timeSteps
+        sensTimeSeries = []
 
         startTime = timeSteps[nSteps - firstCheckpoint*writeInterval][0]
         if firstCheckpoint == 0:
@@ -182,12 +184,16 @@ class Adjoint(Solver):
                     pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
                 # compute sensitivity using adjoint solution
+                sensTimeSeries.append([0.]*nPerturb)
                 for index in range(0, len(perturb)):
                     perturbation = perturb[index](None, mesh.origMesh, t)
                     #if not isinstance(perturbation, list) or (len(parameters) == 1 and len(perturbation) > 1):
                     #    perturbation = [perturbation]
+                    
                     for derivative, delphi in zip(paramGradient, perturbation):
-                        result[index] += np.sum(derivative * delphi)
+                        sensitivity = np.sum(derivative * delphi)
+                        result[index] += sensitivity
+                        sensTimeSeries[-1][index] += parallel.sum(sensitivity)
 
                 #parallel.mpi.Barrier()
                 if report:
@@ -199,6 +205,9 @@ class Adjoint(Solver):
             #exit(1)
             self.writeFields(fields, t)
             self.writeStatusFile([checkpoint + 1, result])
+            if parallel.rank == 0:
+                with open(self.sensTimeSeriesFile, 'a') as f:
+                    np.savetxt(f, sensTimeSeries[-writeInterval:])
 
         for index in range(0, nPerturb):
             writeResult('adjoint', result[index], '{} {}'.format(index, self.scaling))

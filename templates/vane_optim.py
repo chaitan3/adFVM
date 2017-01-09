@@ -117,6 +117,8 @@ perturb = []
 for index in range(0, nParam):
     perturb.append(makePerturb(index))
 
+parameters = 'mesh'
+
 nSteps = 100000
 writeInterval = 5000
 startTime = 3.0
