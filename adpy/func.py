@@ -7,7 +7,7 @@ import subprocess
 class Function:
     def __init__(self, inputs, outputs, mode='py'):
         # TODO
-        # broadcasting
+        # subtensor operations
         # shapeOp
         # integer arrays
         # in place optimizations

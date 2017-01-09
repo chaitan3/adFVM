@@ -12,12 +12,12 @@ a = tensor.matrix()
 b = tensor.col()
 c = a+b
 d = tensor.matrix()
+#c = c[:]
 
 #f = Function([a, b, d], [d*c])
-f = Function([a, b], [2.*c], mode='c')
+f = Function([a, b], [2.*c], mode='py')
 
 a = np.ones((3,4))
 b = 2*np.ones((3,1))
 d = 40*np.ones((3,4))
-#print f(np.random.rand(2), np.random.rand(2), np.random.rand(2))
-print f(a, b)
+print f(np.random.rand(2,4), np.random.rand(2,1))
