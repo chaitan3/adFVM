@@ -284,22 +284,29 @@ class Solver(object):
         # source term update
         self.updateSource(source(fields, mesh.origMesh, t))
         # perturbation
-        if perturbation:
+
+        def doPerturb(revert=False):
             parameters, perturb = perturbation
             values = perturb(fields, mesh.origMesh, t)
             if not isinstance(values, list) or (len(parameters) == 1 and len(values) > 1):
                 values = [values]
             for param, value in zip(parameters, values):
                 if param == 'source':
+                    if revert:
+                        value = -value
                     pprint('Perturbing source')
                     self.updateSource(value, perturb=True)
                 elif param == 'mesh':
                     pprint('Perturbing mesh')
                     for attr, delta in zip(Mesh.gradFields, value):
+                        if revert:
+                            delta = -delta
                         field = getattr(mesh.origMesh, attr)
                         field += delta
                         assert field is getattr(mesh.origMesh, attr)
                 elif isinstance(param, tuple):
+                    if revert:
+                        value = -value
                     assert param[0] == 'BCs'
                     pprint('Perturbing', param)
                     _, phi, patchID, key = param
@@ -308,6 +315,8 @@ class Solver(object):
                     patch.inputs[index][1][:] += value
                 elif isinstance(param, ad.TensorType):
                     raise NotImplementedError
+        if perturbation:
+            doPerturb()
 
         pprint('Time marching for', ' '.join(self.names))
 
@@ -411,6 +420,9 @@ class Solver(object):
                         with open(self.timeSeriesFile, 'a') as f:
                             np.savetxt(f, timeSeries[lastIndex:])
                 self.writeStatusFile([timeIndex, t, dt, result])
+
+        if perturbation:
+            doPerturb(revert=True)
 
         if mode == 'forward':
             return solutions
