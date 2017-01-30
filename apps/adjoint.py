@@ -187,8 +187,9 @@ class Adjoint(Solver):
                 sensTimeSeries.append([0.]*nPerturb)
                 for index in range(0, len(perturb)):
                     perturbation = perturb[index](None, mesh.origMesh, t)
-                    #if not isinstance(perturbation, list) or (len(parameters) == 1 and len(perturbation) > 1):
-                    #    perturbation = [perturbation]
+                    if not isinstance(perturbation, list):# or (len(parameters) == 1 and len(perturbation) > 1):
+                        perturbation = [perturbation]
+                        # complex parameter perturbation not supported
                     
                     for derivative, delphi in zip(paramGradient, perturbation):
                         sensitivity = np.sum(derivative * delphi)
