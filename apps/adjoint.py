@@ -88,17 +88,17 @@ class Adjoint(Solver):
         parallel.mpi.Bcast(self.timeSteps, root=0)
         return
     
-    def run(self):
+    def run(self, readFields=False):
         mesh = self.mesh
         result, firstCheckpoint = self.result, self.firstCheckpoint
         timeSteps = self.timeSteps
         sensTimeSeries = []
 
         startTime = timeSteps[nSteps - firstCheckpoint*writeInterval][0]
-        if firstCheckpoint == 0:
-            fields = self.getFields(self.fields, IOField)
-        else:
+        if (firstCheckpoint > 0) or readFields:
             fields = self.readFields(startTime)
+        else:
+            fields = self.getFields(self.fields, IOField)
 
         pprint('STARTING ADJOINT')
         pprint('Number of steps:', nSteps)
@@ -219,6 +219,7 @@ class Adjoint(Solver):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--scaling', required=False)
+    parser.add_argument('--readFields', action='store_true')
     user, args = parser.parse_known_args()
 
     adjoint = Adjoint(primal, user.scaling)
@@ -228,7 +229,7 @@ def main():
     primal.readFields(adjoint.timeSteps[nSteps-writeInterval][0])
     adjoint.compile()
 
-    adjoint.run()
+    adjoint.run(user.readFields)
 
 if __name__ == '__main__':
     main()
