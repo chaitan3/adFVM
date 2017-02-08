@@ -22,6 +22,7 @@ class Solver(object):
                         'adjoint': False,
                         'dynamicMesh': False,
                         'localTimeStep': False,
+                        'fixedTimeStep': False,
                         'stepFactor': 1.0,
                         'postpro': [],
                         'sourceTerms': []
@@ -281,9 +282,6 @@ class Solver(object):
             else:
                 solutions = [fields]
 
-        # source term update
-        self.updateSource(source(fields, mesh.origMesh, t))
-        # perturbation
 
         def doPerturb(revert=False):
             parameters, perturb = perturbation
@@ -315,10 +313,7 @@ class Solver(object):
                     patch.inputs[index][1][:] += value
                 elif isinstance(param, ad.TensorType):
                     raise NotImplementedError
-        if perturbation:
-            doPerturb()
-
-        pprint('Time marching for', ' '.join(self.names))
+                pprint('Time marching for', ' '.join(self.names))
 
         def iterate(t, timeIndex):
             return t < endTime and timeIndex < nSteps
@@ -326,6 +321,12 @@ class Solver(object):
             # add reporting interval
             mesh.reset = True
             report = (timeIndex % reportInterval) == 0
+
+            # source term update
+            self.updateSource(source(fields, mesh.origMesh, t))
+            # perturbation
+            if perturbation:
+                doPerturb()
 
             if report:
                 printMemUsage()
@@ -381,12 +382,11 @@ class Solver(object):
                 dt = dtc
             elif isinstance(dts, np.ndarray):
                 dt = dts[timeIndex]
-            else:
+            elif not self.fixedTimeStep:
                 dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
 
             if self.dynamicMesh:
                 mesh.update(t, dt)
-            #self.updateSource(source(fields, mesh.origMesh, t))
 
             # objective management
             result += objective
@@ -420,9 +420,6 @@ class Solver(object):
                         with open(self.timeSeriesFile, 'a') as f:
                             np.savetxt(f, timeSeries[lastIndex:])
                 self.writeStatusFile([timeIndex, t, dt, result])
-
-        if perturbation:
-            doPerturb(revert=True)
 
         if mode == 'forward':
             return solutions

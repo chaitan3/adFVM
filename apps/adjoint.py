@@ -138,6 +138,7 @@ class Adjoint(Solver):
                     mesh.origMesh.boundary = previousMesh.boundary
                 else:
                     previousSolution = solutions[adjointIndex]
+                self.updateSource(source(previousSolution, mesh.origMesh, t))
 
                 if report:
                     printMemUsage()

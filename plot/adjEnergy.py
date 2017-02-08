@@ -24,7 +24,7 @@ cm = plt.get_cmap('gist_rainbow')
 n = len(names)
 cmc =[cm(1.*i/n) for i in range(n)]
 lines = ["-","--","-.",":", '']
-#plt.gca().set_color_cycle(cmc)
+plt.gca().set_color_cycle(cmc)
 cmcd = {}
 for i,j in enumerate(labels):
     cmcd[j] = cmc[i]
@@ -43,7 +43,7 @@ for name, label, l in zip(names, labels, lines):
     #x /= 0.001
     y = np.loadtxt(f)
     x = np.linspace(0,1,len(y))
-    plt.semilogy(x, y, 'k'+l, label=label)#, color=np.random.rand(3,1))
+    plt.semilogy(x, y, label=label, color=np.random.rand(3,1))
 
     #s = len(y)/5
     #visc = float(label)

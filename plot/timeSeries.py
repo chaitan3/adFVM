@@ -17,6 +17,7 @@ for f in sys.argv[1:]:
     print f
     y = np.loadtxt(f)
     x = np.arange(0, len(y))
+    x = x/2386.
     s = y
     #s = np.cumsum(y)/np.arange(1,len(y)+1)
     #plt.xlabel('time (T)')
@@ -24,15 +25,15 @@ for f in sys.argv[1:]:
     #plt.plot(x, y, label='instantaneous objective')
     #plt.plot(x, s, label='cumulative averaged objective')
     token = os.path.basename(f).split('_')[0]
-    xy = (x*time[token]/(0.002*len(y)), s)
-    plt.plot(xy[0], xy[1], c=colors[c]) #, label=f)
+    xy = (x, s)
+    plt.plot(xy[0], xy[1], c=colors[c], label=f)
     plt.annotate(str(c), xy=(xy[0][-1], xy[1][-1]))
     plt.legend(loc='lower right')
     c += 1
 #plt.xlabel('iteration')
 #plt.ylabel('objective')
 plt.xlabel('Time unit')
-plt.ylabel('Pressure loss')
+plt.ylabel('Drag over cylinder (N)')
 #plt.savefig('test.png')
 plt.show()
 
