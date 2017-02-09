@@ -37,6 +37,9 @@ class Solver(object):
         for key in fullConfig:
             setattr(self, key, fullConfig[key])
 
+        if parallel.rank == 0:
+            open(case + 'STARTED', 'w').close()
+            print('touched', case + 'STARTED')
         self.mesh = Mesh.create(case)
         self.resultFile = self.mesh.case + 'objective.txt'
         self.statusFile = self.mesh.case + 'status.pkl'
