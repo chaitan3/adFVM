@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python2 -u
 from __future__ import print_function
 
 from adFVM import config, parallel
@@ -12,7 +12,7 @@ from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
 from adFVM.solver import Solver
 
-from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters
+from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source
 
 import numpy as np
 import time
@@ -138,7 +138,7 @@ class Adjoint(Solver):
                     mesh.origMesh.boundary = previousMesh.boundary
                 else:
                     previousSolution = solutions[adjointIndex]
-                self.updateSource(source(previousSolution, mesh.origMesh, t))
+                primal.updateSource(source(previousSolution, mesh.origMesh, t))
 
                 if report:
                     printMemUsage()

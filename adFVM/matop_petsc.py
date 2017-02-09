@@ -178,14 +178,15 @@ def laplacian(phi, DT, correction=True):
 
     # neumann, how does this affect processor?
     # cyclic support?
-    indices = mesh.owner[m:o]
-    data = faceData[m:o].reshape(-1,1)/mesh.volumes[indices]
-    indices, inverse = np.unique(indices, return_inverse=True)
-    uniqData = np.zeros((indices.shape[0], 1), config.precision)
-    add_at(uniqData, inverse, data)
-    indices = indices.reshape(-1,1)
-    A.assemble()
-    A.setValuesRCV(il + indices, jl + indices, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
+    if o > m:
+    	indices = mesh.owner[m:o]
+    	data = faceData[m:o].reshape(-1,1)/mesh.volumes[indices]
+    	indices, inverse = np.unique(indices, return_inverse=True)
+    	uniqData = np.zeros((indices.shape[0], 1), config.precision)
+    	add_at(uniqData, inverse, data)
+    	indices = indices.reshape(-1,1)
+    	A.assemble()
+    	A.setValuesRCV(il + indices, jl + indices, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
 
     # TESTING
     #indices = np.arange(0, mesh.nInternalCells).astype(np.int32)
