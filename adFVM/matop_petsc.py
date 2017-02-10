@@ -9,9 +9,12 @@ from .field import Field
 import numpy as np
 import time
 
-import petsc4py
-petsc4py.init()
-from petsc4py import PETSc
+try:
+    import petsc4py
+    petsc4py.init()
+    from petsc4py import PETSc
+except:
+    pprint('could not load petsc4py')
 
 class Matrix(object):
     def __init__(self, A, b):
