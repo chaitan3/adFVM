@@ -19,7 +19,7 @@ viscosity = []
 sens = []
 perturb = 0.
 
-f = open('2d_vane/objective.txt')
+f = open('naca0012/objective.txt')
 lines =  f.readlines()
 #for line in lines:
 #    words = line.split(' ')
@@ -35,9 +35,10 @@ for line in lines:
     if words[0] == 'perturb':
         perturb = float(words[1])
     elif words[0] == 'adjoint':
-        viscosity.append(float(words[1]))
-        sens.append(float(words[2]))
+        viscosity.append(float(words[2]))
+        sens.append(float(words[3]))
 
+#index = np.argsort(viscosity)[2:]
 index = np.argsort(viscosity)
 viscosity = np.array(viscosity)[index]
 sens = np.array(sens)[index]
@@ -100,27 +101,30 @@ from matplotlib.pyplot import *
 #cmcd = cPickle.load(open('colors.pkl'))
 #colors = [cmcd.get(i,(0.,0.,0.,1.)) for i in viscosity]
 
-sens = (100-sens)/1e8
-perturb = (100-perturb)/1e8
-
-z = np.polyfit(np.log(viscosity), sens, 4)
-f = np.poly1d(z)
+sens = np.abs(sens)
+from scipy.interpolate import UnivariateSpline
+z = UnivariateSpline(viscosity, sens, k=4, s=len(sens))
 plt.xlabel('viscosity scaling factor')
 plt.ylabel('sensitivity')
 plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
-plt.semilogx(viscosity, perturb*np.ones_like(viscosity), 'k',label='finite difference')
-plt.semilogx(viscosity, perturb*np.ones_like(viscosity), 'k.', markerfacecolor='white', markersize=20)
+#plt.semilogx(viscosity, perturb*np.ones_like(viscosity), 'k',label='finite difference')
+#plt.semilogx(viscosity, perturb*np.ones_like(viscosity), 'k.', markerfacecolor='white', markersize=20)
 #for i in range(0, len(viscosity)):
 #    plt.loglog(viscosity[i], sens[i], '.', color=colors[i],markersize=20)
-plt.semilogx(viscosity, sens, 'kv',markersize=10, label='adjoint')
-xr = [3e-4, 0.011]
-x = np.log(xr)
-x = np.linspace(x[0], x[1], 100)
-y = f(x)
-print x
-f = np.poly1d(z)
-plt.semilogx(np.exp(x), y, 'k--')
-plt.xlim(xr)
+plt.loglog(viscosity, sens, 'k.',markersize=15, label='adjoint sensitivity')
+plt.loglog(viscosity, sens, 'k')
+x = np.linspace(viscosity[0], viscosity[-1], 100)
+print 'x', x
+print 'f', z(x)
+#plt.plot(x, z(x), 'b-',label='fit')
+#xr = [3e-4, 0.011]
+#x = np.log(xr)
+#x = np.linspace(x[0], x[1], 100)
+#y = f(x)
+#print x
+#f = np.poly1d(z)
+#plt.semilogx(np.exp(x), y, 'k--')
+#plt.xlim(xr)
 #plt.axis('tight')
 #sens = np.abs(sens-perturb)/np.abs(perturb)
 #plt.ylabel('relative error in sensitivity')
@@ -132,4 +136,5 @@ print sens
 #plt.ylabel('percent error in sensitivity')
 
 plt.legend()
-plt.savefig('2d_vane/error.png')
+plt.savefig('naca0012/adj_sens.png')
+#plt.show()
