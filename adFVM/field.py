@@ -6,7 +6,7 @@ from numbers import Number
 from contextlib import contextmanager
 
 from . import config, parallel, BCs
-from .config import ad, T
+from .config import ad
 from .parallel import pprint
 from .mesh import extractField, writeField
 
@@ -70,7 +70,7 @@ class Field(object):
         if isinstance(field, Field):
             field = field.field
         if isinstance(indices, tuple):
-            self.field = ad.set_subtensor(self.field[indices[0]:indices[1]], field)
+            #self.field = ad.set_subtensor(self.field[indices[0]:indices[1]], field)
         else:
             self.field = ad.set_subtensor(self.field[indices], field)
 
@@ -248,7 +248,7 @@ class CellField(Field):
     def resetField(self):
         mesh = self.mesh
         size = (mesh.nCells, ) + self.dimensions
-        self.field = ad.bcalloc(config.precision(1.), size)
+        self.field = ad.zeros(size, config.dtype)
         #self.field.tag.test_value = np.zeros((mesh.origMesh.nCells,) + self.dimensions, config.precision)
 
     def setInternalField(self, internalField):
@@ -466,7 +466,7 @@ class IOField(Field):
 
     def completeField(self):
         logger.debug('completing field {0}'.format(self.name))
-        internalField = ad.matrix()
+        internalField = ad.placeholder(config.dtype)
         # CellField for later use
         self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, ghost=True)
         return internalField, self.phi.field
@@ -656,88 +656,88 @@ class IOField(Field):
         return field
 
 
-class ExchangerOp(T.Op):
-    __props__ = ()
-    def __init__(self):
-        if parallel.nProcessors == 1:
-            self.view_map = {0: [0]}
-
-    def make_node(self, x):
-        assert hasattr(self, '_props')
-        x = ad.as_tensor_variable(x)
-        return T.Apply(self, [x], [x.type()])
-
-    def perform(self, node, inputs, output_storage):
-        field = np.ascontiguousarray(inputs[0])
-        output_storage[0][0] = parallel.getRemoteCells(field, Field.mesh)
-
-    def grad(self, inputs, output_grads):
-        return [gradExchange(output_grads[0])]
-
-    def R_op(self, inputs, eval_points):
-        return [exchange(eval_points[0])]
-
-class FaceExchangerOp(T.Op):
-    __props__ = ()
-    def __init__(self):
-        if parallel.nProcessors == 1:
-            self.view_map = {0: [0]}
-
-    def make_node(self, x, y, z):
-        assert hasattr(self, '_props')
-        x = ad.as_tensor_variable(x)
-        y = ad.as_tensor_variable(y)
-        z = ad.as_tensor_variable(z)
-        return T.Apply(self, [x, y, z], [x.type()])
-
-    def perform(self, node, inputs, output_storage):
-        field1 = np.ascontiguousarray(inputs[0])
-        field2 = np.ascontiguousarray(inputs[1])
-        startFace = inputs[2]
-        output_storage[0][0] = parallel.getRemoteFaces(field1, field2, startFace, Field.mesh)
-
-    def grad(self, inputs, output_grads):
-        gradFace = gradFaceExchange(output_grads[0], inputs[2])
-        gradFace.append(T.gradient.disconnected_type())
-        return gradFace
-
-class gradFaceExchangerOp(T.Op):
-    __props__ = ()
-
-    def __init__(self):
-        if parallel.nProcessors == 1:
-            self.view_map = {0: [0]}
-
-    def make_node(self, x, y):
-        assert hasattr(self, '_props')
-        x = ad.as_tensor_variable(x)
-        y = ad.as_tensor_variable(y)
-        return T.Apply(self, [x, y], [x.type(), x.type()])
-
-    def perform(self, node, inputs, output_storage):
-        gradField = np.ascontiguousarray(inputs[0])
-        startFace = inputs[1]
-        gradField1, gradField2 = parallel.getAdjointRemoteFaces(gradField, startFace, Field.mesh)
-        output_storage[0][0] = gradField1
-        output_storage[1][0] = gradField2
-
-class gradExchangerOp(T.Op):
-    __props__ = ()
-
-    def __init__(self):
-        if parallel.nProcessors == 1:
-            self.view_map = {0: [0]}
-
-    def make_node(self, x):
-        assert hasattr(self, '_props')
-        x = ad.as_tensor_variable(x)
-        return T.Apply(self, [x], [x.type()])
-
-    def perform(self, node, inputs, output_storage):
-        field = np.ascontiguousarray(inputs[0])
-        output_storage[0][0] = parallel.getAdjointRemoteCells(field, Field.mesh)
-
-exchange = ExchangerOp()
-faceExchange = FaceExchangerOp()
-gradExchange = gradExchangerOp()
-gradFaceExchange = gradFaceExchangerOp()
+#class ExchangerOp(T.Op):
+#    __props__ = ()
+#    def __init__(self):
+#        if parallel.nProcessors == 1:
+#            self.view_map = {0: [0]}
+#
+#    def make_node(self, x):
+#        assert hasattr(self, '_props')
+#        x = ad.as_tensor_variable(x)
+#        return T.Apply(self, [x], [x.type()])
+#
+#    def perform(self, node, inputs, output_storage):
+#        field = np.ascontiguousarray(inputs[0])
+#        output_storage[0][0] = parallel.getRemoteCells(field, Field.mesh)
+#
+#    def grad(self, inputs, output_grads):
+#        return [gradExchange(output_grads[0])]
+#
+#    def R_op(self, inputs, eval_points):
+#        return [exchange(eval_points[0])]
+#
+#class FaceExchangerOp(T.Op):
+#    __props__ = ()
+#    def __init__(self):
+#        if parallel.nProcessors == 1:
+#            self.view_map = {0: [0]}
+#
+#    def make_node(self, x, y, z):
+#        assert hasattr(self, '_props')
+#        x = ad.as_tensor_variable(x)
+#        y = ad.as_tensor_variable(y)
+#        z = ad.as_tensor_variable(z)
+#        return T.Apply(self, [x, y, z], [x.type()])
+#
+#    def perform(self, node, inputs, output_storage):
+#        field1 = np.ascontiguousarray(inputs[0])
+#        field2 = np.ascontiguousarray(inputs[1])
+#        startFace = inputs[2]
+#        output_storage[0][0] = parallel.getRemoteFaces(field1, field2, startFace, Field.mesh)
+#
+#    def grad(self, inputs, output_grads):
+#        gradFace = gradFaceExchange(output_grads[0], inputs[2])
+#        gradFace.append(T.gradient.disconnected_type())
+#        return gradFace
+#
+#class gradFaceExchangerOp(T.Op):
+#    __props__ = ()
+#
+#    def __init__(self):
+#        if parallel.nProcessors == 1:
+#            self.view_map = {0: [0]}
+#
+#    def make_node(self, x, y):
+#        assert hasattr(self, '_props')
+#        x = ad.as_tensor_variable(x)
+#        y = ad.as_tensor_variable(y)
+#        return T.Apply(self, [x, y], [x.type(), x.type()])
+#
+#    def perform(self, node, inputs, output_storage):
+#        gradField = np.ascontiguousarray(inputs[0])
+#        startFace = inputs[1]
+#        gradField1, gradField2 = parallel.getAdjointRemoteFaces(gradField, startFace, Field.mesh)
+#        output_storage[0][0] = gradField1
+#        output_storage[1][0] = gradField2
+#
+#class gradExchangerOp(T.Op):
+#    __props__ = ()
+#
+#    def __init__(self):
+#        if parallel.nProcessors == 1:
+#            self.view_map = {0: [0]}
+#
+#    def make_node(self, x):
+#        assert hasattr(self, '_props')
+#        x = ad.as_tensor_variable(x)
+#        return T.Apply(self, [x], [x.type()])
+#
+#    def perform(self, node, inputs, output_storage):
+#        field = np.ascontiguousarray(inputs[0])
+#        output_storage[0][0] = parallel.getAdjointRemoteCells(field, Field.mesh)
+#
+#exchange = ExchangerOp()
+#faceExchange = FaceExchangerOp()
+#gradExchange = gradExchangerOp()
+#gradFaceExchange = gradFaceExchangerOp()

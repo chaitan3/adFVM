@@ -5,7 +5,7 @@ import os
 import copy
 
 from . import config, parallel, timestep
-from .config import ad, T
+from .config import ad
 from .parallel import pprint
 from .memory import printMemUsage
 
@@ -143,9 +143,9 @@ class Solver(object):
         fields = []
         for index, dim in enumerate(self.dimensions):
             if dim == (1,):
-                field = ad.bcmatrix()
+                field = ad.placeholder(config.dtype)
             else:
-                field = ad.matrix()
+                field = ad.placeholder(config.dtype)
             if returnField:
                 field = CellField(names[index], field, dim)
             fields.append(field)

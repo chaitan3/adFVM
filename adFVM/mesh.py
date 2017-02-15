@@ -829,21 +829,21 @@ class Mesh(object):
     def makeTensor(self):
         logger.info('making tensor variables')
         for attr in Mesh.constants:
-            setattr(self, attr, ad.iscalar())
+            setattr(self, attr, ad.placeholder(ad.int32))
         for attr in Mesh.fields:
             value = getattr(self, attr) 
             if attr in ['owner', 'neighbour']:
-                setattr(self, attr, ad.ivector())
+                setattr(self, attr, ad.placeholder(ad.int32))
             elif attr in ['cellNeighbours', 'cellFaces']:
-                setattr(self, attr, ad.imatrix())
-            elif attr == 'sumOp' or attr == 'gradOp':
-                setattr(self, attr, adsparse.csr_matrix(dtype=config.dtype))
+                setattr(self, attr, ad.placeholder(ad.int32))
+            #elif attr == 'sumOp' or attr == 'gradOp':
+            #    setattr(self, attr, adsparse.(dtype=config.dtype))
             elif value.shape[1] == 1:
-                setattr(self, attr, ad.bcmatrix())
+                setattr(self, attr, ad.placeholder(config.dtype))
             elif len(value.shape) > 2:
-                setattr(self, attr, ad.tensor3())
+                setattr(self, attr, ad.placeholder(config.dtype))
             else:
-                setattr(self, attr, ad.matrix())
+                setattr(self, attr, ad.placeholder(config.dtype))
 
         for patchID in self.localPatches:
             for attr in self.getBoundaryTensor(patchID):
@@ -851,7 +851,7 @@ class Mesh(object):
 
 
     def getBoundaryTensor(self, patchID):
-        default = [('startFace', ad.iscalar()), ('nFaces', ad.iscalar())]
+        default = [('startFace', ad.placeholder(ad.int32)), ('nFaces', ad.placeholder(ad.int32))]
         return default + self.boundaryTensor.get(patchID, [])
 
     @config.timeFunction('Time to update mesh')

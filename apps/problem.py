@@ -2,9 +2,7 @@
 from __future__ import print_function
 
 from adFVM import config, parallel
-from adFVM.config import ad
 from adFVM.parallel import pprint
-from adFVM.field import CellField
 
 import numpy as np
 import sys
