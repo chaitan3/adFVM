@@ -649,7 +649,7 @@ class Mesh(object):
         #        startFace = mesh.nInternalFaces + patch['startFace'] - self.nInternalFaces
         #        endFace = startFace + patch['nFaces']
         #        owner.data[startFace:endFace] = 0
-        sumOp = (owner + neighbour).tocsr()
+        sumOp = (owner + neighbour).tocoo()
     
         #return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
         return sumOp
@@ -690,7 +690,7 @@ class Mesh(object):
         data = data.flatten()
 
         shape = (3*mesh.nInternalCells, mesh.nCells)
-        gradOp = sparse.coo_matrix((data, (row, column)), shape=shape).tocsr()
+        gradOp = sparse.coo_matrix((data, (row, column)), shape=shape)
 
         return gradOp
 
@@ -836,8 +836,8 @@ class Mesh(object):
                 setattr(self, attr, ad.placeholder(ad.int32))
             elif attr in ['cellNeighbours', 'cellFaces']:
                 setattr(self, attr, ad.placeholder(ad.int32))
-            #elif attr == 'sumOp' or attr == 'gradOp':
-            #    setattr(self, attr, adsparse.(dtype=config.dtype))
+            elif attr == 'sumOp' or attr == 'gradOp':
+                setattr(self, attr, self.getSparseTensor(attr))
             elif value.shape[1] == 1:
                 setattr(self, attr, ad.placeholder(config.dtype))
             elif len(value.shape) > 2:
@@ -848,6 +848,17 @@ class Mesh(object):
         for patchID in self.localPatches:
             for attr in self.getBoundaryTensor(patchID):
                 self.boundary[patchID][attr[0]] = attr[1]
+
+    def getSparseTensor(self, attr):
+        indices = ad.placeholder(ad.int64)
+        values = ad.placeholder(config.dtype)
+        shape = ad.placeholder(ad.int64)
+        sparse = getattr(self.origMesh, attr)
+        sparse.indices = np.stack((sparse.row, sparse.col), axis=1).astype(np.int64)
+        sparse.values = sparse.data
+        sparse.dense_shape = np.array(sparse.shape).astype(np.int64)
+        sumOp = ad.SparseTensor(indices, values, shape)
+        return sumOp
 
 
     def getBoundaryTensor(self, patchID):

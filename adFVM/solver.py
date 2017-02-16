@@ -93,8 +93,8 @@ class Solver(object):
                             gradients, 'adjoint')
             #self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \
             #                ad.Rop(newStackedFields, stackedFields, stackedAdjointFields), 'tangent')
-        if config.compile:
-            exit()
+        #if config.compile:
+        #    exit()
         pprint()
 
     def compileInit(self, functionName='init'):
@@ -458,7 +458,11 @@ class SolverFunction(object):
     def populate_mesh(self, inputs, mesh, solverMesh):
         attrs = Mesh.fields + Mesh.constants
         for attr in attrs:
-            inputs.append(getattr(mesh, attr))
+            val = getattr(mesh, attr)
+            if attr == 'sumOp' or attr == 'gradOp':
+                inputs.extend([val.indices, val.values, val.dense_shape])
+            else:
+                inputs.append(val)
         for patchID in solverMesh.sortedPatches:
             for attr in solverMesh.getBoundaryTensor(patchID):
                 inputs.append(mesh.boundary[patchID][attr[0]])
@@ -484,7 +488,7 @@ class SolverFunction(object):
                 pklData = open(pklFile).read()
             else:
                 #fn = ad.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)#, allow_input_downcast=True)
-                self.fn = (inputs, outputs)
+                fn = (inputs, outputs)
                 #T.printing.pydotprint(fn, outfile=name + '_graph.png')
                 #if config.pickleFunction or (parallel.nProcessors > 1):
                 #pklData = pkl.dumps(fn)
@@ -529,8 +533,12 @@ class SolverFunction(object):
         inputs = inputs + self.values
         #print 'get', id(self.values[29].data)
         with ad.Session() as sess: 
-            out, inp = self.fn
-            outputs = sess.run(out, feed_dict={inp[i]:inputs[i] for i in range(0, len(inp))})
+            inp, out = self.fn
+            #print len(inp), len(inputs)
+            #for i in range(0, len(inp)):
+            #    print inp[i], inputs[i].dtype
+            feed_dict = {inp[i]:inputs[i] for i in range(0, len(inp))}
+            outputs = sess.run(out, feed_dict=feed_dict)
         if isinstance(outputs, tuple):
             outputs = list(outputs)
         return outputs

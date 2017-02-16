@@ -9,12 +9,13 @@ logger = config.Logger(__name__)
 
 
 def internal_sum(phi, mesh, absolute=False):
-    if config.device == "cpu1":
+    if config.device == "cpu":
         if not absolute:
             sumOp = mesh.sumOp
         else:
-            sumOp = adsparse.basic.sp_ones_like(mesh.sumOp)
-        x = (adsparse.basic.dot(sumOp, (phi.field * mesh.areas)))/mesh.volumes
+            sumOp = ad.abs(mesh.sumOp)
+        #x = (adsparse.basic.dot(sumOp, (phi.field * mesh.areas)))/mesh.volumes
+        x = ad.sparse_tensor_dense_matmul(sumOp, phi.field * mesh.areas)/mesh.volumes
     else:
         phiF = phi.field*mesh.areas
         dimensions = (np.product(phi.dimensions),)

@@ -24,7 +24,7 @@ valuePatches = config.processorPatches + ['calculated',
 
 def dot(v, w, dims=1):
     if dims == 1:
-        return ad.sum(v*w, axis=1, keepdims=True)
+        return ad.sum(v*w, axis=1, keep_dims=True)
     else:
         w = w[:,np.newaxis,:]
         return ad.sum(v*w, axis=-1)

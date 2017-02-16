@@ -181,11 +181,16 @@ class RCF(Solver):
         #rhoFlux, rhoUFlux, rhoEFlux, aF, UnF = self.riemannSolver(mesh, self.gamma, \
         #        pLF, pRF, TLF, TRF, ULF, URF, \
         #        rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF)
-        rhoFlux = Field('rho', ad.zeros((mesh.nFaces,) + rho.dimensions), rho.dimensions)
-        rhoUFlux = Field('rhoU', ad.zeros((mesh.nFaces,) + rhoU.dimensions), rhoU.dimensions)
-        rhoEFlux = Field('rhoE', ad.zeros((mesh.nFaces,) + rhoE.dimensions), rhoE.dimensions)
-        UF = Field('U', ad.zeros((mesh.nFaces,) + U.dimensions), U.dimensions)
-        TF = Field('T', ad.zeros((mesh.nFaces,) + T.dimensions), T.dimensions)
+        #rhoFlux = Field('rho', ad.zeros((mesh.nFaces,) + rho.dimensions), rho.dimensions)
+        #rhoUFlux = Field('rhoU', ad.zeros((mesh.nFaces,) + rhoU.dimensions), rhoU.dimensions)
+        #rhoEFlux = Field('rhoE', ad.zeros((mesh.nFaces,) + rhoE.dimensions), rhoE.dimensions)
+        #UF = Field('U', ad.zeros((mesh.nFaces,) + U.dimensions), U.dimensions)
+        #TF = Field('T', ad.zeros((mesh.nFaces,) + T.dimensions), T.dimensions)
+        rhoFlux = []
+        rhoUFlux = []
+        rhoEFlux = []
+        UF = []
+        TF = []
         indices = self.faceReconstructor.indices
 
         # INTERNAL FLUX: includes internal faces
@@ -202,11 +207,11 @@ class RCF(Solver):
         rhoIFlux, rhoUIFlux, rhoEIFlux = self.riemannSolver(self.gamma, \
                 pLIF, pRIF, TLIF, TRIF, ULIF, URIF, \
                 rhoLIF, rhoRIF, rhoULIF, rhoURIF, rhoELIF, rhoERIF, Normals)
-        rhoFlux.setField(indices, rhoIFlux)
-        rhoUFlux.setField(indices, rhoUIFlux)
-        rhoEFlux.setField(indices, rhoEIFlux)
-        UF.setField(indices, 0.5*(ULIF + URIF))
-        TF.setField(indices, 0.5*(TLIF + TRIF))
+        rhoFlux.append((indices, rhoIFlux))
+        rhoUFlux.append((indices, rhoUIFlux))
+        rhoEFlux.append((indices, rhoEIFlux))
+        UF.append((indices, 0.5*(ULIF + URIF)))
+        TF.append((indices, 0.5*(TLIF + TRIF)))
 
         # BOUNDARY FLUX
         if self.faceReconstructor.boundary:
@@ -216,11 +221,11 @@ class RCF(Solver):
             UBF, TBF, pBF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
             BNormals = mesh.Normals.getField(indices)
             rhoBFlux, rhoUBFlux, rhoEBFlux = self.getFlux(UBF, TBF, pBF, BNormals)
-            rhoFlux.setField(indices, rhoBFlux)
-            rhoUFlux.setField(indices, rhoUBFlux)
-            rhoEFlux.setField(indices, rhoEBFlux)
-            UF.setField(indices, UBF)
-            TF.setField(indices, TBF)
+            rhoFlux.append((indices, rhoBFlux))
+            rhoUFlux.append((indices, rhoUBFlux))
+            rhoEFlux.append((indices, rhoEBFlux))
+            UF.append((indices, UBF))
+            TF.append((indices, TBF))
         # CHARACTERISTIC BOUNDARY FLUX 
         if self.faceReconstructor.characteristic:
             # first order interpolation? really?
@@ -235,11 +240,22 @@ class RCF(Solver):
             rhoCFlux, rhoUCFlux, rhoECFlux = self.boundaryRiemannSolver(self.gamma, \
                     pLCF, pRCF, TLCF, TRCF, ULCF, URCF, \
                     rhoLCF, rhoRCF, rhoULCF, rhoURCF, rhoELCF, rhoERCF, CNormals)
-            rhoFlux.setField(indices, rhoCFlux)
-            rhoUFlux.setField(indices, rhoUCFlux)
-            rhoEFlux.setField(indices, rhoECFlux)
-            UF.setField(indices, 0.5*(ULCF + URCF))
-            TF.setField(indices, 0.5*(TLCF + TRCF))
+            rhoFlux.append((indices, rhoCFlux))
+            rhoUFlux.append((indices, rhoUCFlux))
+            rhoEFlux.append((indices, rhoECFlux))
+            UF.append((indices, 0.5*(ULCF + URCF)))
+            TF.append((indices, 0.5*(TLCF + TRCF)))
+
+        def stitch(variable):
+            indices = [var[0] for var in variable]
+            values = [var[1].field for var in variable]
+            return ad.dynamic_stitch(indices, values)
+
+        rhoFlux = Field('rho', stitch(rhoFlux), rho.dimensions)
+        rhoUFlux = Field('rhoU', stitch(rhoUFlux), rhoU.dimensions)
+        rhoEFlux = Field('rhoE', stitch(rhoEFlux), rhoE.dimensions)
+        UF = Field('U', stitch(UF), U.dimensions)
+        TF = Field('T', stitch(TF), T.dimensions)
 
         # viscous part
         mu = self.mu(TF)

@@ -18,7 +18,7 @@ def central(phi, mesh):
     factor = mesh.weights
     # for tensor
     if len(phi.dimensions) == 2:
-        factor = factor.reshape((factor.shape[0], 1, 1))
+        factor = ad.reshape(factor, (-1, 1, 1))
     faceField = Field('{0}F'.format(phi.name), ad.gather(phi.field, mesh.owner)*factor + ad.gather(phi.field, mesh.neighbour)*(1.-factor), phi.dimensions)
     #faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner] + phi.field[mesh.neighbour], phi.dimensions)
     # retain pattern broadcasting
@@ -123,7 +123,7 @@ class Reconstruct(object):
 class FirstOrder(Reconstruct):
     def update(self, index, phi, gradPhi):
         C = self.faceOptions[index][0]
-        phiC = phi.field[C]
+        phiC = ad.gather(phi.field, C)
         return phiC
 
 class SecondOrder(Reconstruct):
@@ -136,7 +136,7 @@ class SecondOrder(Reconstruct):
         phiDC = (phiD-phiC)*1
 
         gradF = Field('gradF({0})'.format(phi.name), phiDC, phi.dimensions)
-        gradC = Field('gradC({0})'.format(phi.name), gradPhi.field[C], gradPhi.dimensions)
+        gradC = Field('gradC({0})'.format(phi.name), ad.gather(gradPhi.field, C), gradPhi.dimensions)
 
         weights1 = Field('lw', ad.reshape(ad.gather(mesh.linearWeights[:,index], self.indices), (-1,1)), (1,))
         weights2 = Field('qw', ad.gather(mesh.quadraticWeights[:,:,index], self.indices), (3,))

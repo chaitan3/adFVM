@@ -27,17 +27,18 @@ def objectiveDrag(fields, mesh):
     patch = mesh.boundary[patchID]
     start, end, nF = mesh.getPatchFaceRange(patchID)
     areas = mesh.areas[start:end]
-    nx = mesh.normals[start:end, 0].reshape((-1, 1))
+    nx = ad.reshape(mesh.normals[start:end, 0], (-1, 1))
     cellStartFace = mesh.nInternalCells + start - mesh.nInternalFaces 
     cellEndFace = mesh.nInternalCells + end - mesh.nInternalFaces
     internalIndices = mesh.owner[start:end]
     start, end = cellStartFace, cellEndFace
     p = rhoE.field[start:end]*(primal.gamma-1)
     #deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1, keepdims=True)
-    deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nF,1))
+    dx = mesh.cellCentres[start:end]-ad.gather(mesh.cellCentres, internalIndices)
+    deltas = ad.reshape(ad.sum(dx*dx, axis=1)**0.5, (nF,1))
     T = rhoE/(rho*primal.Cv)
     #mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
-    mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
+    mungUx = (ad.reshape(rhoU.field[start:end, 0], (nF,1))/rho.field[start:end]-ad.reshape(ad.gather(rhoU.field[:, 0], internalIndices), (nF,1))/ad.gather(rho.field, internalIndices))*primal.mu(T).field[start:end]/deltas
     return ad.sum((p*nx-mungUx)*areas)
 
 def getPlane(solver):

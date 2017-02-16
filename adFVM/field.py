@@ -58,13 +58,12 @@ class Field(object):
 
     @classmethod
     def switch(self, condition, a, b):
-        return self('switch({0},{1})'.format(a.name, b.name), ad.switch(condition, a.field, b.field), a.dimensions)
+        return self('switch({0},{1})'.format(a.name, b.name), ad.where(condition, a.field, b.field), a.dimensions)
 
     def getField(self, indices):
         if isinstance(indices, tuple):
             return self.__class__(self.name, self.field[indices[0]:indices[1]], self.dimensions)
         else:
-            raise Exception('not implemented')
             return self.__class__(self.name, ad.gather(self.field, indices), self.dimensions)
 
     def setField(self, indices, field):
@@ -77,10 +76,12 @@ class Field(object):
             
         else:
             raise Exception('not implemented')
-            self.field = ad.set_subtensor(self.field[indices], field)
+            rev_indices = 1 - ad.scatter_nd(indices, 1, 1)
+            self.field = ad.dynamic_stitch([indices, rev_indices], field, ad.gather(self.field, rev_indices))
+            #self.field = ad.set_subtensor(self.field[indices], field)
 
     def stabilise(self, num):
-        return self.__class__('stabilise({0})'.format(self.name), ad.switch(ad.lt(self.field, 0.), self.field - num, self.field + num), self.dimensions)
+        return self.__class__('stabilise({0})'.format(self.name), ad.where(self.field < 0., self.field - num, self.field + num), self.dimensions)
 
     def sign(self):
         return self.__class__('abs({0})'.format(self.name), ad.sgn(self.field), self.dimensions)
@@ -144,7 +145,7 @@ class Field(object):
 
 
     def abs(self):
-        return self.__class__('abs({0})'.format(self.name), ad.abs_(self.field), self.dimensions)
+        return self.__class__('abs({0})'.format(self.name), ad.abs(self.field), self.dimensions)
 
     def dot(self, phi):
         assert phi.dimensions == (3,)
@@ -160,7 +161,8 @@ class Field(object):
         product = ad.sum(self.field * phi.field, axis=-1)
         # if summed over vector
         if len(self.dimensions) == 1:
-            product = ad.reshape(product,(self.field.shape[0],1))
+            #product = ad.reshape(product,(self.field.shape[0],1))
+            product = ad.reshape(product,(-1,1))
         return self.__class__('dot({0},{1})'.format(self.name, phi.name), product, dimensions)
 
     def dotN(self):
@@ -173,12 +175,12 @@ class Field(object):
     # creates a view
     def transpose(self):
         assert len(self.dimensions) == 2
-        return self.__class__('{0}.T'.format(self.name), self.field.transpose((0,2,1)), self.dimensions)
+        return self.__class__('{0}.T'.format(self.name), ad.transpose(self.field, (0,2,1)), self.dimensions)
 
     def trace(self):
         assert len(self.dimensions) == 2
         phi = self.field
-        return self.__class__('tr({0})'.format(self.name), ad.reshape(phi[:,0,0] + phi[:,1,1] + phi[:,2,2], (phi.shape[0],1)), (1,))
+        return self.__class__('tr({0})'.format(self.name), ad.reshape(phi[:,0,0] + phi[:,1,1] + phi[:,2,2], (-1,1)), (1,))
 
     def norm(self):
         assert len(self.dimensions) == 2
