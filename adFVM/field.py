@@ -64,14 +64,19 @@ class Field(object):
         if isinstance(indices, tuple):
             return self.__class__(self.name, self.field[indices[0]:indices[1]], self.dimensions)
         else:
-            return self.__class__(self.name, self.field[indices], self.dimensions)
+            raise Exception('not implemented')
+            return self.__class__(self.name, ad.gather(self.field, indices), self.dimensions)
 
     def setField(self, indices, field):
         if isinstance(field, Field):
             field = field.field
         if isinstance(indices, tuple):
+            #print self.field.shape, field.shape
+            self.field = ad.concat((self.field[:indices[0]], field, self.field[indices[1]:]), 0)
             #self.field = ad.set_subtensor(self.field[indices[0]:indices[1]], field)
+            
         else:
+            raise Exception('not implemented')
             self.field = ad.set_subtensor(self.field[indices], field)
 
     def stabilise(self, num):
@@ -111,12 +116,13 @@ class Field(object):
     # creates a view
     def component(self, component): 
         assert self.dimensions == (3,)
-        return self.__class__('{0}.{1}'.format(self.name, component), self.field[:,[0]], (1,))
+        comp = ad.reshape(self.field[:,0], (-1,1))
+        return self.__class__('{0}.{1}'.format(self.name, component), comp, (1,))
 
     def magSqr(self):
         assert self.dimensions == (3,)
         ad = self._getType()
-        return self.__class__('magSqr({0})'.format(self.name), ad.sum(self.field*self.field, axis=1, keepdims=True), (1,))
+        return self.__class__('magSqr({0})'.format(self.name), ad.reshape(ad.sum(self.field*self.field, axis=1), (-1,1)), (1,))
 
     def sqrt(self):
         ad = self._getType()
@@ -154,7 +160,7 @@ class Field(object):
         product = ad.sum(self.field * phi.field, axis=-1)
         # if summed over vector
         if len(self.dimensions) == 1:
-            product = product.reshape((self.field.shape[0],1))
+            product = ad.reshape(product,(self.field.shape[0],1))
         return self.__class__('dot({0},{1})'.format(self.name, phi.name), product, dimensions)
 
     def dotN(self):
@@ -172,7 +178,7 @@ class Field(object):
     def trace(self):
         assert len(self.dimensions) == 2
         phi = self.field
-        return self.__class__('tr({0})'.format(self.name), (phi[:,0,0] + phi[:,1,1] + phi[:,2,2]).reshape((phi.shape[0],1)), (1,))
+        return self.__class__('tr({0})'.format(self.name), ad.reshape(phi[:,0,0] + phi[:,1,1] + phi[:,2,2], (phi.shape[0],1)), (1,))
 
     def norm(self):
         assert len(self.dimensions) == 2
@@ -262,7 +268,7 @@ class CellField(Field):
         logger.info('updating ghost cells for {0}'.format(self.name))
         for patchID in self.BC:
             self.BC[patchID].update()
-        self.field = exchange(self.field)
+        #self.field = exchange(self.field)
 
 class IOField(Field):
     _handle = None

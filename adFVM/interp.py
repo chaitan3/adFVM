@@ -19,11 +19,11 @@ def central(phi, mesh):
     # for tensor
     if len(phi.dimensions) == 2:
         factor = factor.reshape((factor.shape[0], 1, 1))
-    faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1.-factor), phi.dimensions)
+    faceField = Field('{0}F'.format(phi.name), ad.gather(phi.field, mesh.owner)*factor + ad.gather(phi.field, mesh.neighbour)*(1.-factor), phi.dimensions)
     #faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner] + phi.field[mesh.neighbour], phi.dimensions)
     # retain pattern broadcasting
-    if hasattr(mesh, 'origMesh'):
-        faceField.field = ad.patternbroadcast(faceField.field, phi.field.broadcastable)
+    #if hasattr(mesh, 'origMesh'):
+    #    faceField.field = ad.patternbroadcast(faceField.field, phi.field.broadcastable)
     return faceField
 
 # only defined on ad
@@ -50,33 +50,33 @@ class Reconstruct(object):
         nRemoteFaces = meshO.nFaces-(meshO.nCells-meshO.nLocalCells)
         indices.append(np.arange(nRemoteFaces, meshO.nFaces))
         indices = np.concatenate(indices).astype(np.int32)
-        self.indices = ad.ivector()
+        self.indices = ad.placeholder(ad.int32)
         solver.postpro.append((self.indices, indices))
         #print(indices.shape, meshO.nInternalFaces)
 
         self.boundary = len(Bindices) > 0
         if self.boundary:
             Bindices = np.concatenate(Bindices).astype(np.int32)
-            self.Bindices = ad.ivector()
+            self.Bindices = ad.placeholder(ad.int32)
             solver.postpro.append((self.Bindices, Bindices))
 
         self.characteristic = len(Cindices) > 0
         if self.characteristic:
             Cindices = np.concatenate(Cindices).astype(np.int32)
-            self.Cindices = ad.ivector()
+            self.Cindices = ad.placeholder(ad.int32)
             solver.postpro.append((self.Cindices, Cindices))
 
         self.valueIndices = [indices, Bindices, Cindices]
-        owner, neighbour = mesh.owner[self.indices], mesh.neighbour[self.indices]
+        owner, neighbour = ad.gather(mesh.owner, self.indices), ad.gather(mesh.neighbour, self.indices)
         self.faceOptions = [[owner, neighbour], [neighbour, owner]]
 
         self.cyclicStartFaces = {}
-        startFace = self.mesh.nInternalFaces.copy()
+        startFace = self.mesh.nInternalFaces
         for patchID in self.mesh.localPatches:
             patch = self.mesh.boundary[patchID]
             if patch['type'] in config.cyclicPatches:
                 self.cyclicStartFaces[patchID] = startFace
-                startFace += patch['nFaces']
+                startFace = startFace + patch['nFaces']
         self.procStartFace = startFace
         self.BCUpdate = False
 
@@ -104,7 +104,7 @@ class Reconstruct(object):
 
     def faceBCUpdate(self, faceFields, expand=True):
         if expand:
-            faceFields[1].field = ad.concatenate((faceFields[1].field, faceFields[0].field[self.mesh.nInternalFaces:]), axis=0)
+            faceFields[1].field = ad.concat((faceFields[1].field, faceFields[0].field[self.mesh.nInternalFaces:]), axis=0)
         for patchID in self.mesh.localPatches:
             patch = self.mesh.boundary[patchID]
             if patch['type'] in config.cyclicPatches:
@@ -131,15 +131,15 @@ class SecondOrder(Reconstruct):
     def update(self, index, phi, gradPhi):
         mesh = phi.mesh
         C, D = self.faceOptions[index]
-        phiC = phi.field[C]
-        phiD = phi.field[D]
+        phiC = ad.gather(phi.field, C)
+        phiD = ad.gather(phi.field, D)
         phiDC = (phiD-phiC)*1
 
         gradF = Field('gradF({0})'.format(phi.name), phiDC, phi.dimensions)
         gradC = Field('gradC({0})'.format(phi.name), gradPhi.field[C], gradPhi.dimensions)
 
-        weights1 = Field('lw', mesh.linearWeights[self.indices,index].reshape((-1,1)), (1,))
-        weights2 = Field('qw', mesh.quadraticWeights[self.indices,:,index], (3,))
+        weights1 = Field('lw', ad.reshape(ad.gather(mesh.linearWeights[:,index], self.indices), (-1,1)), (1,))
+        weights2 = Field('qw', ad.gather(mesh.quadraticWeights[:,:,index], self.indices), (3,))
         return phiC + (weights1*gradF + gradC.dot(weights2)).field
 
 #class reduceAbsMinOp(T.Op):

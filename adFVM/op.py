@@ -9,7 +9,7 @@ logger = config.Logger(__name__)
 
 
 def internal_sum(phi, mesh, absolute=False):
-    if config.device == "cpu":
+    if config.device == "cpu1":
         if not absolute:
             sumOp = mesh.sumOp
         else:
@@ -27,7 +27,7 @@ def internal_sum(phi, mesh, absolute=False):
         x = x[:-1]/mesh.volumes
 
     # retain pattern broadcasting
-    x = ad.patternbroadcast(x, phi.field.broadcastable)
+    #x = ad.patternbroadcast(x, phi.field.broadcastable)
     return x
 
 
@@ -51,7 +51,7 @@ def div(phi, U=None, ghost=False):
 def snGrad(phi):
     logger.info('snGrad of {0}'.format(phi.name))
     mesh = phi.mesh
-    gradFdotn = (phi.field[mesh.neighbour]-phi.field[mesh.owner])/mesh.deltas
+    gradFdotn = (ad.gather(phi.field, mesh.neighbour)-ad.gather(phi.field, mesh.owner))/mesh.deltas
     return Field('snGrad({0})'.format(phi.name), gradFdotn, phi.dimensions)
 
 def laplacian(phi, DT):
@@ -91,11 +91,11 @@ def grad(phi, ghost=False, op=False, numpy=False):
         else:
             product = phi.outer(mesh.Normals)
             dimprod = np.prod(dimensions)
-            product.field = product.field.reshape((mesh.nFaces, dimprod))
+            product.field = ad.reshape(product.field, (mesh.nFaces, dimprod))
         gradField = loc_internal_sum(product, mesh)
         # if grad of vector
         if len(dimensions) == 2:
-            gradField = gradField.reshape((mesh.nInternalCells,) + dimensions)
+            gradField = ad.reshape(gradField, (mesh.nInternalCells,) + dimensions)
 
     if ghost:
         gradPhi = mod('grad({0})'.format(phi.name), gradField, dimensions, ghost=True)

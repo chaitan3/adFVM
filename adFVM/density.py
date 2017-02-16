@@ -225,7 +225,7 @@ class RCF(Solver):
         if self.faceReconstructor.characteristic:
             # first order interpolation? really?
             indices = self.faceReconstructor.Cindices
-            Iindices = mesh.owner[indices]
+            Iindices = ad.gather(mesh.owner, indices)
             cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
             ULCF, TLCF, pLCF = U.getField(Iindices), T.getField(Iindices), p.getField(Iindices)
             URCF, TRCF, pRCF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)

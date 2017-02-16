@@ -29,10 +29,10 @@ def dot(v, w, dims=1):
         w = w[:,np.newaxis,:]
         return ad.sum(v*w, axis=-1)
 def cross(v, w):
-    p = v*0.
-    p[:,0] = v[:,1]*w[:,2]-v[:,2]*w[:,1]
-    p[:,1] = v[:,2]*w[:,0]-v[:,0]*w[:,2]
-    p[:,2] = v[:,0]*w[:,1]-v[:,1]*w[:,0]
+    p0 = v[:,1]*w[:,2]-v[:,2]*w[:,1]
+    p1 = v[:,2]*w[:,0]-v[:,0]*w[:,2]
+    p2 = v[:,0]*w[:,1]-v[:,1]*w[:,0]
+    p = tf.stack((p0,p1,p2), axis=1)
     return p
 
 class BoundaryCondition(object):
@@ -87,7 +87,7 @@ class cyclic(BoundaryCondition):
     def update(self):
         logger.debug('cyclic BC for {0}'.format(self.patchID))
         #self.value[:] = self.field[self.neighbourIndices]
-        self.setValue(self.phi.field[self.neighbourIndices])
+        self.setValue(ad.gather(self.phi.field, self.neighbourIndices))
 
 class slidingPeriodic1D(BoundaryCondition):
     def __init__(self, phi, patchID):
@@ -106,7 +106,7 @@ class slidingPeriodic1D(BoundaryCondition):
         #cellStartFace = patch['startFace']  + m.nInternalCells-m.nInternalFaces
         #cellEndFace  = cellStartFace + patch['nFaces']
         #print(cellStartFace, cellEndFace, self.phi.name, self.patchID)
-        neighbourPhi = self.phi.field[self.neighbourIndices]
+        neighbourPhi = ad.gather(self.phi.field, self.neighbourIndices)
         if len(self.phi.dimensions) == 2:
             neighbourPhi = neighbourPhi.reshape((self.nFaces, 9))
         value = adsparse.basic.dot(self.interpOp, neighbourPhi)
@@ -119,7 +119,7 @@ class slidingPeriodic1D(BoundaryCondition):
 class zeroGradient(BoundaryCondition):
     def update(self):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))
-        boundaryValue = self.phi.field[self.internalIndices]
+        boundaryValue = ad.gather(self.phi.field, self.internalIndices)
         #if hasattr(self.phi, 'grad'):
         #    # second order correction
         #    grad = self.phi.grad.field[self.internalIndices]
@@ -182,7 +182,7 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
             self.direction = self.normals
 
     def update(self):
-        Un = dot(self.U.field[self.internalIndices], self.direction)
+        Un = dot(ad.gather(self.U.field, self.internalIndices), self.direction)
         U = Un*self.direction
         T = self.Tt - 0.5*Un*Un/self.Cp
         p = self.pt * (T/self.Tt)**(self.gamma/(self.gamma-1))
@@ -204,6 +204,7 @@ class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
         self.TBC = zeroGradient(self.T, patchID)
 
     def update(self):
+        raise Exception('TODO')
         self.UBC.update()
         self.TBC.update()
         if self.solver.stage == 0:

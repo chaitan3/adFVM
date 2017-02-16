@@ -60,10 +60,10 @@ class Solver(object):
         self.compileInit()
 
         if self.localTimeStep:
-            self.dt = ad.bcmatrix()
+            self.dt = ad.placeholder(config.dtype)
         else:
-            self.dt = ad.scalar()
-        self.t0 = ad.scalar()
+            self.dt = ad.placeholder(config.dtype)
+        self.t0 = ad.placeholder(config.dtype)
 
         # default values
         self.t = self.t0*1.
@@ -483,38 +483,39 @@ class SolverFunction(object):
                 pprint('Loading pickled file', pklFile)
                 pklData = open(pklFile).read()
             else:
-                fn = T.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)#, allow_input_downcast=True)
+                #fn = ad.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)#, allow_input_downcast=True)
+                self.fn = (inputs, outputs)
                 #T.printing.pydotprint(fn, outfile=name + '_graph.png')
                 #if config.pickleFunction or (parallel.nProcessors > 1):
-                pklData = pkl.dumps(fn)
-                if config.pickleFunction:
-                    pprint('Saving pickle file', pklFile)
-                    open(pklFile, 'w').write(pklData)
-                    pprint('Module size: {0:.2f}'.format(float(len(pklData))/(1024*1024)))
+                #pklData = pkl.dumps(fn)
+                #if config.pickleFunction:
+                #    pprint('Saving pickle file', pklFile)
+                #    open(pklFile, 'w').write(pklData)
+                #    pprint('Module size: {0:.2f}'.format(float(len(pklData))/(1024*1024)))
             end = time.time()
             pprint('Compilation time: {0:.2f}'.format(end-start))
 
-        if not config.compile:
-            start = time.time()
-            pklData = parallel.mpi.bcast(pklData, root=0)
-            #if parallel.mpi.bcast(fn is not None, root=0) and parallel.nProcessors > 1:
-            #    T.gof.cc.get_module_cache().refresh(cleanup=False)
-            end = time.time()
-            pprint('Transfer time: {0:.2f}'.format(end-start))
+        #if not config.compile:
+        #    start = time.time()
+        #    pklData = parallel.mpi.bcast(pklData, root=0)
+        #    #if parallel.mpi.bcast(fn is not None, root=0) and parallel.nProcessors > 1:
+        #    #    T.gof.cc.get_module_cache().refresh(cleanup=False)
+        #    end = time.time()
+        #    pprint('Transfer time: {0:.2f}'.format(end-start))
 
-            start = time.time()
-            unloadingStages = config.user.unloadingStages
-            coresPerNode = config.user.coresPerNode
-            coresPerStage = coresPerNode/unloadingStages
-            nodeStage = (parallel.rank % coresPerNode)/coresPerStage
-            for stage in range(unloadingStages):
-                printMemUsage()
-                if (nodeStage == stage) and (fn is None):
-                    fn = pkl.loads(pklData)
-                parallel.mpi.Barrier()
-            end = time.time()
-            pprint('Loading time: {0:.2f}'.format(end-start))
-            printMemUsage()
+        #    start = time.time()
+        #    unloadingStages = config.user.unloadingStages
+        #    coresPerNode = config.user.coresPerNode
+        #    coresPerStage = coresPerNode/unloadingStages
+        #    nodeStage = (parallel.rank % coresPerNode)/coresPerStage
+        #    for stage in range(unloadingStages):
+        #        printMemUsage()
+        #        if (nodeStage == stage) and (fn is None):
+        #            fn = pkl.loads(pklData)
+        #        parallel.mpi.Barrier()
+        #    end = time.time()
+        #    pprint('Loading time: {0:.2f}'.format(end-start))
+        #    printMemUsage()
 
         self.fn = fn
 
@@ -527,7 +528,9 @@ class SolverFunction(object):
                 
         inputs = inputs + self.values
         #print 'get', id(self.values[29].data)
-        outputs = self.fn(*inputs)
+        with ad.Session() as sess: 
+            out, inp = self.fn
+            outputs = sess.run(out, feed_dict={inp[i]:inputs[i] for i in range(0, len(inp))})
         if isinstance(outputs, tuple):
             outputs = list(outputs)
         return outputs
