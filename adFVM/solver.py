@@ -81,12 +81,12 @@ class Solver(object):
                                  newFields + [objective, self.dtc, self.local, self.remote], 'forward')
 
         if adjoint:
-            objGrad = [phi/mesh.volumes for phi in ad.grad(objective, fields)]
+            objGrad = [phi/mesh.volumes for phi in ad.gradients(objective, fields)]
             adjointFields = self.getSymbolicFields(False)
             gradientInputs = fields + adjoint.getGradFields()
             scalarFields = sum([ad.sum(newFields[index]*adjointFields[index]*mesh.volumes) \
                                 for index in range(0, len(fields))])
-            gradients = list(ad.grad(scalarFields, gradientInputs)) + objGrad
+            gradients = list(ad.gradients(scalarFields, gradientInputs)) + objGrad
             for index in range(0, len(fields)):
                 gradients[index] /= mesh.volumes
             self.gradient = self.function(fields + adjointFields + [self.dt, self.t0], \
@@ -532,16 +532,23 @@ class SolverFunction(object):
                 
         inputs = inputs + self.values
         #print 'get', id(self.values[29].data)
-        #config = ad.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1, \
-        #                                allow_soft_placement=True, device_count = {'CPU': 1})
+        #config = ad.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8, \
+        #                                allow_soft_placement=True, device_count = {'CPU': 8})
         #with ad.Session(config=config) as sess: 
+        #run_options = ad.RunOptions(trace_level=ad.RunOptions.FULL_TRACE)
+        #run_metadata = ad.RunMetadata()
         with ad.Session() as sess: 
             inp, out = self.fn
             #print len(inp), len(inputs)
             #for i in range(0, len(inp)):
             #    print inp[i], inputs[i].dtype
             feed_dict = {inp[i]:inputs[i] for i in range(0, len(inp))}
-            outputs = sess.run(out, feed_dict=feed_dict)
+            outputs = sess.run(out, feed_dict=feed_dict)#, options=run_options, run_metadata=run_metadata)
+            #from tensorflow.python.client import timeline
+            #tl = timeline.Timeline(run_metadata.step_stats)
+            #ctf = tl.generate_chrome_trace_format()
+            #with open('timeline.json', 'w') as f:
+            #    f.write(ctf)
         if isinstance(outputs, tuple):
             outputs = list(outputs)
         return outputs
