@@ -69,16 +69,18 @@ class Field(object):
     def setField(self, indices, field):
         if isinstance(field, Field):
             field = field.field
-        if isinstance(indices, tuple):
-            #print self.field.shape, field.shape
-            self.field = ad.concat((self.field[:indices[0]], field, self.field[indices[1]:]), 0)
-            #self.field = ad.set_subtensor(self.field[indices[0]:indices[1]], field)
-            
-        else:
-            raise Exception('not implemented')
-            rev_indices = 1 - ad.scatter_nd(indices, 1, 1)
-            self.field = ad.dynamic_stitch([indices, rev_indices], field, ad.gather(self.field, rev_indices))
-            #self.field = ad.set_subtensor(self.field[indices], field)
+        self._indices.append(indices)
+        self._values.append(field)
+        #if isinstance(indices, tuple):
+        #    #print self.field.shape, field.shape
+        #    self.field = ad.concat((self.field[:indices[0]], field, self.field[indices[1]:]), 0)
+        #    #self.field = ad.set_subtensor(self.field[indices[0]:indices[1]], field)
+        #    
+        #else:
+        #    raise Exception('not implemented')
+        #    rev_indices = 1 - ad.scatter_nd(indices, 1, 1)
+        #    self.field = ad.dynamic_stitch([indices, rev_indices], field, ad.gather(self.field, rev_indices))
+        #    #self.field = ad.set_subtensor(self.field[indices], field)
 
     def stabilise(self, num):
         return self.__class__('stabilise({0})'.format(self.name), ad.where(self.field < 0., self.field - num, self.field + num), self.dimensions)
@@ -260,6 +262,9 @@ class CellField(Field):
         #self.field.tag.test_value = np.zeros((mesh.origMesh.nCells,) + self.dimensions, config.precision)
 
     def setInternalField(self, internalField):
+        self._indices = []
+        self._values = []
+        self.field = internalField
         self.setField((0, self.mesh.nInternalCells), internalField)
         self.updateGhostCells()
 
@@ -268,8 +273,10 @@ class CellField(Field):
 
     def updateGhostCells(self):
         logger.info('updating ghost cells for {0}'.format(self.name))
-        for patchID in self.BC:
+        patches = sorted(self.mesh.localPatches, key=lambda x: self.mesh.origMesh.boundary[x]['startFace'])
+        for patchID in patches:
             self.BC[patchID].update()
+        self.field = ad.concat(self._values, 0)
         #self.field = exchange(self.field)
 
 class IOField(Field):

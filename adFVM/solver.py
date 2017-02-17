@@ -483,7 +483,7 @@ class SolverFunction(object):
         pklData = None
         if parallel.rank == 0:
             start = time.time()
-            if os.path.exists(pklFile) and config.unpickleFunction:
+            if 0:#os.path.exists(pklFile) and config.unpickleFunction:
                 pprint('Loading pickled file', pklFile)
                 pklData = open(pklFile).read()
             else:
@@ -532,6 +532,9 @@ class SolverFunction(object):
                 
         inputs = inputs + self.values
         #print 'get', id(self.values[29].data)
+        #config = ad.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1, \
+        #                                allow_soft_placement=True, device_count = {'CPU': 1})
+        #with ad.Session(config=config) as sess: 
         with ad.Session() as sess: 
             inp, out = self.fn
             #print len(inp), len(inputs)

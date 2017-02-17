@@ -70,11 +70,11 @@ class BoundaryCondition(object):
 class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
-        if 'value' in self.patch:
-            self.fixedValue = self.createInput('value', self.phi.dimensions)
-            self.setValue(self.fixedValue)
-        else:
-            self.setValue(0.)
+        #if 'value' in self.patch:
+        #    self.fixedValue = self.createInput('value', self.phi.dimensions)
+        #    self.setValue(self.fixedValue)
+        #else:
+        #    self.setValue(0.)
 
 class cyclic(BoundaryCondition):
     def __init__(self, phi, patchID):
@@ -130,12 +130,14 @@ class zeroGradient(BoundaryCondition):
 class symmetryPlane(zeroGradient):
     def update(self):
         logger.debug('symmetryPlane BC for {0}'.format(self.patchID))
-        super(self.__class__, self).update()
         # if vector
         if self.phi.dimensions == (3,):
             v = -self.normals
-            value = self.phi.field[self.cellStartFace:self.cellEndFace]
+            #value = self.phi.field[self.cellStartFace:self.cellEndFace]
+            value = ad.gather(self.phi.field, self.internalIndices)
             self.setValue(value-dot(value, v)*v)
+        else:
+            super(self.__class__, self).update()
 
 class fixedValue(BoundaryCondition):
     def __init__(self, phi, patchID):
@@ -154,6 +156,7 @@ class CharacteristicBoundaryCondition(BoundaryCondition):
         self.U, self.T, _ = self.solver.getBCFields()
         self.p = self.phi
 
+import new
 class CBC_UPT(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
@@ -163,8 +166,9 @@ class CBC_UPT(CharacteristicBoundaryCondition):
         self.p0 = self.createInput('p0', (1,))
 
     def update(self):
-        self.U.setField((self.cellStartFace, self.cellEndFace), self.U0)
-        self.T.setField((self.cellStartFace, self.cellEndFace), self.T0)
+        self.U.BC[self.patchID].update = new.instancemethod(lambda self_: self_.phi.setField((self_.cellStartFace, self_.cellEndFace), self.U0), self.U.BC[self.patchID], None)
+        self.T.BC[self.patchID].update = new.instancemethod(lambda self_: self_.phi.setField((self_.cellStartFace, self_.cellEndFace), self.T0), self.T.BC[self.patchID], None)
+        #self.T.setField((self.cellStartFace, self.cellEndFace), self.T0)
         self.p.setField((self.cellStartFace, self.cellEndFace), self.p0)
 
 # implement support for characteristic time travel

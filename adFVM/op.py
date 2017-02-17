@@ -9,7 +9,7 @@ logger = config.Logger(__name__)
 
 
 def internal_sum(phi, mesh, absolute=False):
-    if config.device == "cpu":
+    if 1:#config.device == "cpu":
         if not absolute:
             sumOp = mesh.sumOp
         else:

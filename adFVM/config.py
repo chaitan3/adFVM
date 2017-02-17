@@ -53,7 +53,12 @@ else:
 import tensorflow as ad
 ad.sum = ad.reduce_sum
 import tensorflow as adsparse
-dtype = ad.float64
+if not user.use_gpu:
+    dtype = ad.float64
+    ad.device('/cpu:0')
+else:
+    dtype = ad.float32
+    ad.device('/gpu:0')
 
 # theano
 #project = 'adFVM'
