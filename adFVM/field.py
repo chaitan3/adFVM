@@ -276,8 +276,13 @@ class CellField(Field):
         patches = sorted(self.mesh.localPatches, key=lambda x: self.mesh.origMesh.boundary[x]['startFace'])
         for patchID in patches:
             self.BC[patchID].update()
-        self.field = ad.concat(self._values, 0)
         #self.field = exchange(self.field)
+        self.field = ad.concat(self._values, 0)
+        names = ['U', 'T', 'p', 'grad(UF)', 'grad(TF)', 'grad(pF)']
+        tag = self.solver.stage*10000 + names.index(self.name)*1000
+        exchange = lambda field: parallel.getRemoteCells(field, Field.mesh, tag)
+        gradExchange = lambda field: parallel.getAdjointRemoteCells(field, Field.mesh)
+        self.field = ad.py_func(exchange, [self.field], config.dtype)
 
 class IOField(Field):
     _handle = None

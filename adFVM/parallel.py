@@ -84,9 +84,9 @@ class Exchanger(object):
     def exchange(self, remote, sendData, recvData, tag):
         sendRequest = mpi.Isend(sendData, dest=remote, tag=tag)
         recvRequest = mpi.Irecv(recvData, source=remote, tag=tag)
+        self.requests.extend([sendRequest, recvRequest])
         #sendStatus = MPI.Status()
         #recvStatus = MPI.Status()
-        self.requests.extend([sendRequest, recvRequest])
         #self.statuses.extend([sendStatus, recvStatus])
 
     def wait(self):
@@ -94,12 +94,18 @@ class Exchanger(object):
             return []
         MPI.Request.Waitall(self.requests)
         return
-        #MPI.Request.Waitall(self.requests, self.statuses)
+        #try:
+        #    MPI.Request.Waitall(self.requests, self.statuses)
+        #    print(rank, 'done')
+        #except:
+        #    print(rank, 'send', MPI.Get_error_string(self.statuses[0].Get_error()))
+        #    print(rank, 'recv', MPI.Get_error_string(self.statuses[1].Get_error()))
+        #    exit(0)
         #return self.statuses
 
 #mtime = 0.
 #wtime = 0.
-def getRemoteCells(field, meshC):
+def getRemoteCells(field, meshC, fieldTag=0):
     # mesh values required outside theano
     #logger.info('fetching remote cells')
     if nProcessors == 1:
@@ -117,10 +123,12 @@ def getRemoteCells(field, meshC):
     #wtime += start2-start
     exchanger = Exchanger()
     mesh = meshC.origMesh
+    field = np.concatenate((field[:mesh.nLocalCells].copy(), np.zeros((mesh.nCells-mesh.nLocalCells,) + field.shape[1:], field.dtype)))
+    assert field.flags['C_CONTIGUOUS']
     for patchID in meshC.remotePatches:
         local, remote, tag = meshC.getProcessorPatchInfo(patchID)
         startFace, endFace, cellStartFace, cellEndFace, _ = mesh.getPatchFaceCellRange(patchID)
-        exchanger.exchange(remote, field[mesh.owner[startFace:endFace]], field[cellStartFace:cellEndFace], tag)
+        exchanger.exchange(remote, field[mesh.owner[startFace:endFace]], field[cellStartFace:cellEndFace], fieldTag + tag)
     exchanger.wait()
     #mtime += time.time()-start2
     return field

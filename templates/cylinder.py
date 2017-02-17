@@ -99,5 +99,6 @@ parameters = ('BCs', 'p', 'left', 'U0')
 
 nSteps = 200000
 writeInterval = 5000
+reportInterval = 1
 startTime = 2.0
 dt = 8e-8

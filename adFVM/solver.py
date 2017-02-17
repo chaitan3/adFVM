@@ -481,23 +481,22 @@ class SolverFunction(object):
 
         fn = None
         pklData = None
-        if parallel.rank == 0:
-            start = time.time()
-            if 0:#os.path.exists(pklFile) and config.unpickleFunction:
-                pprint('Loading pickled file', pklFile)
-                pklData = open(pklFile).read()
-            else:
-                #fn = ad.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)#, allow_input_downcast=True)
-                fn = (inputs, outputs)
-                #T.printing.pydotprint(fn, outfile=name + '_graph.png')
-                #if config.pickleFunction or (parallel.nProcessors > 1):
-                #pklData = pkl.dumps(fn)
-                #if config.pickleFunction:
-                #    pprint('Saving pickle file', pklFile)
-                #    open(pklFile, 'w').write(pklData)
-                #    pprint('Module size: {0:.2f}'.format(float(len(pklData))/(1024*1024)))
-            end = time.time()
-            pprint('Compilation time: {0:.2f}'.format(end-start))
+        start = time.time()
+        if 0:#os.path.exists(pklFile) and config.unpickleFunction:
+            pprint('Loading pickled file', pklFile)
+            pklData = open(pklFile).read()
+        else:
+            #fn = ad.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)#, allow_input_downcast=True)
+            fn = (inputs, outputs)
+            #T.printing.pydotprint(fn, outfile=name + '_graph.png')
+            #if config.pickleFunction or (parallel.nProcessors > 1):
+            #pklData = pkl.dumps(fn)
+            #if config.pickleFunction:
+            #    pprint('Saving pickle file', pklFile)
+            #    open(pklFile, 'w').write(pklData)
+            #    pprint('Module size: {0:.2f}'.format(float(len(pklData))/(1024*1024)))
+        end = time.time()
+        pprint('Compilation time: {0:.2f}'.format(end-start))
 
         #if not config.compile:
         #    start = time.time()
@@ -543,6 +542,7 @@ class SolverFunction(object):
             #for i in range(0, len(inp)):
             #    print inp[i], inputs[i].dtype
             feed_dict = {inp[i]:inputs[i] for i in range(0, len(inp))}
+            parallel.mpi.Barrier()
             outputs = sess.run(out, feed_dict=feed_dict)#, options=run_options, run_metadata=run_metadata)
             #from tensorflow.python.client import timeline
             #tl = timeline.Timeline(run_metadata.step_stats)
