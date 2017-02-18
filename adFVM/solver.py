@@ -543,10 +543,8 @@ class SolverFunction(object):
         
         #run_options = ad.RunOptions(trace_level=ad.RunOptions.FULL_TRACE)
         #run_metadata = ad.RunMetadata()
+
         inp, out = self.fn
-        #print len(inp), len(inputs)
-        #for i in range(0, len(inp)):
-        #    print inp[i], inputs[i].dtype
         feed_dict = {inp[i]:inputs[i] for i in range(0, len(inp))}
         outputs = self.sess.run(out, feed_dict=feed_dict)#, options=run_options, run_metadata=run_metadata)
         #from tensorflow.python.client import timeline
