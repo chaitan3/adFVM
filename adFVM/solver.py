@@ -435,6 +435,7 @@ class SolverFunction(object):
         logger.info('compiling function')
         self.symbolic = []
         self.values = []
+        self.name = name
         mesh = solver.mesh
         # values require inplace substitution
         self.populate_mesh(self.symbolic, mesh, mesh)
@@ -453,7 +454,7 @@ class SolverFunction(object):
             self.symbolic.extend(symbolic)
             self.values.extend(values)
 
-        self.generate(inputs, outputs, solver.mesh.case, name)
+        self.generate(inputs, outputs, solver.mesh.case)
 
     def populate_mesh(self, inputs, mesh, solverMesh):
         attrs = Mesh.fields + Mesh.constants
@@ -474,9 +475,9 @@ class SolverFunction(object):
                 for patchID in solver.mesh.sortedPatches:
                     inputs.extend([value[index] for value in phi.BC[patchID].inputs])
 
-    def generate(self, inputs, outputs, caseDir, name):
+    def generate(self, inputs, outputs, caseDir):
         SolverFunction.counter += 1
-        pklFile = caseDir + '{0}_func_{1}.pkl'.format(config.device, name)
+        pklFile = caseDir + '{0}_func_{1}.pkl'.format(config.device, self.name)
         inputs = inputs + self.symbolic
 
         fn = None
@@ -496,7 +497,7 @@ class SolverFunction(object):
             #    open(pklFile, 'w').write(pklData)
             #    pprint('Module size: {0:.2f}'.format(float(len(pklData))/(1024*1024)))
         end = time.time()
-        pprint('Compilation time: {0:.2f}'.format(end-start))
+        pprint('Compilation time for {}: {:.2f}'.format(self.name, end-start))
 
         #if not config.compile:
         #    start = time.time()
@@ -521,9 +522,17 @@ class SolverFunction(object):
         #    printMemUsage()
 
         self.fn = fn
+        self.sess = ad.Session()
+        #init = ad.global_variables_initializer()
+        #self.sess.run(init)
+        #config = ad.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8, \
+
+        #                                allow_soft_placement=True, device_count = {'CPU': 8})
+        #with ad.Session(config=config) as sess: 
 
     def __call__(self, *inputs):
         logger.info('running function')
+        #pprint('running function', self.name)
         inputs = list(inputs)
         for index, inp in enumerate(inputs):
             if isinstance(inp, Field):
@@ -531,24 +540,20 @@ class SolverFunction(object):
                 
         inputs = inputs + self.values
         #print 'get', id(self.values[29].data)
-        #config = ad.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8, \
-        #                                allow_soft_placement=True, device_count = {'CPU': 8})
-        #with ad.Session(config=config) as sess: 
+        
         #run_options = ad.RunOptions(trace_level=ad.RunOptions.FULL_TRACE)
         #run_metadata = ad.RunMetadata()
-        with ad.Session() as sess: 
-            inp, out = self.fn
-            #print len(inp), len(inputs)
-            #for i in range(0, len(inp)):
-            #    print inp[i], inputs[i].dtype
-            feed_dict = {inp[i]:inputs[i] for i in range(0, len(inp))}
-            parallel.mpi.Barrier()
-            outputs = sess.run(out, feed_dict=feed_dict)#, options=run_options, run_metadata=run_metadata)
-            #from tensorflow.python.client import timeline
-            #tl = timeline.Timeline(run_metadata.step_stats)
-            #ctf = tl.generate_chrome_trace_format()
-            #with open('timeline.json', 'w') as f:
-            #    f.write(ctf)
+        inp, out = self.fn
+        #print len(inp), len(inputs)
+        #for i in range(0, len(inp)):
+        #    print inp[i], inputs[i].dtype
+        feed_dict = {inp[i]:inputs[i] for i in range(0, len(inp))}
+        outputs = self.sess.run(out, feed_dict=feed_dict)#, options=run_options, run_metadata=run_metadata)
+        #from tensorflow.python.client import timeline
+        #tl = timeline.Timeline(run_metadata.step_stats)
+        #ctf = tl.generate_chrome_trace_format()
+        #with open('timeline.json', 'w') as f:
+        #    f.write(ctf)
         if isinstance(outputs, tuple):
             outputs = list(outputs)
         return outputs
