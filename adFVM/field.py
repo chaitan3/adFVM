@@ -225,7 +225,7 @@ class Field(object):
         return self.__class__('{0}/{1}'.format(self.name, phi.name), self.field / phi.field, self.dimensions)
 
 class CellField(Field):
-    def __init__(self, name, field, dimensions, boundary={}, ghost=False):
+    def __init__(self, name, field, dimensions, boundary={}, ghost=False, init=False):
         logger.debug('initializing CellField {0}'.format(name))
         super(self.__class__, self).__init__(name, field, dimensions)
         mesh = self.mesh
@@ -240,12 +240,12 @@ class CellField(Field):
             # can be not filled
             self.resetField()
 
-        # why initialize the boundary for ghost=False cases
-        self.BC = {}
-        for patchID in mesh.localPatches:
-            # skip processor patches
-            patchType = self.boundary[patchID]['type']
-            self.BC[patchID] = getattr(BCs, patchType)(self, patchID)
+        if ghost or init:
+            self.BC = {}
+            for patchID in mesh.localPatches:
+                # skip processor patches
+                patchType = self.boundary[patchID]['type']
+                self.BC[patchID] = getattr(BCs, patchType)(self, patchID)
 
         if ghost:
             self.setInternalField(field)
@@ -256,6 +256,7 @@ class CellField(Field):
         return self(phi.name, phi.field.copy(), phi.dimensions, phi.boundary.copy())
 
     def resetField(self):
+        return
         mesh = self.mesh
         size = (mesh.nCells, ) + self.dimensions
         self.field = ad.zeros(size, config.dtype)
@@ -489,8 +490,8 @@ class IOField(Field):
         logger.debug('completing field {0}'.format(self.name))
         internalField = ad.placeholder(config.dtype)
         # CellField for later use
-        self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, ghost=True)
-        return internalField, self.phi.field
+        self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, init=True)
+        return internalField
 
     def partialComplete(self, value=0.):
         mesh = self.mesh.origMesh

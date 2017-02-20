@@ -283,6 +283,9 @@ class RCF(Solver):
                 div(rhoUFlux - sigmaF) - self.sourceFields[1], \
                 div(rhoEFlux - qF - sigmadotUF) - self.sourceFields[2]]
 
+    def initOrder(self, fields):
+        return [fields[2], fields[0], fields[1]]
+
     def boundary(self, rhoN, rhoUN, rhoEN):
         logger.info('correcting boundary')
         UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
@@ -290,8 +293,8 @@ class RCF(Solver):
         p.resetField()
         U.resetField()
         T.resetField()
+        p.setInternalField(pN.field)
         U.setInternalField(UN.field)
         T.setInternalField(TN.field)
-        p.setInternalField(pN.field)
         return list(self.conservative(U, T, p))
     

@@ -1,4 +1,5 @@
 import numpy as np
+import new
 
 from . import config
 from .config import ad, adsparse
@@ -153,10 +154,19 @@ class fixedValue(BoundaryCondition):
 class CharacteristicBoundaryCondition(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(CharacteristicBoundaryCondition, self).__init__(phi, patchID)
-        self.U, self.T, _ = self.solver.getBCFields()
-        self.p = self.phi
+        #self.U, self.T, _ = self.solver.getBCFields()
+        #self.p = self.phi
 
-import new
+    def update(self):
+        U, T, _ = self.solver.getBCFields()
+        self.UBC = U.BC[self.patchID]
+        self.TBC = T.BC[self.patchID]
+
+    def updateAll(self, (U, T, p)):
+        self.UBC.update = new.instancemethod(lambda self_: self_.setValue(U), self.UBC, None)
+        self.TBC.update = new.instancemethod(lambda self_: self_.setValue(T), self.TBC, None)
+        self.setValue(p)
+
 class CBC_UPT(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
@@ -166,10 +176,11 @@ class CBC_UPT(CharacteristicBoundaryCondition):
         self.p0 = self.createInput('p0', (1,))
 
     def update(self):
-        self.U.BC[self.patchID].update = new.instancemethod(lambda self_: self_.phi.setField((self_.cellStartFace, self_.cellEndFace), self.U0), self.U.BC[self.patchID], None)
-        self.T.BC[self.patchID].update = new.instancemethod(lambda self_: self_.phi.setField((self_.cellStartFace, self_.cellEndFace), self.T0), self.T.BC[self.patchID], None)
+        super(CBC_UPT, self).update()
+        self.updateAll((self.U0, self.T0, self.p0))
         #self.T.setField((self.cellStartFace, self.cellEndFace), self.T0)
-        self.p.setField((self.cellStartFace, self.cellEndFace), self.p0)
+        #self.T.BC[self.patchID].update = new.instancemethod(lambda self_: self_.phi.setField((self_.cellStartFace, self_.cellEndFace), self.T0), self.T.BC[self.patchID], None)
+
 
 # implement support for characteristic time travel
 class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
@@ -186,14 +197,12 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
             self.direction = self.normals
 
     def update(self):
+        super(CBC_TOTAL_PT, self).update()
         Un = dot(ad.gather(self.U.field, self.internalIndices), self.direction)
         U = Un*self.direction
         T = self.Tt - 0.5*Un*Un/self.Cp
         p = self.pt * (T/self.Tt)**(self.gamma/(self.gamma-1))
-        
-        self.U.setField((self.cellStartFace, self.cellEndFace), U)
-        self.T.setField((self.cellStartFace, self.cellEndFace), T)
-        self.p.setField((self.cellStartFace, self.cellEndFace), p)
+        self.updateAll((U, T, p))
 
 class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):

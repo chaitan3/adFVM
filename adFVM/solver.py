@@ -98,13 +98,18 @@ class Solver(object):
         #    exit()
         pprint()
 
+    def initOrder(self, fields):
+        return fields
+
     def compileInit(self, functionName='init'):
         internalFields = []
         completeFields = []
         for phi in self.fields:
-            phiI, phiN = phi.completeField()
+            phiI = phi.completeField()
             internalFields.append(phiI)
             #completeFields.append(phiN)
+        for phi, phiI in zip(self.initOrder(self.fields), self.initOrder(internalFields)):
+            phi.phi.setInternalField(phiI)
         for phi in self.fields:
             phiN = phi.phi.field
             completeFields.append(phiN)
