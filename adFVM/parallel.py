@@ -123,6 +123,8 @@ def getRemoteCells(field, meshC, fieldTag=0):
     #wtime += start2-start
     exchanger = Exchanger()
     mesh = meshC.origMesh
+    assert field.shape[0] <= mesh.nCells
+    assert field.shape[0] >= mesh.nLocalCells
     field = np.concatenate((field[:mesh.nLocalCells].copy(), np.zeros((mesh.nCells-mesh.nLocalCells,) + field.shape[1:], field.dtype)))
     assert field.flags['C_CONTIGUOUS']
     for patchID in meshC.remotePatches:
