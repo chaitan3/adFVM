@@ -40,7 +40,6 @@ def timeStepper(equation, boundary, initFields, solver):
     fields = [initFields]
     nFields = len(fields[0])
     for i in range(0, nStages):
-        solver.stage += 1
         solver.t = solver.t0 + gamma[i]*solver.dt
         LHS.append(equation(*fields[i]))
         internalFields = [0]*nFields
@@ -48,7 +47,8 @@ def timeStepper(equation, boundary, initFields, solver):
             for index in range(0, nFields):
                 internalFields[index] += alpha[i,j]*fields[j][index].getInternalField()-beta[i,j]*LHS[j][index].field*solver.dt
         internalFields = createFields(internalFields, solver)
-        if i == nStages - 1:
+        solver.stage += 1
+        if i == nStages:
             return  [phi.field for phi in internalFields]
         else:
             fields.append(boundary(*internalFields))

@@ -280,6 +280,7 @@ class CellField(Field):
         self.field = ad.concat(self._values, 0)
         names = ['U', 'T', 'p', 'grad(UF)', 'grad(TF)', 'grad(pF)']
         tag = self.solver.stage*10000 + names.index(self.name)*1000
+        print self.name, self.solver.stage
         exchange = lambda field: parallel.getRemoteCells(field, Field.mesh, tag)
         gradExchange = lambda field: parallel.getAdjointRemoteCells(field, Field.mesh, tag)
         self.field = config.py_func(exchange, [self.field], config.dtype, grad=gradExchange)

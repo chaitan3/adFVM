@@ -69,6 +69,7 @@ class Solver(object):
         self.t = self.t0*1.
         self.dtc = self.dt
         self.local, self.remote = self.mesh.nCells, self.mesh.nFaces
+        self.stage = 1
 
         fields = self.getSymbolicFields(False)
         initFields = self.boundary(*timestep.createFields(fields, self))
