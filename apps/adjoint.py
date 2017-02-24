@@ -22,7 +22,7 @@ import argparse
 class Adjoint(Solver):
     def __init__(self, primal, scaling, homogeneous):
         self.scaling = scaling
-        self.homogeneous = scaling
+        self.homogeneous = homogeneous
         self.mesh = primal.mesh
         self.statusFile = primal.statusFile
         self.names = [name + 'a' for name in primal.names]
