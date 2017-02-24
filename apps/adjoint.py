@@ -20,8 +20,9 @@ import os
 import argparse
 
 class Adjoint(Solver):
-    def __init__(self, primal, scaling):
+    def __init__(self, primal, scaling, homogeneous):
         self.scaling = scaling
+        self.homogeneous = scaling
         self.mesh = primal.mesh
         self.statusFile = primal.statusFile
         self.names = [name + 'a' for name in primal.names]
@@ -156,7 +157,9 @@ class Adjoint(Solver):
                                                        outputs[-n:]
                 objGradient = [phi/nSteps for phi in objGradient]
                 for index in range(0, len(fields)):
-                    fields[index].field = gradient[index] + objGradient[index]
+                    fields[index].field = gradient[index]
+                    if not self.homogeneous:
+                        fields[index].field += objGradient[index]
 
                 if self.scaling:
                     if report:
@@ -219,10 +222,11 @@ class Adjoint(Solver):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--scaling', required=False)
+    parser.add_argument('--homogeneous', action='store_true')
     parser.add_argument('--readFields', action='store_true')
     user, args = parser.parse_known_args()
 
-    adjoint = Adjoint(primal, user.scaling)
+    adjoint = Adjoint(primal, user.scaling, user.homogeneous)
     adjoint.initPrimalData()
 
     adjoint.createFields()
