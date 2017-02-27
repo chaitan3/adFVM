@@ -198,7 +198,8 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
 
     def update(self):
         super(CBC_TOTAL_PT, self).update()
-        Un = dot(ad.gather(self.U.field, self.internalIndices), self.direction)
+        U, T, p = self.solver.getBCFields()
+        Un = dot(ad.gather(U.field, self.internalIndices), self.direction)
         U = Un*self.direction
         T = self.Tt - 0.5*Un*Un/self.Cp
         p = self.pt * (T/self.Tt)**(self.gamma/(self.gamma-1))

@@ -6,12 +6,12 @@ from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
 #primal = RCF('/home/talnikar/foam/blade/les-turb/')
-primal = RCF('/home/talnikar/foam/vane/laminar/', faceReconstructor='ENO')#, timeIntegrator='euler')
+primal = RCF('/home/talnikar/foam/vane/laminar/', faceReconstructor='SecondOrder')#, timeIntegrator='euler')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 
 def dot(a, b):
-    return ad.sum(a*b, axis=1, keepdims=True)
+    return ad.reshape(ad.sum(a*b, axis=1), (-1,1))
 
 # heat transfer
 def objectiveHeatTransfer(fields, mesh):
@@ -27,7 +27,7 @@ def objectiveHeatTransfer(fields, mesh):
         areas = mesh.areas[startFace:endFace]
         deltas = mesh.deltas[startFace:endFace]
 
-        Ti = T.field[internalIndices] 
+        Ti = ad.gather(T.field, internalIndices)
         Tw = 300
         dtdn = (Tw-Ti)/deltas
         k = solver.Cp*solver.mu(Tw)/solver.Pr
@@ -44,7 +44,7 @@ def getPlane(solver):
     normal = np.array([1.,0.,0.])
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
     #print interCells.shape, interArea.sum()
-    solver.postpro.extend([(ad.ivector(), interCells), (ad.bcmatrix(), interArea)])
+    solver.postpro.extend([(ad.placeholder(ad.int32), interCells), (ad.placeholder(config.dtype), interArea)])
     return solver.postpro[-2][0], solver.postpro[-1][0], normal
     
 def objectivePressureLoss(fields, mesh):
@@ -58,7 +58,7 @@ def objectivePressureLoss(fields, mesh):
     solver = rhoE.solver
     g = solver.gamma
     U, T, p = solver.primitive(rho, rhoU, rhoE)
-    pi, rhoi, Ui = p.field[cells], rho.field[cells], U.field[cells]
+    pi, rhoi, Ui = ad.gather(p.field, cells), ad.gather(rho.field, cells), ad.gather(U.field, cells)
     rhoUi, ci = rhoi*Ui, ad.sqrt(g*pi/rhoi)
     rhoUni, Umagi = dot(rhoUi, normal), ad.sqrt(dot(Ui, Ui))
     Mi = Umagi/ci
