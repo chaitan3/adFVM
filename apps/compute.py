@@ -48,9 +48,9 @@ for index, time in enumerate(times):
         pprint()
 
 
-        #enstrophy, Q = getEnstrophyAndQ(outputsF[1])
-        #enstrophy.write(name='enstrophy') 
-        #Q.write(name='Q')
+        enstrophy, Q = getEnstrophyAndQ(outputsF[1])
+        enstrophy.write(name='enstrophy') 
+        Q.write(name='Q')
 
         #c, M, pt, s = getTotalPressureAndEntropy(U, T, p, solver)
         #c.write(name='c') 
@@ -71,12 +71,12 @@ for index, time in enumerate(times):
         #adjNorm.write()
         #pprint()
 
-        rhoa = IOField.read('rhoa')
-        rhoUa = IOField.read('rhoUa')
-        rhoEa = IOField.read('rhoEa')
-        adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
-        pprint('L2 norm adjoint', time, adjEnergy)
-        pprint()
+        #rhoa = IOField.read('rhoa')
+        #rhoUa = IOField.read('rhoUa')
+        #rhoEa = IOField.read('rhoEa')
+        #adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
+        #pprint('L2 norm adjoint', time, adjEnergy)
+        #pprint()
 
         ## adjoint viscosity
         mua = getAdjointViscosity(rho, rhoU, rhoE, 1e-2, outputs=outputs, init=False)
