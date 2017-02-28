@@ -283,7 +283,7 @@ class CellField(Field):
         tag = self.solver.stage*10000 + names.index(self.name)*1000
         #print self.name, self.solver.stage
         exchange = lambda field: parallel.getRemoteCells(field, Field.mesh, tag)
-        gradExchange = lambda input_field, field: parallel.getAdjointRemoteCells(field, Field.mesh, tag)
+        gradExchange = lambda input_field, grad_field: config.py_func(lambda field: parallel.getAdjointRemoteCells(field, Field.mesh, tag), [grad_field], config.dtype)
         self.field = config.py_func(exchange, [self.field], config.dtype, grad=gradExchange)
 
 class IOField(Field):

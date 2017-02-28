@@ -186,6 +186,7 @@ def getAdjointRemoteCells(field, meshC, fieldTag=0):
     if nProcessors == 1:
         return field
     mesh = meshC.origMesh
+    #print(type(field), field.shape, mesh.nLocalCells)
     jacobian = np.zeros_like(field)
     jacobian[:mesh.nLocalCells] = field[:mesh.nLocalCells]
     precision = field.dtype
