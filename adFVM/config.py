@@ -1,4 +1,7 @@
 from __future__ import print_function
+# mira hack
+import tensorflow as tf
+
 import time
 runtime = time.time()
 
@@ -23,8 +26,7 @@ parser.add_argument('--titan', action='store_true')
 parser.add_argument('--bw', action='store_true')
 parser.add_argument('--mira', action='store_true')
 parser.add_argument('-d', '--hdf5', action='store_true')
-parser.add_argument('--coresPerNode', required=False, default=16, type=int)
-parser.add_argument('--unloadingStages', required=False, default=1, type=int)
+parser.add_argument('--coresPerNode', required=False, default=0, type=int)
 user, args = parser.parse_known_args()
 
 if user.titan:

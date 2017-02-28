@@ -531,9 +531,8 @@ class SolverFunction(object):
         self.sess = ad.Session()
         #init = ad.global_variables_initializer()
         #self.sess.run(init)
-        #config = ad.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8, \
-
-        #                                allow_soft_placement=True, device_count = {'CPU': 8})
+        nThreads = config.coresPerNode
+        config = ad.ConfigProto(intra_op_parallelism_threads=nThreads, inter_op_parallelism_threads=nThreads, allow_soft_placement=True)
         #with ad.Session(config=config) as sess: 
 
     def __call__(self, *inputs):
