@@ -528,11 +528,11 @@ class SolverFunction(object):
         #    printMemUsage()
 
         self.fn = fn
-        self.sess = ad.Session()
         #init = ad.global_variables_initializer()
         #self.sess.run(init)
         nThreads = config.coresPerNode
-        config = ad.ConfigProto(intra_op_parallelism_threads=nThreads, inter_op_parallelism_threads=nThreads, allow_soft_placement=True)
+        tf_config = ad.ConfigProto(intra_op_parallelism_threads=nThreads, inter_op_parallelism_threads=nThreads, allow_soft_placement=True)
+        self.sess = ad.Session(config=tf_config)
         #with ad.Session(config=config) as sess: 
 
     def __call__(self, *inputs):
