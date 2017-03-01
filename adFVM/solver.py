@@ -530,7 +530,7 @@ class SolverFunction(object):
         self.fn = fn
         #init = ad.global_variables_initializer()
         #self.sess.run(init)
-        nThreads = config.coresPerNode
+        nThreads = config.user.coresPerNode
         tf_config = ad.ConfigProto(intra_op_parallelism_threads=nThreads, inter_op_parallelism_threads=nThreads, allow_soft_placement=True)
         self.sess = ad.Session(config=tf_config)
         #with ad.Session(config=config) as sess: 

@@ -35,6 +35,7 @@ class Field(object):
         self.name = name
         self.field = field
         self.dimensions = dimensions
+        self.initField()
 
     def _getType(self):
         if isinstance(self.field, np.ndarray):
@@ -66,6 +67,10 @@ class Field(object):
         else:
             return self.__class__(self.name, ad.gather(self.field, indices), self.dimensions)
 
+    def initField(self):
+        self._indices = []
+        self._values = []
+
     def setField(self, indices, field):
         if isinstance(field, Field):
             field = field.field
@@ -81,6 +86,14 @@ class Field(object):
         #    rev_indices = 1 - ad.scatter_nd(indices, 1, 1)
         #    self.field = ad.dynamic_stitch([indices, rev_indices], field, ad.gather(self.field, rev_indices))
         #    #self.field = ad.set_subtensor(self.field[indices], field)
+
+    def gatherField(self, gtype='stitch'):
+        if gtype == 'stitch':
+            self.field = ad.dynamic_stitch(self._indices, self._values)
+        elif gtype == 'concat':
+            self.field = ad.concat(self._values, 0)
+        else:
+            raise Exception('WTF')
 
     def stabilise(self, num):
         return self.__class__('stabilise({0})'.format(self.name), ad.where(self.field < 0., self.field - num, self.field + num), self.dimensions)
@@ -263,11 +276,12 @@ class CellField(Field):
         #self.field.tag.test_value = np.zeros((mesh.origMesh.nCells,) + self.dimensions, config.precision)
 
     def setInternalField(self, internalField):
-        self._indices = []
-        self._values = []
-        self.field = internalField
+        self.initField()
         self.setField((0, self.mesh.nInternalCells), internalField)
+        self.field = internalField
         self.updateGhostCells()
+        self.gatherField('concat')
+        self.updateProcessorCells()
 
     def getInternalField(self):
         return self.field[:self.mesh.nInternalCells]
@@ -277,8 +291,9 @@ class CellField(Field):
         patches = sorted(self.mesh.localPatches, key=lambda x: self.mesh.origMesh.boundary[x]['startFace'])
         for patchID in patches:
             self.BC[patchID].update()
+
+    def updateProcessorCells(self):
         #self.field = exchange(self.field)
-        self.field = ad.concat(self._values, 0)
         names = ['U', 'T', 'p', 'grad(UF)', 'grad(TF)', 'grad(pF)', 'rhoa', 'rhoUa', 'rhoEa']
         tag = self.solver.stage*10000 + names.index(self.name)*1000
         #print self.name, self.solver.stage
