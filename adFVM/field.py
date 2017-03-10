@@ -201,7 +201,7 @@ class Field(object):
         assert len(self.dimensions) == 2
         ad = self._getType()
         phi = self.field
-        normPhi = ad.sqrt(ad.sum(ad.sum(phi*phi, axis=2), axis=1, keepdims=True))
+        normPhi = ad.sqrt(ad.reshape(ad.sum(ad.sum(phi*phi, axis=2), axis=1), (-1,1)))
         return self.__class__('norm({0})'.format(self.name), normPhi, (1,))
 
     def __neg__(self):
@@ -294,7 +294,7 @@ class CellField(Field):
 
     def updateProcessorCells(self):
         #self.field = exchange(self.field)
-        names = ['U', 'T', 'p', 'grad(UF)', 'grad(TF)', 'grad(pF)', 'rhoa', 'rhoUa', 'rhoEa']
+        names = ['U', 'T', 'p', 'grad(UF)', 'grad(TF)', 'grad(pF)', 'rhoa', 'rhoUa', 'rhoEa', 'div(UFN)', 'grad(cF)']
         tag = self.solver.stage*10000 + names.index(self.name)*1000
         #print self.name, self.solver.stage
         exchange = lambda field: parallel.getRemoteCells(field, Field.mesh, tag)

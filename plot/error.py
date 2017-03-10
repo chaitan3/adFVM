@@ -43,53 +43,9 @@ index = np.argsort(viscosity)
 viscosity = np.array(viscosity)[index]
 sens = np.array(sens)[index]
 
-Ah = {}
-for i in range(0, len(sens)):
-    Ah[viscosity[i]] = sens[i]
-
 #viscosity = viscosity[-8:]
 #sens = sens[-8:]
 #error = 100*(sens-perturb)/abs(perturb)
-
-def polynomial(h, t, Ah, n=None, k=None):
-    if n is None:
-        n = len(Ah)-1
-    if k is None:
-        k = np.arange(1, n+1)
-    def Ar(x, i):
-        if i == 0:
-            return Ah[x]
-        return (t**k[i-1]*Ar(x/t, i-1)-Ar(x, i-1))/(t**k[i-1]-1)
-    Ac = []
-    for i in range(0, n):
-        A = Ar(h, i+1)
-        Ac.append(A)
-    return Ac
-
-from scipy.optimize import brentq
-def unknown(h, t, s, Ah):
-    def f(x):
-        def A(h, t):
-            return (t**x*Ah[h/t]-Ah[h])/(t**x-1)
-        v = A(h, t)-A(h, s)
-        return v
-    #x = np.linspace(-10, 10, 1000)
-    #y = []
-    #for i in x:
-    #    y.append(f(i))
-    #plt.plot(x, y)
-    #plt.show()
-    return brentq(f, -0.1, 0.1)
-
-#h = 3.84
-#t = 2.
-#Ac = polynomial(h, t, Ah, 7)
-#print Ac
-#h = 3.84
-#t = 2.**1
-#s = 2.**2
-#print unknown(h, t, s, Ah)
-#plt.semilogx(viscosity[:-1:][::-1], Ac, 'r.', markersize=20, label='richardson')
 
 from numpy import *
 from matplotlib.pyplot import *

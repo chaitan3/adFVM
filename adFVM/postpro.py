@@ -14,15 +14,22 @@ def computeGradients(solver):
 
     #divU
     UF = central(U, mesh)
+    UF.name = 'UF'
     gradU = grad(UF, ghost=True)
     #ULF, URF = TVD_dual(U, gradU)
     #UFN = 0.5*(ULF + URF)
     #divU = div(UF.dotN(), ghost=True)
-    divU = div(UF.dot(mesh.Normals), ghost=True)
+    UFN = UF.dot(mesh.Normals)
+    UFN.name = 'UFN'
+    divU = div(UFN, ghost=True)
 
     #speed of sound
-    gradc = grad(central(c, mesh), ghost=True)
-    gradp = grad(central(p, mesh), ghost=True)
+    cF = central(c, mesh)
+    cF.name = 'cF'
+    gradc = grad(cF, ghost=True)
+    pF = central(p, mesh)
+    pF.name = 'pF'
+    gradp = grad(pF, ghost=True)
     gradrho = g*(gradp-c*p)/(c*c)
 
     computer = solver.function([U.field, T.field, p.field], [gradrho.field, 
@@ -139,17 +146,19 @@ def getAdjointEnergy(solver, rhoa, rhoUa, rhoEa):
     adjEnergy = (parallel.sum(adjEnergy)**0.5)/(solver.Jref*solver.tref)
     return adjEnergy
 
-def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
+def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs):
     mesh = rho.mesh
     solver = rho.solver
     g = solver.gamma
     sg = np.sqrt(g)
     g1 = g-1
     sg1 = np.sqrt(g1)
+    sge = sg1*sg
 
     gradrho, gradU, gradp, gradc, divU = outputs
     rho = rho.field
     p = p.field
+    U = U.field
     c = np.sqrt(g*p/rho)
     b = c/sg
     a = sg1*c/sg
@@ -157,25 +166,77 @@ def getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs):
     grada = gradc*sg1/sg
     Z = np.zeros_like(divU)
     
-    M1 = np.dstack((np.hstack((divU, gradb, Z)),
-               np.hstack((gradb[:,[0]], divU, Z, Z, grada[:,[0]])),
-               np.hstack((gradb[:,[1]], Z, divU, Z, grada[:,[1]])),
-               np.hstack((gradb[:,[2]], Z, Z, divU, grada[:,[2]])),
-               np.hstack((Z, grada, divU))))
+    # Abarbanel
+    #M1 = np.stack((np.hstack((divU, gradb, Z)),
+    #           np.hstack((gradb[:,[0]], divU, Z, Z, grada[:,[0]])),
+    #           np.hstack((gradb[:,[1]], Z, divU, Z, grada[:,[1]])),
+    #           np.hstack((gradb[:,[2]], Z, Z, divU, grada[:,[2]])),
+    #           np.hstack((Z, grada, divU))),
+    #           axis=1)
+    #M2 = np.concatenate((np.hstack((Z, b*gradrho/rho, sg1*divU/2)).reshape(-1,1,5),
+    #                np.dstack((np.hstack((Z,Z,Z)).reshape(-1,3,1), gradU, (a*gradp/(2*p)).reshape(-1, 3, 1))),
+    #                np.hstack((Z, 2*grada/g1, g1*divU/2)).reshape(-1,1,5)),
+    #                axis=1)
+    #T = np.stack((
+    #        np.hstack((b/rho, Z, Z, Z, Z)),
+    #        np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
+    #        np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
+    #        np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
+    #        np.hstack(((-2*c*c+g*g1*(U*U).sum(axis=1,keepdims=1))/(2*c*sge*rho), -sge*U[:,[0]]/(c*rho), -sge*U[:,[1]]/(c*rho), -sge*U[:,[2]]/(c*rho), sge/(c*rho))),
+    #    ), axis=2)
+    #suffix = ''
 
-    M2 = np.dstack((np.hstack((Z, b*gradrho/rho, sg1*divU/2)),
-                    np.hstack((np.dstack((Z,Z,Z)), gradU, (a*gradp/(2*p)).reshape(-1, 1, 3))),
-                    np.hstack((Z, 2*grada/g1, g1*divU/2))))
-    M = M1-M2
+    # Entropy
+    M1 = np.stack((np.hstack((divU, gradc, Z)),
+               np.hstack((gradc[:,[0]], divU, Z, Z, Z)),
+               np.hstack((gradc[:,[1]], Z, divU, Z, Z)),
+               np.hstack((gradc[:,[2]], Z, Z, divU, Z)),
+               np.hstack((Z, Z, Z, Z, divU))),
+               axis=1)
+    M2 = np.concatenate((np.hstack((g1*divU/2, gradp/(rho*c), divU/(2*rho*c))).reshape(-1,1,5),
+                    np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp/(2*g*rho*c)).reshape((-1, 3, 1)))),
+                    np.hstack((Z, gradp-c*c*gradrho, Z)).reshape(-1,1,5)),
+                    axis=1)
+    T = np.stack((
+            np.hstack((b/rho, -g1*U/(c*rho), g1/(c*rho))),
+            np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
+            np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
+            np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
+            np.hstack((-c*c+g1/2*(U*U).sum(axis=1,keepdims=1), -g1*U, (g-1)*np.ones_like(Z))),
+        ), axis=2)
 
-    #U, S, V = np.linalg.svd(M)
-    #M_2norm = np.ascontiguousarray(S[:, [0]])
+    suffix = '_entropy'
+
+    #M = M1/2-M2
+    #MS = (M + M.transpose((0, 2, 1)))/2
+    #M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
+    #M_2norm = IOField('M_2norm_old' + suffix, M_2norm, (1,), boundary=mesh.calculatedBoundary)
+    #M_2norm.write()
+    
+    M = M[:mesh.origMesh.nInternalCells]
+    T = T[:mesh.origMesh.nInternalCells]
+    def dot(a, b):
+        return np.sum(a*b.reshape(-1,1,5), axis=-1)
+    Ti = np.linalg.inv(T)
+
+    #w = np.hstack((rhoa.field, rhoUa.field, rhoEa.field))
+    #v = dot(Ti, w)
+    #energy = np.sum(dot(M, v)*v, axis=-1,keepdims=1)
+    #energy = IOField('energy' + suffix, 1e-30*energy, (1,))
+    #energy.defaultComplete()
+    #energy.write()
+
+    X = np.diag([1, 1./100, 1./100, 1./100, 1/2e5]).reshape(1,5,5)
+    Ti = np.matmul(Ti, X)
+    M = np.matmul(Ti.transpose(0, 2, 1), np.matmul(M, Ti))
     MS = (M + M.transpose((0, 2, 1)))/2
     M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
-    #M_2norm = np.linalg.eigh(MS, eigvals=(4), eigvals_only=True).reshape(-1,1)
+    M_2norm = IOField('M_2norm' + suffix, M_2norm, (1,))
+    #M_2norm.defaultComplete()
+    #M_2norm.write()
 
-    M_2norm = IOField('M_2norm', M_2norm, (1,), boundary=mesh.calculatedBoundary)
     return M_2norm
+
 
 def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True):
     self = getAdjointViscosity
@@ -189,7 +250,7 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True):
         if not hasattr(self, 'computer'):
             self.computer = computeGradients(solver)
         outputs = self.computer(U, T, p)
-    M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
+    M_2norm = getAdjointMatrixNorm(None, None, None, rho, rhoU, rhoE, U, T, p, *outputs)
     M_2normLim = parallel.min(M_2norm.field), parallel.max(M_2norm.field)
     assert M_2normLim[0] > 0.
     viscosityScale = float(scaling)

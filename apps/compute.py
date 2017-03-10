@@ -26,9 +26,6 @@ solver.readFields(times[0])
 solver.compileInit()
 computer = computeGradients(solver)
 
-if config.compile:
-    exit()
-
 for index, time in enumerate(times):
     pprint('Time:', time)
     start = timer.time()
@@ -48,9 +45,9 @@ for index, time in enumerate(times):
         pprint()
 
 
-        enstrophy, Q = getEnstrophyAndQ(outputsF[1])
-        enstrophy.write(name='enstrophy') 
-        Q.write(name='Q')
+        #enstrophy, Q = getEnstrophyAndQ(outputsF[1])
+        #enstrophy.write(name='enstrophy') 
+        #Q.write(name='Q')
 
         #c, M, pt, s = getTotalPressureAndEntropy(U, T, p, solver)
         #c.write(name='c') 
@@ -67,20 +64,23 @@ for index, time in enumerate(times):
         #yplus.write()
 
         ## adjoint norm
-        #adjNorm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)
-        #adjNorm.write()
-        #pprint()
-
         #rhoa = IOField.read('rhoa')
         #rhoUa = IOField.read('rhoUa')
         #rhoEa = IOField.read('rhoEa')
+        rhoa = IOField.read('rho')
+        rhoUa = IOField.read('rhoU')
+        rhoEa = IOField.read('rhoE')
+        adjNorm = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
+        adjNorm.write()
+        pprint()
+
         #adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
         #pprint('L2 norm adjoint', time, adjEnergy)
         #pprint()
 
         ## adjoint viscosity
-        mua = getAdjointViscosity(rho, rhoU, rhoE, 1e-2, outputs=outputs, init=False)
-        mua.write()
+        #mua = getAdjointViscosity(rho, rhoU, rhoE, 1e-2, outputs=outputs, init=False)
+        #mua.write()
 
     end = timer.time()
     pprint('Time for computing: {0}'.format(end-start))
