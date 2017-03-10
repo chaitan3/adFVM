@@ -5,7 +5,8 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-primal = RCF('/master/home/talnikar/adFVM/cases/naca0012/', 
+#primal = RCF('/master/home/talnikar/adFVM/cases/naca0012/', 
+primal = RCF('/home/talnikar/backup/voya_hyper/naca0012/adjoint_0.0/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*3.4e-5,

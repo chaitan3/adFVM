@@ -207,7 +207,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
 
     suffix = '_entropy'
 
-    #M = M1/2-M2
+    M = M1/2-M2
     #MS = (M + M.transpose((0, 2, 1)))/2
     #M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
     #M_2norm = IOField('M_2norm_old' + suffix, M_2norm, (1,), boundary=mesh.calculatedBoundary)

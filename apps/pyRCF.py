@@ -3,7 +3,6 @@ import argparse
 import numpy as np
 
 from adFVM import config, parallel
-from adFVM.config import T
 from adFVM.density import RCF
 
 parser = argparse.ArgumentParser()
@@ -30,7 +29,3 @@ solver = RCF(user.case, mu=mu, timeIntegrator=user.timeIntegrator, CFL=user.CFL,
 solver.readFields(user.time)
 solver.compile()
 solver.run(startTime=user.time, endTime=user.endTime, dt=user.dt, nSteps=user.nSteps, writeInterval=user.writeInterval)
-
-# for profiling purposes
-if parallel.rank == 0 and config.user.profile:
-    T.compile.profiling._atexit_print_fn()
