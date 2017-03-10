@@ -213,12 +213,12 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
     #M_2norm = IOField('M_2norm_old' + suffix, M_2norm, (1,), boundary=mesh.calculatedBoundary)
     #M_2norm.write()
     
-    M = M[:mesh.origMesh.nInternalCells]
-    T = T[:mesh.origMesh.nInternalCells]
     def dot(a, b):
         return np.sum(a*b.reshape(-1,1,5), axis=-1)
     Ti = np.linalg.inv(T)
 
+    #M = M[:mesh.origMesh.nInternalCells]
+    #T = T[:mesh.origMesh.nInternalCells]
     #w = np.hstack((rhoa.field, rhoUa.field, rhoEa.field))
     #v = dot(Ti, w)
     #energy = np.sum(dot(M, v)*v, axis=-1,keepdims=1)
