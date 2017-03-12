@@ -152,6 +152,7 @@ class RCF(Solver):
         gradU = grad(central(U, mesh), ghost=True)
         gradT = grad(central(T, mesh), ghost=True)
         gradp = grad(central(p, mesh), ghost=True)
+        gradp.updateProcessorCells([gradp, gradU, gradT], index=4)
         #gradU = grad(U, ghost=True, op=True)
         #gradT = grad(T, ghost=True, op=True)
         #gradp = grad(p, ghost=True, op=True)
@@ -290,5 +291,6 @@ class RCF(Solver):
         p.setInternalField(pN.field)
         U.setInternalField(UN.field)
         T.setInternalField(TN.field)
+        p.updateProcessorCells([p, T, U])
         return list(self.conservative(U, T, p))
     

@@ -109,7 +109,7 @@ class Solver(object):
             internalFields.append(phiI)
             #completeFields.append(phiN)
         for phi, phiI in zip(self.initOrder(self.fields), self.initOrder(internalFields)):
-            phi.phi.setInternalField(phiI)
+            phi.phi.setInternalField(phiI, processor=True)
         for phi in self.fields:
             phiN = phi.phi.field
             completeFields.append(phiN)
