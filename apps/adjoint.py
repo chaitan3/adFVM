@@ -171,7 +171,8 @@ class Adjoint(Solver):
                     stackedFields = np.ascontiguousarray(stackedFields)
                     stackedPhi = Field('a', stackedFields, (5,))
                     stackedPhi.old = stackedFields
-                    newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight, correction=False)).solve()
+                    #newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight, correction=False)).solve()
+                    newStackedFields = stackedFields/(1 + weight*dt)
                     newFields = [newStackedFields[:,[0]], 
                                  newStackedFields[:,[1,2,3]], 
                                  newStackedFields[:,[4]]

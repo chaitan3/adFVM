@@ -275,13 +275,14 @@ class CellField(Field):
         self.field = ad.zeros(size, config.dtype)
         #self.field.tag.test_value = np.zeros((mesh.origMesh.nCells,) + self.dimensions, config.precision)
 
-    def setInternalField(self, internalField):
+    def setInternalField(self, internalField, processor=False):
         self.initField()
         self.setField((0, self.mesh.nInternalCells), internalField)
         self.field = internalField
         self.updateGhostCells()
         self.gatherField('concat')
-        self.updateProcessorCells()
+        if processor:
+            self.updateProcessorCells([self])
 
     def getInternalField(self):
         return self.field[:self.mesh.nInternalCells]
@@ -292,14 +293,16 @@ class CellField(Field):
         for patchID in patches:
             self.BC[patchID].update()
 
-    def updateProcessorCells(self):
+    def updateProcessorCells(self, fields, index=0):
         #self.field = exchange(self.field)
         names = ['U', 'T', 'p', 'grad(UF)', 'grad(TF)', 'grad(pF)', 'rhoa', 'rhoUa', 'rhoEa', 'div(UFN)', 'grad(cF)']
-        tag = self.solver.stage*10000 + names.index(self.name)*1000
-        #print self.name, self.solver.stage
-        exchange = lambda field: parallel.getRemoteCells(field, Field.mesh, tag)
-        gradExchange = lambda input_field, grad_field: config.py_func(lambda field: parallel.getAdjointRemoteCells(field, Field.mesh, tag), [grad_field], config.dtype)
-        self.field = config.py_func(exchange, [self.field], config.dtype, grad=gradExchange)
+        tag = self.solver.stage*10000 + index*1000 #names.index(self.name)*1000
+        exchange = lambda *fields: parallel.getRemoteCells(fields, Field.mesh, tag)
+        gradExchange = lambda op, *grad_fields: config.py_func(lambda *fields: parallel.getAdjointRemoteCells(fields, Field.mesh, tag), grad_fields, [config.dtype for phi in fields])
+        newFields = config.py_func(exchange, [phi.field for phi in fields], [config.dtype for phi in fields], grad=gradExchange)
+        for phi, phiN in zip(fields, newFields):
+            phi.field = phiN
+        return
 
 class IOField(Field):
     _handle = None
@@ -498,7 +501,7 @@ class IOField(Field):
                 field[cellStartFace:cellEndFace] = field[internalCells]
             else:
                 assert patch['type'] in config.processorPatches
-        self.field = parallel.getRemoteCells(field, self.mesh)
+        self.field = parallel.getRemoteCells([field], self.mesh)[0]
         return
 
     def completeField(self):
@@ -543,7 +546,7 @@ class IOField(Field):
         # mesh values required outside theano
         field = self.field
         if not skipProcessor:
-            field = parallel.getRemoteCells(field, self.mesh)
+            field = parallel.getRemoteCells([field], self.mesh)[0]
 
         # fetch processor information
         assert len(field.shape) == 2
@@ -617,7 +620,7 @@ class IOField(Field):
         # fetch processor information
         field = self.field
         if not skipProcessor:
-            field = parallel.getRemoteCells(field, self.mesh)
+            field = parallel.getRemoteCells([field], self.mesh)[0]
 
         fieldsFile = self._handle
         fieldGroup = fieldsFile.require_group(self.name)
