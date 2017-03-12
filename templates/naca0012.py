@@ -5,8 +5,8 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-#primal = RCF('/master/home/talnikar/adFVM/cases/naca0012/', 
-primal = RCF('/home/talnikar/backup/voya_hyper/naca0012/adjoint_0.0/', 
+primal = RCF('/master/home/talnikar/adFVM-tf/cases/naca0012/adjoint/', 
+#primal = RCF('/master/home/talnikar/adFVM-tf/cases/naca0012/adjoint_entropy/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=lambda T: T/T*3.4e-5,
@@ -92,7 +92,7 @@ parameters = ('BCs', 'p', 'inlet', 'pt')
 
 #nSteps = 20000
 #writeInterval = 5000
-nSteps = 2000000
-writeInterval = 100000
+nSteps = 20000
+writeInterval = 1000
 startTime = 3.0
 dt = 6e-9
