@@ -301,7 +301,7 @@ class CellField(Field):
         def gradExchange(*fields): 
             if not hasattr(gradExchange, 'index'):
                 gradExchange.index = 0
-            gradExchange.index += 1
+            #gradExchange.index += 1
             return parallel.getAdjointRemoteCells(fields, Field.mesh, gradExchange.index*100000 + tag)
         gradExchanger = lambda op, *grad_fields: config.py_func(gradExchange, grad_fields, [config.dtype for phi in fields])
         newFields = config.py_func(exchange, [phi.field for phi in fields], [config.dtype for phi in fields], grad=gradExchanger)
