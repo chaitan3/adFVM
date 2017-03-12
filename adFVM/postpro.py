@@ -30,6 +30,7 @@ def computeGradients(solver):
     pF = central(p, mesh)
     pF.name = 'pF'
     gradp = grad(pF, ghost=True)
+    gradU.updateProcessorCells([gradU, divU, gradc, gradp])
     gradrho = g*(gradp-c*p)/(c*c)
 
     computer = solver.function([U.field, T.field, p.field], [gradrho.field, 
