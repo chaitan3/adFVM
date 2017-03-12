@@ -194,7 +194,7 @@ def getAdjointRemoteCells(fields, meshC, fieldTag=0):
 
     phis = []
     adjointRemoteCells = []
-    for field in fields:
+    for index, field in enumerate(fields):
         phi = np.zeros_like(field)
         phi[:mesh.nLocalCells] = field[:mesh.nLocalCells]
         phis.append(phi)
@@ -204,6 +204,7 @@ def getAdjointRemoteCells(fields, meshC, fieldTag=0):
         exchanger = Exchanger()
         for patchID in meshC.remotePatches:
             local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+            tag += 1000*index
             startFace, endFace, cellStartFace, cellEndFace, nFaces = mesh.getPatchFaceCellRange(patchID)
             adjointRemoteCells[-1][patchID] = np.zeros((nFaces,) + dimensions, precision)
             exchanger.exchange(remote, field[mesh.neighbour[startFace:endFace]], adjointRemoteCells[-1][patchID], fieldTag + tag)
