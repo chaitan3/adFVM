@@ -135,6 +135,7 @@ def getRemoteCells(fields, meshC, fieldTag=0):
             tag += 1000*index
             startFace, endFace, cellStartFace, cellEndFace, _ = mesh.getPatchFaceCellRange(patchID)
             exchanger.exchange(remote, phi[mesh.owner[startFace:endFace]], phi[cellStartFace:cellEndFace], fieldTag + tag)
+    #print(rank, fieldTag)
     exchanger.wait()
         #mtime += time.time()-start2
     return phis
@@ -191,7 +192,7 @@ def getAdjointRemoteCells(fields, meshC, fieldTag=0):
         return fields
     mesh = meshC.origMesh
     #print(type(field), field.shape, mesh.nLocalCells)
-    print(rank, fieldTag, len(fields))
+    #print(rank, fieldTag, len(fields))
 
     phis = []
     adjointRemoteCells = []

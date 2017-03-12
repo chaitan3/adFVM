@@ -298,7 +298,7 @@ class CellField(Field):
         names = ['U', 'T', 'p', 'grad(UF)', 'grad(TF)', 'grad(pF)', 'rhoa', 'rhoUa', 'rhoEa', 'div(UFN)', 'grad(cF)']
         tag = self.solver.stage*10000 + names.index(self.name)*1000
         exchange = lambda *fields: parallel.getRemoteCells(fields, Field.mesh, tag)
-        gradExchange = lambda op, *grad_fields: config.py_func(lambda *fields: parallel.getAdjointRemoteCells(fields, Field.mesh, tag), grad_fields, [config.dtype for phi in fields])
+        gradExchange = lambda op, *grad_fields: config.py_func(lambda *fields: parallel.getAdjointRemoteCells(fields, Field.mesh, 100000 + tag), grad_fields, [config.dtype for phi in fields])
         newFields = config.py_func(exchange, [phi.field for phi in fields], [config.dtype for phi in fields], grad=gradExchange)
         for phi, phiN in zip(fields, newFields):
             phi.field = phiN
