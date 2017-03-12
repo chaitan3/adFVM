@@ -103,16 +103,17 @@ class Solver(object):
 
     def compileInit(self, functionName='init'):
         internalFields = []
+        fields = []
         completeFields = []
         for phi in self.fields:
             phiI = phi.completeField()
+            fields.append(phi.phi)
             internalFields.append(phiI)
             #completeFields.append(phiN)
         for phi, phiI in zip(self.initOrder(self.fields), self.initOrder(internalFields)):
-            phi.phi.setInternalField(phiI, processor=True)
-        for phi in self.fields:
-            phiN = phi.phi.field
-            completeFields.append(phiN)
+            phi.phi.setInternalField(phiI)
+        fields[0].updateProcessorCells(fields)
+        completeFields = [phi.field for phi in fields]
         self.init = self.function(internalFields, completeFields, functionName, source=False, postpro=False)
         return
 
