@@ -9,7 +9,7 @@ from adFVM.matop_petsc import laplacian, ddt
 #from adFVM.matop import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
-from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
+from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, computeGradients
 from adFVM.solver import Solver
 
 from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source
@@ -41,6 +41,8 @@ class Adjoint(Solver):
         self.compileInit(functionName='adjoint_init')
         primal.compile(adjoint=self)
         self.map = primal.gradient
+        if self.scaling:
+            getAdjointViscosity.computer = computeGradients(primal)
         return
 
     def getGradFields(self):

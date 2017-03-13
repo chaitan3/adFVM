@@ -248,8 +248,6 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True):
     U, T, p = solver.primitive(rho, rhoU, rhoE)
 
     if not outputs:
-        if not hasattr(self, 'computer'):
-            self.computer = computeGradients(solver)
         outputs = self.computer(U, T, p)
     M_2norm = getAdjointMatrixNorm(None, None, None, rho, rhoU, rhoE, U, T, p, *outputs)
     M_2normLim = parallel.min(M_2norm.field), parallel.max(M_2norm.field)

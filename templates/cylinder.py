@@ -97,8 +97,8 @@ def makePerturb(pt_per):
 perturb = [makePerturb(1.)]
 parameters = ('BCs', 'p', 'left', 'U0')
 
-nSteps = 50
-writeInterval = 25
+nSteps = 10
+writeInterval = 5
 reportInterval = 1
 startTime = 2.0
 dt = 8e-8
