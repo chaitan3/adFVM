@@ -34,6 +34,8 @@ class Mesh {
         arr volumes;
         arr deltas;
         arr weights;
+        arr linearWeights;
+        arr quadraticWeights;
 
         //spmat sumOp;
         //spmat sumOpT;

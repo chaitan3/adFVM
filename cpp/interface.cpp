@@ -13,8 +13,10 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 
 static PyObject* forwardSolver(PyObject *self, PyObject *args) {
 
-    PyObject *rho, *rhoU, *rhoE;
-    PyArg_ParseTuple(args, "OOO", &rho, &rhoU, &rhoE);
+    PyObject *rhoObject, *rhoUObject, *rhoEObject;
+    scalar t, dt;
+    PyArg_ParseTuple(args, "OOOdd", &rhoObject, &rhoUObject, &rhoEObject, &dt, &t);
+    
     return Py_BuildValue("(OOO)", rho, rhoU, rhoE);
 }
 
@@ -68,6 +70,8 @@ Mesh::Mesh (PyObject* meshObject) {
 
     getArray(this->mesh, "deltas", this->deltas);
     getArray(this->mesh, "weights", this->weights);
+    getArray(this->mesh, "linearWeights", this->linearWeights);
+    getArray(this->mesh, "quadraticWeights", this->quadraticWeights);
 
     this->boundary = getBoundary(this->mesh, "boundary");
     this->calculatedBoundary = getBoundary(this->mesh, "calculatedBoundary");
@@ -114,8 +118,8 @@ void getArray(PyObject *mesh, const string attr, arrType<dtype> & tmp) {
     dtype *data = (dtype *) PyArray_DATA(array);
     //cout << rows << " " << cols << endl;
     integer shape[NDIMS] = {cols, rows, 1, 1};
-    arrType<dtype>* result = new arrType<dtype>(shape, data);
-    tmp = *result;
+    arrType<dtype> result arrType(shape, data);
+    tmp = result;
     Py_DECREF(array);
 }
 

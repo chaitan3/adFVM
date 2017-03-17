@@ -55,9 +55,20 @@ class arrType {
         return const_cast<const dtype &>(*(data + i1*sizeof(dtype)*this->strides[0] + 
                       i2*sizeof(dtype)*this->strides[1]));
     }
+    const dtype& operator() (const integer i1, const integer i2, const integer i3) const {
+        return const_cast<const dtype &>(*(data + i1*sizeof(dtype)*this->strides[0] + 
+                      i2*sizeof(dtype)*this->strides[1] +
+                      i3*sizeof(dtype)*this->strides[2]));
+    }
 
     dtype& operator()(const integer i1) {
         return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1));
+    }
+    dtype& operator()(const integer i1, const integer i2) {
+        return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1, i2));
+    }
+    dtype& operator()(const integer i1, const integer i2, const integer i3) {
+        return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1, i2, i3));
     }
 };
 

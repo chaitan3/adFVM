@@ -8,8 +8,8 @@ class Interpolator {
     
     public:
         Interpolator(const Mesh& mesh): mesh(mesh) {};
-        arr central(const arr&);
-        arr TVD(const arr&, const arr&, const arr& );
+        void central(const arr&, scalar [], integer);
+        void secondOrder(const arr& phi, const arr& gradPhi, scalar *phiF, integer index, integer which);
 };
  
 
