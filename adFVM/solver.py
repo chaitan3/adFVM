@@ -41,6 +41,8 @@ class Solver(object):
             open(case + 'STARTED', 'w').close()
             print('touched', case + 'STARTED')
         self.mesh = Mesh.create(case)
+        import adFVMcpp
+        adFVMcpp.init(self.mesh)
         self.resultFile = self.mesh.case + 'objective.txt'
         self.statusFile = self.mesh.case + 'status.pkl'
         self.timeSeriesFile = self.mesh.case + 'timeSeries.txt'

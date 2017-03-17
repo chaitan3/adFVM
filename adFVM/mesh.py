@@ -117,10 +117,11 @@ class Mesh(object):
         self.checkWeights()
 
         # theano shared variables
-        self.origMesh = Mesh.copy(self, fields=True)
+        self.origMesh = self
+        #self.origMesh = Mesh.copy(self, fields=True)
         # update mesh initialization call
         self.update(currTime, 0.)
-        self.makeTensor()
+        #self.makeTensor()
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
         pprint('nFaces:', parallel.sum(self.origMesh.nFaces))

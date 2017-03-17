@@ -1,24 +1,52 @@
 #include "interface.hpp"
+#include "density.cpp"
+
+Mesh *mesh;
+RCF rcf(mesh);
+
+static PyObject* initSolver(PyObject *self, PyObject *args) {
+
+    PyObject *meshObject = PyTuple_GetItem(args, 0);
+    mesh = new Mesh(meshObject);
+    return Py_None;
+}
+
+static PyObject* forwardSolver(PyObject *self, PyObject *args) {
+
+    PyObject *rho, *rhoU, *rhoE;
+    PyArg_ParseTuple(args, "OOO", &rho, &rhoU, &rhoE);
+    return Py_BuildValue("(OOO)", rho, rhoU, rhoE);
+}
+
+PyMODINIT_FUNC
+initadFVMcpp(void)
+{
+    PyObject *m;
+
+    static PyMethodDef Methods[] = {
+        {"forward",  forwardSolver, METH_VARARGS, "boo"},
+        {"init",  initSolver, METH_VARARGS,
+             "Execute a shell command."},
+        {NULL, NULL, 0, NULL}        /* Sentinel */
+    };
+
+    m = Py_InitModule("adFVMcpp", Methods);
+    if (m == NULL)
+        return;
+
+    //SpamError = PyErr_NewException("spam.error", NULL, NULL);
+    //Py_INCREF(SpamError);
+    //PyModule_AddObject(m, "error", SpamError);
+}
 
 
-Mesh::Mesh (string caseDir) {
-    Py_Initialize();
-    PyObject* mainmod = PyImport_AddModule("__main__");
-    PyObject* maindict = PyModule_GetDict(mainmod);
-    this->meshModule = PyImport_ImportModuleEx("mesh", maindict, maindict, NULL);
-    assert(this->meshModule);
-    this->meshClass = PyObject_GetAttrString(this->meshModule, "Mesh");
-    assert(this->meshClass);
-    PyObject *meshCreate = PyObject_GetAttrString(this->meshClass, "create");
-    PyObject *caseString = PyString_FromString(caseDir.c_str());
-    PyObject *args = PyTuple_New(1);
-    PyTuple_SetItem(args, 0, caseString);
-    this->mesh = PyObject_CallObject(meshCreate, args);
-    Py_DECREF(caseString);
+
+Mesh::Mesh (PyObject* meshObject) {
+    this->mesh = meshObject;
     //Py_DECREF(args);
     assert(this->mesh);
+    std::cout << "Initializing C++ interface" << endl;
 
-    this->caseDir = getString(this->mesh, "case");
     this->nInternalFaces = getInteger(this->mesh, "nInternalFaces");
     this->nFaces = getInteger(this->mesh, "nFaces");
     this->nBoundaryFaces = getInteger(this->mesh, "nBoundaryFaces");
@@ -40,9 +68,6 @@ Mesh::Mesh (string caseDir) {
 
     getArray(this->mesh, "deltas", this->deltas);
     getArray(this->mesh, "weights", this->weights);
-
-    getSpArray(this->mesh, "sumOp", this->sumOp);
-    this->sumOpT = this->sumOp.transpose();
 
     this->boundary = getBoundary(this->mesh, "boundary");
     this->calculatedBoundary = getBoundary(this->mesh, "calculatedBoundary");
@@ -74,22 +99,23 @@ string getString(PyObject *mesh, const string attr) {
     return result;
 }
 
-template <typename Derived>
-void getArray(PyObject *mesh, const string attr, DenseBase<Derived> & tmp) {
+template <typename dtype>
+void getArray(PyObject *mesh, const string attr, arrType<dtype> & tmp) {
     PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
     assert(array);
     int nDims = PyArray_NDIM(array);
     npy_intp* dims = PyArray_DIMS(array);
     int rows = dims[1];
     int cols = dims[0];
-    cout << attr << " " << rows << " " << cols << endl;
+    //cout << attr << " " << rows << " " << cols << endl;
     if (nDims == 1) {
         rows = 1;
     }
-    typename Derived::Scalar *data = (typename Derived::Scalar *) PyArray_DATA(array);
+    dtype *data = (dtype *) PyArray_DATA(array);
     //cout << rows << " " << cols << endl;
-    Map<Derived> result(data, rows, cols);
-    tmp = result;
+    integer shape[NDIMS] = {cols, rows, 1, 1};
+    arrType<dtype>* result = new arrType<dtype>(shape, data);
+    tmp = *result;
     Py_DECREF(array);
 }
 
@@ -97,50 +123,9 @@ void putArray(PyObject *mesh, const string attr, arr &tmp) {
     PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
     assert(array);
     double *data = (double *) PyArray_DATA(array);
-    memcpy(data, tmp.data(), tmp.size() * sizeof(double));
+    //memcpy(data, tmp.data(), tmp.size() * sizeof(double));
     Py_DECREF(array);
 }
-
-
-
-template <typename Derived>
-void getSpArray(PyObject *mesh, const string attr, SparseMatrix<Derived> & tmp) {
-    PyObject *sparse = PyObject_GetAttrString(mesh, attr.c_str());
-    assert(sparse);
-    PyObject *shape = PyObject_GetAttrString(sparse, "shape");
-    PyArrayObject *data = (PyArrayObject*) PyObject_GetAttrString(sparse, "data");
-    PyArrayObject *indices = (PyArrayObject*) PyObject_GetAttrString(sparse, "indices");
-    PyArrayObject *indptr = (PyArrayObject*) PyObject_GetAttrString(sparse, "indptr");
-    Derived *cdata = (Derived*) PyArray_DATA(data);
-    int32_t *cindices = (int32_t *)PyArray_DATA(indices);
-    int32_t *cindptr = (int32_t *)PyArray_DATA(indptr);
-
-    PyObject *pyRows = PyTuple_GetItem(shape, 0);
-    PyObject *pyCols = PyTuple_GetItem(shape, 1);
-    int rows = PyInt_AsLong(pyRows);
-    int cols = PyInt_AsLong(pyCols);
-    //cout << attr << " " << rows << " " << cols << endl;
-
-    tmp = spmat(rows, cols);
-    tmp.reserve(2*cols);
-    // fill
-    for (int i = 0; i < rows; i++) {
-        for (int j = cindptr[i]; j < cindptr[i+1] ; j++) {
-            tmp.insert(i, cindices[j]) = cdata[j];
-        }
-    }
-    //
-    //tmp.makeCompressed();
-    //cout << rows << " " << cols << endl;
-    Py_DECREF(shape);
-    Py_DECREF(pyRows);
-    Py_DECREF(pyCols);
-    Py_DECREF(data);
-    Py_DECREF(indices);
-    Py_DECREF(indptr);
-    Py_DECREF(sparse);
-}
-
 
 
 Boundary getBoundary(PyObject *mesh, const string attr) {

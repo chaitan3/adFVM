@@ -35,8 +35,8 @@ class Mesh {
         arr deltas;
         arr weights;
 
-        spmat sumOp;
-        spmat sumOpT;
+        //spmat sumOp;
+        //spmat sumOpT;
 
         Boundary boundary;
         Boundary defaultBoundary;
@@ -46,7 +46,8 @@ class Mesh {
         PyObject* meshClass; 
         PyObject* meshModule; 
 
-        Mesh () {};
+        //Mesh () {};
+        Mesh (PyObject *);
         ~Mesh ();
         Mesh (string);
 };
@@ -56,11 +57,11 @@ string getString(PyObject*, const string);
 
 extern void putArray(PyObject *, const string, arr&);
 
-template<typename Derived>
-extern void getArray(PyObject *, const string, DenseBase<Derived> &);
-
-template<typename Derived>
-extern void getSpArray(PyObject *, const string, SparseMatrix<Derived> &);
+template<typename dtype>
+extern void getArray(PyObject *, const string, arrType<dtype> &);
+//
+//template<typename Derived>
+//extern void getSpArray(PyObject *, const string, SparseMatrix<Derived> &);
 
 Boundary getBoundary(PyObject*, const string);
 
