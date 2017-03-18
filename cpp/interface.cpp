@@ -1,5 +1,6 @@
 #include "interface.hpp"
-#include "density.cpp"
+#include "timestep.hpp"
+#include "density.hpp"
 
 Mesh *mesh;
 RCF rcf(mesh);
@@ -17,7 +18,22 @@ static PyObject* forwardSolver(PyObject *self, PyObject *args) {
     scalar t, dt;
     PyArg_ParseTuple(args, "OOOdd", &rhoObject, &rhoUObject, &rhoEObject, &dt, &t);
     
-    return Py_BuildValue("(OOO)", rho, rhoU, rhoE);
+    arr rho, rhoU, rhoE;
+    getArray((PyArrayObject *)rhoObject, rho);
+    getArray((PyArrayObject *)rhoUObject, rhoU);
+    getArray((PyArrayObject *)rhoEObject, rhoE);
+
+    arr rhoN(rho.shape);
+    arr rhoUN(rhoU.shape);
+    arr rhoEN(rhoE.shape);
+    timeStepper(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+
+    PyObject *rhoNObject, *rhoUNObject, *rhoENObject;
+    putArray(rhoObject, rhoN);
+    putArray(rhoUObject, rhoUN);
+    putArray(rhoEObject, rhoEN);
+    
+    return Py_BuildValue("(OOO)", rhoNObject, rhoUNObject, rhoENObject);
 }
 
 PyMODINIT_FUNC
@@ -56,22 +72,22 @@ Mesh::Mesh (PyObject* meshObject) {
     this->nGhostCells = getInteger(this->mesh, "nGhostCells");
     this->nCells = getInteger(this->mesh, "nCells");
 
-    getArray(this->mesh, "faces", this->faces);
-    getArray(this->mesh, "points", this->points);
-    getArray(this->mesh, "owner", this->owner);
-    getArray(this->mesh, "neighbour", this->neighbour);
+    getMeshArray(this->mesh, "faces", this->faces);
+    getMeshArray(this->mesh, "points", this->points);
+    getMeshArray(this->mesh, "owner", this->owner);
+    getMeshArray(this->mesh, "neighbour", this->neighbour);
 
-    getArray(this->mesh, "normals", this->normals);
-    getArray(this->mesh, "faceCentres", this->faceCentres);
-    getArray(this->mesh, "areas", this->areas);
-    getArray(this->mesh, "cellFaces", this->cellFaces);
-    getArray(this->mesh, "cellCentres", this->cellCentres);
-    getArray(this->mesh, "volumes", this->volumes);
+    getMeshArray(this->mesh, "normals", this->normals);
+    getMeshArray(this->mesh, "faceCentres", this->faceCentres);
+    getMeshArray(this->mesh, "areas", this->areas);
+    getMeshArray(this->mesh, "cellFaces", this->cellFaces);
+    getMeshArray(this->mesh, "cellCentres", this->cellCentres);
+    getMeshArray(this->mesh, "volumes", this->volumes);
 
-    getArray(this->mesh, "deltas", this->deltas);
-    getArray(this->mesh, "weights", this->weights);
-    getArray(this->mesh, "linearWeights", this->linearWeights);
-    getArray(this->mesh, "quadraticWeights", this->quadraticWeights);
+    getMeshArray(this->mesh, "deltas", this->deltas);
+    getMeshArray(this->mesh, "weights", this->weights);
+    getMeshArray(this->mesh, "linearWeights", this->linearWeights);
+    getMeshArray(this->mesh, "quadraticWeights", this->quadraticWeights);
 
     this->boundary = getBoundary(this->mesh, "boundary");
     this->calculatedBoundary = getBoundary(this->mesh, "calculatedBoundary");
@@ -104,8 +120,14 @@ string getString(PyObject *mesh, const string attr) {
 }
 
 template <typename dtype>
-void getArray(PyObject *mesh, const string attr, arrType<dtype> & tmp) {
+void getMeshArray(PyObject *mesh, const string attr, arrType<dtype>& tmp) {
     PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
+    getArray(array, tmp);
+}
+
+
+template <typename dtype>
+void getArray(PyArrayObject *array, arrType<dtype> & tmp) {
     assert(array);
     int nDims = PyArray_NDIM(array);
     npy_intp* dims = PyArray_DIMS(array);
@@ -118,17 +140,15 @@ void getArray(PyObject *mesh, const string attr, arrType<dtype> & tmp) {
     dtype *data = (dtype *) PyArray_DATA(array);
     //cout << rows << " " << cols << endl;
     integer shape[NDIMS] = {cols, rows, 1, 1};
-    arrType<dtype> result arrType(shape, data);
+    arrType<dtype> result(shape, data);
     tmp = result;
     Py_DECREF(array);
 }
 
-void putArray(PyObject *mesh, const string attr, arr &tmp) {
-    PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
-    assert(array);
-    double *data = (double *) PyArray_DATA(array);
-    //memcpy(data, tmp.data(), tmp.size() * sizeof(double));
-    Py_DECREF(array);
+template <typename dtype>
+void putArray(PyObject* array, arrType<dtype> &tmp) {
+    npy_intp shape[2] = {tmp.shape[0], tmp.shape[1]};
+    array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, tmp.data);
 }
 
 

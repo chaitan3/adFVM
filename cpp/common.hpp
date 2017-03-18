@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <cstdint>
+#include <cmath>
 #include <tuple>
 
 using namespace std;
@@ -35,11 +36,27 @@ class arrType {
     arrType () {}
 
     arrType(const integer* shape) {
-        data = new dtype[size];
+        dtype* data = new dtype[size];
         this -> init(shape, data);
     }
 
     arrType(const integer* shape, dtype* data) {
+        this -> init(shape, data);
+    }
+
+    arrType(const integer shape1) {
+        const integer shape[NDIMS] = {shape1, 1, 1, 1};
+        dtype* data = new dtype[size];
+        this -> init(shape, data);
+    }
+    arrType(const integer shape1, const integer shape2) {
+        const integer shape[NDIMS] = {shape1, shape2, 1, 1};
+        dtype* data = new dtype[size];
+        this -> init(shape, data);
+    }
+    arrType(const integer shape1, const integer shape2, const integer shape3) {
+        const integer shape[NDIMS] = {shape1, shape2, shape3, 1};
+        dtype* data = new dtype[size];
         this -> init(shape, data);
     }
 

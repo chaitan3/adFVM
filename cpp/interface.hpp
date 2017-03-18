@@ -57,10 +57,14 @@ class Mesh {
 int getInteger(PyObject*, const string);
 string getString(PyObject*, const string);
 
-extern void putArray(PyObject *, const string, arr&);
+template<typename dtype>
+extern void putArray(PyObject *, arrType<dtype>&);
 
 template<typename dtype>
-extern void getArray(PyObject *, const string, arrType<dtype> &);
+extern void getMeshArray(PyObject *, const string, arrType<dtype> &);
+
+template<typename dtype>
+extern void getArray(PyArrayObject *, arrType<dtype> &);
 //
 //template<typename Derived>
 //extern void getSpArray(PyObject *, const string, SparseMatrix<Derived> &);
