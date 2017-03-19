@@ -4,6 +4,7 @@ import cPickle as pkl
 import os
 import copy
 
+import adFVMcpp
 from . import config, parallel, timestep
 from .config import ad
 from .parallel import pprint
@@ -41,8 +42,6 @@ class Solver(object):
             open(case + 'STARTED', 'w').close()
             print('touched', case + 'STARTED')
         self.mesh = Mesh.create(case)
-        import adFVMcpp
-        adFVMcpp.init(self.mesh)
         self.resultFile = self.mesh.case + 'objective.txt'
         self.statusFile = self.mesh.case + 'status.pkl'
         self.timeSeriesFile = self.mesh.case + 'timeSeries.txt'
@@ -57,6 +56,8 @@ class Solver(object):
 
     def compile(self, adjoint=None):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
+        adFVMcpp.init(self.mesh, *[phi.boundary for phi in self.fields])
+        return
         mesh = self.mesh
 
         self.compileInit()
@@ -353,9 +354,15 @@ class Solver(object):
                 #        fields[index].write()
                 #    exit(1)
 
-            inputs = fields + [dt, t]
-            outputs = self.map(*inputs)
-            newFields, objective, dtc, local, remote = outputs[:-4], outputs[-4], outputs[-3], outputs[-2], outputs[-1]
+            inputs = [phi.field for phi in fields] + [dt, t]
+            #outputs = self.map(*inputs)
+            #newFields, objective, dtc, local, remote = outputs[:-4], outputs[-4], outputs[-3], outputs[-2], outputs[-1]
+            outputs = adFVMcpp.forward(*inputs)
+            newFields = outputs
+            objective = 0
+            dtc = dt
+            local = remote = 0
+
             fields = self.getFields(newFields, IOField, refFields=fields)
 
             if report:

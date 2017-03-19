@@ -89,7 +89,7 @@ class RCF(Solver):
     # only reads fields
     @config.timeFunction('Time for reading fields')
     def readFields(self, t, suffix=''):
-        firstRun = self.init is None
+        firstRun = False
 
         with IOField.handle(t):
             U = IOField.read('U' + suffix, skipField=firstRun)
@@ -104,11 +104,13 @@ class RCF(Solver):
                 self.mesh.read(IOField._handle)
         fields = [U, T, p]
         # IO Fields, with phi attribute as a CellField
-        if firstRun:
-            self.U, self.T, self.p = fields
-            self.fields = fields
-        else:
-            self.updateFields(fields)
+        self.U, self.T, self.p = fields
+        self.fields = fields
+        #if firstRun:
+        #    self.U, self.T, self.p = fields
+        #    self.fields = fields
+        #else:
+        #    self.updateFields(fields)
         return list(self.conservative(*self.fields))
 
     # reads and updates ghost cells

@@ -2,13 +2,17 @@
 #include "timestep.hpp"
 #include "density.hpp"
 
-Mesh *mesh;
-RCF rcf(mesh);
+RCF rcf;
 
 static PyObject* initSolver(PyObject *self, PyObject *args) {
 
     PyObject *meshObject = PyTuple_GetItem(args, 0);
-    mesh = new Mesh(meshObject);
+    Mesh *mesh = new Mesh(meshObject);
+    rcf.setMesh(mesh);
+    for (integer i = 1; i < 4; i++) {
+        PyObject *boundaryObject = PyTuple_GetItem(args, i);
+        rcf.boundaries[i-1] = getBoundary(boundaryObject);
+    }
     return Py_None;
 }
 
@@ -17,21 +21,29 @@ static PyObject* forwardSolver(PyObject *self, PyObject *args) {
     PyObject *rhoObject, *rhoUObject, *rhoEObject;
     scalar t, dt;
     PyArg_ParseTuple(args, "OOOdd", &rhoObject, &rhoUObject, &rhoEObject, &dt, &t);
-    
+
+    //cout << "forward 1" << endl;
     arr rho, rhoU, rhoE;
     getArray((PyArrayObject *)rhoObject, rho);
     getArray((PyArrayObject *)rhoUObject, rhoU);
     getArray((PyArrayObject *)rhoEObject, rhoE);
+    //cout << "forward 2" << endl;
 
     arr rhoN(rho.shape);
     arr rhoUN(rhoU.shape);
     arr rhoEN(rhoE.shape);
+    rhoN.ownData = false;
+    rhoUN.ownData = false;
+    rhoEN.ownData = false;
+    //cout << "forward 3" << endl;
     timeStepper(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+    //cout << "forward 4" << endl;
 
     PyObject *rhoNObject, *rhoUNObject, *rhoENObject;
-    putArray(rhoObject, rhoN);
-    putArray(rhoUObject, rhoUN);
-    putArray(rhoEObject, rhoEN);
+    rhoNObject = putArray(rhoN);
+    rhoUNObject = putArray(rhoUN);
+    rhoENObject = putArray(rhoEN);
+    //cout << "forward 5" << endl;
     
     return Py_BuildValue("(OOO)", rhoNObject, rhoUNObject, rhoENObject);
 }
@@ -51,6 +63,7 @@ initadFVMcpp(void)
     m = Py_InitModule("adFVMcpp", Methods);
     if (m == NULL)
         return;
+    import_array();
 
     //SpamError = PyErr_NewException("spam.error", NULL, NULL);
     //Py_INCREF(SpamError);
@@ -71,6 +84,8 @@ Mesh::Mesh (PyObject* meshObject) {
     this->nInternalCells = getInteger(this->mesh, "nInternalCells");
     this->nGhostCells = getInteger(this->mesh, "nGhostCells");
     this->nCells = getInteger(this->mesh, "nCells");
+    this->nLocalCells = getInteger(this->mesh, "nLocalCells");
+    this->nLocalFaces = this->nFaces - (this->nCells-this->nLocalCells);
 
     getMeshArray(this->mesh, "faces", this->faces);
     getMeshArray(this->mesh, "points", this->points);
@@ -89,9 +104,20 @@ Mesh::Mesh (PyObject* meshObject) {
     getMeshArray(this->mesh, "linearWeights", this->linearWeights);
     getMeshArray(this->mesh, "quadraticWeights", this->quadraticWeights);
 
-    this->boundary = getBoundary(this->mesh, "boundary");
-    this->calculatedBoundary = getBoundary(this->mesh, "calculatedBoundary");
-    this->defaultBoundary = getBoundary(this->mesh, "defaultBoundary");
+    this->boundary = getMeshBoundary(this->mesh, "boundary");
+    this->calculatedBoundary = getMeshBoundary(this->mesh, "calculatedBoundary");
+    this->defaultBoundary = getMeshBoundary(this->mesh, "defaultBoundary");
+    this->init();
+}
+
+void Mesh::init () {
+    for (auto& patch: this->boundary) {
+        string patchID = patch.first;
+        auto& patchInfo = patch.second;
+        integer startFace = stoi(patchInfo.at("startFace"));
+        integer nFaces = stoi(patchInfo.at("nFaces"));
+        this->boundaryFaces[patchID] = make_pair(startFace, nFaces);
+    }
 }
 
 Mesh::~Mesh () {
@@ -122,6 +148,7 @@ string getString(PyObject *mesh, const string attr) {
 template <typename dtype>
 void getMeshArray(PyObject *mesh, const string attr, arrType<dtype>& tmp) {
     PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
+    //cout << attr << " " << PyArray_DESCR(array)->elsize << endl;
     getArray(array, tmp);
 }
 
@@ -133,7 +160,6 @@ void getArray(PyArrayObject *array, arrType<dtype> & tmp) {
     npy_intp* dims = PyArray_DIMS(array);
     int rows = dims[1];
     int cols = dims[0];
-    //cout << attr << " " << rows << " " << cols << endl;
     if (nDims == 1) {
         rows = 1;
     }
@@ -142,18 +168,21 @@ void getArray(PyArrayObject *array, arrType<dtype> & tmp) {
     integer shape[NDIMS] = {cols, rows, 1, 1};
     arrType<dtype> result(shape, data);
     tmp = result;
-    Py_DECREF(array);
+    //Py_DECREF(array);
 }
 
 template <typename dtype>
-void putArray(PyObject* array, arrType<dtype> &tmp) {
+PyObject* putArray(arrType<dtype> &tmp) {
     npy_intp shape[2] = {tmp.shape[0], tmp.shape[1]};
-    array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, tmp.data);
+    return PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, tmp.data);
 }
 
-
-Boundary getBoundary(PyObject *mesh, const string attr) {
+Boundary getMeshBoundary(PyObject *mesh, const string attr) {
     PyObject *dict = PyObject_GetAttrString(mesh, attr.c_str());
+    return getBoundary(dict);
+}
+
+Boundary getBoundary(PyObject *dict) {
     assert(dict);
     PyObject *key, *value;
     PyObject *key2, *value2;
@@ -179,6 +208,5 @@ Boundary getBoundary(PyObject *mesh, const string attr) {
             boundary[ckey][ckey2] = cvalue;
         }
     }
-    Py_DECREF(dict);
     return boundary;
 }

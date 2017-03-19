@@ -14,12 +14,14 @@ typedef map<string, map<string, string> > Boundary;
 class Mesh {
     public:
         string caseDir;
-        int nInternalFaces;
-        int nFaces;
-        int nBoundaryFaces;
-        int nInternalCells;
-        int nGhostCells;
         int nCells;
+        int nFaces;
+        int nInternalCells;
+        int nInternalFaces;
+        int nBoundaryFaces;
+        int nGhostCells;
+        int nLocalFaces;
+        int nLocalCells;
 
         iarr faces;
         arr points;
@@ -41,6 +43,7 @@ class Mesh {
         //spmat sumOpT;
 
         Boundary boundary;
+        map<string, pair<integer, integer>> boundaryFaces;
         Boundary defaultBoundary;
         Boundary calculatedBoundary;
 
@@ -50,6 +53,7 @@ class Mesh {
 
         //Mesh () {};
         Mesh (PyObject *);
+        void init();
         ~Mesh ();
         Mesh (string);
 };
@@ -58,7 +62,7 @@ int getInteger(PyObject*, const string);
 string getString(PyObject*, const string);
 
 template<typename dtype>
-extern void putArray(PyObject *, arrType<dtype>&);
+PyObject * putArray(arrType<dtype>&);
 
 template<typename dtype>
 extern void getMeshArray(PyObject *, const string, arrType<dtype> &);
@@ -69,6 +73,7 @@ extern void getArray(PyArrayObject *, arrType<dtype> &);
 //template<typename Derived>
 //extern void getSpArray(PyObject *, const string, SparseMatrix<Derived> &);
 
-Boundary getBoundary(PyObject*, const string);
+Boundary getBoundary(PyObject*);
+Boundary getMeshBoundary(PyObject *mesh, const string attr);
 
 #endif

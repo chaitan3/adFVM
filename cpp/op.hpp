@@ -4,13 +4,13 @@
 #include "interface.hpp"
 
 class Operator {
-    const Mesh& mesh;
+    Mesh const * mesh;
     arr internal_sum(const arr&);
     
     public:
-        Operator(const Mesh& mesh): mesh(mesh) {};
-        void div(const scalar*, arr&, integer);
-        void grad(const scalar*, arr&, integer);
+        Operator(Mesh const* mesh): mesh(mesh) {};
+        void div(const scalar*, arr&, integer, bool);
+        void grad(const scalar*, arr&, integer, bool);
         //void snGrad(const arr&, arr&);
         //void laplacian(const arr&, const arr&, arr&);
 };

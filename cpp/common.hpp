@@ -21,61 +21,89 @@ class arrType {
     integer shape[NDIMS];
     integer size;
     integer strides[NDIMS];
+    bool ownData;
 
-    void init(const integer* shape, dtype* data) {
+    void init(const integer* shape) {
         copy(shape, shape + NDIMS, this->shape);
         integer temp = 1;
         for (integer i = NDIMS-1; i >= 0; i--) {
+            //cout << shape[i] << " ";
             this->strides[i] = temp;
             temp *= shape[i];
         }
+        //cout << endl;
         this -> size = temp;
-        this -> data = data;
+        this -> ownData = true;
     }
 
-    arrType () {}
+    arrType () {
+        for (integer i = 0; i < NDIMS; i++)  {
+            this->shape[i] = 0;
+            this->strides[i] = 0;
+        }
+        this -> size = 0;
+        this -> data = NULL;
+        this -> ownData = false;
+    }
 
     arrType(const integer* shape) {
-        dtype* data = new dtype[size];
-        this -> init(shape, data);
+        this -> init(shape);
+        this -> data = new dtype[this->size];
     }
 
     arrType(const integer* shape, dtype* data) {
-        this -> init(shape, data);
+        this -> init(shape);
+        this -> data = data;
+        this -> ownData = false;
     }
 
     arrType(const integer shape1) {
         const integer shape[NDIMS] = {shape1, 1, 1, 1};
-        dtype* data = new dtype[size];
-        this -> init(shape, data);
+        this -> init(shape);
+        this -> data = new dtype[this->size];
     }
     arrType(const integer shape1, const integer shape2) {
         const integer shape[NDIMS] = {shape1, shape2, 1, 1};
-        dtype* data = new dtype[size];
-        this -> init(shape, data);
+        this -> init(shape);
+        this -> data = new dtype[this->size];
     }
     arrType(const integer shape1, const integer shape2, const integer shape3) {
         const integer shape[NDIMS] = {shape1, shape2, shape3, 1};
-        dtype* data = new dtype[size];
-        this -> init(shape, data);
+        this -> init(shape);
+        this -> data = new dtype[this->size];
     }
 
+    //arrType(const arrType& ref) {
+    //    cout << "copy arr " << ref.shape[0] << " " << ref.shape[1] << endl;
+    //}
+    //arrType& operator= (arrType& ref) {
+    //    cout << "assign arr " << ref.shape[0] << " " << ref.shape[1] << endl;
+    //    ref.ownData = false;
+    //    this -> init(ref.shape);
+    //    this -> data = data;
+    //    this -> ownData = false;
+    //}
+
     ~arrType() {
-        delete this -> data; 
+        //if (this->ownData) {
+        if (this->ownData && this->data != NULL) {
+            delete this -> data; 
+            this -> data = NULL;
+        }
     };
     
     const dtype& operator() (const integer i1) const {
-        return const_cast<const dtype &>(*(data + i1*sizeof(dtype)*this->strides[0]));
+        return const_cast<const dtype &>(data[i1*this->strides[0]]);
     }
 
     const dtype& operator() (const integer i1, const integer i2) const {
-        return const_cast<const dtype &>(*(data + i1*sizeof(dtype)*this->strides[0] + 
-                      i2*sizeof(dtype)*this->strides[1]));
+        return const_cast<const dtype &>(data[i1*this->strides[0] + 
+                      i2*this->strides[1]]);
     }
     const dtype& operator() (const integer i1, const integer i2, const integer i3) const {
-        return const_cast<const dtype &>(*(data + i1*sizeof(dtype)*this->strides[0] + 
-                      i2*sizeof(dtype)*this->strides[1] +
-                      i3*sizeof(dtype)*this->strides[2]));
+        return const_cast<const dtype &>(data[i1*this->strides[0] + 
+                      i2*this->strides[1] +
+                      i3*this->strides[2]]);
     }
 
     dtype& operator()(const integer i1) {

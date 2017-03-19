@@ -17,31 +17,43 @@
 //}
 //
 
-void Operator::grad(const scalar* phi, arr& gradPhi, integer index) {
-    const Mesh& mesh = this->mesh;
+void Operator::grad(const scalar* phi, arr& gradPhi, integer index, bool neighbour) {
+    const Mesh& mesh = *this->mesh;
     
     integer p = mesh.owner(index);
     integer n = mesh.neighbour(index);
     scalar wp = mesh.areas(index)/mesh.volumes(p);
-    scalar wn = mesh.areas(index)/mesh.volumes(n);
+    scalar wn;
+    if (neighbour) {
+        wn = mesh.areas(index)/mesh.volumes(n);
+    }
+    //cout << index << " " << mesh.nInternalFaces << " " << mesh.nFaces << " " << mesh.nInternalCells << endl;
+    //cout << p << " " << mesh.areas(index) << " " << mesh.areas.data[index] << endl;
     for (integer i = 0; i < gradPhi.shape[2]; i++) {
         for (integer j = 0; j < 3; j++) {
             gradPhi(p, i, j) += phi[i]*mesh.normals(index, j)*wp;
-            gradPhi(n, i, j) -= phi[i]*mesh.normals(index, j)*wn;
+            if (neighbour) {
+                gradPhi(n, i, j) -= phi[i]*mesh.normals(index, j)*wn;
+            }
         }
     }
 }
 
-void Operator::div(const scalar* phi, arr& divPhi, integer index) {
-    const Mesh& mesh = this->mesh;
+void Operator::div(const scalar* phi, arr& divPhi, integer index, bool neighbour) {
+    const Mesh& mesh = *this->mesh;
     
     integer p = mesh.owner(index);
     integer n = mesh.neighbour(index);
     scalar wp = mesh.areas(index)/mesh.volumes(p);
-    scalar wn = mesh.areas(index)/mesh.volumes(n);
+    scalar wn;
+    if (neighbour) {
+        wn = mesh.areas(index)/mesh.volumes(n);
+    }
     for (integer i = 0; i < divPhi.shape[1]; i++) {
         divPhi(p, i) += phi[i]*wp;
-        divPhi(n, i) -= phi[i]*wn;
+        if (neighbour) {
+            divPhi(n, i) -= phi[i]*wn;
+        }
     }
 }
 

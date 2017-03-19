@@ -4,10 +4,10 @@
 #include "interface.hpp"
 
 class Interpolator {
-    const Mesh& mesh;
+    Mesh const* mesh;
     
     public:
-        Interpolator(const Mesh& mesh): mesh(mesh) {};
+        Interpolator(Mesh const* mesh): mesh(mesh) {};
         void central(const arr&, scalar [], integer);
         void secondOrder(const arr& phi, const arr& gradPhi, scalar *phiF, integer index, integer which);
 };
