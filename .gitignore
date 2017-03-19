@@ -30,6 +30,4 @@ processor*
 [1-9]*
 *.foam
 
-*.c
-*.cpp
 *.html
