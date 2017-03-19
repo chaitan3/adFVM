@@ -47,5 +47,5 @@ writeInterval = 100
 #nSteps = 10
 #writeInterval = 2
 startTime = 0.0
-dt = 1e-5
+dt = 1e-4
 
