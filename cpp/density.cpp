@@ -173,7 +173,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
         }
     }
     faceFluxUpdate(mesh.nLocalFaces, mesh.nFaces, false);
-    //cout << "c++: equation 5" << endl;
+    cout << "c++: equation 5" << endl;
 }
 
 void RCF::boundary(const Boundary& boundary, arr& phi) {

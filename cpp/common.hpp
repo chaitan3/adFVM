@@ -9,7 +9,17 @@
 
 using namespace std;
 
-typedef double scalar;
+#define ADIFF 1
+
+#ifdef ADIFF
+    #include "adept.h"
+    using adept::adouble;
+    typedef adouble scalar;
+#else 
+    typedef double scalar;
+#endif
+
+typedef double uscalar;
 typedef int32_t integer;
 
 #define NDIMS 4
@@ -88,8 +98,8 @@ class arrType {
     ~arrType() {
         //if (this->ownData) {
         if (this->ownData && this->data != NULL) {
-            delete this -> data; 
-            this -> data = NULL;
+            //delete this -> data; 
+            //this -> data = NULL;
         }
     };
     
@@ -130,6 +140,28 @@ class arrType {
         for (integer i = 0; i < this->size; i++) {
             this->data[i] = 0;
         }
+    }
+
+    void adInit() {
+        #ifdef ADIFF
+            uscalar *udata = (uscalar *)this->data;
+            this -> data = new scalar[this->size];
+            adept::set_values(this->data, this->size, udata);
+            this->ownData = true;
+        #else
+            return;
+        #endif
+    }
+    uscalar* adGet() {
+        #ifdef ADIFF
+            uscalar* udata = new uscalar[this->size];
+            for (integer i = 0; i < this->size; i++) {
+                udata[i] = this->data[i].value();
+            }
+            return udata;
+        #else
+            return this->data;
+        #endif
     }
 };
 

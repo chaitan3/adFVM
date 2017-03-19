@@ -17,8 +17,8 @@
     //}
 /*}*/
 
-void timeStepper(RCF &rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {
-    const Mesh& mesh = *rcf.mesh;
+void timeStepper(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {
+    const Mesh& mesh = *(rcf->mesh);
 
     const integer n = 3;
     scalar alpha[n][n] = {{1,0,0},{3./4, 1./4, 0}, {1./3, 0, 2./3}};
@@ -34,7 +34,7 @@ void timeStepper(RCF &rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr
 
     for (integer stage = 0; stage < n; stage++) {
         //solver.t = solver.t0 + gamma[i]*solver.dt
-        rcf.equation(rhos[stage], rhoUs[stage], rhoEs[stage], drho, drhoU, drhoE);
+        rcf->equation(rhos[stage], rhoUs[stage], rhoEs[stage], drho, drhoU, drhoE);
         integer curr = stage + 1;
         scalar b = beta[stage][stage];
         for (integer i = 0; i < mesh.nInternalCells; i++) {

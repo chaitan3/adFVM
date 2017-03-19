@@ -2,32 +2,45 @@
 #include "timestep.hpp"
 #include "density.hpp"
 
-RCF rcf;
+RCF* rcf;
+#ifdef ADIFF
+    adept::Stack stack;
+#endif
 
 static PyObject* initSolver(PyObject *self, PyObject *args) {
 
     PyObject *meshObject = PyTuple_GetItem(args, 0);
+
     Mesh *mesh = new Mesh(meshObject);
-    rcf.setMesh(mesh);
+    rcf = new RCF();
+    rcf->setMesh(mesh);
     for (integer i = 1; i < 4; i++) {
         PyObject *boundaryObject = PyTuple_GetItem(args, i);
-        rcf.boundaries[i-1] = getBoundary(boundaryObject);
+        rcf->boundaries[i-1] = getBoundary(boundaryObject);
     }
     return Py_None;
 }
 
 static PyObject* forwardSolver(PyObject *self, PyObject *args) {
 
+    //cout << "forward 1" << endl;
     PyObject *rhoObject, *rhoUObject, *rhoEObject;
-    scalar t, dt;
+    uscalar t, dt;
     PyArg_ParseTuple(args, "OOOdd", &rhoObject, &rhoUObject, &rhoEObject, &dt, &t);
 
-    //cout << "forward 1" << endl;
     arr rho, rhoU, rhoE;
     getArray((PyArrayObject *)rhoObject, rho);
     getArray((PyArrayObject *)rhoUObject, rhoU);
     getArray((PyArrayObject *)rhoEObject, rhoE);
     //cout << "forward 2" << endl;
+
+    //cout << "forward 3" << endl;
+    rho.adInit();
+    rhoU.adInit();
+    rhoE.adInit();
+    #ifdef ADIFF
+        stack.new_recording();
+    #endif
 
     arr rhoN(rho.shape);
     arr rhoUN(rhoU.shape);
@@ -35,7 +48,6 @@ static PyObject* forwardSolver(PyObject *self, PyObject *args) {
     rhoN.ownData = false;
     rhoUN.ownData = false;
     rhoEN.ownData = false;
-    //cout << "forward 3" << endl;
     timeStepper(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
     //cout << "forward 4" << endl;
 
@@ -174,7 +186,8 @@ void getArray(PyArrayObject *array, arrType<dtype> & tmp) {
 template <typename dtype>
 PyObject* putArray(arrType<dtype> &tmp) {
     npy_intp shape[2] = {tmp.shape[0], tmp.shape[1]};
-    return PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, tmp.data);
+    uscalar* data = tmp.adGet();
+    return PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
 }
 
 Boundary getMeshBoundary(PyObject *mesh, const string attr) {
