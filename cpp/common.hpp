@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <cstdint>
+#include <cstdio>
 #include <cmath>
 #include <tuple>
 
@@ -114,6 +115,21 @@ class arrType {
     }
     dtype& operator()(const integer i1, const integer i2, const integer i3) {
         return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1, i2, i3));
+    }
+
+    bool checkNAN() {
+        for (integer i = 0; i < this->size; i++) {
+            if (std::isnan(this->data[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void zero() {
+        for (integer i = 0; i < this->size; i++) {
+            this->data[i] = 0;
+        }
     }
 };
 

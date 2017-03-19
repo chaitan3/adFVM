@@ -42,10 +42,10 @@ parameters = 'source'
 #
 #parameters = ('BCs', 'U', 'inlet', 'value')
 
-#nSteps = 4000
-#writeInterval = 100
-nSteps = 10
-writeInterval = 2
+nSteps = 4000
+writeInterval = 100
+#nSteps = 10
+#writeInterval = 2
 startTime = 0.0
-dt = 1e-4
+dt = 1e-5
 

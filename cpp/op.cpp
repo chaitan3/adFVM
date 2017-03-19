@@ -29,7 +29,7 @@ void Operator::grad(const scalar* phi, arr& gradPhi, integer index, bool neighbo
     }
     //cout << index << " " << mesh.nInternalFaces << " " << mesh.nFaces << " " << mesh.nInternalCells << endl;
     //cout << p << " " << mesh.areas(index) << " " << mesh.areas.data[index] << endl;
-    for (integer i = 0; i < gradPhi.shape[2]; i++) {
+    for (integer i = 0; i < gradPhi.shape[1]; i++) {
         for (integer j = 0; j < 3; j++) {
             gradPhi(p, i, j) += phi[i]*mesh.normals(index, j)*wp;
             if (neighbour) {

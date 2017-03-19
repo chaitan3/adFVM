@@ -115,8 +115,9 @@ class RCF(Solver):
 
     # reads and updates ghost cells
     def initFields(self, fields):
+        return fields
         primitiveFields = self.primitive(*fields)
-        newFields = self.init(*primitiveFields)
+        #newFields = self.init(*primitiveFields)
         primitiveFields = self.getFields(newFields, IOField)
         return list(self.conservative(*primitiveFields))
     
