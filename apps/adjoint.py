@@ -5,8 +5,7 @@ from adFVM import config, parallel
 from adFVM.config import ad
 from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
-from adFVM.matop_petsc import laplacian, ddt
-#from adFVM.matop import laplacian, ddt
+#from adFVM.matop_petsc import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, computeGradients
@@ -18,6 +17,7 @@ import numpy as np
 import time
 import os
 import argparse
+import adFVMcpp_ad as adFVMcpp
 
 class Adjoint(Solver):
     def __init__(self, primal, scaling):
@@ -29,6 +29,9 @@ class Adjoint(Solver):
         self.sensTimeSeriesFile = self.mesh.case + 'sensTimeSeries.txt'
         return
 
+    def initFields(self, fields):
+        return fields
+
     def createFields(self):
         fields = []
         for name, dims in zip(self.names, self.dimensions):
@@ -38,9 +41,10 @@ class Adjoint(Solver):
         return
 
     def compile(self):
-        self.compileInit(functionName='adjoint_init')
+        #self.compileInit(functionName='adjoint_init')
+        adFVMcpp.init(self.mesh, *[phi.boundary for phi in self.fields])
         primal.compile(adjoint=self)
-        self.map = primal.gradient
+        #self.map = primal.gradient
         if self.scaling:
             getAdjointViscosity.computer = computeGradients(primal)
         return
@@ -150,12 +154,17 @@ class Adjoint(Solver):
                     pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
                     pprint('Time step', adjointIndex)
 
-                inputs = previousSolution + fields + [dt, t]
-                outputs = self.map(*inputs)
+                inputs = [phi.field for phi in previousSolution] + \
+                         [phi.field for phi in fields] + [dt, t]
+                #outputs = self.map(*inputs)
+                outputs = adFVMcpp.forward(*inputs)
                 n = len(fields)
-                gradient, paramGradient, objGradient = outputs[:n], \
-                                                       outputs[n:-n], \
-                                                       outputs[-n:]
+                gradient = outputs
+                paramGradient = [0, 0, 0]
+                objGradient = [0, 0, 0]
+                #gradient, paramGradient, objGradient = outputs[:n], \
+                #                                       outputs[n:-n], \
+                #                                       outputs[-n:]
                 objGradient = [phi/nSteps for phi in objGradient]
                 for index in range(0, len(fields)):
                     fields[index].field = gradient[index] + objGradient[index]

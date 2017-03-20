@@ -155,14 +155,12 @@ class arrType {
                 tape.registerInput(this->data[i]);
             }
             this->ownData = true;
-            return;
         }
-        uscalar* adGet() {
-                uscalar* udata = new uscalar[this->size];
-                for (integer i = 0; i < this->size; i++) {
-                    udata[i] = this->data[i].value();
-                }
-                return udata;
+        void adGetGrad(const arrType<scalar>& phi) {
+            for (integer i = 0; i < this->size; i++) {
+                this -> data[i] = phi.data[i].getGradient();
+            }
+            this->ownData = true;
         }
     #endif
 };

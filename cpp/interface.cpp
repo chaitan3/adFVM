@@ -3,9 +3,6 @@
 #include "density.hpp"
 
 RCF* rcf;
-#ifdef ADIFF
-    auto& tape = codi::RealReverse::getGlobalTape();    
-#endif
 
 static PyObject* initSolver(PyObject *self, PyObject *args) {
 
@@ -21,61 +18,119 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     return Py_None;
 }
 
-static PyObject* forwardSolver(PyObject *self, PyObject *args) {
+#ifdef ADIFF
+    #define initFunc initadFVMcpp_ad
+    #define modName "adFVMcpp_ad"
+    auto& tape = codi::RealReverse::getGlobalTape();    
 
-    //cout << "forward 1" << endl;
-    PyObject *rhoObject, *rhoUObject, *rhoEObject;
-    uscalar t, dt;
-    PyArg_ParseTuple(args, "OOOdd", &rhoObject, &rhoUObject, &rhoEObject, &dt, &t);
+    static PyObject* forwardSolver(PyObject *self, PyObject *args) {
 
-    arr rho, rhoU, rhoE;
-    getArray((PyArrayObject *)rhoObject, rho);
-    getArray((PyArrayObject *)rhoUObject, rhoU);
-    getArray((PyArrayObject *)rhoEObject, rhoE);
-    //cout << "forward 2" << endl;
+        //cout << "forward 1" << endl;
+        PyObject *rhoObject, *rhoUObject, *rhoEObject;
+        PyObject *rhoaObject, *rhoUaObject, *rhoEaObject;
+        uscalar t, dt;
+        PyArg_ParseTuple(args, "OOOOOOdd", &rhoObject, &rhoUObject, &rhoEObject, &rhoaObject, &rhoUaObject, &rhoEaObject, &dt, &t);
 
-    //cout << "forward 3" << endl;
-    #ifdef ADIFF
+        arr rho, rhoU, rhoE;
+        getArray((PyArrayObject *)rhoObject, rho);
+        getArray((PyArrayObject *)rhoUObject, rhoU);
+        getArray((PyArrayObject *)rhoEObject, rhoE);
+        arr rhoa, rhoUa, rhoEa;
+        getArray((PyArrayObject *)rhoaObject, rhoa);
+        getArray((PyArrayObject *)rhoUaObject, rhoUa);
+        getArray((PyArrayObject *)rhoEaObject, rhoEa);
+        //cout << "forward 2" << endl;
+
+        //cout << "forward 3" << endl;
         tape.reset();
         tape.setActive();
         rho.adInit(tape);
         rhoU.adInit(tape);
         rhoE.adInit(tape);
-    #endif
 
-    arr rhoN(rho.shape);
-    arr rhoUN(rhoU.shape);
-    arr rhoEN(rhoE.shape);
-    rhoN.ownData = false;
-    rhoUN.ownData = false;
-    rhoEN.ownData = false;
-    timeStepper(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
-    //cout << "forward 4" << endl;
-    #ifdef ADIFF
-        scalar obj = 0.;
-        for (int i = 0; i < rho.size; i++) {
-            obj += rho(i);
+        // useless
+        rhoa.adInit(tape);
+        rhoUa.adInit(tape);
+        rhoEa.adInit(tape);
+
+        arr rhoN(rho.shape);
+        arr rhoUN(rhoU.shape);
+        arr rhoEN(rhoE.shape);
+        timeStepper(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+        //cout << "forward 4" << endl;
+        //
+        scalar adjoint = 0.;
+        const Mesh& mesh = *(rcf->mesh);
+        for (integer i = 0; i < mesh.nInternalCells; i++) {
+            scalar volume = mesh.volumes(i);
+            adjoint += rhoN(i)*rhoa(i)*volume;
+            for (integer j = 0; j < 3; j++) {
+                adjoint += rhoUN(i, j)*rhoUa(i, j)*volume;
+            }
+            adjoint += rhoEN(i)*rhoEa(i)*volume;
+
         }
-        tape.registerOutput(obj);
+        tape.registerOutput(adjoint);
         tape.setPassive();
 
-        obj.setGradient(1.0);
+        adjoint.setGradient(1.0);
         tape.evaluate();
-        cout << "evaluated tape" << endl;
-    #endif
+        //cout << "evaluated tape" << endl;
 
+        uarr rhoaN(rho.shape);
+        uarr rhoUaN(rhoU.shape);
+        uarr rhoEaN(rhoE.shape);
+        rhoaN.adGetGrad(rho);
+        rhoUaN.adGetGrad(rhoU);
+        rhoEaN.adGetGrad(rhoE);
+        
+        PyObject *rhoaNObject, *rhoUaNObject, *rhoEaNObject;
+        rhoaNObject = putArray(rhoaN);
+        rhoUaNObject = putArray(rhoUaN);
+        rhoEaNObject = putArray(rhoEaN);
+        //cout << "forward 5" << endl;
+        
+        return Py_BuildValue("(OOO)", rhoaNObject, rhoUaNObject, rhoEaNObject);
+    }
+#else
+    #define initFunc initadFVMcpp
+    #define modName "adFVMcpp"
 
-    PyObject *rhoNObject, *rhoUNObject, *rhoENObject;
-    rhoNObject = putArray(rhoN);
-    rhoUNObject = putArray(rhoUN);
-    rhoENObject = putArray(rhoEN);
-    //cout << "forward 5" << endl;
-    
-    return Py_BuildValue("(OOO)", rhoNObject, rhoUNObject, rhoENObject);
-}
+    static PyObject* forwardSolver(PyObject *self, PyObject *args) {
+
+        //cout << "forward 1" << endl;
+        PyObject *rhoObject, *rhoUObject, *rhoEObject;
+        uscalar t, dt;
+        PyArg_ParseTuple(args, "OOOdd", &rhoObject, &rhoUObject, &rhoEObject, &dt, &t);
+
+        arr rho, rhoU, rhoE;
+        getArray((PyArrayObject *)rhoObject, rho);
+        getArray((PyArrayObject *)rhoUObject, rhoU);
+        getArray((PyArrayObject *)rhoEObject, rhoE);
+        //cout << "forward 2" << endl;
+
+        //cout << "forward 3" << endl;
+        arr rhoN(rho.shape);
+        arr rhoUN(rhoU.shape);
+        arr rhoEN(rhoE.shape);
+        rhoN.ownData = false;
+        rhoUN.ownData = false;
+        rhoEN.ownData = false;
+        timeStepper(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+        //cout << "forward 4" << endl;
+        
+        PyObject *rhoNObject, *rhoUNObject, *rhoENObject;
+        rhoNObject = putArray(rhoN);
+        rhoUNObject = putArray(rhoUN);
+        rhoENObject = putArray(rhoEN);
+        //cout << "forward 5" << endl;
+        
+        return Py_BuildValue("(OOO)", rhoNObject, rhoUNObject, rhoENObject);
+    }
+#endif
 
 PyMODINIT_FUNC
-initadFVMcpp(void)
+initFunc(void)
 {
     PyObject *m;
 
@@ -86,7 +141,7 @@ initadFVMcpp(void)
         {NULL, NULL, 0, NULL}        /* Sentinel */
     };
 
-    m = Py_InitModule("adFVMcpp", Methods);
+    m = Py_InitModule(modName, Methods);
     if (m == NULL)
         return;
     import_array();
@@ -202,11 +257,7 @@ void getArray(PyArrayObject *array, arrType<dtype> & tmp) {
 template <typename dtype>
 PyObject* putArray(arrType<dtype> &tmp) {
     npy_intp shape[2] = {tmp.shape[0], tmp.shape[1]};
-    #ifdef ADIFF 
-        uscalar* data = tmp.adGet();
-    #else
-        uscalar* data = tmp.data;
-    #endif
+    uscalar* data = tmp.data;
     return PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
 }
 
