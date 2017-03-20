@@ -4,6 +4,7 @@ from .field import Field, IOField
 from .op import  div, snGrad, grad, internal_sum
 from .solver import Solver
 from .interp import central
+import adFVMcpp
 
 logger = config.Logger(__name__)
 
@@ -115,11 +116,9 @@ class RCF(Solver):
 
     # reads and updates ghost cells
     def initFields(self, fields):
-        return fields
-        primitiveFields = self.primitive(*fields)
-        #newFields = self.init(*primitiveFields)
-        primitiveFields = self.getFields(newFields, IOField)
-        return list(self.conservative(*primitiveFields))
+        newFields = adFVMcpp.ghost(*[phi.field for phi in fields])
+        #import pdb;pdb.set_trace()
+        return self.getFields(newFields, IOField, refFields=fields)
     
     @config.timeFunction('Time for writing fields')
     def writeFields(self, fields, t):
@@ -132,7 +131,7 @@ class RCF(Solver):
 
         with IOField.handle(t):
             for phi in fields + self.fields + rest:
-                phi.write()
+                phi.write(skipProcessor=True)
             if self.dynamicMesh:
                 self.mesh.write(IOField._handle)
         return

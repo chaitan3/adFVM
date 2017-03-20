@@ -185,11 +185,12 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     //cout << "c++: equation 5" << endl;
 }
 
-void RCF::boundary(const Boundary& boundary, arr& phi) {
+template <typename real>
+void RCF::boundary(const Boundary& boundary, arrType<real>& phi) {
     const Mesh& mesh = *this->mesh;
     //MPI_Barrier(MPI_COMM_WORLD);
 
-    arr phiBuf(mesh.nCells-mesh.nLocalCells, phi.shape[1], phi.shape[2]);
+    arrType<real> phiBuf(mesh.nCells-mesh.nLocalCells, phi.shape[1], phi.shape[2]);
     AMPI_Request* req;
     integer reqIndex = 0;
     if (mesh.nRemotePatches > 0) {
@@ -233,7 +234,7 @@ void RCF::boundary(const Boundary& boundary, arr& phi) {
                     integer f = startFace + i;
                     integer c = cellStartFace + i;
                     integer p = mesh.owner(f);
-                    scalar phin = 0.;
+                    real phin = 0.;
                     for (integer j = 0; j < 3; j++) {
                         phin += mesh.normals(f, j)*phi(p, j);
                     }
@@ -296,3 +297,7 @@ void RCF::boundary(const Boundary& boundary, arr& phi) {
 }
 
 
+template void RCF::boundary<scalar>(const Boundary& boundary, arrType<scalar>& phi);
+#ifdef ADIFF
+    template void RCF::boundary<uscalar>(const Boundary& boundary, arrType<uscalar>& phi);
+#endif

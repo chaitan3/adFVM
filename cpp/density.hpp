@@ -20,10 +20,6 @@ class RCF {
     Operator* operate;
 
     //// confirm that make_tuple doesn't create copies
-    void primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p);
-    
-    void conservative(const scalar U[3], const scalar T, const scalar p, scalar& rho, scalar rhoU[3], scalar& rhoE);
-    void getFlux(const scalar U[3], const scalar T, const scalar p, const uscalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux);
 
     //inline Ref<arr> internalField(arr& phi) {
         //Ref<arr> phiI = SELECT(phi, 0, mesh.nInternalCells);
@@ -51,9 +47,13 @@ class RCF {
     public:
     Mesh const* mesh;
     Boundary* boundaries;
+    void primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p);
+    void conservative(const scalar U[3], const scalar T, const scalar p, scalar& rho, scalar rhoU[3], scalar& rhoE);
+    void getFlux(const scalar U[3], const scalar T, const scalar p, const uscalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux);
 
     void equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE);
-    void boundary(const Boundary& boundary, arr& phi);
+    template<typename real>
+    void boundary(const Boundary& boundary, arrType<real>& phi);
 
     void setMesh(Mesh const* mesh)  {
         this->mesh = mesh;

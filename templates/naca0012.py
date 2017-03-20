@@ -92,9 +92,9 @@ parameters = ('BCs', 'p', 'inlet', 'pt')
 
 #nSteps = 20000
 #writeInterval = 5000
-nSteps = 20000
-writeInterval = 1000
-#nSteps = 50
-#writeInterval = 25
+#nSteps = 20000
+#writeInterval = 1000
+nSteps = 50
+writeInterval = 25
 startTime = 3.0
 dt = 6e-9
