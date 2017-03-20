@@ -375,6 +375,7 @@ Boundary getBoundary(PyObject *dict) {
                 cvalue = PyString_AsString(value2);
             }
             else {
+                cout << ckey << " " << ckey2 << endl;
             }
             boundary[ckey][ckey2] = cvalue;
         }

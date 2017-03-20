@@ -324,6 +324,21 @@ class IOField(Field):
             self.defaultComplete()
 
     @classmethod
+    def _extract(self, boundary, dimensions):
+        mesh = self.mesh
+        for patchID in boundary:
+            patch = boundary[patchID]
+            nFaces = mesh.boundary[patchID]['nFaces']
+            value = None
+            for attr in patch:
+                if attr == 'value':
+                    value = extractField(patch['value'], nFaces, dimensions)
+            if value is not None:
+                patch['_value'] = value
+        return
+
+
+    @classmethod
     def internalField(self, name, field, dimensions):
         phi = self(name, field, dimensions)  
         phi.partialComplete()
@@ -348,6 +363,7 @@ class IOField(Field):
         else:
             return self.readFoam(name, **kwargs)
 
+    
     @classmethod
     def readFoam(self, name, skipField=False):
         # mesh values required outside theano
@@ -409,6 +425,9 @@ class IOField(Field):
             dimensions = (3,)
         else:
             dimensions = (1,)
+                #import pdb;pdb.set_trace()
+        #value = extractField(self.patch[key], nFaces, dimensions)
+        self._extract(boundary, dimensions)
 
         return self(name, internalField, dimensions, boundary)
 
@@ -459,6 +478,7 @@ class IOField(Field):
             if patch['type'] in BCs.valuePatches:
                 cellStartFace, cellEndFace, _ = mesh.getPatchCellRange(patchID)
                 patch['value'] = field[cellStartFace - delta:cellEndFace - delta]
+        self._extract(boundary, dimensions)
 
         return self(name, internalField, dimensions, boundary)
  
@@ -600,6 +620,8 @@ class IOField(Field):
             patch = boundary[patchID]
             for attr in patch:
                 # look into skipProcessor
+                if attr.startswith('_'):
+                    continue
                 if attr == 'value' and patch['type'] in BCs.valuePatches:
                     writeField(handle, patch[attr], dtype, 'value')
                 else:
@@ -618,6 +640,8 @@ class IOField(Field):
             #print rank, self.name, patchID
             patch = self.boundary[patchID]
             for key, value in patch.iteritems():
+                if key.startswith('_'):
+                    continue
                 if not (key == 'value' and patch['type'] in BCs.valuePatches):
                     boundary.append([patchID, key, str(value)])
         boundary = np.array(boundary, dtype='S100')
