@@ -65,7 +65,7 @@ class RCF {
     ~RCF() {
         delete this->interpolate;
         delete this->operate;
-        delete this->boundaries;
+        delete[] this->boundaries;
     }
 };
 

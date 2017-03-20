@@ -97,8 +97,8 @@ class arrType {
     ~arrType() {
         //if (this->ownData) {
         if (this->ownData && this->data != NULL) {
-            //delete this -> data; 
-            //this -> data = NULL;
+            delete[] this -> data; 
+            this -> data = NULL;
         }
     };
     
