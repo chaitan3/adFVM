@@ -112,6 +112,8 @@ Mesh::Mesh (PyObject* meshObject) {
     this->nCells = getInteger(this->mesh, "nCells");
     this->nLocalCells = getInteger(this->mesh, "nLocalCells");
     this->nLocalFaces = this->nFaces - (this->nCells-this->nLocalCells);
+    this->nLocalPatches = getInteger(this->mesh, "nLocalPatches");
+    this->nRemotePatches = getInteger(this->mesh, "nRemotePatches");
 
     getMeshArray(this->mesh, "faces", this->faces);
     getMeshArray(this->mesh, "points", this->points);

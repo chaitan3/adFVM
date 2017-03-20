@@ -22,6 +22,8 @@ class Mesh {
         int nGhostCells;
         int nLocalFaces;
         int nLocalCells;
+        int nLocalPatches;
+        int nRemotePatches;
 
         iarr faces;
         uarr points;

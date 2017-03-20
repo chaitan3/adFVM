@@ -1,8 +1,11 @@
 from distutils.core import setup, Extension
 import numpy as np
+import mpi4py
 import os
 
-os.environ['CC'] = 'ccache gcc'
+os.environ['CC'] = 'ccache mpicc'
+os.environ['CXX'] = 'mpicxx'
+#os.environ['LDSHARED'] = 'mpicc'
 
 mod = Extension('adFVMcpp',
                 sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp'],

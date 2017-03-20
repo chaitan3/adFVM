@@ -94,6 +94,7 @@ class Mesh(object):
         self.localPatches, self.remotePatches = self.splitPatches(self.boundary)
         self.patches = self.localPatches + self.remotePatches
         self.nLocalPatches = len(self.localPatches)
+        self.nRemotePatches = len(self.remotePatches)
         self.sortedPatches = copy.copy(self.localPatches)
         self.sortedPatches.sort()
         self.boundaryTensor = {}

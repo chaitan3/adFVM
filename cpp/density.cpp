@@ -1,5 +1,6 @@
 #include "density.hpp"
 #include "riemann.hpp"
+#include "mpi.h"
 
 //// confirm that make_tuple doesn't create copies
 void RCF::primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p) {
@@ -179,6 +180,14 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
 void RCF::boundary(const Boundary& boundary, arr& phi) {
     const Mesh& mesh = *this->mesh;
 
+    scalar* phiBuf;
+    MPI_Request* req;
+    integer reqIndex = 0;
+    if (mesh.nRemotePatches > 0) {
+        phiBuf = new scalar[mesh.nGhostCells*phi.shape[1]*phi.shape[2]];
+        req = new MPI_Request[2*mesh.nRemotePatches];
+    }
+
     for (auto& patch: boundary) {
         string patchType = patch.second.at("type");
         string patchID = patch.first;
@@ -249,10 +258,33 @@ void RCF::boundary(const Boundary& boundary, arr& phi) {
                     phi(cellStartFace + i) = 1.;
                 }
             }
-        } else {
+        } else if (patchType == "processor" || patchType == "processorCyclic") {
+            //cout << "hello " << patchID << endl;
+            integer size = phi.shape[1]*phi.shape[2]*nFaces;
+            for (integer i = 0; i < nFaces; i++) {
+                integer p = mesh.owner(startFace + i);
+                integer c = cellStartFace + i;
+                for (integer j = 0; j < phi.shape[1]; j++) {
+                    for (integer k = 0; k < phi.shape[2]; k++) {
+                        phiBuf[i*phi.shape[1]*phi.shape[2] + j*phi.shape[2]+k] = phi(p, j, k);
+                    }
+                }
+            }
+            integer dest = stoi(patchInfo.at("neighbProcNo"));
+            integer tag = 0;
+            MPI_Isend(&phiBuf, size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[reqIndex]);
+            MPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[reqIndex+1]);
+            reqIndex += 2;
+        }
+        else {
             cout << "patch not found " << patchType << " for " << patchID << endl;
         }
     }
+    if (mesh.nRemotePatches > 0) {
+        MPI_Waitall(2*mesh.nRemotePatches, req, MPI_STATUSES_IGNORE);
+    }
+    delete phiBuf;
+    delete req;
 }
 
 
