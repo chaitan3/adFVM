@@ -9,12 +9,17 @@
 
 using namespace std;
 
-//#define ADIFF 1
+#define ADIFF 1
 
 #ifdef ADIFF
     #include "codi.hpp"
     typedef codi::RealReverse scalar;
 #else 
+    #include "mpi.h"
+    #define AMPI_Irecv MPI_Irecv
+    #define AMPI_Isend MPI_Isend
+    #define AMPI_Waitall MPI_Waitall
+    #define AMPI_Request MPI_Request
     typedef double scalar;
 #endif
 

@@ -1,6 +1,8 @@
 #include "density.hpp"
 #include "riemann.hpp"
-#include "mpi.h"
+#ifdef ADIFF
+    #include "externals/ampi_interface_realreverse.cpp"
+#endif
 
 //// confirm that make_tuple doesn't create copies
 void RCF::primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p) {
@@ -174,17 +176,18 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
         }
     }
     faceFluxUpdate(mesh.nLocalFaces, mesh.nFaces, false);
-    cout << "c++: equation 5" << endl;
+    //cout << "c++: equation 5" << endl;
 }
 
 void RCF::boundary(const Boundary& boundary, arr& phi) {
     const Mesh& mesh = *this->mesh;
+    //MPI_Barrier(MPI_COMM_WORLD);
 
-    arr phiBuf(mesh.nGhostCells, phi.shape[1], phi.shape[2]);
-    MPI_Request* req;
+    arr phiBuf(mesh.nCells-mesh.nLocalCells, phi.shape[1], phi.shape[2]);
+    AMPI_Request* req;
     integer reqIndex = 0;
     if (mesh.nRemotePatches > 0) {
-        req = new MPI_Request[2*mesh.nRemotePatches];
+        req = new AMPI_Request[2*mesh.nRemotePatches];
     }
 
     for (auto& patch: boundary) {
@@ -259,20 +262,21 @@ void RCF::boundary(const Boundary& boundary, arr& phi) {
             }
         } else if (patchType == "processor" || patchType == "processorCyclic") {
             //cout << "hello " << patchID << endl;
-            integer size = phi.shape[1]*phi.shape[2]*nFaces;
+            integer bufStartFace = cellStartFace - mesh.nLocalCells;
+            integer size = nFaces*phi.shape[1]*phi.shape[2];
+            integer dest = stoi(patchInfo.at("neighbProcNo"));
+            integer tag = 0;
             for (integer i = 0; i < nFaces; i++) {
                 integer p = mesh.owner(startFace + i);
-                integer c = cellStartFace + i;
+                integer b = bufStartFace + i;
                 for (integer j = 0; j < phi.shape[1]; j++) {
                     for (integer k = 0; k < phi.shape[2]; k++) {
-                        phiBuf(i, j, k) = phi(p, j, k);
+                        phiBuf(b, j, k) = phi(p, j, k);
                     }
                 }
             }
-            integer dest = stoi(patchInfo.at("neighbProcNo"));
-            integer tag = 0;
-            MPI_Isend(&phiBuf(0), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[reqIndex]);
-            MPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[reqIndex+1]);
+            AMPI_Isend(&phiBuf(bufStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[reqIndex]);
+            AMPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[reqIndex+1]);
             reqIndex += 2;
         }
         else {
@@ -280,7 +284,7 @@ void RCF::boundary(const Boundary& boundary, arr& phi) {
         }
     }
     if (mesh.nRemotePatches > 0) {
-        MPI_Waitall(2*mesh.nRemotePatches, req, MPI_STATUSES_IGNORE);
+        AMPI_Waitall(2*mesh.nRemotePatches, req, MPI_STATUSES_IGNORE);
         delete[] req;
     }
 }
