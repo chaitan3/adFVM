@@ -9,7 +9,7 @@
 
 using namespace std;
 
-#define ADIFF 1
+//#define ADIFF 1
 
 #ifdef ADIFF
     #include "codi.hpp"
