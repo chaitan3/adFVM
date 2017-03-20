@@ -23,7 +23,7 @@ class RCF {
     void primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p);
     
     void conservative(const scalar U[3], const scalar T, const scalar p, scalar& rho, scalar rhoU[3], scalar& rhoE);
-    void getFlux(const scalar U[3], const scalar T, const scalar p, const scalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux);
+    void getFlux(const scalar U[3], const scalar T, const scalar p, const uscalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux);
 
     //inline Ref<arr> internalField(arr& phi) {
         //Ref<arr> phiI = SELECT(phi, 0, mesh.nInternalCells);

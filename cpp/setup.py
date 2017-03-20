@@ -14,5 +14,5 @@ setup (name = 'adFVMcpp',
        version = '0.0.1',
        description = 'This is a demo package',
        ext_modules = [mod],
-       include_dirs=[np.get_include()]
+       include_dirs=[np.get_include(), '/home/talnikar/sources/CoDiPack/include']
        )

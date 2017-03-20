@@ -9,12 +9,11 @@
 
 using namespace std;
 
-#define ADIFF 1
+//#define ADIFF 1
 
 #ifdef ADIFF
-    #include "adept.h"
-    using adept::adouble;
-    typedef adouble scalar;
+    #include "codi.hpp"
+    typedef codi::RealReverse scalar;
 #else 
     typedef double scalar;
 #endif
@@ -142,30 +141,29 @@ class arrType {
         }
     }
 
-    void adInit() {
-        #ifdef ADIFF
+    #ifdef ADIFF 
+        void adInit(codi::RealReverse::TapeType& tape) {
             uscalar *udata = (uscalar *)this->data;
             this -> data = new scalar[this->size];
-            adept::set_values(this->data, this->size, udata);
-            this->ownData = true;
-        #else
-            return;
-        #endif
-    }
-    uscalar* adGet() {
-        #ifdef ADIFF
-            uscalar* udata = new uscalar[this->size];
             for (integer i = 0; i < this->size; i++) {
-                udata[i] = this->data[i].value();
+                this -> data[i] = udata[i];
+                tape.registerInput(this->data[i]);
             }
-            return udata;
-        #else
-            return this->data;
-        #endif
-    }
+            this->ownData = true;
+            return;
+        }
+        uscalar* adGet() {
+                uscalar* udata = new uscalar[this->size];
+                for (integer i = 0; i < this->size; i++) {
+                    udata[i] = this->data[i].value();
+                }
+                return udata;
+        }
+    #endif
 };
 
 typedef arrType<scalar> arr;
+typedef arrType<uscalar> uarr;
 typedef arrType<integer> iarr;
 
 // switch to lambda funcs?

@@ -40,7 +40,7 @@ void RCF::conservative(const scalar U[3], const scalar T, const scalar p, scalar
 //inline arr kappa(const arr& mu, const arr& T) {
     //return mu*this->Cp/this->Pr;
 //}
-void RCF::getFlux(const scalar U[3], const scalar T, const scalar p, const scalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux) {
+void RCF::getFlux(const scalar U[3], const scalar T, const scalar p, const uscalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux) {
     scalar rho, rhoU[3], rhoE;
     this->conservative(U, T, p, rho, rhoU, rhoE);
     scalar Un = 0.;

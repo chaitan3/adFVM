@@ -50,7 +50,7 @@ void riemannSolver(
                     const scalar rhoURF[3], 
                     const scalar rhoELF, 
                     const scalar rhoERF, 
-                    const scalar Normals[3],
+                    const uscalar Normals[3],
                     scalar& rhoFlux,
                     scalar rhoUFlux[3],
                     scalar& rhoEFlux) {
@@ -104,10 +104,20 @@ void riemannSolver(
     scalar eps = fabs(0.5*(rhoUnLF/rhoLF - rhoUnRF/rhoRF));
     eps += 0.5*fabs(sqrt(gamma*pLF/rhoLF) - sqrt(gamma*pRF/rhoRF));
     
-    eps = eps < 0 ? eps-SMALL : eps + SMALL;
-    lam1 = lam1 < 2*eps ? .25*lam1*lam1/eps + eps : lam1;
-    lam2 = lam2 < 2*eps ? .25*lam2*lam3/eps + eps : lam2;
-    lam3 = lam3 < 2*eps ? .25*lam3*lam3/eps + eps : lam3;
+    #ifdef ADIFF 1
+        if (eps.value() < 0) 
+            eps -= SMALL;
+        else
+            eps += SMALL;
+        if (lam1.value() < 2*eps) lam1 = .25*lam1*lam1/eps;
+        if (lam2.value() < 2*eps) lam2 = .25*lam2*lam2/eps;
+        if (lam3.value() < 2*eps) lam3 = .25*lam3*lam3/eps;
+    #else
+        eps = eps < 0 ? eps-SMALL : eps + SMALL;
+        lam1 = lam1 < 2*eps ? .25*lam1*lam1/eps + eps : lam1;
+        lam2 = lam2 < 2*eps ? .25*lam2*lam3/eps + eps : lam2;
+        lam3 = lam3 < 2*eps ? .25*lam3*lam3/eps + eps : lam3;
+    #endif
 
     scalar abv1 = 0.5*(lam2 + lam3);
     scalar abv2 = 0.5*(lam2 - lam3);

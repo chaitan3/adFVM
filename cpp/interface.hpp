@@ -24,20 +24,20 @@ class Mesh {
         int nLocalCells;
 
         iarr faces;
-        arr points;
+        uarr points;
         iarr owner;
         iarr neighbour;
 
-        arr normals;
-        arr faceCentres;
-        arr areas;
+        uarr normals;
+        uarr faceCentres;
+        uarr areas;
         iarr cellFaces;
-        arr cellCentres;
-        arr volumes;
-        arr deltas;
-        arr weights;
-        arr linearWeights;
-        arr quadraticWeights;
+        uarr cellCentres;
+        uarr volumes;
+        uarr deltas;
+        uarr weights;
+        uarr linearWeights;
+        uarr quadraticWeights;
 
         //spmat sumOp;
         //spmat sumOpT;

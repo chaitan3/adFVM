@@ -4,7 +4,7 @@
 
 RCF* rcf;
 #ifdef ADIFF
-    adept::Stack stack;
+    auto& tape = codi::RealReverse::getGlobalTape();    
 #endif
 
 static PyObject* initSolver(PyObject *self, PyObject *args) {
@@ -35,11 +35,12 @@ static PyObject* forwardSolver(PyObject *self, PyObject *args) {
     //cout << "forward 2" << endl;
 
     //cout << "forward 3" << endl;
-    rho.adInit();
-    rhoU.adInit();
-    rhoE.adInit();
     #ifdef ADIFF
-        stack.new_recording();
+        tape.reset();
+        tape.setActive();
+        rho.adInit(tape);
+        rhoU.adInit(tape);
+        rhoE.adInit(tape);
     #endif
 
     arr rhoN(rho.shape);
@@ -50,6 +51,19 @@ static PyObject* forwardSolver(PyObject *self, PyObject *args) {
     rhoEN.ownData = false;
     timeStepper(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
     //cout << "forward 4" << endl;
+    #ifdef ADIFF
+        scalar obj = 0.;
+        for (int i = 0; i < rho.size; i++) {
+            obj += rho(i);
+        }
+        tape.registerOutput(obj);
+        tape.setPassive();
+
+        obj.setGradient(1.0);
+        tape.evaluate();
+        cout << "evaluated tape" << endl;
+    #endif
+
 
     PyObject *rhoNObject, *rhoUNObject, *rhoENObject;
     rhoNObject = putArray(rhoN);
@@ -186,7 +200,11 @@ void getArray(PyArrayObject *array, arrType<dtype> & tmp) {
 template <typename dtype>
 PyObject* putArray(arrType<dtype> &tmp) {
     npy_intp shape[2] = {tmp.shape[0], tmp.shape[1]};
-    uscalar* data = tmp.adGet();
+    #ifdef ADIFF 
+        uscalar* data = tmp.adGet();
+    #else
+        uscalar* data = tmp.data;
+    #endif
     return PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
 }
 
