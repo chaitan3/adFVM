@@ -98,7 +98,10 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
         integer startFace, nFaces;
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patch.first);
         integer cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
-        if (patchInfo.at("type") == "cyclic") {
+        //if (patchInfo.at("type") == "cyclic") {
+        if (patchInfo.at("type") == "cyclic" ||
+            patchInfo.at("type") == "processor" ||
+            patchInfo.at("type") == "processorCyclic") {
             faceUpdate(startFace, startFace + nFaces, false);
         } else {
             for (integer i = 0; i < nFaces; i++) {
@@ -110,7 +113,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
             }
         }
     }
-    faceUpdate(mesh.nLocalFaces, mesh.nFaces, false);
+    //faceUpdate(mesh.nLocalFaces, mesh.nFaces, false);
     //cout << "gradU " << gradU.checkNAN() << endl;
     
     //cout << "c++: equation 3" << endl;
@@ -159,7 +162,10 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
         integer startFace, nFaces;
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patch.first);
         integer cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
-        if (patchInfo.at("type") == "cyclic") {
+        //if (patchInfo.at("type") == "cyclic") {
+        if (patchInfo.at("type") == "cyclic" ||
+            patchInfo.at("type") == "processor" ||
+            patchInfo.at("type") == "processorCyclic") {
             faceFluxUpdate(startFace, startFace + nFaces, false);
         } else {
             for (integer i = 0; i < nFaces; i++) {
@@ -175,7 +181,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
             }
         }
     }
-    faceFluxUpdate(mesh.nLocalFaces, mesh.nFaces, false);
+    //faceFluxUpdate(mesh.nLocalFaces, mesh.nFaces, false);
     //cout << "c++: equation 5" << endl;
 }
 
