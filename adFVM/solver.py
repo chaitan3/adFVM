@@ -57,7 +57,7 @@ class Solver(object):
     def compile(self, adjoint=None):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         self.compileInit()
-        adFVMcpp.init(self.mesh, *[phi.boundary for phi in self.fields])
+        adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
         return
         mesh = self.mesh
 

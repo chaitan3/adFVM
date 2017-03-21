@@ -3,6 +3,7 @@
 #include "density.hpp"
 
 RCF* rcf;
+void (*timeIntegrator)(RCF*, const arr&, const arr&, const arr&, arr&, arr&, arr&, scalar, scalar) = SSPRK;
 
 static PyObject* initSolver(PyObject *self, PyObject *args) {
 
@@ -15,6 +16,35 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         PyObject *boundaryObject = PyTuple_GetItem(args, i);
         rcf->boundaries[i-1] = getBoundary(boundaryObject);
     }
+    PyObject *dict = PyTuple_GetItem(args, 4);
+    // mu 
+    // riemann solver, face reconstructor support?
+    PyObject *key, *value;
+    Py_ssize_t pos = 0;
+    while (PyDict_Next(dict, &pos, &key, &value)) {
+        string ckey = PyString_AsString(key);
+        if (ckey == "Cp") {
+            rcf->Cp = PyFloat_AsDouble(value);
+            cout << rcf->Cp << endl;
+        } else if (ckey == "CFL") {
+            rcf->CFL = PyFloat_AsDouble(value);
+        } else if (ckey == "timeIntegrator") {
+            string cvalue = PyString_AsString(value);
+            if (cvalue == "euler") {
+                timeIntegrator = euler;
+            } else if (cvalue == "SSPRK") {
+                timeIntegrator = SSPRK;
+            }
+        } else if (ckey == "mu") {
+            if (value == Py_None) {
+                rcf->mu = &RCF::sutherland;
+            } else {
+                rcf->muC = PyFloat_AsDouble(value);
+                rcf->mu = &RCF::constantMu;
+            }
+        }
+    }
+
     return Py_None;
 }
 
@@ -56,7 +86,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         arr rhoN(rho.shape);
         arr rhoUN(rhoU.shape);
         arr rhoEN(rhoE.shape);
-        timeStepper(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+        timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
         //cout << "forward 4" << endl;
         //
         scalar adjoint = 0.;
@@ -159,7 +189,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoN.ownData = false;
         rhoUN.ownData = false;
         rhoEN.ownData = false;
-        timeStepper(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+        timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
         //cout << "forward 4" << endl;
         
         PyObject *rhoNObject, *rhoUNObject, *rhoENObject;

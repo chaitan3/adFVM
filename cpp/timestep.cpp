@@ -1,23 +1,23 @@
 #include "timestep.hpp"
 
-/*void timeStepper(RCF &rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {*/
-    //const Mesh& mesh = *rcf.mesh;
+void euler(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {
+    const Mesh& mesh = *(rcf->mesh);
 
-    //arr drho(rho.shape);
-    //arr drhoU(rhoU.shape);
-    //arr drhoE(rhoE.shape);
-    //rcf.equation(rho, rhoU, rhoE, drho, drhoU, drhoE);
+    arr drho(rho.shape);
+    arr drhoU(rhoU.shape);
+    arr drhoE(rhoE.shape);
+    rcf->equation(rho, rhoU, rhoE, drho, drhoU, drhoE);
 
-    //for (integer i = 0; i < mesh.nInternalCells; i++) {
-        //rhoN(i) = rho(i) - dt*drho(i);
-        //for (integer j = 0; j < 3; j++) {
-            //rhoUN(i, j) = rhoU(i, j) - dt*drhoU(i, j);
-        //}
-        //rhoEN(i) = rhoE(i) - dt*drhoE(i);
-    //}
-/*}*/
+    for (integer i = 0; i < mesh.nInternalCells; i++) {
+        rhoN(i) = rho(i) - dt*drho(i);
+        for (integer j = 0; j < 3; j++) {
+            rhoUN(i, j) = rhoU(i, j) - dt*drhoU(i, j);
+        }
+        rhoEN(i) = rhoE(i) - dt*drhoE(i);
+    }
+}
 
-void timeStepper(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {
+void SSPRK(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {
     const Mesh& mesh = *(rcf->mesh);
 
     const integer n = 3;

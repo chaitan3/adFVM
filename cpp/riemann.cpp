@@ -1,42 +1,41 @@
 #include "riemann.hpp"
 
-//void eulerLaxFriedrichs(
-/*void riemannSolver(*/
-                    //const scalar gamma, 
-                    //const scalar pLF, 
-                    //const scalar pRF, 
-                    //const scalar TLF, 
-                    //const scalar TRF, 
-                    //const scalar ULF[3], 
-                    //const scalar URF[3], 
-                    //const scalar rhoLF, 
-                    //const scalar rhoRF, 
-                    //const scalar rhoULF[3], 
-                    //const scalar rhoURF[3], 
-                    //const scalar rhoELF, 
-                    //const scalar rhoERF, 
-                    //const scalar Normals[3],
-                    //scalar& rhoFlux,
-                    //scalar rhoUFlux[3],
-                    //scalar& rhoEFlux) {
+void eulerLaxFriedrichs(
+                    const scalar gamma, 
+                    const scalar pLF, 
+                    const scalar pRF, 
+                    const scalar TLF, 
+                    const scalar TRF, 
+                    const scalar ULF[3], 
+                    const scalar URF[3], 
+                    const scalar rhoLF, 
+                    const scalar rhoRF, 
+                    const scalar rhoULF[3], 
+                    const scalar rhoURF[3], 
+                    const scalar rhoELF, 
+                    const scalar rhoERF, 
+                    const scalar Normals[3],
+                    scalar& rhoFlux,
+                    scalar rhoUFlux[3],
+                    scalar& rhoEFlux) {
 
-    //scalar UnLF = 0., UnRF = 0.;
-    //for (integer i = 0; i < 3; i++) {
-        //UnLF += ULF[i]*Normals[i];
-        //UnRF += URF[i]*Normals[i];
-    //}
-    //scalar cLF = sqrt(gamma*pLF/rhoLF);
-    //scalar cRF = sqrt(gamma*pRF/rhoRF);
-    //scalar aF = max(fabs(UnLF) + cLF, fabs(UnRF) + cRF);
+    scalar UnLF = 0., UnRF = 0.;
+    for (integer i = 0; i < 3; i++) {
+        UnLF += ULF[i]*Normals[i];
+        UnRF += URF[i]*Normals[i];
+    }
+    scalar cLF = sqrt(gamma*pLF/rhoLF);
+    scalar cRF = sqrt(gamma*pRF/rhoRF);
+    scalar aF = max(fabs(UnLF) + cLF, fabs(UnRF) + cRF);
 
-    //rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF);
-    //for (integer i = 0; i < 3; i++) {
-        //rhoUFlux[i] = 0.5*(rhoULF[i]*UnLF + rhoURF[i]*UnRF + (pLF + pRF)*Normals[i]) - 0.5*aF*(rhoURF[i]-rhoULF[i]);
-    //}
-    //rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoERF-rhoELF);
-/*}*/
+    rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF);
+    for (integer i = 0; i < 3; i++) {
+        rhoUFlux[i] = 0.5*(rhoULF[i]*UnLF + rhoURF[i]*UnRF + (pLF + pRF)*Normals[i]) - 0.5*aF*(rhoURF[i]-rhoULF[i]);
+    }
+    rhoEFlux = 0.5*((rhoELF + pLF)*UnLF + (rhoERF + pRF)*UnRF) - 0.5*aF*(rhoERF-rhoELF);
+}
 
-void riemannSolver(
+void eulerRoe(
                     const scalar gamma, 
                     const scalar pLF, 
                     const scalar pRF, 

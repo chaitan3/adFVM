@@ -14,7 +14,8 @@ class RCF(Solver):
                              #specific
                              'Cp': 1004.5, 
                              'gamma': 1.4, 
-                             'mu': lambda T:  1.4792e-06*T**1.5/(T+116.), 
+                             #'mu': lambda T:  1.4792e-06*T**1.5/(T+116.), 
+                             'mu': None,
                              'Pr': 0.7, 
                              'CFL': 1.2,
                              'stepFactor': 1.2,

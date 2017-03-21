@@ -116,7 +116,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     drhoE.zero();
     auto viscousFluxUpdate = [&](const scalar UF[3], const scalar TF, scalar rhoUFlux[3], scalar& rhoEFlux, integer ind) {
         scalar qF, sigmadotUF=0., sigmaF[3];
-        scalar mu = this->mu(TF);
+        scalar mu = (this->*(this->mu))(TF);
         //cout << mu << endl;
         scalar kappa = this->kappa(mu, TF);
 
@@ -168,9 +168,9 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
             scalar TLF, TRF;
             scalar pLF, pRF;
             
-            this->interpolate->secondOrder(U, gradU, ULF, i, 0);
-            this->interpolate->secondOrder(T, gradT, &TLF, i, 0);
-            this->interpolate->secondOrder(p, gradp, &pLF, i, 0);
+            this->interpolate->faceReconstructor(U, gradU, ULF, i, 0);
+            this->interpolate->faceReconstructor(T, gradT, &TLF, i, 0);
+            this->interpolate->faceReconstructor(p, gradp, &pLF, i, 0);
             if (characteristic) {
                 integer n = mesh.nInternalCells + i - mesh.nInternalFaces;
                 for (integer j = 0; j < 3; j++) {
@@ -179,9 +179,9 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
                 TRF = T(n);
                 pRF = p(n);
             } else {
-                this->interpolate->secondOrder(U, gradU, URF, i, 1);
-                this->interpolate->secondOrder(T, gradT, &TRF, i, 1);
-                this->interpolate->secondOrder(p, gradp, &pRF, i, 1);
+                this->interpolate->faceReconstructor(U, gradU, URF, i, 1);
+                this->interpolate->faceReconstructor(T, gradT, &TRF, i, 1);
+                this->interpolate->faceReconstructor(p, gradp, &pRF, i, 1);
             }
 
             scalar rhoLF, rhoRF;

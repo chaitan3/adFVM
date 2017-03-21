@@ -5,35 +5,45 @@
 #ifndef DENSITY_HPP
 #define DENSITY_HPP
 
+#define faceReconstructor secondOrder
+#define riemannSolver eulerRoe
+#define boundaryRiemannSolver eulerLaxFriedrichs
+
 class RCF {
     
+    public:
+
     scalar R = 8.314;
     scalar Cp = 1004.5;
-    //scalar Cp = 2.5;
     scalar gamma = 1.4;
     scalar Cv = Cp/gamma;
     scalar Pr = 0.7;
     scalar CFL = 1.2;
     scalar stepFactor = 1.2;
 
-    Interpolator* interpolate;
-    Operator* operate;
+    scalar muC;
+    scalar (RCF::*mu)(const scalar);
 
-    scalar mu(const scalar T) {
-      //return 0*T;
+    scalar sutherland(const scalar T) {
       return 1.4792e-06*pow(T, 1.5)/(T+116);
+    }
+    scalar constantMu(const scalar T) {
+      return this->muC;
     }
     scalar kappa(const scalar mu, const scalar T) {
       return mu*this->Cp/this->Pr;
     }
     
-    public:
 
     arr* U;
     arr* T;
     arr* p;
-    Mesh const* mesh;
     Boundary* boundaries;
+
+    Interpolator* interpolate;
+    Operator* operate;
+    Mesh const* mesh;
+
 
     void primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p);
     void conservative(const scalar U[3], const scalar T, const scalar p, scalar& rho, scalar rhoU[3], scalar& rhoE);
@@ -48,6 +58,7 @@ class RCF {
         this->interpolate = new Interpolator(mesh);
         this->operate = new Operator(mesh);
         this->boundaries = new Boundary[3];
+        this->mu = &RCF::sutherland;
     }
 
     ~RCF() {

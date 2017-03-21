@@ -11,7 +11,7 @@ from adFVM.density import RCF
 primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
-             mu=lambda T: T/T*2.5e-5,
+             mu=2.5e-5,
              faceReconstructor='SecondOrder',
              boundaryRiemannSolver='eulerLaxFriedrichs'
 
