@@ -8,8 +8,8 @@
 class RCF {
     
     scalar R = 8.314;
-    //double Cp = 1004.5;
-    scalar Cp = 2.5;
+    scalar Cp = 1004.5;
+    //scalar Cp = 2.5;
     scalar gamma = 1.4;
     scalar Cv = Cp/gamma;
     scalar Pr = 0.7;
@@ -22,32 +22,16 @@ class RCF {
     arr* T;
     arr* p;
 
-    //// confirm that make_tuple doesn't create copies
-
-    //inline Ref<arr> internalField(arr& phi) {
-        //Ref<arr> phiI = SELECT(phi, 0, mesh.nInternalCells);
-        //return phiI;
-    //}
-
-    //inline Ref<arr> boundaryField(arr& phi) { 
-        //Ref<arr> phiB = SELECT(phi, mesh.nInternalCells, mesh.nGhostCells);
-        //return phiB;
-    //}
+    scalar mu(const scalar T) {
+      //return 0*T;
+      return 1.4792e-06*pow(T, 1.5)/(T+116);
+    }
+    scalar kappa(const scalar mu, const scalar T) {
+      return mu*this->Cp/this->Pr;
+    }
     
-    //inline arr mu(const arr& T) {
-        //return 0*T;//1.4792e-06*T.pow(1.5)/(T+116);
-    //}
-    //inline arr kappa(const arr& mu, const arr& T) {
-        //return mu*this->Cp/this->Pr;
-    //}
-    
-    //public:
-        //RCF (string caseDir, double time):
-            //mesh(caseDir), 
-            //U("U", mesh, time), T("T", mesh, time), p("p", mesh, time),
-            //interpolate(mesh), operate(mesh) {};
-
     public:
+
     Mesh const* mesh;
     Boundary* boundaries;
     void primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p);

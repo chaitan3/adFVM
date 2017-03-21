@@ -6,7 +6,9 @@ void Interpolator::central(const arr& phi, scalar* phiF, integer index) {
     integer n = mesh.neighbour(index);
     scalar w = mesh.weights(index);
     for (integer i = 0; i < phi.shape[1]; i++) {
-        phiF[i] = phi(n, i)*(1-w) + phi(p, i)*w;
+        for (integer j = 0; j < phi.shape[2]; j++) {
+            phiF[i*phi.shape[2]+j] = phi(n, i, j)*(1-w) + phi(p, i, j)*w;
+        }
     }
 }
 

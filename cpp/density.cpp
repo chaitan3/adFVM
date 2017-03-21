@@ -27,12 +27,7 @@ void RCF::conservative(const scalar U[3], const scalar T, const scalar p, scalar
     rhoE = rho*(e + 0.5*U2);
 }
 
-//inline arr mu(const arr& T) {
-    //return 0*T;//1.4792e-06*T.pow(1.5)/(T+116);
-//}
-//inline arr kappa(const arr& mu, const arr& T) {
-    //return mu*this->Cp/this->Pr;
-//}
+
 void RCF::getFlux(const scalar U[3], const scalar T, const scalar p, const uscalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux) {
     scalar rho, rhoU[3], rhoE;
     this->conservative(U, T, p, rho, rhoU, rhoE);
@@ -74,7 +69,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     gradU.zero();
     gradT.zero();
     gradp.zero();
-    auto faceUpdate = [&](integer start, integer end, bool neighbour) {
+    auto faceUpdate = [&](const integer start, const integer end, const bool neighbour) {
         for (integer i = start; i < end; i++) {
             scalar UF[3], TF, pF;
             this->interpolate->central(U, UF, i);
@@ -84,6 +79,8 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
             this->operate->grad(&TF, gradT, i, neighbour);
             this->operate->grad(&pF, gradp, i, neighbour);
         }
+        //cout << start << " " << U.checkNAN() << endl;
+        //cout << end << " " << gradT.checkNAN() << endl;
     };
     faceUpdate(0, mesh.nInternalFaces, true);
     for (auto& patch: mesh.boundary) {
@@ -117,7 +114,54 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     drho.zero();
     drhoU.zero();
     drhoE.zero();
-    auto faceFluxUpdate = [&](integer start, integer end, bool neighbour, bool characteristic) {
+    auto viscousFluxUpdate = [&](const scalar UF[3], const scalar TF, scalar rhoUFlux[3], scalar& rhoEFlux, integer ind) {
+        scalar qF, sigmadotUF=0., sigmaF[3];
+        scalar mu = this->mu(TF);
+        scalar kappa = this->kappa(mu, TF);
+
+        scalar gradTF[3], gradTCF[3];
+        this->interpolate->central(gradT, gradTF, ind);
+        //for (integer i = 0; i < 3; i++) {
+            scalar snGradT;
+            this->operate->snGrad(T, &snGradT, ind);
+            //gradTCF[i] = gradTF[i] + snGradTF*mesh.Normals - (gradTF.dotN())*mesh.Normals
+            qF = kappa*snGradT;
+        //}
+        
+        scalar gradUF[3][3], gradUCF[3][3];
+        this->interpolate->central(gradU, (scalar*)gradUF, ind);
+        scalar snGradU[3];
+        this->operate->snGrad(U, snGradU, ind);
+        const uscalar *N = &mesh.normals(ind);
+
+        scalar tmp[3], tmp2[3], tmp3;
+        for (integer i = 0; i < 3; i++) {
+            tmp[i] = 0;
+            for (integer j = 0; j < 3; j++) {
+                tmp[i] += gradUF[i][j]*N[j];
+            }
+        }
+        for (integer i = 0; i < 3; i++) {
+            for (integer j = 0; j < 3; j++) {
+                gradUCF[i][j] = gradUF[i][j] + snGradU[i]*N[j] - tmp[i]*N[j];
+            }
+        }
+        tmp3 = 0;
+        for (integer i = 0; i < 3; i++) {
+            tmp2[i] = 0;
+            for (integer j = 0; j < 3; j++) {
+                tmp2[i] += (gradUCF[i][j] + gradUCF[j][i])*N[j];
+            }
+            tmp3 += gradUCF[i][i];
+        }
+        for (integer i = 0; i < 3; i++) {
+            sigmaF[i] = mu*(tmp2[i] - 2./3*tmp3*N[i]);
+            rhoUFlux[i] -= sigmaF[i];
+            sigmadotUF += sigmaF[i]*UF[i];
+        }
+        rhoEFlux -= qF + sigmadotUF;
+    };
+    auto faceFluxUpdate = [&](const integer start, const integer end, const bool neighbour, const bool characteristic) {
         for (integer i = start; i < end; i++) {
             scalar ULF[3], URF[3];
             scalar TLF, TRF;
@@ -151,10 +195,20 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
                 pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, &mesh.normals(i), 
                 rhoFlux, rhoUFlux, rhoEFlux);
+
+            scalar UF[3], TF;
+            for (integer j = 0; j < 3; j++) {
+                UF[j] = 0.5*(ULF[j] + URF[j]);
+            }
+            TF = 0.5*(TLF + TRF);
+            viscousFluxUpdate(UF, TF, rhoUFlux, rhoEFlux, i);
+
             this->operate->div(&rhoFlux, drho, i, neighbour);
             this->operate->div(rhoUFlux, drhoU, i, neighbour);
             this->operate->div(&rhoEFlux, drhoE, i, neighbour);
         }
+        //cout << start << " " << drho.checkNAN() << endl;
+        //cout << end << " " << drhoU.checkNAN() << endl;
     };
     faceFluxUpdate(0, mesh.nInternalFaces, true, false);
     //cout << "c++: equation 4" << endl;
@@ -179,7 +233,10 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
                 scalar rhoFlux;
                 scalar rhoUFlux[3];
                 scalar rhoEFlux;
+
                 this->getFlux(&U(c), T(c), p(c), &mesh.normals(index), rhoFlux, rhoUFlux, rhoEFlux);
+                viscousFluxUpdate(&U(c), T(c), rhoUFlux, rhoEFlux, index);
+
                 this->operate->div(&rhoFlux, drho, index, false);
                 this->operate->div(rhoUFlux, drhoU, index, false);
                 this->operate->div(&rhoEFlux, drhoE, index, false);
@@ -304,7 +361,7 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
                 }
                 T = Tt(i)-0.5*Un*Un/this->Cp;
                 (*this->T)(c) = T;
-                (*this->p)(c) = pt(i)-pow(T/Tt(i), this->gamma/(this->gamma-1));
+                (*this->p)(c) = pt(i)*pow(T/Tt(i), this->gamma/(this->gamma-1));
             }
         } else if (patchType == "processor" || patchType == "processorCyclic") {
             //cout << "hello " << patchID << endl;

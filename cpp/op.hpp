@@ -11,7 +11,7 @@ class Operator {
         Operator(Mesh const* mesh): mesh(mesh) {};
         void div(const scalar*, arr&, integer, bool);
         void grad(const scalar*, arr&, integer, bool);
-        //void snGrad(const arr&, arr&);
+        void snGrad(const arr&, scalar *, integer);
         //void laplacian(const arr&, const arr&, arr&);
 };
 

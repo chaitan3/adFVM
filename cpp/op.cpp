@@ -57,6 +57,17 @@ void Operator::div(const scalar* phi, arr& divPhi, integer index, bool neighbour
     }
 }
 
+void Operator::snGrad(const arr& phi, scalar* snGradPhi, integer index) {
+    const Mesh& mesh = *this->mesh;
+    
+    integer p = mesh.owner(index);
+    integer n = mesh.neighbour(index);
+    integer d = mesh.deltas(index);
+    for (integer i = 0; i < phi.shape[1]; i++) {
+        snGradPhi[i] = (phi(n, i)-phi(p, i))*d;
+    }
+}
+
 //arr Operator::div(const arr& phi) {
     //return internal_sum(phi);
 //}
