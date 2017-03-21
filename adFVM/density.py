@@ -51,7 +51,7 @@ class RCF(Solver):
 
     def compileInit(self):
         super(RCF, self).compileInit()
-        self.faceReconstructor = self.faceReconstructor(self)
+        #self.faceReconstructor = self.faceReconstructor(self)
         return
 
     def primitive(self, rho, rhoU, rhoE):

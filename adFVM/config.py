@@ -1,6 +1,6 @@
 from __future__ import print_function
 # mira hack
-import tensorflow as tf
+#import tensorflow as tf
 
 import time
 runtime = time.time()
@@ -53,24 +53,30 @@ else:
     device = 'gpu0'
     precision = np.float32
 
-import tensorflow as ad
-ad.sum = ad.reduce_sum
-import tensorflow as adsparse
-if not user.use_gpu:
-    dtype = ad.float64
-    ad.device('/cpu:0')
-else:
-    dtype = ad.float32
-    ad.device('/gpu:0')
+ad = np
+adsparse = np
+ad.placeholder = lambda *x: None
+ad.concat = lambda *x: None
+dtype = np.float64
+#import tensorflow as ad
+#ad.sum = ad.reduce_sum
+#import tensorflow as adsparse
+#if not user.use_gpu:
+#    dtype = ad.float64
+#    ad.device('/cpu:0')
+#else:
+#    dtype = ad.float32
+#    ad.device('/gpu:0')
+#
+#def py_func(func, inp, Tout, stateful=True, name=None, grad=None):
+#    # Need to generate a unique name to avoid duplicates:
+#    rnd_name = 'PyFuncGrad' + str(np.random.randint(0, 1E+8))
+#
+#    ad.RegisterGradient(rnd_name)(grad)  # see _MySquareGrad for grad example
+#    g = ad.get_default_graph()
+#    with g.gradient_override_map({"PyFunc": rnd_name}):
+#        return ad.py_func(func, inp, Tout, stateful=stateful, name=name)
 
-def py_func(func, inp, Tout, stateful=True, name=None, grad=None):
-    # Need to generate a unique name to avoid duplicates:
-    rnd_name = 'PyFuncGrad' + str(np.random.randint(0, 1E+8))
-
-    ad.RegisterGradient(rnd_name)(grad)  # see _MySquareGrad for grad example
-    g = ad.get_default_graph()
-    with g.gradient_override_map({"PyFunc": rnd_name}):
-        return ad.py_func(func, inp, Tout, stateful=stateful, name=name)
 # theano
 #project = 'adFVM'
 #dtype = str(np.zeros(1, precision).dtype)

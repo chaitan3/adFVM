@@ -86,7 +86,7 @@ class cyclic(BoundaryCondition):
         neighbourEndFace = neighbourStartFace + self.nFaces
         self.neighbourIndices = self.mesh.owner[neighbourStartFace:neighbourEndFace]
 
-    def update(self):
+    def _update(self):
         logger.debug('cyclic BC for {0}'.format(self.patchID))
         #self.value[:] = self.field[self.neighbourIndices]
         self.setValue(ad.gather(self.phi.field, self.neighbourIndices))
@@ -101,7 +101,7 @@ class slidingPeriodic1D(BoundaryCondition):
         self.interpOp = self.mesh.boundary[patchID]['loc_multiplier']
         self.velocity = self.mesh.origMesh.boundary[patchID]['loc_velocity']
 
-    def update(self):
+    def _update(self):
         logger.debug('slidingPeriodic1D BC for {0}'.format(self.patchID))
         #m = self.mesh.origMesh
         #patch = m.boundary[self.patchID]
@@ -119,7 +119,7 @@ class slidingPeriodic1D(BoundaryCondition):
         self.setValue(value)
 
 class zeroGradient(BoundaryCondition):
-    def update(self):
+    def _update(self):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))
         boundaryValue = ad.gather(self.phi.field, self.internalIndices)
         #if hasattr(self.phi, 'grad'):
@@ -130,7 +130,7 @@ class zeroGradient(BoundaryCondition):
         self.setValue(boundaryValue)
 
 class symmetryPlane(zeroGradient):
-    def update(self):
+    def _update(self):
         logger.debug('symmetryPlane BC for {0}'.format(self.patchID))
         # if vector
         if self.phi.dimensions == (3,):
@@ -148,7 +148,7 @@ class fixedValue(BoundaryCondition):
         #self.fixedValue = extractField(self.patch['value'], self.nFaces, self.phi.dimensions == (3,))
         self.fixedValue = self.createInput('value', self.phi.dimensions)
 
-    def update(self):
+    def _update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
         self.setValue(self.fixedValue)
 
@@ -158,12 +158,12 @@ class CharacteristicBoundaryCondition(BoundaryCondition):
         #self.U, self.T, _ = self.solver.getBCFields()
         #self.p = self.phi
 
-    def update(self):
+    def _update(self):
         U, T, _ = self.solver.getBCFields()
         self.UBC = U.BC[self.patchID]
         self.TBC = T.BC[self.patchID]
 
-    def updateAll(self, (U, T, p)):
+    def _updateAll(self, (U, T, p)):
         self.UBC.update = new.instancemethod(lambda self_: self_.setValue(U), self.UBC, None)
         self.TBC.update = new.instancemethod(lambda self_: self_.setValue(T), self.TBC, None)
         self.setValue(p)
@@ -176,7 +176,7 @@ class CBC_UPT(CharacteristicBoundaryCondition):
         self.T0 = self.createInput('T0', (1,))
         self.p0 = self.createInput('p0', (1,))
 
-    def update(self):
+    def _update(self):
         super(CBC_UPT, self).update()
         self.updateAll((self.U0, self.T0, self.p0))
         #self.T.setField((self.cellStartFace, self.cellEndFace), self.T0)
@@ -197,7 +197,7 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
         else:
             self.direction = self.normals
 
-    def update(self):
+    def _update(self):
         super(CBC_TOTAL_PT, self).update()
         U, T, p = self.solver.getBCFields()
         Un = dot(ad.gather(U.field, self.internalIndices), self.direction)
@@ -218,7 +218,7 @@ class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
         self.UBC = zeroGradient(self.U, patchID)
         self.TBC = zeroGradient(self.T, patchID)
 
-    def update(self):
+    def _update(self):
         raise Exception('TODO')
         self.UBC.update()
         self.TBC.update()
@@ -297,7 +297,7 @@ class turbulentInletVelocityN(BoundaryCondition):
         self.Uscale = self.lengthScale/self.timeScale
         self.k = self.kd#*self.Uscale/self.c
 
-    def update(self):
+    def _update(self):
         logger.debug('turbulentInletVelocity BC for {0}'.format(self.patchID))
         #self.value[:] = self.fixedValue
         value = self.value
@@ -319,7 +319,7 @@ class turbulentInletVelocity(BoundaryCondition):
         super(self.__class__, self).__init__(phi, patchID)
         self.Umean = self.createInput('Umean', (3,))
 
-    def update(self):
+    def _update(self):
         self.setValue(self.Umean)
 
 
