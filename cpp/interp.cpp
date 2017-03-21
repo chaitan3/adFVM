@@ -13,7 +13,7 @@ void Interpolator::central(const arr& phi, scalar* phiF, integer index) {
 }
 
 //void Interpolator::firstOrder(const arr& phi, const arr& gradPhi, scalar *phiF, integer index, integer swap) {
-/*void Interpolator::secondOrder(const arr& phi, const arr& gradPhi, scalar *phiF, integer index, integer swap) {*/
+//void Interpolator::secondOrder(const arr& phi, const arr& gradPhi, scalar *phiF, integer index, integer swap) {
     //const Mesh& mesh = *this->mesh;
     //integer p;
     //if (swap) {
@@ -24,7 +24,7 @@ void Interpolator::central(const arr& phi, scalar* phiF, integer index) {
     //for (integer i = 0; i < phi.shape[1]; i++) {
         //phiF[i] = phi(p, i);
     //}
-/*}*/
+//}
 
 void Interpolator::secondOrder(const arr& phi, const arr& gradPhi, scalar *phiF, integer index, integer swap) {
     const Mesh& mesh = *this->mesh;

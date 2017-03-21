@@ -4,6 +4,7 @@ import mpi4py
 import os
 
 os.environ['CC'] = 'ccache mpicc'
+#os.environ['CC'] = 'mpicc'
 os.environ['CXX'] = 'mpicxx'
 #os.environ['LDSHARED'] = 'mpicc'
 

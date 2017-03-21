@@ -328,14 +328,12 @@ void getArray(PyArrayObject *array, arrType<dtype> & tmp) {
     assert(array);
     int nDims = PyArray_NDIM(array);
     npy_intp* dims = PyArray_DIMS(array);
-    int rows = dims[1];
-    int cols = dims[0];
-    if (nDims == 1) {
-        rows = 1;
+    integer shape[NDIMS] = {1,1,1,1};
+    for (integer i = 0; i < nDims; i++) {
+        shape[i] = dims[i];
     }
     dtype *data = (dtype *) PyArray_DATA(array);
     //cout << rows << " " << cols << endl;
-    integer shape[NDIMS] = {cols, rows, 1, 1};
     arrType<dtype> result(shape, data);
     tmp = result;
     //Py_DECREF(array);

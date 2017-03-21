@@ -117,6 +117,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     auto viscousFluxUpdate = [&](const scalar UF[3], const scalar TF, scalar rhoUFlux[3], scalar& rhoEFlux, integer ind) {
         scalar qF, sigmadotUF=0., sigmaF[3];
         scalar mu = this->mu(TF);
+        //cout << mu << endl;
         scalar kappa = this->kappa(mu, TF);
 
         scalar gradTF[3], gradTCF[3];
