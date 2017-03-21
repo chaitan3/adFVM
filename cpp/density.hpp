@@ -18,6 +18,9 @@ class RCF {
 
     Interpolator* interpolate;
     Operator* operate;
+    arr* U;
+    arr* T;
+    arr* p;
 
     //// confirm that make_tuple doesn't create copies
 
@@ -52,8 +55,8 @@ class RCF {
     void getFlux(const scalar U[3], const scalar T, const scalar p, const uscalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux);
 
     void equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE);
-    template<typename real>
-    void boundary(const Boundary& boundary, arrType<real>& phi);
+    template<typename dtype>
+    void boundary(const Boundary& boundary, arrType<dtype>& phi);
 
     void setMesh(Mesh const* mesh)  {
         this->mesh = mesh;

@@ -88,6 +88,13 @@ class arrType {
         this -> data = new dtype[this->size];
     }
 
+    arrType(const integer* shape, const string& data) {
+        this->init(shape);
+        this->data = const_cast<dtype *>((dtype *)data.data());
+        this->ownData = false ;
+    }
+
+
     //arrType(const arrType& ref) {
     //    cout << "copy arr " << ref.shape[0] << " " << ref.shape[1] << endl;
     //}
@@ -120,6 +127,8 @@ class arrType {
                       i2*this->strides[1] +
                       i3*this->strides[2]]);
     }
+
+
 
     dtype& operator()(const integer i1) {
         return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1));

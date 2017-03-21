@@ -71,6 +71,9 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     }
     //cout << "c++: equation 2" << endl;
 
+    this->U = &U;
+    this->T = &T;
+    this->p = &p;
     this->boundary(this->boundaries[0], U);
     this->boundary(this->boundaries[1], T);
     this->boundary(this->boundaries[2], p);
@@ -124,18 +127,27 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     drho.zero();
     drhoU.zero();
     drhoE.zero();
-    auto faceFluxUpdate = [&](integer start, integer end, bool neighbour) {
+    auto faceFluxUpdate = [&](integer start, integer end, bool neighbour, bool characteristic) {
         for (integer i = start; i < end; i++) {
             scalar ULF[3], URF[3];
             scalar TLF, TRF;
             scalar pLF, pRF;
             
             this->interpolate->secondOrder(U, gradU, ULF, i, 0);
-            this->interpolate->secondOrder(U, gradU, URF, i, 1);
             this->interpolate->secondOrder(T, gradT, &TLF, i, 0);
-            this->interpolate->secondOrder(T, gradT, &TRF, i, 1);
             this->interpolate->secondOrder(p, gradp, &pLF, i, 0);
-            this->interpolate->secondOrder(p, gradp, &pRF, i, 1);
+            if (characteristic) {
+                integer n = mesh.nInternalCells + i - mesh.nInternalFaces;
+                for (integer j = 0; j < 3; j++) {
+                    URF[j] = U(n, j);
+                }
+                TRF = T(n);
+                pRF = p(n);
+            } else {
+                this->interpolate->secondOrder(U, gradU, URF, i, 1);
+                this->interpolate->secondOrder(T, gradT, &TRF, i, 1);
+                this->interpolate->secondOrder(p, gradp, &pRF, i, 1);
+            }
 
             scalar rhoLF, rhoRF;
             scalar rhoULF[3], rhoURF[3];
@@ -154,7 +166,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
             this->operate->div(&rhoEFlux, drhoE, i, neighbour);
         }
     };
-    faceFluxUpdate(0, mesh.nInternalFaces, true);
+    faceFluxUpdate(0, mesh.nInternalFaces, true, false);
     //cout << "c++: equation 4" << endl;
     // characteristic boundary
     for (auto& patch: mesh.boundary) {
@@ -162,11 +174,14 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
         integer startFace, nFaces;
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patch.first);
         integer cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
+        string patchType = patchInfo.at("type");
         //if (patchInfo.at("type") == "cyclic") {
-        if (patchInfo.at("type") == "cyclic" ||
-            patchInfo.at("type") == "processor" ||
-            patchInfo.at("type") == "processorCyclic") {
-            faceFluxUpdate(startFace, startFace + nFaces, false);
+        if (patchType == "cyclic" ||
+            patchType == "processor" ||
+            patchType == "processorCyclic") {
+            faceFluxUpdate(startFace, startFace + nFaces, false, false);
+        } else if (patchType == "characteristic") {
+            faceFluxUpdate(startFace, startFace + nFaces, false, true);
         } else {
             for (integer i = 0; i < nFaces; i++) {
                 integer index = startFace + i;
@@ -185,12 +200,12 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     //cout << "c++: equation 5" << endl;
 }
 
-template <typename real>
-void RCF::boundary(const Boundary& boundary, arrType<real>& phi) {
+template <typename dtype>
+void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
     const Mesh& mesh = *this->mesh;
     //MPI_Barrier(MPI_COMM_WORLD);
 
-    arrType<real> phiBuf(mesh.nCells-mesh.nLocalCells, phi.shape[1], phi.shape[2]);
+    arrType<dtype> phiBuf(mesh.nCells-mesh.nLocalCells, phi.shape[1], phi.shape[2]);
     AMPI_Request* req;
     integer reqIndex = 0;
     if (mesh.nRemotePatches > 0) {
@@ -234,7 +249,7 @@ void RCF::boundary(const Boundary& boundary, arrType<real>& phi) {
                     integer f = startFace + i;
                     integer c = cellStartFace + i;
                     integer p = mesh.owner(f);
-                    real phin = 0.;
+                    dtype phin = 0.;
                     for (integer j = 0; j < 3; j++) {
                         phin += mesh.normals(f, j)*phi(p, j);
                     }
@@ -254,9 +269,8 @@ void RCF::boundary(const Boundary& boundary, arrType<real>& phi) {
                 }
             }
         } else if (patchType == "fixedValue") {
-            real* data = const_cast<real *>((real *)patch.second.at("_value").data());
             integer shape[NDIMS] = {nFaces, phi.shape[1], phi.shape[2], 1};
-            arrType<real> phiVal(shape, data);
+            arrType<dtype> phiVal(shape, patch.second.at("_value"));
 
             for (integer i = 0; i < nFaces; i++) {
                 integer c = cellStartFace + i;
@@ -265,6 +279,42 @@ void RCF::boundary(const Boundary& boundary, arrType<real>& phi) {
                         phi(c, j, k) = phiVal(i, j, k);
                     }
                 }
+            }
+        } else if (patchType == "CBC_UPT") {
+            integer shape[NDIMS] = {nFaces, 3, 1, 1};
+            arrType<dtype> Uval(shape, patch.second.at("_U0"));
+            shape[1] = 1;
+            arrType<dtype> Tval(shape, patch.second.at("_T0"));
+            arrType<dtype> pval(shape, patch.second.at("_p0"));
+            for (integer i = 0; i < nFaces; i++) {
+                integer c = cellStartFace + i;
+                for (integer j = 0; j < 3; j++) {
+                    (*this->U)(c, j) = Uval(i, j);
+                }
+                (*this->T)(c) = Tval(i);
+                (*this->p)(c) = pval(i);
+            }
+        } else if (patchType == "CBC_TOTAL_PT") {
+            integer shape[NDIMS] = {nFaces, 1, 1, 1};
+            arrType<dtype> Tt(shape, patch.second.at("_Tt"));
+            arrType<dtype> pt(shape, patch.second.at("_pt"));
+            shape[1] = 3;
+            arrType<dtype> direction(shape, patch.second.at("_direction"));
+
+            for (integer i = 0; i < nFaces; i++) {
+                integer c = cellStartFace + i;
+                integer o = mesh.owner(startFace + i);
+                scalar Un = 0;
+                scalar U[3], T, p;
+                for (integer j = 0; j < 3; j++) {
+                    Un = Un + (*this->U)(o, j)*direction(i, j);
+                }
+                for (integer j = 0; j < 3; j++) {
+                    (*this->U)(c, j) = Un*direction(i, j);
+                }
+                T = Tt(i)-0.5*Un*Un/this->Cp;
+                (*this->T)(c) = T;
+                (*this->p)(c) = pt(i)-pow(T/Tt(i), this->gamma/(this->gamma-1));
             }
         } else if (patchType == "processor" || patchType == "processorCyclic") {
             //cout << "hello " << patchID << endl;
@@ -285,6 +335,8 @@ void RCF::boundary(const Boundary& boundary, arrType<real>& phi) {
             AMPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[reqIndex+1]);
             reqIndex += 2;
         }
+        else if (patchType == "calculated") {
+        } 
         else {
             cout << "patch not found " << patchType << " for " << patchID << endl;
         }
