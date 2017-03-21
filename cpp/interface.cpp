@@ -374,7 +374,7 @@ Boundary getBoundary(PyObject *dict) {
             else if (PyString_Check(value2)) {
                 cvalue = PyString_AsString(value2);
             }
-            else if (ckey2 == "_value") {
+            else if (ckey2[0] == "_") {
                 PyArrayObject* val = (PyArrayObject*) value2;
                 char* data = (char *) PyArray_DATA(val);
                 int size = PyArray_NBYTES(val);

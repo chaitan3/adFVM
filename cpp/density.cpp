@@ -27,16 +27,6 @@ void RCF::conservative(const scalar U[3], const scalar T, const scalar p, scalar
     rhoE = rho*(e + 0.5*U2);
 }
 
-//inline Ref<arr> internalField(arr& phi) {
-    //Ref<arr> phiI = SELECT(phi, 0, mesh.nInternalCells);
-    //return phiI;
-//}
-
-//inline Ref<arr> boundaryField(arr& phi) { 
-    //Ref<arr> phiB = SELECT(phi, mesh.nInternalCells, mesh.nGhostCells);
-    //return phiB;
-//}
-
 //inline arr mu(const arr& T) {
     //return 0*T;//1.4792e-06*T.pow(1.5)/(T+116);
 //}

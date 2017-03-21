@@ -324,21 +324,6 @@ class IOField(Field):
             self.defaultComplete()
 
     @classmethod
-    def _extract(self, boundary, dimensions):
-        mesh = self.mesh
-        for patchID in boundary:
-            patch = boundary[patchID]
-            nFaces = mesh.boundary[patchID]['nFaces']
-            value = None
-            for attr in patch:
-                if attr == 'value':
-                    value = extractField(patch['value'], nFaces, dimensions)
-            if value is not None:
-                patch['_value'] = value
-        return
-
-
-    @classmethod
     def internalField(self, name, field, dimensions):
         phi = self(name, field, dimensions)  
         phi.partialComplete()
@@ -427,7 +412,6 @@ class IOField(Field):
             dimensions = (1,)
                 #import pdb;pdb.set_trace()
         #value = extractField(self.patch[key], nFaces, dimensions)
-        self._extract(boundary, dimensions)
 
         return self(name, internalField, dimensions, boundary)
 
@@ -478,7 +462,6 @@ class IOField(Field):
             if patch['type'] in BCs.valuePatches:
                 cellStartFace, cellEndFace, _ = mesh.getPatchCellRange(patchID)
                 patch['value'] = field[cellStartFace - delta:cellEndFace - delta]
-        self._extract(boundary, dimensions)
 
         return self(name, internalField, dimensions, boundary)
  

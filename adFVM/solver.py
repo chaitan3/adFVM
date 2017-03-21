@@ -56,11 +56,11 @@ class Solver(object):
 
     def compile(self, adjoint=None):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
+        self.compileInit()
         adFVMcpp.init(self.mesh, *[phi.boundary for phi in self.fields])
         return
         mesh = self.mesh
 
-        self.compileInit()
 
         if self.localTimeStep:
             self.dt = ad.placeholder(config.dtype)
@@ -454,21 +454,21 @@ class SolverFunction(object):
         self.name = name
         mesh = solver.mesh
         # values require inplace substitution
-        self.populate_mesh(self.symbolic, mesh, mesh)
-        self.populate_mesh(self.values, mesh.origMesh, mesh)
-        if BCs:
-            self.populate_BCs(self.symbolic, solver, 0)
-            self.populate_BCs(self.values, solver, 1)
-        # source terms
-        if source and len(solver.sourceTerms) > 0:
-            symbolic, values = zip(*solver.sourceTerms)
-            self.symbolic.extend(symbolic)
-            self.values.extend(values)
-        # postpro variables
-        if postpro and len(solver.postpro) > 0:
-            symbolic, values = zip(*solver.postpro)
-            self.symbolic.extend(symbolic)
-            self.values.extend(values)
+        #self.populate_mesh(self.symbolic, mesh, mesh)
+        #self.populate_mesh(self.values, mesh.origMesh, mesh)
+        #if BCs:
+        #    self.populate_BCs(self.symbolic, solver, 0)
+        #    self.populate_BCs(self.values, solver, 1)
+        ## source terms
+        #if source and len(solver.sourceTerms) > 0:
+        #    symbolic, values = zip(*solver.sourceTerms)
+        #    self.symbolic.extend(symbolic)
+        #    self.values.extend(values)
+        ## postpro variables
+        #if postpro and len(solver.postpro) > 0:
+        #    symbolic, values = zip(*solver.postpro)
+        #    self.symbolic.extend(symbolic)
+        #    self.values.extend(values)
 
         self.generate(inputs, outputs, solver.mesh.case)
 
