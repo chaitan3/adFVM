@@ -18,9 +18,6 @@ class RCF {
 
     Interpolator* interpolate;
     Operator* operate;
-    arr* U;
-    arr* T;
-    arr* p;
 
     scalar mu(const scalar T) {
       //return 0*T;
@@ -32,8 +29,12 @@ class RCF {
     
     public:
 
+    arr* U;
+    arr* T;
+    arr* p;
     Mesh const* mesh;
     Boundary* boundaries;
+
     void primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p);
     void conservative(const scalar U[3], const scalar T, const scalar p, scalar& rho, scalar rhoU[3], scalar& rhoE);
     void getFlux(const scalar U[3], const scalar T, const scalar p, const uscalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux);

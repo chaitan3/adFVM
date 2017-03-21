@@ -190,6 +190,9 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         for (integer i = 0; i < mesh.nInternalCells; i++) {
             rcf->primitive(rho(i), &rhoU(i), rhoE(i), &U(i), T(i), p(i));
         }
+        rcf->U = &U;
+        rcf->T = &T;
+        rcf->p = &p;
         rcf->boundary(rcf->boundaries[0], U);
         rcf->boundary(rcf->boundaries[1], T);
         rcf->boundary(rcf->boundaries[2], p);
