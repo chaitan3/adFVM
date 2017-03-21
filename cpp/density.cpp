@@ -254,17 +254,16 @@ void RCF::boundary(const Boundary& boundary, arrType<real>& phi) {
                 }
             }
         } else if (patchType == "fixedValue") {
-            // fix this
-            // more boundary conditions
-            if (phi.shape[1] == 3) {
-                for (integer i = 0; i < nFaces; i++) {
-                    phi(cellStartFace + i, 0) = 3.;
-                    phi(cellStartFace + i, 1) = 0.;
-                    phi(cellStartFace + i, 2) = 0.;
-                } 
-            } else {
-                for (integer i = 0; i < nFaces; i++) {
-                    phi(cellStartFace + i) = 1.;
+            real* data = const_cast<real *>((real *)patch.second.at("_value").data());
+            integer shape[NDIMS] = {nFaces, phi.shape[1], phi.shape[2], 1};
+            arrType<real> phiVal(shape, data);
+
+            for (integer i = 0; i < nFaces; i++) {
+                integer c = cellStartFace + i;
+                for (integer j = 0; j < phi.shape[1]; j++) {
+                    for (integer k = 0; k < phi.shape[2]; k++) {
+                        phi(c, j, k) = phiVal(i, j, k);
+                    }
                 }
             }
         } else if (patchType == "processor" || patchType == "processorCyclic") {

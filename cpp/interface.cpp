@@ -374,8 +374,11 @@ Boundary getBoundary(PyObject *dict) {
             else if (PyString_Check(value2)) {
                 cvalue = PyString_AsString(value2);
             }
-            else {
-                cout << ckey << " " << ckey2 << endl;
+            else if (ckey2 == "_value") {
+                PyArrayObject* val = (PyArrayObject*) value2;
+                char* data = (char *) PyArray_DATA(val);
+                int size = PyArray_NBYTES(val);
+                cvalue = string(data, size);
             }
             boundary[ckey][ckey2] = cvalue;
         }
