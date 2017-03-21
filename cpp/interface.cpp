@@ -1,9 +1,10 @@
 #include "interface.hpp"
 #include "timestep.hpp"
 #include "density.hpp"
+#include "objective.hpp"
 
 RCF* rcf;
-void (*timeIntegrator)(RCF*, const arr&, const arr&, const arr&, arr&, arr&, arr&, scalar, scalar) = SSPRK;
+scalar (*timeIntegrator)(RCF*, const arr&, const arr&, const arr&, arr&, arr&, arr&, scalar, scalar) = SSPRK;
 
 static PyObject* initSolver(PyObject *self, PyObject *args) {
 
@@ -44,6 +45,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
             }
         }
     }
+    rcf->objective = objectiveDrag;
 
     return Py_None;
 }
@@ -86,7 +88,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         arr rhoN(rho.shape);
         arr rhoUN(rhoU.shape);
         arr rhoEN(rhoE.shape);
-        timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+        scalar objective = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
         //cout << "forward 4" << endl;
         //
         scalar adjoint = 0.;
@@ -101,26 +103,38 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 
         }
         tape.registerOutput(adjoint);
+        tape.registerOutput(objective);
         tape.setPassive();
+        tape.evaluate();
 
         adjoint.setGradient(1.0);
-        tape.evaluate();
-        //cout << "evaluated tape" << endl;
-
         uarr rhoaN(rho.shape);
         uarr rhoUaN(rhoU.shape);
         uarr rhoEaN(rhoE.shape);
         rhoaN.adGetGrad(rho);
         rhoUaN.adGetGrad(rhoU);
         rhoEaN.adGetGrad(rhoE);
+
+        objective.setGradient(1.0);
+        tape.evaluate();
+        for (integer i = 0; i < mesh.nInternalCells; i++) {
+            uscalar v = mesh.volumes(i);
+            rhoaN(i) += rho(i).getGradient()/v;
+            for (integer j = 0; j < 3; j++) {
+                rhoUaN(i, j) += rhoU(i,j).getGradient()/v;
+            }
+            rhoEaN(i) += rhoE(i).getGradient()/v;
+        }
         
+        //cout << "evaluated tape" << endl;
+
         PyObject *rhoaNObject, *rhoUaNObject, *rhoEaNObject;
         rhoaNObject = putArray(rhoaN);
         rhoUaNObject = putArray(rhoUaN);
         rhoEaNObject = putArray(rhoEaN);
         //cout << "forward 5" << endl;
         
-        return Py_BuildValue("(OOO)", rhoaNObject, rhoUaNObject, rhoEaNObject);
+        return Py_BuildValue("(OOOd)", rhoaNObject, rhoUaNObject, rhoEaNObject, objective.value());
     }
     static PyObject* ghost(PyObject *self, PyObject *args) {
 
@@ -189,7 +203,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoN.ownData = false;
         rhoUN.ownData = false;
         rhoEN.ownData = false;
-        timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+        scalar objective = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
         //cout << "forward 4" << endl;
         
         PyObject *rhoNObject, *rhoUNObject, *rhoENObject;
@@ -198,7 +212,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoENObject = putArray(rhoEN);
         //cout << "forward 5" << endl;
         
-        return Py_BuildValue("(OOO)", rhoNObject, rhoUNObject, rhoENObject);
+        return Py_BuildValue("(OOOd)", rhoNObject, rhoUNObject, rhoENObject, objective);
     }
     static PyObject* ghost(PyObject *self, PyObject *args) {
 

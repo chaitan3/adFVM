@@ -42,7 +42,7 @@ void RCF::getFlux(const scalar U[3], const scalar T, const scalar p, const uscal
     rhoEFlux = (rhoE + p)*Un;
 }
 
-void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE) {
+void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE, scalar& objective) {
     // make decision between 1 and 3 a template
     // optimal memory layout? combine everything?
     //cout << "c++: equation 1" << endl;
@@ -62,6 +62,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     this->boundary(this->boundaries[0], U);
     this->boundary(this->boundaries[1], T);
     this->boundary(this->boundaries[2], p);
+    objective = this->objective(this, U, T, p);
 
     arr gradU(mesh.nCells, 3, 3);
     arr gradT(mesh.nCells, 1, 3);

@@ -7,7 +7,8 @@
 
 #define faceReconstructor secondOrder
 #define riemannSolver eulerRoe
-#define boundaryRiemannSolver eulerLaxFriedrichs
+#define boundaryRiemannSolver eulerRoe
+//#define boundaryRiemannSolver eulerLaxFriedrichs
 
 class RCF {
     
@@ -43,13 +44,14 @@ class RCF {
     Interpolator* interpolate;
     Operator* operate;
     Mesh const* mesh;
+    scalar (*objective)(RCF*, const arr&, const arr&, const arr&);
 
 
     void primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p);
     void conservative(const scalar U[3], const scalar T, const scalar p, scalar& rho, scalar rhoU[3], scalar& rhoE);
     void getFlux(const scalar U[3], const scalar T, const scalar p, const uscalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux);
 
-    void equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE);
+    void equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE, scalar& objective);
     template<typename dtype>
     void boundary(const Boundary& boundary, arrType<dtype>& phi);
 

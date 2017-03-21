@@ -43,7 +43,7 @@ class Adjoint(Solver):
 
     def compile(self):
         #self.compileInit(functionName='adjoint_init')
-        adFVMcpp.init(self.mesh, *[phi.boundary for phi in self.fields])
+        adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in self.fields] + [primal.__class__.defaultConfig]))
         primal.compile(adjoint=self)
         #self.map = primal.gradient
         if self.scaling:

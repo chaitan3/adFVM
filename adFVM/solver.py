@@ -356,10 +356,8 @@ class Solver(object):
 
             inputs = [phi.field for phi in fields] + [dt, t]
             #outputs = self.map(*inputs)
-            #newFields, objective, dtc, local, remote = outputs[:-4], outputs[-4], outputs[-3], outputs[-2], outputs[-1]
             outputs = adFVMcpp.forward(*inputs)
-            newFields = outputs
-            objective = 0
+            newFields, objective = outputs[:3], outputs[3]
             dtc = dt
             local = remote = 0
 

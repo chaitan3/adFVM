@@ -13,7 +13,7 @@ for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], ['', '-DADIFF']):
     if len(args) > 0:
         compile_args += [args]
     mod = Extension(module,
-                    sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp'],
+                    sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp'],
                     extra_compile_args=compile_args,
                     #extra_linker_args=['--whole-archive'],
                     libraries=['AMPI'])
