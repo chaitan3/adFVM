@@ -29,7 +29,6 @@ if not isinstance(perturb, list):
     perturb = [perturb]
 nPerturb = len(perturb)
 
-primal.objective = objective
 primal.timeStepFile = primal.mesh.case + '{0}.{1}.txt'.format(nSteps, writeInterval)
 pprint('')
 

@@ -1,8 +1,12 @@
 #include "objective.hpp"
 
+scalar objectiveNone(RCF* rcf, const arr& U, const arr& T, const arr& p) {
+    return 0;
+}
+
 scalar objectiveDrag(RCF* rcf, const arr& U, const arr& T, const arr& p) {
     const Mesh& mesh = *(rcf->mesh);
-    string patchID = "airfoil";
+    string patchID = rcf->objectiveDragInfo;
     integer startFace, nFaces;
     tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
     scalar drag = 0;

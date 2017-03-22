@@ -45,9 +45,20 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
                 rcf->muC = PyFloat_AsDouble(value);
                 rcf->mu = &RCF::constantMu;
             }
+        } else if (ckey == "objective") {
+            if (value == Py_None) {
+                rcf->objective = objectiveNone;
+            } else {
+                string cvalue = PyString_AsString(value);
+                if (cvalue == "drag") {
+                    rcf->objective = objectiveDrag;
+                }
+            }
+        } else if (ckey == "objectiveDragInfo") {
+            string cvalue = PyString_AsString(value);
+            rcf->objectiveDragInfo = cvalue;
         }
     }
-    rcf->objective = objectiveDrag;
 
     Py_INCREF(Py_None);
     return Py_None;

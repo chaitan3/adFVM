@@ -19,7 +19,7 @@ logger = config.Logger(__name__)
 class Solver(object):
     defaultConfig = {
                         'timeIntegrator': 'euler',
-                        'objective': lambda *x: 0,
+                        'objective': None,
                         'adjoint': False,
                         'dynamicMesh': False,
                         'localTimeStep': False,
@@ -51,7 +51,6 @@ class Solver(object):
         self.nStages = self.timeStepCoeff[0].shape[0]
         self.stage = 0
         self.init = None
-        self.objective = None
         return
 
     def compile(self, adjoint=None):

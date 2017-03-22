@@ -45,7 +45,7 @@ class RCF {
     Operator* operate;
     Mesh const* mesh;
     scalar (*objective)(RCF*, const arr&, const arr&, const arr&);
-
+    string objectiveDragInfo;
 
     void primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p);
     void conservative(const scalar U[3], const scalar T, const scalar p, scalar& rho, scalar rhoU[3], scalar& rhoE);

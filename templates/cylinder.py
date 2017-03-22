@@ -14,7 +14,8 @@ primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/',
              mu=2.5e-5,
              faceReconstructor='SecondOrder',
              boundaryRiemannSolver='eulerLaxFriedrichs'
-
+             objective = 'drag',
+             objectiveDragInfo = 'cylinder',
 )
 
 def dot(a, b):

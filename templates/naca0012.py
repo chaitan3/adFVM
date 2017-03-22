@@ -12,7 +12,9 @@ primal = RCF('/home/talnikar/adFVM/cases/naca0012/hyper/adjoint_test/',
              mu=3.4e-5,
              faceReconstructor='SecondOrder',
              #faceReconstructor='AnkitWENO',
-             boundaryRiemannSolver='eulerLaxFriedrichs'
+             boundaryRiemannSolver='eulerLaxFriedrichs',
+             objective='drag',
+             objectiveDragInfo='airfoil'             
 )
 
 def dot(a, b):
