@@ -61,7 +61,8 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         PyObject *rhoObject, *rhoUObject, *rhoEObject;
         PyObject *rhoaObject, *rhoUaObject, *rhoEaObject;
         uscalar t, dt;
-        PyArg_ParseTuple(args, "OOOOOOdd", &rhoObject, &rhoUObject, &rhoEObject, &rhoaObject, &rhoUaObject, &rhoEaObject, &dt, &t);
+        integer nSteps;
+        PyArg_ParseTuple(args, "OOOOOOddi", &rhoObject, &rhoUObject, &rhoEObject, &rhoaObject, &rhoUaObject, &rhoEaObject, &dt, &t, &nSteps);
 
         arr rho, rhoU, rhoE;
         getArray((PyArrayObject *)rhoObject, rho);
@@ -94,20 +95,20 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         scalar adjoint = 0.;
         const Mesh& mesh = *(rcf->mesh);
         for (integer i = 0; i < mesh.nInternalCells; i++) {
-            scalar volume = mesh.volumes(i);
-            adjoint += rhoN(i)*rhoa(i)*volume;
+            scalar v = mesh.volumes(i);
+            adjoint += rhoN(i)*rhoa(i)*v;
             for (integer j = 0; j < 3; j++) {
-                adjoint += rhoUN(i, j)*rhoUa(i, j)*volume;
+                adjoint += rhoUN(i, j)*rhoUa(i, j)*v;
             }
-            adjoint += rhoEN(i)*rhoEa(i)*volume;
+            adjoint += rhoEN(i)*rhoEa(i)*v;
 
         }
         tape.registerOutput(adjoint);
         tape.registerOutput(objective);
         tape.setPassive();
-        tape.evaluate();
 
         adjoint.setGradient(1.0);
+        tape.evaluate();
         uarr rhoaN(rho.shape);
         uarr rhoUaN(rhoU.shape);
         uarr rhoEaN(rhoE.shape);
@@ -115,15 +116,16 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoUaN.adGetGrad(rhoU);
         rhoEaN.adGetGrad(rhoE);
 
+        tape.clearAdjoints();
         objective.setGradient(1.0);
         tape.evaluate();
         for (integer i = 0; i < mesh.nInternalCells; i++) {
             uscalar v = mesh.volumes(i);
-            rhoaN(i) += rho(i).getGradient()/v;
+            rhoaN(i) = rhoaN(i)/v +  rho(i).getGradient()/(v*nSteps);
             for (integer j = 0; j < 3; j++) {
-                rhoUaN(i, j) += rhoU(i,j).getGradient()/v;
+                rhoUaN(i, j) = rhoUaN(i, j)/v + rhoU(i, j).getGradient()/(v*nSteps);
             }
-            rhoEaN(i) += rhoE(i).getGradient()/v;
+            rhoEaN(i) = rhoEaN(i)/v +  rhoE(i).getGradient()/(v*nSteps);
         }
         
         //cout << "evaluated tape" << endl;
@@ -134,7 +136,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoEaNObject = putArray(rhoEaN);
         //cout << "forward 5" << endl;
         
-        return Py_BuildValue("(OOOd)", rhoaNObject, rhoUaNObject, rhoEaNObject, objective.value());
+        return Py_BuildValue("(OOO)", rhoaNObject, rhoUaNObject, rhoEaNObject);
     }
     static PyObject* ghost(PyObject *self, PyObject *args) {
 

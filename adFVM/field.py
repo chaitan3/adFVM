@@ -572,7 +572,6 @@ class IOField(Field):
                 cellStartFace, cellEndFace, _ = mesh.getPatchCellRange(patchID)
                 patch['value'] = field[cellStartFace:cellEndFace]
                 
-
         self.writeFoamField(internalField, boundary)
 
     def writeFoamField(self, internalField, boundary, timeDir=None):

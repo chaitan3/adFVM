@@ -118,7 +118,9 @@ class Adjoint(Solver):
             pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
             primalIndex = nSteps - (checkpoint + 1)*writeInterval
             t, dt = timeSteps[primalIndex]
+            print(fields[0].field.max())
             solutions = primal.run(startTime=t, dt=dt, nSteps=writeInterval, mode='forward')
+            print(fields[0].field.max())
 
             pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
             pprint('Time marching for', ' '.join(self.names))
@@ -133,7 +135,7 @@ class Adjoint(Solver):
                 #fields = objectiveGradient(*lastSolution)
                 #fields = [phi/(nSteps + 1) for phi in fields]
                 #fields = self.getFields(fields, IOField)
-                self.writeFields(fields, t)
+                self.writeFields(fields, t, skipProcessor=True)
 
             for step in range(0, writeInterval):
                 report = (step % reportInterval) == 0
@@ -157,7 +159,7 @@ class Adjoint(Solver):
                     pprint('Time step', adjointIndex)
 
                 inputs = [phi.field for phi in previousSolution] + \
-                         [phi.field for phi in fields] + [dt, t]
+                         [phi.field for phi in fields] + [dt, t, nSteps]
                 #outputs = self.map(*inputs)
                 outputs = adFVMcpp.forward(*inputs)
                 n = len(fields)
@@ -167,9 +169,9 @@ class Adjoint(Solver):
                 #gradient, paramGradient, objGradient = outputs[:n], \
                 #                                       outputs[n:-n], \
                 #                                       outputs[-n:]
-                objGradient = [phi/nSteps for phi in objGradient]
+                #objGradient = [phi/nSteps for phi in objGradient]
                 for index in range(0, len(fields)):
-                    fields[index].field = gradient[index] + objGradient[index]
+                    fields[index].field = gradient[index]# + objGradient[index]
 
                 if self.scaling:
                     if report:
@@ -221,7 +223,9 @@ class Adjoint(Solver):
                     pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
             #exit(1)
-            self.writeFields(fields, t)
+            print(fields[0].field.max())
+            self.writeFields(fields, t, skipProcessor=True)
+            print(fields[0].field.max())
             self.writeStatusFile([checkpoint + 1, result])
             if parallel.rank == 0:
                 with open(self.sensTimeSeriesFile, 'a') as f:
