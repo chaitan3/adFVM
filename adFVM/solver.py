@@ -223,9 +223,9 @@ class Solver(object):
         #print(x[0].field.max())
         for phi, phiN in zip(self.fields, fields):
             phi.field = phiN.field
-        #with IOField.handle(t):
-        #    for phi in self.fields + rest:
-        #        phi.write(**kwargs)
+        with IOField.handle(t):
+            for phi in self.fields + rest:
+                phi.write(**kwargs)
         #print(x[0].field.max())
         return 
 
