@@ -3,6 +3,9 @@ import numpy as np
 import mpi4py
 import os
 
+from os.path import expanduser
+home = expanduser("~")
+
 os.environ['CC'] = 'ccache mpicc'
 #os.environ['CC'] = 'mpicc'
 os.environ['CXX'] = 'mpicxx'
@@ -23,5 +26,5 @@ for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], ['', '-DADIFF']):
            version = '0.0.1',
            description = 'This is a demo package',
            ext_modules = [mod],
-           include_dirs=[np.get_include(), '/home/talnikar/sources/CoDiPack/include', '/usr/local/include']
+           include_dirs=[np.get_include(), home + '/sources/CoDiPack/include', '/usr/local/include']
            )
