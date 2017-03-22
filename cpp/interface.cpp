@@ -9,12 +9,14 @@ scalar (*timeIntegrator)(RCF*, const arr&, const arr&, const arr&, arr&, arr&, a
 static PyObject* initSolver(PyObject *self, PyObject *args) {
 
     PyObject *meshObject = PyTuple_GetItem(args, 0);
+    Py_INCREF(meshObject);
 
     Mesh *mesh = new Mesh(meshObject);
     rcf = new RCF();
     rcf->setMesh(mesh);
     for (integer i = 1; i < 4; i++) {
         PyObject *boundaryObject = PyTuple_GetItem(args, i);
+        Py_INCREF(boundaryObject);
         rcf->boundaries[i-1] = getBoundary(boundaryObject);
     }
     PyObject *dict = PyTuple_GetItem(args, 4);
@@ -26,7 +28,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         string ckey = PyString_AsString(key);
         if (ckey == "Cp") {
             rcf->Cp = PyFloat_AsDouble(value);
-            cout << rcf->Cp << endl;
+            //cout << rcf->Cp << endl;
         } else if (ckey == "CFL") {
             rcf->CFL = PyFloat_AsDouble(value);
         } else if (ckey == "timeIntegrator") {
@@ -47,6 +49,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     }
     rcf->objective = objectiveDrag;
 
+    Py_INCREF(Py_None);
     return Py_None;
 }
 
@@ -101,7 +104,6 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
                 adjoint += rhoUN(i, j)*rhoUa(i, j)*v;
             }
             adjoint += rhoEN(i)*rhoEa(i)*v;
-
         }
         tape.registerOutput(adjoint);
         tape.registerOutput(objective);
@@ -136,7 +138,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoEaNObject = putArray(rhoEaN);
         //cout << "forward 5" << endl;
         
-        return Py_BuildValue("(OOO)", rhoaNObject, rhoUaNObject, rhoEaNObject);
+        return Py_BuildValue("(NNN)", rhoaNObject, rhoUaNObject, rhoEaNObject);
     }
     static PyObject* ghost(PyObject *self, PyObject *args) {
 
@@ -179,7 +181,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoENObject = putArray(rhoEN);
         //cout << "forward 5" << endl;
         
-        return Py_BuildValue("(OOO)", rhoNObject, rhoUNObject, rhoENObject);
+        return Py_BuildValue("(NNN)", rhoNObject, rhoUNObject, rhoENObject);
     }
 #else
     #define initFunc initadFVMcpp
@@ -202,9 +204,6 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         arr rhoN(rho.shape);
         arr rhoUN(rhoU.shape);
         arr rhoEN(rhoE.shape);
-        rhoN.ownData = false;
-        rhoUN.ownData = false;
-        rhoEN.ownData = false;
         scalar objective = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
         //cout << "forward 4" << endl;
         
@@ -214,7 +213,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoENObject = putArray(rhoEN);
         //cout << "forward 5" << endl;
         
-        return Py_BuildValue("(OOOd)", rhoNObject, rhoUNObject, rhoENObject, objective);
+        return Py_BuildValue("(NNNd)", rhoNObject, rhoUNObject, rhoENObject, objective);
     }
     static PyObject* ghost(PyObject *self, PyObject *args) {
 
@@ -247,9 +246,6 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         arr rhoN(mesh.nCells, 1);
         arr rhoUN(mesh.nCells, 3);
         arr rhoEN(rhoN.shape);
-        rhoN.ownData = false;
-        rhoUN.ownData = false;
-        rhoEN.ownData = false;
         for (integer i = 0; i < mesh.nCells; i++) {
             rcf->conservative(&U(i), T(i), p(i), rhoN(i), &rhoUN(i), rhoEN(i));
         }
@@ -261,7 +257,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoENObject = putArray(rhoEN);
         //cout << "forward 5" << endl;
         
-        return Py_BuildValue("(OOO)", rhoNObject, rhoUNObject, rhoENObject);
+        return Py_BuildValue("(NNN)", rhoNObject, rhoUNObject, rhoENObject);
     }
 #endif
    
@@ -369,6 +365,7 @@ void getMeshArray(PyObject *mesh, const string attr, arrType<dtype>& tmp) {
     PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
     //cout << attr << " " << PyArray_DESCR(array)->elsize << endl;
     getArray(array, tmp);
+    Py_DECREF(array);
 }
 
 
@@ -385,14 +382,16 @@ void getArray(PyArrayObject *array, arrType<dtype> & tmp) {
     //cout << rows << " " << cols << endl;
     arrType<dtype> result(shape, data);
     tmp = result;
-    //Py_DECREF(array);
 }
 
 template <typename dtype>
 PyObject* putArray(arrType<dtype> &tmp) {
     npy_intp shape[2] = {tmp.shape[0], tmp.shape[1]};
     uscalar* data = tmp.data;
-    return PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
+    tmp.ownData = false;
+    PyObject* array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
+    PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
+    return array;
 }
 
 Boundary getMeshBoundary(PyObject *mesh, const string attr) {

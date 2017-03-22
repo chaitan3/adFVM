@@ -141,6 +141,7 @@ def getAdjointEnergy(solver, rhoa, rhoUa, rhoEa):
     rhoref = pref/(Tref*solver.R)
     rhoUref = Uref*rhoref
     rhoEref = (solver.Cv*Tref + Uref**2/2)*rhoref
+    
     adjEnergy = (rhoref*rhoa.getInternalField()**2*mesh.volumes).sum(axis=1)
     adjEnergy += (rhoUref*rhoUa.getInternalField()**2*mesh.volumes).sum(axis=1)
     adjEnergy += (rhoEref*rhoEa.getInternalField()**2*mesh.volumes).sum(axis=1)

@@ -43,8 +43,9 @@ class Adjoint(Solver):
 
     def compile(self):
         #self.compileInit(functionName='adjoint_init')
-        adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in self.fields] + [primal.__class__.defaultConfig]))
         primal.compile(adjoint=self)
+        adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in self.fields] + [primal.__class__.defaultConfig]))
+        primal.adjoint = self
         #self.map = primal.gradient
         if self.scaling:
             getAdjointViscosity.computer = computeGradients(primal)
@@ -118,9 +119,11 @@ class Adjoint(Solver):
             pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
             primalIndex = nSteps - (checkpoint + 1)*writeInterval
             t, dt = timeSteps[primalIndex]
-            print(fields[0].field.max())
+
+            #self.fields = fields
+            #print(fields[0].field.max())
             solutions = primal.run(startTime=t, dt=dt, nSteps=writeInterval, mode='forward')
-            print(fields[0].field.max())
+            #print(fields[0].field.max())
 
             pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
             pprint('Time marching for', ' '.join(self.names))
@@ -161,6 +164,7 @@ class Adjoint(Solver):
                 inputs = [phi.field for phi in previousSolution] + \
                          [phi.field for phi in fields] + [dt, t, nSteps]
                 #outputs = self.map(*inputs)
+                #print(fields[0].field.max())
                 outputs = adFVMcpp.forward(*inputs)
                 n = len(fields)
                 gradient = outputs
@@ -172,6 +176,7 @@ class Adjoint(Solver):
                 #objGradient = [phi/nSteps for phi in objGradient]
                 for index in range(0, len(fields)):
                     fields[index].field = gradient[index]# + objGradient[index]
+                #print(fields[0].field.max())
 
                 if self.scaling:
                     if report:
@@ -201,19 +206,19 @@ class Adjoint(Solver):
                     pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
                 # compute sensitivity using adjoint solution
-                sensTimeSeries.append([0.]*nPerturb)
-                for index in range(0, len(perturb)):
-                    perturbation = perturb[index](None, mesh.origMesh, t)
-                    if isinstance(perturbation, tuple):
-                        perturbation = list(perturbation)
-                    if not isinstance(perturbation, list):# or (len(parameters) == 1 and len(perturbation) > 1):
-                        perturbation = [perturbation]
-                        # complex parameter perturbation not supported
-                    
-                    for derivative, delphi in zip(paramGradient, perturbation):
-                        sensitivity = np.sum(derivative * delphi)
-                        result[index] += sensitivity
-                        sensTimeSeries[-1][index] += parallel.sum(sensitivity)
+                #sensTimeSeries.append([0.]*nPerturb)
+                #for index in range(0, len(perturb)):
+                #    perturbation = perturb[index](None, mesh.origMesh, t)
+                #    if isinstance(perturbation, tuple):
+                #        perturbation = list(perturbation)
+                #    if not isinstance(perturbation, list):# or (len(parameters) == 1 and len(perturbation) > 1):
+                #        perturbation = [perturbation]
+                #        # complex parameter perturbation not supported
+                #    
+                #    for derivative, delphi in zip(paramGradient, perturbation):
+                #        sensitivity = np.sum(derivative * delphi)
+                #        result[index] += sensitivity
+                #        sensTimeSeries[-1][index] += parallel.sum(sensitivity)
 
                 #parallel.mpi.Barrier()
                 if report:
@@ -223,9 +228,9 @@ class Adjoint(Solver):
                     pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
 
             #exit(1)
-            print(fields[0].field.max())
+            #print(fields[0].field.max())
             self.writeFields(fields, t, skipProcessor=True)
-            print(fields[0].field.max())
+            #print(fields[0].field.max())
             self.writeStatusFile([checkpoint + 1, result])
             if parallel.rank == 0:
                 with open(self.sensTimeSeriesFile, 'a') as f:

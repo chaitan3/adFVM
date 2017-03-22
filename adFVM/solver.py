@@ -219,15 +219,14 @@ class Solver(object):
         n = len(self.names)
         fields, rest = fields[:n], fields[n:]
         x = fields
-        print(fields[0].field.max())
         fields = self.initFields(fields)
-        print(x[0].field.max(), fields[0].field.max())
+        #print(x[0].field.max())
         for phi, phiN in zip(self.fields, fields):
             phi.field = phiN.field
         #with IOField.handle(t):
         #    for phi in self.fields + rest:
         #        phi.write(**kwargs)
-        print(x[0].field.max(), fields[0].field.max())
+        #print(x[0].field.max())
         return 
 
     def readStatusFile(self):
