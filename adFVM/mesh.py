@@ -113,8 +113,8 @@ class Mesh(object):
         # uses neighbour
         self.cellNeighboursMatOp = self.getCellNeighbours(boundary=False)
         self.cellNeighbours = self.getCellNeighbours()
-        self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
-        self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)
+        #self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
+        #self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)
         self.checkWeights()
 
         # theano shared variables

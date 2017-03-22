@@ -88,6 +88,12 @@ class arrType {
         this -> data = new dtype[this->size];
     }
 
+    arrType(const integer* shape, const dtype* data) {
+        this->init(shape);
+        this->data = const_cast<dtype *>(data);
+        this->ownData = false ;
+    }
+
     arrType(const integer* shape, const string& data) {
         this->init(shape);
         this->data = const_cast<dtype *>((dtype *)data.data());

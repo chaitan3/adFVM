@@ -5,8 +5,8 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-#primal = RCF('/home/talnikar/foam/blade/les-turb/')
-primal = RCF('/master/home/talnikar/adFVM/cases/vane/les/', faceReconstructor='SecondOrder')#, timeIntegrator='euler')
+primal = RCF('/home/talnikar/adFVM/cases/vane_optim/foam/laminar/3d_baseline/par-16/', objective='drag', objectiveDragInfo='pressure')
+#primal = RCF('/master/home/talnikar/adFVM/cases/vane/les/', faceReconstructor='SecondOrder')#, timeIntegrator='euler')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
 

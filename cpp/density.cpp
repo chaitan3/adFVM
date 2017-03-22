@@ -319,7 +319,7 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
             }
         } else if (patchType == "fixedValue") {
             integer shape[NDIMS] = {nFaces, phi.shape[1], phi.shape[2], 1};
-            arrType<dtype> phiVal(shape, patch.second.at("_value"));
+            uarr phiVal(shape, patch.second.at("_value"));
 
             for (integer i = 0; i < nFaces; i++) {
                 integer c = cellStartFace + i;
@@ -331,10 +331,10 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
             }
         } else if (patchType == "CBC_UPT") {
             integer shape[NDIMS] = {nFaces, 3, 1, 1};
-            arrType<dtype> Uval(shape, patch.second.at("_U0"));
+            uarr Uval(shape, patch.second.at("_U0"));
             shape[1] = 1;
-            arrType<dtype> Tval(shape, patch.second.at("_T0"));
-            arrType<dtype> pval(shape, patch.second.at("_p0"));
+            uarr Tval(shape, patch.second.at("_T0"));
+            uarr pval(shape, patch.second.at("_p0"));
             for (integer i = 0; i < nFaces; i++) {
                 integer c = cellStartFace + i;
                 for (integer j = 0; j < 3; j++) {
@@ -345,10 +345,15 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
             }
         } else if (patchType == "CBC_TOTAL_PT") {
             integer shape[NDIMS] = {nFaces, 1, 1, 1};
-            arrType<dtype> Tt(shape, patch.second.at("_Tt"));
-            arrType<dtype> pt(shape, patch.second.at("_pt"));
+            uarr Tt(shape, patch.second.at("_Tt"));
+            uarr pt(shape, patch.second.at("_pt"));
             shape[1] = 3;
-            arrType<dtype> direction(shape, patch.second.at("_direction"));
+            uarr *direction;
+            if (patch.second.count("_direction")) {
+                direction = new uarr(shape, patch.second.at("_direction"));
+            } else {
+                direction = new uarr(shape, &mesh.normals(startFace));
+            }
 
             for (integer i = 0; i < nFaces; i++) {
                 integer c = cellStartFace + i;
@@ -356,15 +361,16 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
                 scalar Un = 0;
                 scalar U[3], T, p;
                 for (integer j = 0; j < 3; j++) {
-                    Un = Un + (*this->U)(o, j)*direction(i, j);
+                    Un = Un + (*this->U)(o, j)*(*direction)(i, j);
                 }
                 for (integer j = 0; j < 3; j++) {
-                    (*this->U)(c, j) = Un*direction(i, j);
+                    (*this->U)(c, j) = Un*(*direction)(i, j);
                 }
                 T = Tt(i)-0.5*Un*Un/this->Cp;
                 (*this->T)(c) = T;
                 (*this->p)(c) = pt(i)*pow(T/Tt(i), this->gamma/(this->gamma-1));
             }
+            delete direction;
         } else if (patchType == "processor" || patchType == "processorCyclic") {
             //cout << "hello " << patchID << endl;
             integer bufStartFace = cellStartFace - mesh.nLocalCells;
