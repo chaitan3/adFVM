@@ -107,7 +107,7 @@ class Mesh(object):
 
         # ghost cell modification: neighbour and cellCentres
         self.nLocalCells = self.createGhostCells()
-        self.deltas = self.getDeltas()           # nFaces 
+        self.deltas, self.deltasUnit = self.getDeltas()           # nFaces 
         self.weights, self.linearWeights, self.quadraticWeights = self.getWeights()   # nFaces
 
         # uses neighbour
@@ -586,7 +586,7 @@ class Mesh(object):
         N = self.cellCentres[self.neighbour]
         deltas = P-N
         deltasNorm = norm(deltas, axis=1, keepdims=True)
-        deltasUnit = deltas/norm
+        deltasUnit = deltas/deltasNorm
         return deltas, deltasUnit
 
     def getWeights(self):
