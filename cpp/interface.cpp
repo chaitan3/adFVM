@@ -326,6 +326,7 @@ Mesh::Mesh (PyObject* meshObject) {
     getMeshArray(this->mesh, "volumes", this->volumes);
 
     getMeshArray(this->mesh, "deltas", this->deltas);
+    getMeshArray(this->mesh, "deltasUnit", this->deltasUnit);
     getMeshArray(this->mesh, "weights", this->weights);
     getMeshArray(this->mesh, "linearWeights", this->linearWeights);
     getMeshArray(this->mesh, "quadraticWeights", this->quadraticWeights);

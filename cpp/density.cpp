@@ -116,36 +116,40 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     drhoU.zero();
     drhoE.zero();
     auto viscousFluxUpdate = [&](const scalar UF[3], const scalar TF, scalar rhoUFlux[3], scalar& rhoEFlux, integer ind) {
-        scalar qF, sigmadotUF=0., sigmaF[3];
+        scalar qF = 0, sigmadotUF = 0., sigmaF[3];
         scalar mu = (this->*(this->mu))(TF);
         //cout << mu << endl;
         scalar kappa = this->kappa(mu, TF);
 
         scalar gradTF[3], gradTCF[3];
+        scalar snGradT, gradTFs = 0.;
+        const uscalar* S = &mesh.deltasUnit(ind);
+        const uscalar* N = &mesh.normals(ind);
+        this->operate->snGrad(T, &snGradT, ind);
         this->interpolate->central(gradT, gradTF, ind);
-        //for (integer i = 0; i < 3; i++) {
-            scalar snGradT;
-            this->operate->snGrad(T, &snGradT, ind);
-            //gradTCF[i] = gradTF[i] + snGradTF*mesh.Normals - (gradTF.dotN())*mesh.Normals
-            qF = kappa*snGradT;
-        //}
-        
+        for (integer i = 0; i < 3; i++) {
+            gradTFs += gradTF[i]*S[i];
+        }
+        for (integer i = 0; i < 3; i++) {
+            gradTCF[i] = gradTF[i] + snGradT*S[i] - gradTFs*S[i];
+            qF += kappa*(gradTCF[i]*N[i]);
+        }
+
         scalar gradUF[3][3], gradUCF[3][3];
-        this->interpolate->central(gradU, (scalar*)gradUF, ind);
         scalar snGradU[3];
+        this->interpolate->central(gradU, (scalar*)gradUF, ind);
         this->operate->snGrad(U, snGradU, ind);
-        const uscalar *N = &mesh.normals(ind);
 
         scalar tmp[3], tmp2[3], tmp3;
         for (integer i = 0; i < 3; i++) {
             tmp[i] = 0;
             for (integer j = 0; j < 3; j++) {
-                tmp[i] += gradUF[i][j]*N[j];
+                tmp[i] += gradUF[i][j]*S[j];
             }
         }
         for (integer i = 0; i < 3; i++) {
             for (integer j = 0; j < 3; j++) {
-                gradUCF[i][j] = gradUF[i][j] + snGradU[i]*N[j] - tmp[i]*N[j];
+                gradUCF[i][j] = gradUF[i][j] + snGradU[i]*S[j] - tmp[i]*S[j];
             }
         }
         tmp3 = 0;

@@ -37,6 +37,7 @@ class Mesh {
         uarr cellCentres;
         uarr volumes;
         uarr deltas;
+        uarr deltasUnit;
         uarr weights;
         uarr linearWeights;
         uarr quadraticWeights;

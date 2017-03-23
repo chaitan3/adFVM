@@ -584,7 +584,10 @@ class Mesh(object):
         logger.info('generated deltas')
         P = self.cellCentres[self.owner]
         N = self.cellCentres[self.neighbour]
-        return norm(P-N, axis=1, keepdims=True)
+        deltas = P-N
+        deltasNorm = norm(deltas, axis=1, keepdims=True)
+        deltasUnit = deltas/norm
+        return deltas, deltasUnit
 
     def getWeights(self):
         logger.info('generated face deltas')

@@ -4,6 +4,9 @@ all:
 install: 
 	python setup.py install
 
+clean:
+	rm -rf build
+
 #CC = g++
 ##CC = clang
 #
