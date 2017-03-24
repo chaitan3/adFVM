@@ -22,7 +22,6 @@ class RCF {
     scalar Cv = Cp/gamma;
     scalar Pr = 0.7;
     scalar CFL = 1.2;
-    scalar stepFactor = 1.2;
 
     scalar muC;
     scalar (RCF::*mu)(const scalar);
