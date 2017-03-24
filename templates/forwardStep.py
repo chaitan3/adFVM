@@ -5,7 +5,7 @@ from adFVM.config import ad
 from adFVM.density import RCF 
 
 #primal = RCF('cases/forwardStep/', timeIntegrator='SSPRK', CFL=1.2, Cp=2.5, mu=lambda T: config.VSMALL*T)
-primal = RCF('cases/forwardStep/', riemannSolver='eulerRoe', timeIntegrator='euler', 
+primal = RCF('cases/forwardStep/', riemannSolver='eulerRoe', timeIntegrator='SSPRK', 
         CFL=0.2, Cp=2.5, mu=0., faceReconstructor='SecondOrder')
 
 def objective(fields, mesh):
@@ -42,10 +42,10 @@ parameters = 'source'
 #
 #parameters = ('BCs', 'U', 'inlet', 'value')
 
-#nSteps = 4000
-#writeInterval = 100
-nSteps = 10
-writeInterval = 2
+nSteps = 4000
+writeInterval = 100
+#nSteps = 10
+#writeInterval = 2
 startTime = 0.0
 dt = 1e-4
 

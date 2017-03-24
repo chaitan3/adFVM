@@ -55,8 +55,10 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
                 }
             }
         } else if (ckey == "objectiveDragInfo") {
-            string cvalue = PyString_AsString(value);
-            rcf->objectiveDragInfo = cvalue;
+            if (value != Py_None) {
+                string cvalue = PyString_AsString(value);
+                rcf->objectiveDragInfo = cvalue;
+            }
         }
     }
 

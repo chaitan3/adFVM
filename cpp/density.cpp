@@ -177,12 +177,12 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
             this->interpolate->faceReconstructor(T, gradT, &TLF, i, 0);
             this->interpolate->faceReconstructor(p, gradp, &pLF, i, 0);
             if (characteristic) {
-                integer n = mesh.nInternalCells + i - mesh.nInternalFaces;
+                integer c = mesh.nInternalCells + i - mesh.nInternalFaces;
                 for (integer j = 0; j < 3; j++) {
-                    URF[j] = U(n, j);
+                    URF[j] = U(c, j);
                 }
-                TRF = T(n);
-                pRF = p(n);
+                TRF = T(c);
+                pRF = p(c);
             } else {
                 this->interpolate->faceReconstructor(U, gradU, URF, i, 1);
                 this->interpolate->faceReconstructor(T, gradT, &TRF, i, 1);
@@ -197,17 +197,23 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
             scalar rhoFlux;
             scalar rhoUFlux[3];
             scalar rhoEFlux;
-            riemannSolver(this->gamma, \
+            if (characteristic) {
+                boundaryRiemannSolver(this->gamma, \
                 pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, &mesh.normals(i), 
                 rhoFlux, rhoUFlux, rhoEFlux);
-
+            } else {
+                riemannSolver(this->gamma, \
+                pLF, pRF, TLF, TRF, ULF, URF, \
+                rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, &mesh.normals(i), 
+                rhoFlux, rhoUFlux, rhoEFlux);
+            }
             scalar UF[3], TF;
             for (integer j = 0; j < 3; j++) {
                 UF[j] = 0.5*(ULF[j] + URF[j]);
             }
             TF = 0.5*(TLF + TRF);
-            viscousFluxUpdate(UF, TF, rhoUFlux, rhoEFlux, i);
+            //viscousFluxUpdate(UF, TF, rhoUFlux, rhoEFlux, i);
 
             this->operate->div(&rhoFlux, drho, i, neighbour);
             this->operate->div(rhoUFlux, drhoU, i, neighbour);
@@ -241,7 +247,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
                 scalar rhoEFlux;
 
                 this->getFlux(&U(c), T(c), p(c), &mesh.normals(index), rhoFlux, rhoUFlux, rhoEFlux);
-                viscousFluxUpdate(&U(c), T(c), rhoUFlux, rhoEFlux, index);
+                //viscousFluxUpdate(&U(c), T(c), rhoUFlux, rhoEFlux, index);
 
                 this->operate->div(&rhoFlux, drho, index, false);
                 this->operate->div(rhoUFlux, drhoU, index, false);
