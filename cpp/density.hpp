@@ -8,6 +8,7 @@
 //#define faceReconstructor secondOrder
 #define faceReconstructor firstOrder
 #define riemannSolver eulerRoe
+//#define riemannSolver eulerLaxFriedrichs
 #define boundaryRiemannSolver eulerRoe
 //#define boundaryRiemannSolver eulerLaxFriedrichs
 

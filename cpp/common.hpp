@@ -154,6 +154,21 @@ class arrType {
         }
         return false;
     }
+    void info() {
+        scalar minPhi, maxPhi;
+        minPhi = 1e100;
+        maxPhi = -1e100;
+        for (integer i = 0; i < this->size; i++) {
+            if (this->data[i] < minPhi) {
+                minPhi = this->data[i];
+            }
+            if (this->data[i] > maxPhi) {
+                maxPhi = this->data[i];
+            }
+
+        }
+        cout << "phi " << minPhi << " " << maxPhi << endl;
+    }
 
     void zero() {
         for (integer i = 0; i < this->size; i++) {

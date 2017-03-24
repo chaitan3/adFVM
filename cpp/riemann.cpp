@@ -103,7 +103,7 @@ void eulerRoe(
     scalar eps = fabs(0.5*(rhoUnLF/rhoLF - rhoUnRF/rhoRF));
     eps += 0.5*fabs(sqrt(gamma*pLF/rhoLF) - sqrt(gamma*pRF/rhoRF));
     
-    #ifdef ADIFF 1
+    #ifdef ADIFF
         if (eps.value() < 0) 
             eps -= SMALL;
         else

@@ -63,6 +63,9 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     this->boundary(this->boundaries[1], T);
     this->boundary(this->boundaries[2], p);
     objective = this->objective(this, U, T, p);
+    //U.info();
+    //T.info();
+    //p.info();
 
     arr gradU(mesh.nCells, 3, 3);
     arr gradT(mesh.nCells, 1, 3);
@@ -90,9 +93,9 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patch.first);
         integer cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
         //if (patchInfo.at("type") == "cyclic") {
-        if (patchInfo.at("type") == "cyclic" ||
-            patchInfo.at("type") == "processor" ||
-            patchInfo.at("type") == "processorCyclic") {
+        if ((patchInfo.at("type") == "cyclic") ||
+            (patchInfo.at("type") == "processor") ||
+            (patchInfo.at("type") == "processorCyclic")) {
             faceUpdate(startFace, startFace + nFaces, false);
         } else {
             for (integer i = 0; i < nFaces; i++) {
@@ -126,7 +129,8 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
         const uscalar* S = &mesh.deltasUnit(ind);
         const uscalar* N = &mesh.normals(ind);
         this->operate->snGrad(T, &snGradT, ind);
-        this->interpolate->central(gradT, gradTF, ind);
+        //this->interpolate->central(gradT, gradTF, ind);
+        this->interpolate->average(gradT, gradTF, ind);
         for (integer i = 0; i < 3; i++) {
             gradTFs += gradTF[i]*S[i];
         }
@@ -137,7 +141,8 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
 
         scalar gradUF[3][3], gradUCF[3][3];
         scalar snGradU[3];
-        this->interpolate->central(gradU, (scalar*)gradUF, ind);
+        this->interpolate->average(gradU, (scalar*)gradUF, ind);
+        //this->interpolate->central(gradU, (scalar*)gradUF, ind);
         this->operate->snGrad(U, snGradU, ind);
 
         scalar tmp[3], tmp2[3], tmp3;
@@ -213,7 +218,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
                 UF[j] = 0.5*(ULF[j] + URF[j]);
             }
             TF = 0.5*(TLF + TRF);
-            //viscousFluxUpdate(UF, TF, rhoUFlux, rhoEFlux, i);
+            viscousFluxUpdate(UF, TF, rhoUFlux, rhoEFlux, i);
 
             this->operate->div(&rhoFlux, drho, i, neighbour);
             this->operate->div(rhoUFlux, drhoU, i, neighbour);
@@ -232,9 +237,9 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
         integer cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
         string patchType = patchInfo.at("type");
         //if (patchInfo.at("type") == "cyclic") {
-        if (patchType == "cyclic" ||
-            patchType == "processor" ||
-            patchType == "processorCyclic") {
+        if ((patchType == "cyclic") ||
+            (patchType == "processor") ||
+            (patchType == "processorCyclic")) {
             faceFluxUpdate(startFace, startFace + nFaces, false, false);
         } else if (patchType == "characteristic") {
             faceFluxUpdate(startFace, startFace + nFaces, false, true);
@@ -247,7 +252,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
                 scalar rhoEFlux;
 
                 this->getFlux(&U(c), T(c), p(c), &mesh.normals(index), rhoFlux, rhoUFlux, rhoEFlux);
-                //viscousFluxUpdate(&U(c), T(c), rhoUFlux, rhoEFlux, index);
+                viscousFluxUpdate(&U(c), T(c), rhoUFlux, rhoEFlux, index);
 
                 this->operate->div(&rhoFlux, drho, index, false);
                 this->operate->div(rhoUFlux, drhoU, index, false);

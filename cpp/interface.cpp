@@ -28,7 +28,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         string ckey = PyString_AsString(key);
         if (ckey == "Cp") {
             rcf->Cp = PyFloat_AsDouble(value);
-            //cout << rcf->Cp << endl;
+            rcf->Cv = rcf->Cp/rcf->gamma;
         } else if (ckey == "CFL") {
             rcf->CFL = PyFloat_AsDouble(value);
         } else if (ckey == "timeIntegrator") {

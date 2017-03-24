@@ -5,6 +5,20 @@ void Interpolator::central(const arr& phi, scalar* phiF, integer index) {
     integer p = mesh.owner(index);
     integer n = mesh.neighbour(index);
     scalar w = mesh.weights(index);
+    //integer w = mesh.weights(index);
+    for (integer i = 0; i < phi.shape[1]; i++) {
+        for (integer j = 0; j < phi.shape[2]; j++) {
+            phiF[i*phi.shape[2]+j] = phi(n, i, j)*(1-w) + phi(p, i, j)*w;
+        }
+    }
+}
+
+void Interpolator::average(const arr& phi, scalar* phiF, integer index) {
+    const Mesh& mesh = *this->mesh;
+    integer p = mesh.owner(index);
+    integer n = mesh.neighbour(index);
+    scalar w = 0.5;
+    //integer w = mesh.weights(index);
     for (integer i = 0; i < phi.shape[1]; i++) {
         for (integer j = 0; j < phi.shape[2]; j++) {
             phiF[i*phi.shape[2]+j] = phi(n, i, j)*(1-w) + phi(p, i, j)*w;
