@@ -6,6 +6,7 @@
 #include <numpy/arrayobject.h>
 #include <string>
 #include <map>
+#include "mpi.h"
 
 #include "common.hpp"
 

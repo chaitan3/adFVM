@@ -1,8 +1,8 @@
 all: 
-	python setup.py build
+	python2 setup.py build
 
 install: 
-	python setup.py install
+	python2 setup.py install
 
 clean:
 	rm -rf build

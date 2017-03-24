@@ -302,7 +302,11 @@ Mesh::Mesh (PyObject* meshObject) {
     this->mesh = meshObject;
     //Py_DECREF(args);
     assert(this->mesh);
-    std::cout << "Initializing C++ interface" << endl;
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        std::cout << "Initializing C++ interface" << endl;
+    }
 
     this->nInternalFaces = getInteger(this->mesh, "nInternalFaces");
     this->nFaces = getInteger(this->mesh, "nFaces");
