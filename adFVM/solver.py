@@ -359,8 +359,7 @@ class Solver(object):
             inputs = [phi.field for phi in fields] + [dt, t]
             #outputs = self.map(*inputs)
             outputs = adFVMcpp.forward(*inputs)
-            newFields, objective = outputs[:3], outputs[3]
-            dtc = dt
+            newFields, objective, dtc = outputs[:3], outputs[3], outputs[4]
             local = remote = 0
 
             fields = self.getFields(newFields, IOField, refFields=fields)
@@ -422,11 +421,12 @@ class Solver(object):
             elif (timeIndex % writeInterval == 0) or not iterate(t, timeIndex):
                 # write mesh, fields, status
                 if mode == 'orig' or mode == 'simulation':
-                    if len(dtc.shape) == 0:
-                        dtc = dtc*np.ones((mesh.origMesh.nInternalCells, 1))
-                    dtc = IOField.internalField('dtc', dtc, (1,))
+                    #if len(dtc.shape) == 0:
+                    #    dtc = dtc*np.ones((mesh.origMesh.nInternalCells, 1))
+                    #dtc = IOField.internalField('dtc', dtc, (1,))
                     # how do i do value BC patches?
-                    self.writeFields(fields + [dtc], t)
+                    #self.writeFields(fields + [dtc], t)
+                    self.writeFields(fields, t)
                     #self.writeFields(fields + [dtc, local], t)
 
                 # write timeSeries if in orig mode (problem.py)

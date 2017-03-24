@@ -1,13 +1,13 @@
 #include "timestep.hpp"
 
-scalar euler(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {
+tuple<scalar, scalar> euler(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {
     const Mesh& mesh = *(rcf->mesh);
 
     arr drho(rho.shape);
     arr drhoU(rhoU.shape);
     arr drhoE(rhoE.shape);
-    scalar objective;
-    rcf->equation(rho, rhoU, rhoE, drho, drhoU, drhoE, objective);
+    scalar objective, dtc;
+    rcf->equation(rho, rhoU, rhoE, drho, drhoU, drhoE, objective, dtc);
 
     for (integer i = 0; i < mesh.nInternalCells; i++) {
         rhoN(i) = rho(i) - dt*drho(i);
@@ -16,16 +16,17 @@ scalar euler(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rh
         }
         rhoEN(i) = rhoE(i) - dt*drhoE(i);
     }
+    return make_tuple(objective, dtc);
 }
 
-scalar SSPRK(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {
+tuple<scalar, scalar> SSPRK(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {
     const Mesh& mesh = *(rcf->mesh);
 
     const integer n = 3;
     scalar alpha[n][n] = {{1,0,0},{3./4, 1./4, 0}, {1./3, 0, 2./3}};
     scalar beta[n][n] = {{1,0,0}, {0,1./4,0},{0,0,2./3}};
     scalar gamma[n] = {0, 1, 0.5};
-    scalar objective[n];
+    scalar objective[n], dtc[n];
 
     arr rhos[n+1] = {{rho.shape, rho.data}, {rho.shape}, {rho.shape}, {rho.shape, rhoN.data}};
     arr rhoUs[n+1] = {{rhoU.shape, rhoU.data}, {rhoU.shape}, {rhoU.shape}, {rhoU.shape, rhoUN.data}};
@@ -36,7 +37,7 @@ scalar SSPRK(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rh
 
     for (integer stage = 0; stage < n; stage++) {
         //solver.t = solver.t0 + gamma[i]*solver.dt
-        rcf->equation(rhos[stage], rhoUs[stage], rhoEs[stage], drho, drhoU, drhoE, objective[stage]);
+        rcf->equation(rhos[stage], rhoUs[stage], rhoEs[stage], drho, drhoU, drhoE, objective[stage], dtc[stage]);
         integer curr = stage + 1;
         scalar b = beta[stage][stage];
         for (integer i = 0; i < mesh.nInternalCells; i++) {
@@ -57,5 +58,5 @@ scalar SSPRK(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rh
             }
         }
     }
-    return objective[0];
+    return make_tuple(objective[0], dtc[0]);
 }

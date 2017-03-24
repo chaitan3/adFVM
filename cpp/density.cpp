@@ -42,7 +42,7 @@ void RCF::getFlux(const scalar U[3], const scalar T, const scalar p, const uscal
     rhoEFlux = (rhoE + p)*Un;
 }
 
-void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE, scalar& objective) {
+void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE, scalar& objective, scalar& minDtc) {
     // make decision between 1 and 3 a template
     // optimal memory layout? combine everything?
     //cout << "c++: equation 1" << endl;
@@ -118,6 +118,9 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     drho.zero();
     drhoU.zero();
     drhoE.zero();
+
+    arr dtc(rho.shape);
+    dtc.zero();
     auto viscousFluxUpdate = [&](const scalar UF[3], const scalar TF, scalar rhoUFlux[3], scalar& rhoEFlux, integer ind) {
         scalar qF = 0, sigmadotUF = 0., sigmaF[3];
         scalar mu = (this->*(this->mu))(TF);
@@ -223,6 +226,14 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
             this->operate->div(&rhoFlux, drho, i, neighbour);
             this->operate->div(rhoUFlux, drhoU, i, neighbour);
             this->operate->div(&rhoEFlux, drhoE, i, neighbour);
+
+            scalar aF = sqrt((this->gamma-1)*this->Cp*TF);
+            scalar maxaF = 0;
+            for (integer j = 0; j < 3; j++) {
+                maxaF += UF[j]*mesh.normals(i, j);
+            }
+            maxaF = fabs(maxaF) + aF;
+            this->operate->absDiv(&maxaF, dtc, i, neighbour);
         }
         //cout << start << " " << drho.checkNAN() << endl;
         //cout << end << " " << drhoU.checkNAN() << endl;
@@ -257,11 +268,27 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
                 this->operate->div(&rhoFlux, drho, index, false);
                 this->operate->div(rhoUFlux, drhoU, index, false);
                 this->operate->div(&rhoEFlux, drhoE, index, false);
+
+                scalar aF = sqrt((this->gamma-1)*this->Cp*T(c));
+                scalar maxaF = 0;
+                for (integer j = 0; j < 3; j++) {
+                    maxaF += U(c, j)*mesh.normals(i, j);
+                }
+                maxaF = fabs(maxaF) + aF;
+                this->operate->absDiv(&maxaF, dtc, i, false);
             }
         }
     }
     //faceFluxUpdate(mesh.nLocalFaces, mesh.nFaces, false);
     //cout << "c++: equation 5" << endl;
+    //
+    
+    // CFL computation
+    minDtc = 1e100;
+    for (integer i = 0; i < mesh.nInternalCells; i++) {
+        minDtc = min(2*this->CFL/dtc(i), minDtc);
+    }
+    //cout << minDtc << endl;
 }
 
 template <typename dtype>

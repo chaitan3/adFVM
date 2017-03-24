@@ -57,6 +57,24 @@ void Operator::div(const scalar* phi, arr& divPhi, integer index, bool neighbour
     }
 }
 
+void Operator::absDiv(const scalar* phi, arr& divPhi, integer index, bool neighbour) {
+    const Mesh& mesh = *this->mesh;
+    
+    integer p = mesh.owner(index);
+    integer n = mesh.neighbour(index);
+    scalar wp = mesh.areas(index)/mesh.volumes(p);
+    scalar wn;
+    if (neighbour) {
+        wn = mesh.areas(index)/mesh.volumes(n);
+    }
+    for (integer i = 0; i < divPhi.shape[1]; i++) {
+        divPhi(p, i) += phi[i]*wp;
+        if (neighbour) {
+            divPhi(n, i) += phi[i]*wn;
+        }
+    }
+}
+
 void Operator::snGrad(const arr& phi, scalar* snGradPhi, integer index) {
     const Mesh& mesh = *this->mesh;
     

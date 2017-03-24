@@ -4,7 +4,7 @@
 #include "objective.hpp"
 
 RCF* rcf;
-scalar (*timeIntegrator)(RCF*, const arr&, const arr&, const arr&, arr&, arr&, arr&, scalar, scalar) = SSPRK;
+tuple<scalar, scalar> (*timeIntegrator)(RCF*, const arr&, const arr&, const arr&, arr&, arr&, arr&, scalar, scalar) = SSPRK;
 
 static PyObject* initSolver(PyObject *self, PyObject *args) {
 
@@ -105,7 +105,8 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         arr rhoN(rho.shape);
         arr rhoUN(rhoU.shape);
         arr rhoEN(rhoE.shape);
-        scalar objective = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+        scalar objective, dtc;
+        tie(objective, dtc) = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
         //cout << "forward 4" << endl;
         //
         scalar adjoint = 0.;
@@ -217,7 +218,8 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         arr rhoN(rho.shape);
         arr rhoUN(rhoU.shape);
         arr rhoEN(rhoE.shape);
-        scalar objective = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+        scalar objective, dtc;
+        tie(objective, dtc) = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
         //cout << "forward 4" << endl;
         
         PyObject *rhoNObject, *rhoUNObject, *rhoENObject;
@@ -226,7 +228,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoENObject = putArray(rhoEN);
         //cout << "forward 5" << endl;
         
-        return Py_BuildValue("(NNNd)", rhoNObject, rhoUNObject, rhoENObject, objective);
+        return Py_BuildValue("(NNNdd)", rhoNObject, rhoUNObject, rhoENObject, objective, dtc);
     }
     static PyObject* ghost(PyObject *self, PyObject *args) {
 

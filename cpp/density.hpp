@@ -5,8 +5,8 @@
 #ifndef DENSITY_HPP
 #define DENSITY_HPP
 
-//#define faceReconstructor secondOrder
-#define faceReconstructor firstOrder
+#define faceReconstructor secondOrder
+//#define faceReconstructor firstOrder
 #define riemannSolver eulerRoe
 //#define riemannSolver eulerLaxFriedrichs
 #define boundaryRiemannSolver eulerRoe
@@ -53,7 +53,7 @@ class RCF {
     void conservative(const scalar U[3], const scalar T, const scalar p, scalar& rho, scalar rhoU[3], scalar& rhoE);
     void getFlux(const scalar U[3], const scalar T, const scalar p, const uscalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux);
 
-    void equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE, scalar& objective);
+    void equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE, scalar& objective, scalar& dtc);
     template<typename dtype>
     void boundary(const Boundary& boundary, arrType<dtype>& phi);
 

@@ -10,6 +10,7 @@ class Operator {
     public:
         Operator(Mesh const* mesh): mesh(mesh) {};
         void div(const scalar*, arr&, integer, bool);
+        void absDiv(const scalar*, arr&, integer, bool);
         void grad(const scalar*, arr&, integer, bool);
         void snGrad(const arr&, scalar *, integer);
         //void laplacian(const arr&, const arr&, arr&);
