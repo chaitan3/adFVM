@@ -14,7 +14,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-convertToMeters 6.4e-4;
+convertToMeters 2.5e-4;
 
 vertices #codeStream
 {
