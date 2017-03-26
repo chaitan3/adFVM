@@ -42,15 +42,15 @@ void RCF::getFlux(const scalar U[3], const scalar T, const scalar p, const uscal
     rhoEFlux = (rhoE + p)*Un;
 }
 
-void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE, scalar& objective, scalar& minDtc) {
+void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& objective, scalar& minDtc) {
     // make decision between 1 and 3 a template
     // optimal memory layout? combine everything?
     //cout << "c++: equation 1" << endl;
     const Mesh& mesh = *this->mesh;
 
-    arr U(mesh.nCells, 3);
-    arr T(mesh.nCells);
-    arr p(T.shape);
+    mat U(mesh.nCells);
+    vec T(mesh.nCells);
+    vec p(mesh.nCells);
     for (integer i = 0; i < mesh.nInternalCells; i++) {
         this->primitive(rho(i), &rhoU(i), rhoE(i), &U(i), T(i), p(i));
     }
@@ -67,9 +67,9 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     //T.info();
     //p.info();
 
-    arr gradU(mesh.nCells, 3, 3);
-    arr gradT(mesh.nCells, 1, 3);
-    arr gradp(gradT.shape);
+    arrType<scalar, 3, 3> gradU(mesh.nCells);
+    arrType<scalar, 1, 3> gradT(mesh.nCells);
+    arrType<scalar, 1, 3> gradp(mesh.nCells);
     gradU.zero();
     gradT.zero();
     gradp.zero();
@@ -119,7 +119,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     drhoU.zero();
     drhoE.zero();
 
-    arr dtc(rho.shape);
+    vec dtc(mesh.nCells);
     dtc.zero();
     /*auto viscousFluxUpdate = [&](const scalar UF[3], const scalar TF, scalar rhoUFlux[3], scalar& rhoEFlux, integer ind) {*/
         //scalar qF = 0, sigmadotUF = 0., sigmaF[3];
@@ -326,12 +326,12 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
     //cout << minDtc << endl;
 }
 
-template <typename dtype>
-void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
+template <typename dtype, integer shape1, integer shape2>
+void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi) {
     const Mesh& mesh = *this->mesh;
     //MPI_Barrier(MPI_COMM_WORLD);
 
-    arrType<dtype> phiBuf(mesh.nCells-mesh.nLocalCells, phi.shape[1], phi.shape[2]);
+    arrType<dtype, shape1, shape2> phiBuf(mesh.nCells-mesh.nLocalCells);
     AMPI_Request* req;
     integer reqIndex = 0;
     if (mesh.nRemotePatches > 0) {
@@ -353,8 +353,8 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
             for (integer i = 0; i < nFaces; i++) {
                 integer p = mesh.owner(neighbourStartFace + i);
                 integer c = cellStartFace + i;
-                for (integer j = 0; j < phi.shape[1]; j++) {
-                    for (integer k = 0; k < phi.shape[2]; k++) {
+                for (integer j = 0; j < shape1; j++) {
+                    for (integer k = 0; k < shape2; k++) {
                         phi(c, j, k) = phi(p, j, k);
                     }
                 }
@@ -363,14 +363,14 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
             for (integer i = 0; i < nFaces; i++) {
                 integer p = mesh.owner(startFace + i);
                 integer c = cellStartFace + i;
-                for (integer j = 0; j < phi.shape[1]; j++) {
-                    for (integer k = 0; k < phi.shape[2]; k++) {
+                for (integer j = 0; j < shape1; j++) {
+                    for (integer k = 0; k < shape2; k++) {
                         phi(c, j, k) = phi(p, j, k);
                     }
                 }
             }
         } else if (patchType == "symmetryPlane" || patchType == "slip") {
-            if ((phi.shape[1] == 3) && (phi.shape[2] == 1)) {
+            if ((shape1 == 3) && (shape2 == 1)) {
                 for (integer i = 0; i < nFaces; i++) {
                     integer f = startFace + i;
                     integer c = cellStartFace + i;
@@ -387,31 +387,28 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
                 for (integer i = 0; i < nFaces; i++) {
                     integer p = mesh.owner(startFace + i);
                     integer c = cellStartFace + i;
-                    for (integer j = 0; j < phi.shape[1]; j++) {
-                        for (integer k = 0; k < phi.shape[2]; k++) {
+                    for (integer j = 0; j < shape1; j++) {
+                        for (integer k = 0; k < shape2; k++) {
                             phi(c, j, k) = phi(p, j, k);
                         }
                     }
                 }
             }
         } else if (patchType == "fixedValue") {
-            integer shape[NDIMS] = {nFaces, phi.shape[1], phi.shape[2], 1};
-            uarr phiVal(shape, patch.second.at("_value"));
+            arrType<uscalar, shape1, shape2> phiVal(nFaces, patch.second.at("_value"));
 
             for (integer i = 0; i < nFaces; i++) {
                 integer c = cellStartFace + i;
-                for (integer j = 0; j < phi.shape[1]; j++) {
-                    for (integer k = 0; k < phi.shape[2]; k++) {
+                for (integer j = 0; j < shape1; j++) {
+                    for (integer k = 0; k < shape2; k++) {
                         phi(c, j, k) = phiVal(i, j, k);
                     }
                 }
             }
         } else if (patchType == "CBC_UPT") {
-            integer shape[NDIMS] = {nFaces, 3, 1, 1};
-            uarr Uval(shape, patch.second.at("_U0"));
-            shape[1] = 1;
-            uarr Tval(shape, patch.second.at("_T0"));
-            uarr pval(shape, patch.second.at("_p0"));
+            umat Uval(nFaces, patch.second.at("_U0"));
+            uvec Tval(nFaces, patch.second.at("_T0"));
+            uvec pval(nFaces, patch.second.at("_p0"));
             for (integer i = 0; i < nFaces; i++) {
                 integer c = cellStartFace + i;
                 for (integer j = 0; j < 3; j++) {
@@ -421,15 +418,13 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
                 (*this->p)(c) = pval(i);
             }
         } else if (patchType == "CBC_TOTAL_PT") {
-            integer shape[NDIMS] = {nFaces, 1, 1, 1};
-            uarr Tt(shape, patch.second.at("_Tt"));
-            uarr pt(shape, patch.second.at("_pt"));
-            shape[1] = 3;
-            uarr *direction;
+            uvec Tt(nFaces, patch.second.at("_Tt"));
+            uvec pt(nFaces, patch.second.at("_pt"));
+            umat *direction;
             if (patch.second.count("_direction")) {
-                direction = new uarr(shape, patch.second.at("_direction"));
+                direction = new umat(nFaces, patch.second.at("_direction"));
             } else {
-                direction = new uarr(shape, &mesh.normals(startFace));
+                direction = new umat(nFaces, &mesh.normals(startFace));
             }
 
             for (integer i = 0; i < nFaces; i++) {
@@ -451,14 +446,14 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
         } else if (patchType == "processor" || patchType == "processorCyclic") {
             //cout << "hello " << patchID << endl;
             integer bufStartFace = cellStartFace - mesh.nLocalCells;
-            integer size = nFaces*phi.shape[1]*phi.shape[2];
+            integer size = nFaces*shape1*shape2;
             integer dest = stoi(patchInfo.at("neighbProcNo"));
             integer tag = 0;
             for (integer i = 0; i < nFaces; i++) {
                 integer p = mesh.owner(startFace + i);
                 integer b = bufStartFace + i;
-                for (integer j = 0; j < phi.shape[1]; j++) {
-                    for (integer k = 0; k < phi.shape[2]; k++) {
+                for (integer j = 0; j < shape1; j++) {
+                    for (integer k = 0; k < shape2; k++) {
                         phiBuf(b, j, k) = phi(p, j, k);
                     }
                 }
@@ -480,7 +475,7 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype>& phi) {
 }
 
 
-template void RCF::boundary<scalar>(const Boundary& boundary, arrType<scalar>& phi);
-#ifdef ADIFF
-    template void RCF::boundary<uscalar>(const Boundary& boundary, arrType<uscalar>& phi);
-#endif
+//template void RCF::boundary<scalar>(const Boundary& boundary, arrType<scalar>& phi);
+//#ifdef ADIFF
+//    template void RCF::boundary<uscalar>(const Boundary& boundary, arrType<uscalar>& phi);
+//#endif

@@ -1,11 +1,11 @@
 #include "timestep.hpp"
 
-tuple<scalar, scalar> euler(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {
+tuple<scalar, scalar> euler(RCF *rcf, const vec& rho, const mat& rhoU, const vec& rhoE, vec& rhoN, mat& rhoUN, vec& rhoEN, scalar t, scalar dt) {
     const Mesh& mesh = *(rcf->mesh);
 
-    arr drho(rho.shape);
-    arr drhoU(rhoU.shape);
-    arr drhoE(rhoE.shape);
+    vec drho(rho.shape);
+    mat drhoU(rhoU.shape);
+    vec drhoE(rhoE.shape);
     scalar objective, dtc;
     rcf->equation(rho, rhoU, rhoE, drho, drhoU, drhoE, objective, dtc);
 
@@ -19,7 +19,7 @@ tuple<scalar, scalar> euler(RCF *rcf, const arr& rho, const arr& rhoU, const arr
     return make_tuple(objective, dtc);
 }
 
-tuple<scalar, scalar> SSPRK(RCF *rcf, const arr& rho, const arr& rhoU, const arr& rhoE, arr& rhoN, arr& rhoUN, arr& rhoEN, scalar t, scalar dt) {
+tuple<scalar, scalar> SSPRK(RCF *rcf, const vec& rho, const mat& rhoU, const vec& rhoE, vec& rhoN, mat& rhoUN, vec& rhoEN, scalar t, scalar dt) {
     const Mesh& mesh = *(rcf->mesh);
 
     const integer n = 3;
@@ -28,12 +28,12 @@ tuple<scalar, scalar> SSPRK(RCF *rcf, const arr& rho, const arr& rhoU, const arr
     scalar gamma[n] = {0, 1, 0.5};
     scalar objective[n], dtc[n];
 
-    arr rhos[n+1] = {{rho.shape, rho.data}, {rho.shape}, {rho.shape}, {rho.shape, rhoN.data}};
-    arr rhoUs[n+1] = {{rhoU.shape, rhoU.data}, {rhoU.shape}, {rhoU.shape}, {rhoU.shape, rhoUN.data}};
-    arr rhoEs[n+1] = {{rhoE.shape, rhoE.data}, {rhoE.shape}, {rhoE.shape}, {rhoE.shape, rhoEN.data}};
-    arr drho(rho.shape);
-    arr drhoU(rhoU.shape);
-    arr drhoE(rhoE.shape);
+    vec rhos[n+1] = {{rho.shape, rho.data}, {rho.shape}, {rho.shape}, {rho.shape, rhoN.data}};
+    mat rhoUs[n+1] = {{rhoU.shape, rhoU.data}, {rhoU.shape}, {rhoU.shape}, {rhoU.shape, rhoUN.data}};
+    vec rhoEs[n+1] = {{rhoE.shape, rhoE.data}, {rhoE.shape}, {rhoE.shape}, {rhoE.shape, rhoEN.data}};
+    vec drho(rho.shape);
+    mat drhoU(rhoU.shape);
+    vec drhoE(rhoE.shape);
 
     for (integer stage = 0; stage < n; stage++) {
         //solver.t = solver.t0 + gamma[i]*solver.dt

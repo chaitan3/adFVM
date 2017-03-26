@@ -178,9 +178,15 @@ class arrType {
     #endif
 };
 
-typedef arrType<scalar> arr;
-typedef arrType<uscalar> uarr;
-typedef arrType<integer> iarr;
+typedef arrType<scalar> vec;
+typedef arrType<scalar, 3> mat;
+
+//typedef arrType<scalar> arr;
+typedef arrType<uscalar> uvec;
+typedef arrType<uscalar, 3> umat;
+
+typedef arrType<integer> ivec;
+typedef arrType<integer, 3> imat;
 
 // switch to lambda funcs?
 //template <typename Derived, typename OtherDerived>

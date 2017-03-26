@@ -5,14 +5,17 @@
 
 class Operator {
     Mesh const * mesh;
-    arr internal_sum(const arr&);
     
     public:
         Operator(Mesh const* mesh): mesh(mesh) {};
-        void div(const scalar*, arr&, integer, bool);
-        void absDiv(const scalar*, arr&, integer, bool);
-        void grad(const scalar*, arr&, integer, bool);
-        void snGrad(const arr&, scalar *, integer);
+        template<integer shape1, integer shape2>
+        void div(const scalar*, arrType<scalar, shape1, shape2>&, integer, bool);
+        template<integer shape1, integer shape2>
+        void absDiv(const scalar*, arrType<scalar, shape1, shape2>&, integer, bool);
+        template<integer shape1, integer shape2>
+        void grad(const scalar*, arrType<scalar, shape1, shape2>&, integer, bool);
+        template<integer shape1, integer shape2>
+        void snGrad(const arrType<scalar, shape1, shape2>&, scalar *, integer);
         //void laplacian(const arr&, const arr&, arr&);
 };
 

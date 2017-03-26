@@ -37,24 +37,24 @@ class RCF {
     }
     
 
-    arr* U;
-    arr* T;
-    arr* p;
+    mat* U;
+    vec* T;
+    vec* p;
     Boundary* boundaries;
 
     Interpolator* interpolate;
     Operator* operate;
     Mesh const* mesh;
-    scalar (*objective)(RCF*, const arr&, const arr&, const arr&);
+    scalar (*objective)(RCF*, const mat&, const vec&, const vec&);
     string objectiveDragInfo;
 
     void primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p);
     void conservative(const scalar U[3], const scalar T, const scalar p, scalar& rho, scalar rhoU[3], scalar& rhoE);
     void getFlux(const scalar U[3], const scalar T, const scalar p, const uscalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux);
 
-    void equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, arr& drhoU, arr& drhoE, scalar& objective, scalar& dtc);
-    template<typename dtype>
-    void boundary(const Boundary& boundary, arrType<dtype>& phi);
+    void equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& objective, scalar& dtc);
+    template<typename dtype, integer shape1, integer shape2>
+    void boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi);
 
     void setMesh(Mesh const* mesh)  {
         this->mesh = mesh;

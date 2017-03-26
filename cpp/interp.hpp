@@ -8,10 +8,14 @@ class Interpolator {
     
     public:
         Interpolator(Mesh const* mesh): mesh(mesh) {};
-        void central(const arr&, scalar [], integer);
-        void average(const arr&, scalar [], integer);
-        void firstOrder(const arr& phi, const arr& gradPhi, scalar *phiF, integer index, integer which);
-        void secondOrder(const arr& phi, const arr& gradPhi, scalar *phiF, integer index, integer which);
+        template<integer shape1, integer shape2>
+        void central(const arrType<scalar, shape1, shape2>& phi, scalar* phiF, integer index);
+        template<integer shape1, integer shape2>
+        void average(const arrType<scalar, shape1, shape2>& phi, scalar* phiF, integer index);
+        template<integer shape1>
+        void firstOrder(const arrType<scalar, shape1>& phi, const arrType<scalar, shape1, 3>& gradPhi, scalar *phiF, integer index, integer swap);
+        template<integer shape1>
+        void secondOrder(const arrType<scalar, shape1>& phi, const arrType<scalar, shape1, 3>& gradPhi, scalar *phiF, integer index, integer swap);
 };
  
 

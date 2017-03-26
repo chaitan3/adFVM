@@ -26,22 +26,22 @@ class Mesh {
         int nLocalPatches;
         int nRemotePatches;
 
-        iarr faces;
-        uarr points;
-        iarr owner;
-        iarr neighbour;
+        imat faces;
+        umat points;
+        ivec owner;
+        ivec neighbour;
 
-        uarr normals;
-        uarr faceCentres;
-        uarr areas;
-        iarr cellFaces;
-        uarr cellCentres;
-        uarr volumes;
-        uarr deltas;
-        uarr deltasUnit;
-        uarr weights;
-        uarr linearWeights;
-        uarr quadraticWeights;
+        umat normals;
+        umat faceCentres;
+        uvec areas;
+        imat cellFaces;
+        umat cellCentres;
+        uvec volumes;
+        uvec deltas;
+        umat deltasUnit;
+        uvec weights;
+        umat linearWeights;
+        arrType<uscalar, 2> quadraticWeights;
 
         //spmat sumOp;
         //spmat sumOpT;
@@ -65,14 +65,14 @@ class Mesh {
 int getInteger(PyObject*, const string);
 string getString(PyObject*, const string);
 
-template<typename dtype>
-PyObject * putArray(arrType<dtype>&);
+template<typename dtype, integer shape1, integer shape2>
+PyObject * putArray(arrType<dtype, shape1, shape2>&);
 
-template<typename dtype>
-extern void getMeshArray(PyObject *, const string, arrType<dtype> &);
+template<typename dtype, integer shape1, integer shape2>
+extern void getMeshArray(PyObject *, const string, arrType<dtype, shape1, shape2> &);
 
-template<typename dtype>
-extern void getArray(PyArrayObject *, arrType<dtype> &);
+template<typename dtype, integer shape1, integer shape2>
+extern void getArray(PyArrayObject *, arrType<dtype, shape1, shape2> &);
 //
 //template<typename Derived>
 //extern void getSpArray(PyObject *, const string, SparseMatrix<Derived> &);

@@ -4,7 +4,7 @@
 #include "objective.hpp"
 
 RCF* rcf;
-tuple<scalar, scalar> (*timeIntegrator)(RCF*, const arr&, const arr&, const arr&, arr&, arr&, arr&, scalar, scalar) = SSPRK;
+tuple<scalar, scalar> (*timeIntegrator)(RCF*, const vec&, const mat&, const vec&, vec&, mat&, vec&, scalar, scalar) = SSPRK;
 
 static PyObject* initSolver(PyObject *self, PyObject *args) {
 
@@ -80,11 +80,14 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         integer nSteps;
         PyArg_ParseTuple(args, "OOOOOOddi", &rhoObject, &rhoUObject, &rhoEObject, &rhoaObject, &rhoUaObject, &rhoEaObject, &dt, &t, &nSteps);
 
-        arr rho, rhoU, rhoE;
+        vec rho, rhoE;
+        mat rhoU;
         getArray((PyArrayObject *)rhoObject, rho);
         getArray((PyArrayObject *)rhoUObject, rhoU);
         getArray((PyArrayObject *)rhoEObject, rhoE);
-        arr rhoa, rhoUa, rhoEa;
+        vec rhoa, rhoEa;
+        mat rhoUa;
+        getArray((PyArrayObject *)rhoObject, rho);
         getArray((PyArrayObject *)rhoaObject, rhoa);
         getArray((PyArrayObject *)rhoUaObject, rhoUa);
         getArray((PyArrayObject *)rhoEaObject, rhoEa);
@@ -102,15 +105,16 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoUa.adInit(tape);
         rhoEa.adInit(tape);
 
-        arr rhoN(rho.shape);
-        arr rhoUN(rhoU.shape);
-        arr rhoEN(rhoE.shape);
+        const Mesh& mesh = *(rcf->mesh);
+        vec rhoN(mesh.nInternalCells);
+        mat rhoUN(mesh.nInternalCells);
+        vec rhoEN(mesh.nInternalCells);
+
         scalar objective, dtc;
         tie(objective, dtc) = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
         //cout << "forward 4" << endl;
         //
         scalar adjoint = 0.;
-        const Mesh& mesh = *(rcf->mesh);
         for (integer i = 0; i < mesh.nInternalCells; i++) {
             scalar v = mesh.volumes(i);
             adjoint += rhoN(i)*rhoa(i)*v;
@@ -125,9 +129,9 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 
         adjoint.setGradient(1.0);
         tape.evaluate();
-        uarr rhoaN(rho.shape);
-        uarr rhoUaN(rhoU.shape);
-        uarr rhoEaN(rhoE.shape);
+        uvec rhoaN(mesh.nInternalCells);
+        umat rhoUaN(mesh.nInternalCells);
+        uvec rhoEaN(mesh.nInternalCells);
         rhoaN.adGetGrad(rho);
         rhoUaN.adGetGrad(rhoU);
         rhoEaN.adGetGrad(rhoE);
@@ -160,7 +164,8 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         PyObject *rhoObject, *rhoUObject, *rhoEObject;
         PyArg_ParseTuple(args, "OOO", &rhoObject, &rhoUObject, &rhoEObject);
 
-        uarr rho, rhoU, rhoE;
+        uvec rho, rhoE;
+        umat rhoU;
         getArray((PyArrayObject *)rhoObject, rho);
         getArray((PyArrayObject *)rhoUObject, rhoU);
         getArray((PyArrayObject *)rhoEObject, rhoE);
@@ -168,9 +173,9 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         //
         
         const Mesh& mesh = *(rcf->mesh);
-        uarr rhoN(mesh.nCells, 1);
-        uarr rhoUN(mesh.nCells, 3);
-        uarr rhoEN(rhoN.shape);
+        uvec rhoN(mesh.nCells);
+        umat rhoUN(mesh.nCells);
+        uvec rhoEN(mesh.nCells);
         rhoN.ownData = false;
         rhoUN.ownData = false;
         rhoEN.ownData = false;
@@ -208,16 +213,18 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         uscalar t, dt;
         PyArg_ParseTuple(args, "OOOdd", &rhoObject, &rhoUObject, &rhoEObject, &dt, &t);
 
-        arr rho, rhoU, rhoE;
+        vec rho, rhoE;
+        mat rhoU;
         getArray((PyArrayObject *)rhoObject, rho);
         getArray((PyArrayObject *)rhoUObject, rhoU);
         getArray((PyArrayObject *)rhoEObject, rhoE);
         //cout << "forward 2" << endl;
 
         //cout << "forward 3" << endl;
-        arr rhoN(rho.shape);
-        arr rhoUN(rhoU.shape);
-        arr rhoEN(rhoE.shape);
+        const Mesh& mesh = *(rcf->mesh);
+        vec rhoN(mesh.nInternalCells);
+        mat rhoUN(mesh.nInternalCells);
+        vec rhoEN(mesh.nInternalCells);
         scalar objective, dtc;
         tie(objective, dtc) = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
         //cout << "forward 4" << endl;
@@ -237,16 +244,17 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         uscalar t, dt;
         PyArg_ParseTuple(args, "OOO", &rhoObject, &rhoUObject, &rhoEObject);
 
-        arr rho, rhoU, rhoE;
+        vec rho, rhoE;
+        mat rhoU;
         getArray((PyArrayObject *)rhoObject, rho);
         getArray((PyArrayObject *)rhoUObject, rhoU);
         getArray((PyArrayObject *)rhoEObject, rhoE);
         //cout << "forward 2" << endl;
         //
         const Mesh& mesh = *(rcf->mesh);
-        arr U(mesh.nCells, 3);
-        arr T(mesh.nCells);
-        arr p(T.shape);
+        mat U(mesh.nCells);
+        vec T(mesh.nCells);
+        vec p(mesh.nCells);
         for (integer i = 0; i < mesh.nInternalCells; i++) {
             rcf->primitive(rho(i), &rhoU(i), rhoE(i), &U(i), T(i), p(i));
         }
@@ -258,9 +266,9 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rcf->boundary(rcf->boundaries[2], p);
 
         //cout << "forward 3" << endl;
-        arr rhoN(mesh.nCells, 1);
-        arr rhoUN(mesh.nCells, 3);
-        arr rhoEN(rhoN.shape);
+        vec rhoN(mesh.nCells);
+        mat rhoUN(mesh.nCells);
+        vec rhoEN(mesh.nCells);
         for (integer i = 0; i < mesh.nCells; i++) {
             rcf->conservative(&U(i), T(i), p(i), rhoN(i), &rhoUN(i), rhoEN(i));
         }

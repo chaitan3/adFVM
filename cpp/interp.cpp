@@ -1,32 +1,35 @@
 #include "interp.hpp"
 
-void Interpolator::central(const arr& phi, scalar* phiF, integer index) {
+template<integer shape1, integer shape2>
+void Interpolator::central(const arrType<scalar, shape1, shape2>& phi, scalar* phiF, integer index) {
     const Mesh& mesh = *this->mesh;
     integer p = mesh.owner(index);
     integer n = mesh.neighbour(index);
     scalar w = mesh.weights(index);
     //integer w = mesh.weights(index);
-    for (integer i = 0; i < phi.shape[1]; i++) {
-        for (integer j = 0; j < phi.shape[2]; j++) {
+    for (integer i = 0; i < shape1; i++) {
+        for (integer j = 0; j < shape2; j++) {
             phiF[i*phi.shape[2]+j] = phi(n, i, j)*(1-w) + phi(p, i, j)*w;
         }
     }
 }
 
-void Interpolator::average(const arr& phi, scalar* phiF, integer index) {
+template<integer shape1, integer shape2>
+void Interpolator::average(const arrType<scalar, shape1, shape2>& phi, scalar* phiF, integer index) {
     const Mesh& mesh = *this->mesh;
     integer p = mesh.owner(index);
     integer n = mesh.neighbour(index);
     scalar w = 0.5;
     //integer w = mesh.weights(index);
-    for (integer i = 0; i < phi.shape[1]; i++) {
-        for (integer j = 0; j < phi.shape[2]; j++) {
+    for (integer i = 0; i < shape1; i++) {
+        for (integer j = 0; j < shape2; j++) {
             phiF[i*phi.shape[2]+j] = phi(n, i, j)*(1-w) + phi(p, i, j)*w;
         }
     }
 }
 
-void Interpolator::firstOrder(const arr& phi, const arr& gradPhi, scalar *phiF, integer index, integer swap) {
+template<integer shape1>
+void Interpolator::firstOrder(const arrType<scalar, shape1>& phi, const arrType<scalar, shape1, 3>& gradPhi, scalar *phiF, integer index, integer swap) {
     const Mesh& mesh = *this->mesh;
     integer p;
     if (swap) {
@@ -34,12 +37,13 @@ void Interpolator::firstOrder(const arr& phi, const arr& gradPhi, scalar *phiF, 
     } else {
         p = mesh.owner(index);
     }
-    for (integer i = 0; i < phi.shape[1]; i++) {
+    for (integer i = 0; i < shape1; i++) {
         phiF[i] = phi(p, i);
     }
 }
 
-void Interpolator::secondOrder(const arr& phi, const arr& gradPhi, scalar *phiF, integer index, integer swap) {
+template<integer shape1>
+void Interpolator::secondOrder(const arrType<scalar, shape1>& phi, const arrType<scalar, shape1, 3>& gradPhi, scalar *phiF, integer index, integer swap) {
     const Mesh& mesh = *this->mesh;
     integer p, n;
     if (swap) {
@@ -49,7 +53,7 @@ void Interpolator::secondOrder(const arr& phi, const arr& gradPhi, scalar *phiF,
         p = mesh.owner(index);
         n = mesh.neighbour(index);
     }
-    for (integer i = 0; i < phi.shape[1]; i++) {
+    for (integer i = 0; i < shape1; i++) {
         scalar phiC = phi(p, i);
         scalar phiD = phi(n, i);
         phiF[i] = phiC + (phiD-phiC)*mesh.linearWeights(swap, index);

@@ -17,7 +17,8 @@
 //}
 //
 
-void Operator::grad(const scalar* phi, arr& gradPhi, integer index, bool neighbour) {
+template<integer shape1, integer shape2>
+void Operator::grad(const scalar* phi, arrType<scalar, shape1, shape2>& gradPhi, integer index, bool neighbour) {
     const Mesh& mesh = *this->mesh;
     
     integer p = mesh.owner(index);
@@ -29,7 +30,7 @@ void Operator::grad(const scalar* phi, arr& gradPhi, integer index, bool neighbo
     }
     //cout << index << " " << mesh.nInternalFaces << " " << mesh.nFaces << " " << mesh.nInternalCells << endl;
     //cout << p << " " << mesh.areas(index) << " " << mesh.areas.data[index] << endl;
-    for (integer i = 0; i < gradPhi.shape[1]; i++) {
+    for (integer i = 0; i < shape1; i++) {
         for (integer j = 0; j < 3; j++) {
             gradPhi(p, i, j) += phi[i]*mesh.normals(index, j)*wp;
             if (neighbour) {
@@ -39,7 +40,8 @@ void Operator::grad(const scalar* phi, arr& gradPhi, integer index, bool neighbo
     }
 }
 
-void Operator::div(const scalar* phi, arr& divPhi, integer index, bool neighbour) {
+template<integer shape1, integer shape2>
+void Operator::div(const scalar* phi, arrType<scalar, shape1, shape2>& divPhi, integer index, bool neighbour) {
     const Mesh& mesh = *this->mesh;
     
     integer p = mesh.owner(index);
@@ -49,7 +51,7 @@ void Operator::div(const scalar* phi, arr& divPhi, integer index, bool neighbour
     if (neighbour) {
         wn = mesh.areas(index)/mesh.volumes(n);
     }
-    for (integer i = 0; i < divPhi.shape[1]; i++) {
+    for (integer i = 0; i < shape1; i++) {
         divPhi(p, i) += phi[i]*wp;
         if (neighbour) {
             divPhi(n, i) -= phi[i]*wn;
@@ -57,7 +59,8 @@ void Operator::div(const scalar* phi, arr& divPhi, integer index, bool neighbour
     }
 }
 
-void Operator::absDiv(const scalar* phi, arr& divPhi, integer index, bool neighbour) {
+template<integer shape1, integer shape2>
+void Operator::absDiv(const scalar* phi, arrType<scalar, shape1, shape2>& divPhi, integer index, bool neighbour) {
     const Mesh& mesh = *this->mesh;
     
     integer p = mesh.owner(index);
@@ -67,7 +70,7 @@ void Operator::absDiv(const scalar* phi, arr& divPhi, integer index, bool neighb
     if (neighbour) {
         wn = mesh.areas(index)/mesh.volumes(n);
     }
-    for (integer i = 0; i < divPhi.shape[1]; i++) {
+    for (integer i = 0; i < shape1; i++) {
         divPhi(p, i) += phi[i]*wp;
         if (neighbour) {
             divPhi(n, i) += phi[i]*wn;
@@ -75,13 +78,14 @@ void Operator::absDiv(const scalar* phi, arr& divPhi, integer index, bool neighb
     }
 }
 
-void Operator::snGrad(const arr& phi, scalar* snGradPhi, integer index) {
+template<integer shape1, integer shape2>
+void Operator::snGrad(const arrType<scalar, shape1, shape2>& phi, scalar* snGradPhi, integer index) {
     const Mesh& mesh = *this->mesh;
     
     integer p = mesh.owner(index);
     integer n = mesh.neighbour(index);
     integer d = mesh.deltas(index);
-    for (integer i = 0; i < phi.shape[1]; i++) {
+    for (integer i = 0; i < shape1; i++) {
         snGradPhi[i] = (phi(n, i)-phi(p, i))*d;
     }
 }

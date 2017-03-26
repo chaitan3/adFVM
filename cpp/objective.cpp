@@ -1,10 +1,10 @@
 #include "objective.hpp"
 
-scalar objectiveNone(RCF* rcf, const arr& U, const arr& T, const arr& p) {
+scalar objectiveNone(RCF* rcf, const mat& U, const vec& T, const vec& p) {
     return 0;
 }
 
-scalar objectiveDrag(RCF* rcf, const arr& U, const arr& T, const arr& p) {
+scalar objectiveDrag(RCF* rcf, const mat& U, const vec& T, const vec& p) {
     const Mesh& mesh = *(rcf->mesh);
     string patchID = rcf->objectiveDragInfo;
     integer startFace, nFaces;
