@@ -195,13 +195,7 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
         this->interpolate->average(gradU, (scalar*)gradUF, ind);
         //this->interpolate->central(gradU, (scalar*)gradUF, ind);
         this->operate->snGrad(U, snGradU, ind);
-        scalar tmp[3], tmp2[3], tmp3;
-        for (integer i = 0; i < 3; i++) {
-            tmp[i] = 0;
-            for (integer j = 0; j < 3; j++) {
-                tmp[i] += gradUF[i][j]*S[j];
-            }
-        }
+        scalar tmp2[3], tmp3;
         for (integer i = 0; i < 3; i++) {
             tmp2[i] = 0;
             for (integer j = 0; j < 3; j++) {
