@@ -169,7 +169,7 @@ class arrType {
             }
             this->ownData = true;
         }
-        void adGetGrad(const arrType<scalar>& phi) {
+        void adGetGrad(const arrType<scalar, shape1, shape2, shape3>& phi) {
             for (integer i = 0; i < this->size; i++) {
                 this -> data[i] = phi.data[i].getGradient();
             }
