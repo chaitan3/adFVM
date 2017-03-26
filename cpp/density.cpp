@@ -121,6 +121,60 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
 
     arr dtc(rho.shape);
     dtc.zero();
+    /*auto viscousFluxUpdate = [&](const scalar UF[3], const scalar TF, scalar rhoUFlux[3], scalar& rhoEFlux, integer ind) {*/
+        //scalar qF = 0, sigmadotUF = 0., sigmaF[3];
+        //scalar mu = (this->*(this->mu))(TF);
+        ////cout << mu << endl;
+        //scalar kappa = this->kappa(mu, TF);
+
+        //scalar gradTF[3], gradTCF[3];
+        //scalar snGradT, gradTFs = 0.;
+        //const uscalar* S = &mesh.deltasUnit(ind);
+        //const uscalar* N = &mesh.normals(ind);
+        //this->operate->snGrad(T, &snGradT, ind);
+        ////this->interpolate->central(gradT, gradTF, ind);
+        //this->interpolate->average(gradT, gradTF, ind);
+        //for (integer i = 0; i < 3; i++) {
+            //gradTFs += gradTF[i]*S[i];
+        //}
+        //for (integer i = 0; i < 3; i++) {
+            //gradTCF[i] = gradTF[i] + snGradT*S[i] - gradTFs*S[i];
+            //qF += kappa*(gradTCF[i]*N[i]);
+        //}
+
+        //scalar gradUF[3][3], gradUCF[3][3];
+        //scalar snGradU[3];
+        //this->interpolate->average(gradU, (scalar*)gradUF, ind);
+        ////this->interpolate->central(gradU, (scalar*)gradUF, ind);
+        //this->operate->snGrad(U, snGradU, ind);
+
+        //scalar tmp[3], tmp2[3], tmp3;
+        //for (integer i = 0; i < 3; i++) {
+            //tmp[i] = 0;
+            //for (integer j = 0; j < 3; j++) {
+                //tmp[i] += gradUF[i][j]*S[j];
+            //}
+        //}
+        //for (integer i = 0; i < 3; i++) {
+            //for (integer j = 0; j < 3; j++) {
+                //gradUCF[i][j] = gradUF[i][j] + snGradU[i]*S[j] - tmp[i]*S[j];
+            //}
+        //}
+        //tmp3 = 0;
+        //for (integer i = 0; i < 3; i++) {
+            //tmp2[i] = 0;
+            //for (integer j = 0; j < 3; j++) {
+                //tmp2[i] += (gradUCF[i][j] + gradUCF[j][i])*N[j];
+            //}
+            //tmp3 += gradUCF[i][i];
+        //}
+        //for (integer i = 0; i < 3; i++) {
+            //sigmaF[i] = mu*(tmp2[i] - 2./3*tmp3*N[i]);
+            //rhoUFlux[i] -= sigmaF[i];
+            //sigmadotUF += sigmaF[i]*UF[i];
+        //}
+        //rhoEFlux -= qF + sigmadotUF;
+    /*};*/
     auto viscousFluxUpdate = [&](const scalar UF[3], const scalar TF, scalar rhoUFlux[3], scalar& rhoEFlux, integer ind) {
         scalar qF = 0, sigmadotUF = 0., sigmaF[3];
         scalar mu = (this->*(this->mu))(TF);
@@ -134,20 +188,13 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
         this->operate->snGrad(T, &snGradT, ind);
         //this->interpolate->central(gradT, gradTF, ind);
         this->interpolate->average(gradT, gradTF, ind);
-        for (integer i = 0; i < 3; i++) {
-            gradTFs += gradTF[i]*S[i];
-        }
-        for (integer i = 0; i < 3; i++) {
-            gradTCF[i] = gradTF[i] + snGradT*S[i] - gradTFs*S[i];
-            qF += kappa*(gradTCF[i]*N[i]);
-        }
+        qF += kappa*snGradT;
 
         scalar gradUF[3][3], gradUCF[3][3];
         scalar snGradU[3];
         this->interpolate->average(gradU, (scalar*)gradUF, ind);
         //this->interpolate->central(gradU, (scalar*)gradUF, ind);
         this->operate->snGrad(U, snGradU, ind);
-
         scalar tmp[3], tmp2[3], tmp3;
         for (integer i = 0; i < 3; i++) {
             tmp[i] = 0;
@@ -156,17 +203,11 @@ void RCF::equation(const arr& rho, const arr& rhoU, const arr& rhoE, arr& drho, 
             }
         }
         for (integer i = 0; i < 3; i++) {
-            for (integer j = 0; j < 3; j++) {
-                gradUCF[i][j] = gradUF[i][j] + snGradU[i]*S[j] - tmp[i]*S[j];
-            }
-        }
-        tmp3 = 0;
-        for (integer i = 0; i < 3; i++) {
             tmp2[i] = 0;
             for (integer j = 0; j < 3; j++) {
-                tmp2[i] += (gradUCF[i][j] + gradUCF[j][i])*N[j];
+                tmp2[i] += (gradUF[i][j] + gradUF[j][i])*N[j];
             }
-            tmp3 += gradUCF[i][i];
+            tmp3 += gradUF[i][i];
         }
         for (integer i = 0; i < 3; i++) {
             sigmaF[i] = mu*(tmp2[i] - 2./3*tmp3*N[i]);
