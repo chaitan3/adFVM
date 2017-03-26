@@ -62,9 +62,9 @@ void Interpolator::secondOrder(const arrType<scalar, shape1>& phi, const arrType
     for (integer i = 0; i < shape1; i++) {
         scalar phiC = phi(p, i);
         scalar phiD = phi(n, i);
-        phiF[i] = phiC + (phiD-phiC)*mesh.linearWeights(swap, index);
+        phiF[i] = phiC + (phiD-phiC)*mesh.linearWeights(index, swap);
         for (integer j = 0; j < 3; j++) {
-            phiF[i] += mesh.quadraticWeights(swap, index, j)*gradPhi(p, i, j);
+            phiF[i] += mesh.quadraticWeights(index, swap, j)*gradPhi(p, i, j);
         }
     }
 }
