@@ -28,32 +28,31 @@ typedef int32_t integer;
 
 #define NDIMS 4
 
-template <typename dtype>
+template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class arrType {
     public:
     dtype* data;
     //integer dims;
-    integer shape[NDIMS];
+    integer shape;
     integer size;
     integer strides[NDIMS];
     bool ownData;
 
-    void init(const integer* shape) {
-        copy(shape, shape + NDIMS, this->shape);
+    void init(const integer shape) {
+        this->shape = shape;
         integer temp = 1;
-        for (integer i = NDIMS-1; i >= 0; i--) {
-            //cout << shape[i] << " ";
-            this->strides[i] = temp;
-            temp *= shape[i];
-        }
+        this->strides[3] = 1;
+        this->strides[2] = shape3*this->strides[3];
+        this->strides[1] = shape2*this->strides[2];
+        this->strides[0] = shape1*this->strides[1];
         //cout << endl;
-        this -> size = temp;
+        this -> size = this->strides[0]*shape;
         this -> ownData = true;
     }
 
     arrType () {
+        this->shape = 0;
         for (integer i = 0; i < NDIMS; i++)  {
-            this->shape[i] = 0;
             this->strides[i] = 0;
         }
         this -> size = 0;
@@ -61,40 +60,24 @@ class arrType {
         this -> ownData = false;
     }
 
-    arrType(const integer* shape) {
+    arrType(const integer shape) {
         this -> init(shape);
         this -> data = new dtype[this->size];
     }
 
-    arrType(const integer* shape, dtype* data) {
+    arrType(const integer shape, dtype* data) {
         this -> init(shape);
         this -> data = data;
         this -> ownData = false;
     }
 
-    arrType(const integer shape1) {
-        const integer shape[NDIMS] = {shape1, 1, 1, 1};
-        this -> init(shape);
-        this -> data = new dtype[this->size];
-    }
-    arrType(const integer shape1, const integer shape2) {
-        const integer shape[NDIMS] = {shape1, shape2, 1, 1};
-        this -> init(shape);
-        this -> data = new dtype[this->size];
-    }
-    arrType(const integer shape1, const integer shape2, const integer shape3) {
-        const integer shape[NDIMS] = {shape1, shape2, shape3, 1};
-        this -> init(shape);
-        this -> data = new dtype[this->size];
-    }
-
-    arrType(const integer* shape, const dtype* data) {
+    arrType(const integer shape, const dtype* data) {
         this->init(shape);
         this->data = const_cast<dtype *>(data);
         this->ownData = false ;
     }
 
-    arrType(const integer* shape, const string& data) {
+    arrType(const integer shape, const string& data) {
         this->init(shape);
         this->data = const_cast<dtype *>((dtype *)data.data());
         this->ownData = false ;
