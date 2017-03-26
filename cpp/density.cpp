@@ -181,21 +181,21 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
         //cout << mu << endl;
         scalar kappa = this->kappa(mu, TF);
 
-        scalar gradTF[3], gradTCF[3];
-        scalar snGradT, gradTFs = 0.;
-        const uscalar* S = &mesh.deltasUnit(ind);
+        scalar gradTF[3];
+        scalar snGradT;
+        //const uscalar* S = &mesh.deltasUnit(ind);
         const uscalar* N = &mesh.normals(ind);
         this->operate->snGrad(T, &snGradT, ind);
         //this->interpolate->central(gradT, gradTF, ind);
         this->interpolate->average(gradT, gradTF, ind);
         qF += kappa*snGradT;
 
-        scalar gradUF[3][3], gradUCF[3][3];
-        scalar snGradU[3];
+        scalar gradUF[3][3];
+        //scalar snGradU[3];
         this->interpolate->average(gradU, (scalar*)gradUF, ind);
         //this->interpolate->central(gradU, (scalar*)gradUF, ind);
-        this->operate->snGrad(U, snGradU, ind);
-        scalar tmp2[3], tmp3;
+        //this->operate->snGrad(U, snGradU, ind);
+        scalar tmp2[3], tmp3 = 0.;
         for (integer i = 0; i < 3; i++) {
             tmp2[i] = 0;
             for (integer j = 0; j < 3; j++) {
@@ -332,7 +332,7 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
     //MPI_Barrier(MPI_COMM_WORLD);
 
     arrType<dtype, shape1, shape2> phiBuf(mesh.nCells-mesh.nLocalCells);
-    AMPI_Request* req;
+    AMPI_Request* req = NULL;
     integer reqIndex = 0;
     if (mesh.nRemotePatches > 0) {
         req = new AMPI_Request[2*mesh.nRemotePatches];
@@ -431,14 +431,13 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
                 integer c = cellStartFace + i;
                 integer o = mesh.owner(startFace + i);
                 scalar Un = 0;
-                scalar U[3], T, p;
                 for (integer j = 0; j < 3; j++) {
                     Un = Un + (*this->U)(o, j)*(*direction)(i, j);
                 }
                 for (integer j = 0; j < 3; j++) {
                     (*this->U)(c, j) = Un*(*direction)(i, j);
                 }
-                T = Tt(i)-0.5*Un*Un/this->Cp;
+                scalar T = Tt(i)-0.5*Un*Un/this->Cp;
                 (*this->T)(c) = T;
                 (*this->p)(c) = pt(i)*pow(T/Tt(i), this->gamma/(this->gamma-1));
             }
@@ -475,7 +474,9 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
 }
 
 
-//template void RCF::boundary<scalar>(const Boundary& boundary, arrType<scalar>& phi);
+template void RCF::boundary(const Boundary& boundary, arrType<scalar, 1, 1>& phi);
+template void RCF::boundary(const Boundary& boundary, arrType<scalar, 3, 1>& phi);
+template void RCF::boundary(const Boundary& boundary, arrType<scalar, 3, 3>& phi);
 //#ifdef ADIFF
 //    template void RCF::boundary<uscalar>(const Boundary& boundary, arrType<uscalar>& phi);
 //#endif

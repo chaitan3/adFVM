@@ -40,7 +40,7 @@ class arrType {
 
     void init(const integer shape) {
         this->shape = shape;
-        integer temp = 1;
+        //integer temp = 1;
         this->strides[3] = 1;
         this->strides[2] = shape3*this->strides[3];
         this->strides[1] = shape2*this->strides[2];

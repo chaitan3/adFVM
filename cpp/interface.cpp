@@ -6,6 +6,38 @@
 RCF* rcf;
 tuple<scalar, scalar> (*timeIntegrator)(RCF*, const vec&, const mat&, const vec&, vec&, mat&, vec&, scalar, scalar) = SSPRK;
 
+template <typename dtype, integer shape1, integer shape2>
+void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shape2>& tmp) {
+    PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
+    //cout << attr << " " << PyArray_DESCR(array)->elsize << endl;
+    getArray(array, tmp);
+    Py_DECREF(array);
+}
+
+
+template <typename dtype, integer shape1, integer shape2>
+void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp) {
+    assert(array);
+    int nDims = PyArray_NDIM(array);
+    npy_intp* dims = PyArray_DIMS(array);
+    if (nDims > 1) assert(dims[1] == shape1);
+    if (nDims > 2) assert(dims[2] == shape2);
+    dtype *data = (dtype *) PyArray_DATA(array);
+    //cout << rows << " " << cols << endl;
+    arrType<dtype, shape1, shape2> result(dims[0], data);
+    tmp = result;
+}
+
+template <typename dtype, integer shape1>
+PyObject* putArray(arrType<dtype, shape1> &tmp) {
+    npy_intp shape[2] = {tmp.shape, shape1};
+    uscalar* data = tmp.data;
+    tmp.ownData = false;
+    PyObject* array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
+    PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
+    return array;
+}
+
 static PyObject* initSolver(PyObject *self, PyObject *args) {
 
     PyObject *meshObject = PyTuple_GetItem(args, 0);
@@ -241,7 +273,6 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 
         //cout << "forward 1" << endl;
         PyObject *rhoObject, *rhoUObject, *rhoEObject;
-        uscalar t, dt;
         PyArg_ParseTuple(args, "OOO", &rhoObject, &rhoUObject, &rhoEObject);
 
         vec rho, rhoE;
@@ -388,39 +419,7 @@ string getString(PyObject *mesh, const string attr) {
     return result;
 }
 
-template <typename dtype>
-void getMeshArray(PyObject *mesh, const string attr, arrType<dtype>& tmp) {
-    PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
-    //cout << attr << " " << PyArray_DESCR(array)->elsize << endl;
-    getArray(array, tmp);
-    Py_DECREF(array);
-}
 
-
-template <typename dtype>
-void getArray(PyArrayObject *array, arrType<dtype> & tmp) {
-    assert(array);
-    int nDims = PyArray_NDIM(array);
-    npy_intp* dims = PyArray_DIMS(array);
-    integer shape[NDIMS] = {1,1,1,1};
-    for (integer i = 0; i < nDims; i++) {
-        shape[i] = dims[i];
-    }
-    dtype *data = (dtype *) PyArray_DATA(array);
-    //cout << rows << " " << cols << endl;
-    arrType<dtype> result(shape, data);
-    tmp = result;
-}
-
-template <typename dtype>
-PyObject* putArray(arrType<dtype> &tmp) {
-    npy_intp shape[2] = {tmp.shape[0], tmp.shape[1]};
-    uscalar* data = tmp.data;
-    tmp.ownData = false;
-    PyObject* array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
-    PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
-    return array;
-}
 
 Boundary getMeshBoundary(PyObject *mesh, const string attr) {
     PyObject *dict = PyObject_GetAttrString(mesh, attr.c_str());
@@ -459,3 +458,4 @@ Boundary getBoundary(PyObject *dict) {
     }
     return boundary;
 }
+

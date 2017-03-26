@@ -40,8 +40,8 @@ class Mesh {
         uvec deltas;
         umat deltasUnit;
         uvec weights;
-        umat linearWeights;
-        arrType<uscalar, 2> quadraticWeights;
+        arrType<uscalar, 2> linearWeights;
+        arrType<uscalar, 2, 3> quadraticWeights;
 
         //spmat sumOp;
         //spmat sumOpT;
@@ -65,14 +65,14 @@ class Mesh {
 int getInteger(PyObject*, const string);
 string getString(PyObject*, const string);
 
-template<typename dtype, integer shape1, integer shape2>
-PyObject * putArray(arrType<dtype, shape1, shape2>&);
-
-template<typename dtype, integer shape1, integer shape2>
-extern void getMeshArray(PyObject *, const string, arrType<dtype, shape1, shape2> &);
-
-template<typename dtype, integer shape1, integer shape2>
-extern void getArray(PyArrayObject *, arrType<dtype, shape1, shape2> &);
+//template<typename dtype, integer shape1, integer shape2>
+// PyObject * putArray(arrType<dtype, shape1, shape2>&);
+//
+//template<typename dtype, integer shape1, integer shape2>
+// void getMeshArray(PyObject *, const string, arrType<dtype, shape1, shape2> &);
+//
+//template<typename dtype, integer shape1>
+// void getArray(PyArrayObject *, arrType<dtype, shape1> &);
 //
 //template<typename Derived>
 //extern void getSpArray(PyObject *, const string, SparseMatrix<Derived> &);

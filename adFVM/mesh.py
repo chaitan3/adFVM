@@ -600,8 +600,8 @@ class Mesh(object):
 
         # weights generally for all faces
         # for actual boundary faces (no coupled) does not matter, NOT USED
-        combinedLinearWeights = np.zeros((2, self.nFaces), config.precision)
-        combinedQuadraticWeights = np.zeros((2, self.nFaces, 3), config.precision)
+        combinedLinearWeights = np.zeros((self.nFaces, 2), config.precision)
+        combinedQuadraticWeights = np.zeros((self.nFaces, 2, 3), config.precision)
         index = 0
         for C, D in [[self.owner, self.neighbour], [self.neighbour, self.owner]]:
             R = self.cellCentres[D] - self.cellCentres[C]
@@ -617,8 +617,8 @@ class Mesh(object):
             # upwind biased: gradient + central difference
             linearWeights = 1./3*w
             quadraticWeights = 2./3*F + 1./3*(F-w.reshape(-1,1)*R)
-            combinedLinearWeights[index, :] = linearWeights
-            combinedQuadraticWeights[index,:,:] = quadraticWeights
+            combinedLinearWeights[:, index] = linearWeights
+            combinedQuadraticWeights[:,index,:] = quadraticWeights
             index += 1
 
         return weights, combinedLinearWeights, combinedQuadraticWeights

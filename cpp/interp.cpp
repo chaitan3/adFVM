@@ -9,10 +9,12 @@ void Interpolator::central(const arrType<scalar, shape1, shape2>& phi, scalar* p
     //integer w = mesh.weights(index);
     for (integer i = 0; i < shape1; i++) {
         for (integer j = 0; j < shape2; j++) {
-            phiF[i*phi.shape[2]+j] = phi(n, i, j)*(1-w) + phi(p, i, j)*w;
+            phiF[i*shape2+j] = phi(n, i, j)*(1-w) + phi(p, i, j)*w;
         }
     }
 }
+template void Interpolator::central(const arrType<scalar, 1, 1>& phi, scalar* phiF, integer index);
+template void Interpolator::central(const arrType<scalar, 3, 1>& phi, scalar* phiF, integer index);
 
 template<integer shape1, integer shape2>
 void Interpolator::average(const arrType<scalar, shape1, shape2>& phi, scalar* phiF, integer index) {
@@ -23,10 +25,12 @@ void Interpolator::average(const arrType<scalar, shape1, shape2>& phi, scalar* p
     //integer w = mesh.weights(index);
     for (integer i = 0; i < shape1; i++) {
         for (integer j = 0; j < shape2; j++) {
-            phiF[i*phi.shape[2]+j] = phi(n, i, j)*(1-w) + phi(p, i, j)*w;
+            phiF[i*shape2+j] = phi(n, i, j)*(1-w) + phi(p, i, j)*w;
         }
     }
 }
+template void Interpolator::average(const arrType<scalar, 1, 3>& phi, scalar* phiF, integer index);
+template void Interpolator::average(const arrType<scalar, 3, 3>& phi, scalar* phiF, integer index);
 
 template<integer shape1>
 void Interpolator::firstOrder(const arrType<scalar, shape1>& phi, const arrType<scalar, shape1, 3>& gradPhi, scalar *phiF, integer index, integer swap) {
@@ -41,6 +45,8 @@ void Interpolator::firstOrder(const arrType<scalar, shape1>& phi, const arrType<
         phiF[i] = phi(p, i);
     }
 }
+template void Interpolator::firstOrder(const arrType<scalar, 1>& phi, const arrType<scalar, 1, 3>& gradPhi, scalar *phiF, integer index, integer swap);
+template void Interpolator::firstOrder(const arrType<scalar, 3>& phi, const arrType<scalar, 3, 3>& gradPhi, scalar *phiF, integer index, integer swap);
 
 template<integer shape1>
 void Interpolator::secondOrder(const arrType<scalar, shape1>& phi, const arrType<scalar, shape1, 3>& gradPhi, scalar *phiF, integer index, integer swap) {
@@ -62,3 +68,5 @@ void Interpolator::secondOrder(const arrType<scalar, shape1>& phi, const arrType
         }
     }
 }
+template void Interpolator::secondOrder(const arrType<scalar, 1>& phi, const arrType<scalar, 1, 3>& gradPhi, scalar *phiF, integer index, integer swap);
+template void Interpolator::secondOrder(const arrType<scalar, 3>& phi, const arrType<scalar, 3, 3>& gradPhi, scalar *phiF, integer index, integer swap);

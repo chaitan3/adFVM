@@ -17,8 +17,8 @@
 //}
 //
 
-template<integer shape1, integer shape2>
-void Operator::grad(const scalar* phi, arrType<scalar, shape1, shape2>& gradPhi, integer index, bool neighbour) {
+template<integer shape1>
+void Operator::grad(const scalar* phi, arrType<scalar, shape1, 3>& gradPhi, integer index, bool neighbour) {
     const Mesh& mesh = *this->mesh;
     
     integer p = mesh.owner(index);
@@ -39,9 +39,11 @@ void Operator::grad(const scalar* phi, arrType<scalar, shape1, shape2>& gradPhi,
         }
     }
 }
+template void Operator::grad(const scalar* phi, arrType<scalar, 1, 3>& gradPhi, integer index, bool neighbour);
+template void Operator::grad(const scalar* phi, arrType<scalar, 3, 3>& gradPhi, integer index, bool neighbour);
 
-template<integer shape1, integer shape2>
-void Operator::div(const scalar* phi, arrType<scalar, shape1, shape2>& divPhi, integer index, bool neighbour) {
+template<integer shape1>
+void Operator::div(const scalar* phi, arrType<scalar, shape1>& divPhi, integer index, bool neighbour) {
     const Mesh& mesh = *this->mesh;
     
     integer p = mesh.owner(index);
@@ -58,9 +60,11 @@ void Operator::div(const scalar* phi, arrType<scalar, shape1, shape2>& divPhi, i
         }
     }
 }
+template void Operator::div(const scalar* phi, arrType<scalar, 1>& divPhi, integer index, bool neighbour);
+template void Operator::div(const scalar* phi, arrType<scalar, 3>& divPhi, integer index, bool neighbour);
 
-template<integer shape1, integer shape2>
-void Operator::absDiv(const scalar* phi, arrType<scalar, shape1, shape2>& divPhi, integer index, bool neighbour) {
+template<integer shape1>
+void Operator::absDiv(const scalar* phi, arrType<scalar, shape1>& divPhi, integer index, bool neighbour) {
     const Mesh& mesh = *this->mesh;
     
     integer p = mesh.owner(index);
@@ -77,9 +81,10 @@ void Operator::absDiv(const scalar* phi, arrType<scalar, shape1, shape2>& divPhi
         }
     }
 }
+template void Operator::absDiv(const scalar* phi, arrType<scalar, 1>& divPhi, integer index, bool neighbour);
 
-template<integer shape1, integer shape2>
-void Operator::snGrad(const arrType<scalar, shape1, shape2>& phi, scalar* snGradPhi, integer index) {
+template<integer shape1>
+void Operator::snGrad(const arrType<scalar, shape1>& phi, scalar* snGradPhi, integer index) {
     const Mesh& mesh = *this->mesh;
     
     integer p = mesh.owner(index);
@@ -89,6 +94,8 @@ void Operator::snGrad(const arrType<scalar, shape1, shape2>& phi, scalar* snGrad
         snGradPhi[i] = (phi(n, i)-phi(p, i))*d;
     }
 }
+template void Operator::snGrad(const arrType<scalar, 1>& phi, scalar* snGradPhi, integer index);
+template void Operator::snGrad(const arrType<scalar, 3>& phi, scalar* snGradPhi, integer index);
 
 //arr Operator::div(const arr& phi) {
     //return internal_sum(phi);
