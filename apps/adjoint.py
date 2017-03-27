@@ -94,7 +94,7 @@ class Adjoint(Solver):
             self.timeSteps = np.concatenate((self.timeSteps, np.array([[np.sum(self.timeSteps[-1]).round(9), 0]])))
         else:
             self.timeSteps = np.zeros((nSteps + 1, 2))
-        print(self.timeSteps.shape)
+        #print(self.timeSteps.shape)
         parallel.mpi.Bcast(self.timeSteps, root=0)
         return
     
