@@ -160,20 +160,20 @@ class arrType {
     }
 
     #ifdef ADIFF 
-        void adInit(codi::RealReverse::TapeType& tape) {
-            uscalar *udata = (uscalar *)this->data;
-            this -> data = new scalar[this->size];
+        void adCopy(uscalar* udata) {
             for (integer i = 0; i < this->size; i++) {
                 this -> data[i] = udata[i];
+            }
+        }
+        void adInit(codi::RealReverse::TapeType& tape) {
+            for (integer i = 0; i < this->size; i++) {
                 tape.registerInput(this->data[i]);
             }
-            this->ownData = true;
         }
         void adGetGrad(const arrType<scalar, shape1, shape2, shape3>& phi) {
             for (integer i = 0; i < this->size; i++) {
                 this -> data[i] = phi.data[i].getGradient();
             }
-            this->ownData = true;
         }
     #endif
 };
