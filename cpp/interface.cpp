@@ -136,7 +136,6 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 
         //cout << "forward 3" << endl;
 
-        tape.reset();
         tape.setActive();
         rho.adInit(tape);
         rhoU.adInit(tape);
@@ -183,6 +182,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
             }
             rhoEaN(i) = rhoEaN(i)/v +  rhoE(i).getGradient()/(v*nSteps);
         }
+        tape.reset();
         
         //cout << "evaluated tape" << endl;
 

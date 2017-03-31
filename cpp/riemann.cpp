@@ -14,7 +14,7 @@ void eulerLaxFriedrichs(
                     const scalar rhoURF[3], 
                     const scalar rhoELF, 
                     const scalar rhoERF, 
-                    const scalar Normals[3],
+                    const uscalar Normals[3],
                     scalar& rhoFlux,
                     scalar rhoUFlux[3],
                     scalar& rhoEFlux) {

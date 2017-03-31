@@ -169,6 +169,8 @@ class Adjoint(Solver):
                 outputs = adFVMcpp.forward(*inputs)
                 n = len(fields)
                 gradient = outputs
+                print sum([(1e-3*phi*mesh.volumes*nSteps).sum() for phi in gradient])
+                import pdb;pdb.set_trace()
                 paramGradient = [0, 0, 0]
                 objGradient = [0, 0, 0]
                 #gradient, paramGradient, objGradient = outputs[:n], \

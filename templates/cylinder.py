@@ -8,13 +8,13 @@ from adFVM.density import RCF
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('/master/home/talnikar/adFVM-cpp/cases/cylinder/',
+primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
              mu=2.5e-5,
              faceReconstructor='SecondOrder',
-             boundaryRiemannSolver='eulerLaxFriedrichs'
+             boundaryRiemannSolver='eulerLaxFriedrichs',
              objective = 'drag',
              objectiveDragInfo = 'cylinder',
 )
@@ -102,5 +102,5 @@ parameters = ('BCs', 'p', 'left', 'U0')
 nSteps = 10
 writeInterval = 5
 reportInterval = 1
-startTime = 2.0
+startTime = 4.0
 dt = 8e-8
