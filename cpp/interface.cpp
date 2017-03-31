@@ -147,6 +147,24 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 
         scalar objective, dtc;
         tie(objective, dtc) = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+
+
+        //mat U(mesh.nCells);
+        //vec T(mesh.nCells);
+        //vec p(mesh.nCells);
+        //for (integer i = 0; i < mesh.nInternalCells; i++) {
+        //    rcf->primitive(rho(i), &rhoU(i), rhoE(i), &U(i), T(i), p(i));
+        //}
+        ////cout << "c++: equation 2" << endl;
+
+        //rcf->U = &U;
+        //rcf->T = &T;
+        //rcf->p = &p;
+        //rcf->boundary(rcf->boundaries[0], U);
+        //rcf->boundary(rcf->boundaries[1], T);
+        //rcf->boundary(rcf->boundaries[2], p);
+        //objective = rcf->objective(rcf, U, T, p);
+
         //cout << "forward 4" << endl;
         //
         scalar adjoint = 0.;
@@ -176,11 +194,11 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         tape.evaluate();
         for (integer i = 0; i < mesh.nInternalCells; i++) {
             uscalar v = mesh.volumes(i);
-            rhoaN(i) = rhoaN(i)/v +  rho(i).getGradient()/(v*nSteps);
+            rhoaN(i) = rhoaN(i)/v + rho(i).getGradient()/(v*nSteps);
             for (integer j = 0; j < 3; j++) {
                 rhoUaN(i, j) = rhoUaN(i, j)/v + rhoU(i, j).getGradient()/(v*nSteps);
             }
-            rhoEaN(i) = rhoEaN(i)/v +  rhoE(i).getGradient()/(v*nSteps);
+            rhoEaN(i) = rhoEaN(i)/v + rhoE(i).getGradient()/(v*nSteps);
         }
         tape.reset();
         

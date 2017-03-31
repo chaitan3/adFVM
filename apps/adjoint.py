@@ -44,7 +44,7 @@ class Adjoint(Solver):
     def compile(self):
         #self.compileInit(functionName='adjoint_init')
         primal.compile(adjoint=self)
-        adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in self.fields] + [primal.__class__.defaultConfig]))
+        adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in primal.fields] + [primal.__class__.defaultConfig]))
         primal.adjoint = self
         #self.map = primal.gradient
         if self.scaling:
@@ -169,8 +169,15 @@ class Adjoint(Solver):
                 outputs = adFVMcpp.forward(*inputs)
                 n = len(fields)
                 gradient = outputs
-                print sum([(1e-3*phi*mesh.volumes*nSteps).sum() for phi in gradient])
-                import pdb;pdb.set_trace()
+
+                #print(sum([(1e-3*phi).sum() for phi in gradient]))
+                #inp1 = inputs[:3] + inputs[-3:-1]
+                #inp2 = [phi + 1e-3 for phi in inputs[:3]] + inputs[-3:-1]
+                #x1 = primal.map(*inp1)[-2]
+                #x2 = primal.map(*inp2)[-2]
+                #print(x1, x2, x1-x2)
+                #import pdb;pdb.set_trace()
+
                 paramGradient = [0, 0, 0]
                 objGradient = [0, 0, 0]
                 #gradient, paramGradient, objGradient = outputs[:n], \
