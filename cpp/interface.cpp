@@ -261,8 +261,9 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 
         //cout << "forward 1" << endl;
         PyObject *rhoObject, *rhoUObject, *rhoEObject;
+        PyObject *rhoSObject, *rhoUSObject, *rhoESObject;
         uscalar t, dt;
-        PyArg_ParseTuple(args, "OOOdd", &rhoObject, &rhoUObject, &rhoEObject, &dt, &t);
+        PyArg_ParseTuple(args, "OOOOOOdd", &rhoObject, &rhoUObject, &rhoEObject, &rhoSObject, &rhoUSObject, &rhoESObject, &dt, &t);
 
         vec rho, rhoE;
         mat rhoU;
@@ -270,6 +271,15 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         getArray((PyArrayObject *)rhoUObject, rhoU);
         getArray((PyArrayObject *)rhoEObject, rhoE);
         //cout << "forward 2" << endl;
+
+        vec rhoS, rhoES;
+        mat rhoUS;
+        getArray((PyArrayObject *)rhoSObject, rhoS);
+        getArray((PyArrayObject *)rhoUSObject, rhoUS);
+        getArray((PyArrayObject *)rhoESObject, rhoES);
+        rcf -> rhoS = &rhoS;
+        rcf -> rhoUS = &rhoUS;
+        rcf -> rhoES = &rhoES;
 
         //cout << "forward 3" << endl;
         const Mesh& mesh = *(rcf->mesh);

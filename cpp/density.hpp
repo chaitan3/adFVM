@@ -40,6 +40,9 @@ class RCF {
     mat* U;
     vec* T;
     vec* p;
+    vec* rhoS;
+    mat* rhoUS;
+    vec* rhoES;
     Boundary* boundaries;
 
     Interpolator* interpolate;

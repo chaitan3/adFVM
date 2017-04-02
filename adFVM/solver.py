@@ -357,7 +357,9 @@ class Solver(object):
                 #        fields[index].write()
                 #    exit(1)
 
-            inputs = [phi.field for phi in fields] + [dt, t]
+            inputs = [phi.field for phi in fields] + \
+                     [phi[1] for phi in self.sourceTerms] + \
+                     [dt, t]
             #outputs = self.map(*inputs)
             outputs = adFVMcpp.forward(*inputs)
             newFields, objective, dtc = outputs[:3], outputs[3], outputs[4]

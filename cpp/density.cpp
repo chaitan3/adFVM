@@ -323,6 +323,11 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     minDtc = 1e100;
     for (integer i = 0; i < mesh.nInternalCells; i++) {
         minDtc = min(2*this->CFL/dtc(i), minDtc);
+        drho(i) -= (*this->rhoS)(i);
+        for (integer j = 0; j < 3; j++) {
+            drhoU(i) -= (*this->rhoUS)(i, j);
+        }
+        drhoE(i) -= (*this->rhoES)(i);
     }
     //cout << minDtc << endl;
 }

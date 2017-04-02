@@ -74,30 +74,30 @@ def objectivePressureLoss(fields, mesh):
 objective = objectiveDrag
 #objective = objectivePressureLoss
 
-#def makePerturb(scale):
-#    def perturb(fields, mesh, t):
-#        #mid = np.array([-0.012, 0.0, 0.])
-#        #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#        mid = np.array([-0.01, 0.0, 0.])
-#        G = scale*np.exp(-1e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#        rho = G
-#        rhoU = np.zeros((mesh.nInternalCells, 3))
-#        rhoU[:, 0] += G.flatten()*100
-#        rhoE = G*2e5
-#        return rho, rhoU, rhoE
-#    return perturb
-# 
-#perturb = [makePerturb(1e-5)]
-#parameters = 'source'
-
-def makePerturb(pt_per):
+def makePerturb(scale):
     def perturb(fields, mesh, t):
-        return pt_per
+        #mid = np.array([-0.012, 0.0, 0.])
+        #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+        mid = np.array([-0.01, 0.0, 0.])
+        G = scale*np.exp(-1e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+        rho = G
+        rhoU = np.zeros((mesh.nInternalCells, 3))
+        rhoU[:, 0] += G.flatten()*100
+        rhoE = G*2e5
+        return rho, rhoU, rhoE
     return perturb
+ 
+perturb = [makePerturb(1e-5)]
+parameters = 'source'
+
+#def makePerturb(pt_per):
+#    def perturb(fields, mesh, t):
+#        return pt_per
+#    return perturb
 
 #perturb = [makePerturb(0.1), makePerturb(0.2), makePerturb(0.4)]
-perturb = [makePerturb(1.)]
-parameters = ('BCs', 'p', 'left', 'U0')
+#perturb = [makePerturb(1.)]
+#parameters = ('BCs', 'p', 'left', 'U0')
 
 nSteps = 10
 writeInterval = 5
