@@ -162,7 +162,9 @@ class Adjoint(Solver):
                     pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
                     pprint('Time step', adjointIndex)
 
+
                 inputs = [phi.field for phi in previousSolution] + \
+                         [phi[1] for phi in primal.sourceTerms] + \
                          [phi.field for phi in fields] + [dt, t, nSteps]
                 #outputs = self.map(*inputs)
                 #print(fields[0].field.max())
@@ -178,14 +180,9 @@ class Adjoint(Solver):
                 #print(x1, x2, x1-x2)
                 #import pdb;pdb.set_trace()
 
-                paramGradient = [0, 0, 0]
-                objGradient = [0, 0, 0]
-                #gradient, paramGradient, objGradient = outputs[:n], \
-                #                                       outputs[n:-n], \
-                #                                       outputs[-n:]
-                #objGradient = [phi/nSteps for phi in objGradient]
+                gradient, paramGradient = outputs[:n], outputs[n:]
                 for index in range(0, len(fields)):
-                    fields[index].field = gradient[index]# + objGradient[index]
+                    fields[index].field = gradient[index]
                 #print(fields[0].field.max())
 
                 if self.scaling:
@@ -216,19 +213,19 @@ class Adjoint(Solver):
                     pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
                 # compute sensitivity using adjoint solution
-                #sensTimeSeries.append([0.]*nPerturb)
-                #for index in range(0, len(perturb)):
-                #    perturbation = perturb[index](None, mesh.origMesh, t)
-                #    if isinstance(perturbation, tuple):
-                #        perturbation = list(perturbation)
-                #    if not isinstance(perturbation, list):# or (len(parameters) == 1 and len(perturbation) > 1):
-                #        perturbation = [perturbation]
-                #        # complex parameter perturbation not supported
-                #    
-                #    for derivative, delphi in zip(paramGradient, perturbation):
-                #        sensitivity = np.sum(derivative * delphi)
-                #        result[index] += sensitivity
-                #        sensTimeSeries[-1][index] += parallel.sum(sensitivity)
+                sensTimeSeries.append([0.]*nPerturb)
+                for index in range(0, len(perturb)):
+                    perturbation = perturb[index](None, mesh.origMesh, t)
+                    if isinstance(perturbation, tuple):
+                        perturbation = list(perturbation)
+                    if not isinstance(perturbation, list):# or (len(parameters) == 1 and len(perturbation) > 1):
+                        perturbation = [perturbation]
+                        # complex parameter perturbation not supported
+                    
+                    for derivative, delphi in zip(paramGradient, perturbation):
+                        sensitivity = np.sum(derivative * delphi)
+                        result[index] += sensitivity
+                        sensTimeSeries[-1][index] += parallel.sum(sensitivity)
 
                 #parallel.mpi.Barrier()
                 if report:
