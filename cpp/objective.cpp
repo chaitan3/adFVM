@@ -60,7 +60,3 @@ scalar objectivePressureLoss(RCF* rcf, const mat& U, const vec& T, const vec& p)
     return pl;
 }
 
-//objective = objectiveDrag
-/*#objective = objectivePressureLoss*/
-
-
