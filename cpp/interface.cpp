@@ -11,7 +11,7 @@ void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shap
     PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
     //cout << attr << " " << PyArray_DESCR(array)->elsize << endl;
     getArray(array, tmp);
-    Py_DECREF(array);
+    //Py_DECREF(array);
 }
 
 
@@ -504,6 +504,7 @@ void getDict(PyObject* dict, map<string, string>& cDict) {
             cvalue = PyString_AsString(value2);
         }
         else if (PyArray_Check(value2)) {
+            Py_INCREF(value2);
             PyArrayObject* val = (PyArrayObject*) value2;
             char* data = (char *) PyArray_DATA(val);
             int size = PyArray_NBYTES(val);
@@ -535,6 +536,7 @@ Boundary getBoundary(PyObject *dict) {
                 cvalue = PyString_AsString(value2);
             }
             else if (ckey2[0] == '_') {
+                Py_INCREF(value2);
                 PyArrayObject* val = (PyArrayObject*) value2;
                 char* data = (char *) PyArray_DATA(val);
                 int size = PyArray_NBYTES(val);
