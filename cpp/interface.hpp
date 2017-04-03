@@ -64,6 +64,7 @@ class Mesh {
 
 int getInteger(PyObject*, const string);
 string getString(PyObject*, const string);
+void getDict(PyObject* dict, map<string, string>& cDict);
 
 //template<typename dtype, integer shape1, integer shape2>
 // PyObject * putArray(arrType<dtype, shape1, shape2>&);

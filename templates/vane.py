@@ -5,7 +5,8 @@ from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
-primal = RCF('/home/talnikar/adFVM/cases/vane_optim/foam/laminar/3d_baseline/par-16/', objective='drag', objectiveDragInfo='pressure')
+#primal = RCF('/home/talnikar/adFVM/cases/vane_optim/foam/laminar/3d_baseline/par-16/', objective='drag', objectiveDragInfo='pressure')
+primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective='pressureLoss', objectivePLInfo={})
 #primal = RCF('/master/home/talnikar/adFVM/cases/vane/les/', faceReconstructor='SecondOrder')#, timeIntegrator='euler')
 #primal = RCF('/master/home/talnikar/foam/blade/les/')
 #primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
@@ -42,16 +43,19 @@ def objectiveHeatTransfer(fields, mesh):
 def getPlane(solver):
     point = np.array([0.052641,-0.1,0.005])
     normal = np.array([1.,0.,0.])
+    ptin = 175158.
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
-    #print interCells.shape, interArea.sum()
-    solver.postpro.extend([(ad.placeholder(ad.int32), interCells), (ad.placeholder(config.dtype), interArea)])
-    return solver.postpro[-2][0], solver.postpro[-1][0], normal
+    return {'cells':interCells.astype(np.int32), 
+            'areas': interArea, 
+            'normal': normal, 
+            'ptin': ptin
+           }
+primal.defaultConfig["objectivePLInfo"] = getPlane(primal)
     
 def objectivePressureLoss(fields, mesh):
     #if not hasattr(objectivePressureLoss, interArea):
     #    objectivePressureLoss.cells, objectivePressureLoss.area = getPlane(primal)
     #cells, area = objectivePressureLoss.cells, objectivePressureLoss.area
-    ptin = 175158.
     #actual ptin = 189718.8
     cells, area, normal = getPlane(primal)
     rho, rhoU, rhoE = fields
@@ -105,6 +109,6 @@ nSteps = 20000
 writeInterval = 500
 #nSteps = 100000
 #writeInterval = 5000
-startTime = 3.0
+startTime = 1.0
 dt = 1e-8
 

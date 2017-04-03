@@ -50,6 +50,7 @@ class RCF {
     Mesh const* mesh;
     scalar (*objective)(RCF*, const mat&, const vec&, const vec&);
     string objectiveDragInfo;
+    map<string, string> objectivePLInfo;
 
     void primitive(const scalar rho, const scalar rhoU[3], const scalar rhoE, scalar U[3], scalar& T, scalar& p);
     void conservative(const scalar U[3], const scalar T, const scalar p, scalar& rho, scalar rhoU[3], scalar& rhoE);

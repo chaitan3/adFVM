@@ -21,6 +21,7 @@ class RCF(Solver):
                              'stepFactor': 1.2,
                              'timeIntegrator': 'SSPRK', 'nStages': 3,
                              'objectiveDragInfo': None,
+                             'objectivePLInfo': None,
                              # eulerHLLC DOES NOT WORK
                              'riemannSolver': 'eulerRoe',
                              #'boundaryRiemannSolver': 'eulerLaxFriedrichs',

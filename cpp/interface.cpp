@@ -86,11 +86,18 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
                 if (cvalue == "drag") {
                     rcf->objective = objectiveDrag;
                 }
+                if (cvalue == "pressureLoss") {
+                    rcf->objective = objectivePressureLoss;
+                }
             }
         } else if (ckey == "objectiveDragInfo") {
             if (value != Py_None) {
                 string cvalue = PyString_AsString(value);
                 rcf->objectiveDragInfo = cvalue;
+            }
+        } else if (ckey == "objectivePLInfo") {
+            if (value != Py_None) {
+                getDict(value, rcf->objectivePLInfo);
             }
         }
     }
@@ -477,6 +484,33 @@ string getString(PyObject *mesh, const string attr) {
 Boundary getMeshBoundary(PyObject *mesh, const string attr) {
     PyObject *dict = PyObject_GetAttrString(mesh, attr.c_str());
     return getBoundary(dict);
+}
+
+void getDict(PyObject* dict, map<string, string>& cDict) {
+    PyObject *key2, *value2;
+    Py_ssize_t pos2 = 0;
+    while (PyDict_Next(dict, &pos2, &key2, &value2)) {
+        string ckey2 = PyString_AsString(key2);
+        string cvalue;
+        if (PyInt_Check(value2)) {
+            int ivalue = (int)PyInt_AsLong(value2);
+            cvalue = to_string(ivalue);
+        }
+        if (PyFloat_Check(value2)) {
+            uscalar ivalue = PyFloat_AsDouble(value2);
+            cvalue = to_string(ivalue);
+        }
+        else if (PyString_Check(value2)) {
+            cvalue = PyString_AsString(value2);
+        }
+        else if (PyArray_Check(value2)) {
+            PyArrayObject* val = (PyArrayObject*) value2;
+            char* data = (char *) PyArray_DATA(val);
+            int size = PyArray_NBYTES(val);
+            cvalue = string(data, size);
+        }
+        cDict[ckey2] = cvalue;
+    }
 }
 
 Boundary getBoundary(PyObject *dict) {

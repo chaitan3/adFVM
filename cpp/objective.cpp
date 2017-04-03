@@ -29,33 +29,36 @@ scalar objectiveDrag(RCF* rcf, const mat& U, const vec& T, const vec& p) {
     return drag;
 }
 
-/*def getPlane(solver):*/
-    //#point = np.array([0.0032,0.0,0.0], config.precision)
-    //point = np.array([0.032,0.0,0.0], config.precision)
-    //normal = np.array([1.,0.,0.], config.precision)
-    //interCells, interArea = intersectPlane(solver.mesh, point, normal)
-    //#print interCells.shape, interArea.sum()
-    //solver.postpro.extend([(ad.ivector(), interCells), (ad.bcmatrix(), interArea)])
-    //return solver.postpro[-2][0], solver.postpro[-1][0], normal
-    
-//def objectivePressureLoss(fields, mesh):
-    //#if not hasattr(objectivePressureLoss, interArea):
-    //#    objectivePressureLoss.cells, objectivePressureLoss.area = getPlane(primal)
-    //#cells, area = objectivePressureLoss.cells, objectivePressureLoss.area
-    //ptin = 104190.
-    //cells, area, normal = getPlane(primal)
-    //rho, rhoU, rhoE = fields
-    //solver = rhoE.solver
-    //g = solver.gamma
-    //U, T, p = solver.primitive(rho, rhoU, rhoE)
-    //pi, rhoi, Ui = p.field[cells], rho.field[cells], U.field[cells]
-    //rhoUi, ci = rhoi*Ui, ad.sqrt(g*pi/rhoi)
-    //rhoUni, Umagi = dot(rhoUi, normal), ad.sqrt(dot(Ui, Ui))
-    //Mi = Umagi/ci
-    //pti = pi*(1 + 0.5*(g-1)*Mi*Mi)**(g/(g-1))
-    //#res = ad.sum((ptin-pti)*rhoUni*area)/(ad.sum(rhoUni*area) + config.VSMALL)
-    //res = ad.sum((ptin-pti)*rhoUni*area)#/(ad.sum(rhoUni*area) + config.VSMALL)
-    //return res 
+   
+scalar objectivePressureLoss(RCF* rcf, const mat& U, const vec& T, const vec& p) {
+    integer nCells = rcf->objectivePLInfo["cells"].size()/sizeof(integer);
+    integer* cells = (integer*) rcf->objectivePLInfo.at("cells").data();
+    uscalar* areas = (uscalar*) rcf->objectivePLInfo.at("areas").data();
+    uscalar* normal = (uscalar*) rcf->objectivePLInfo.at("normal").data();
+    scalar ptin = stod(rcf->objectivePLInfo.at("ptin"));
+    scalar g = rcf->gamma;
+    scalar pl = 0;
+
+    for (integer i = 0; i < nCells; i++) {
+        integer index = cells[i];
+        scalar pi = p(index);
+        scalar Ti = T(index);
+        const scalar* Ui = &U(index);
+        scalar rhoi = pi/(rcf->Cv*Ti*(g - 1));
+        scalar ci = sqrt(g*pi/rhoi);
+
+        scalar rhoUni = 0;
+        scalar Umagi = 0;
+        for (integer j = 0; j < 3; j++) {
+            rhoUni += rhoi*Ui[j]*normal[j];
+            Umagi += Ui[j]*Ui[j];
+        }
+        scalar Mi = sqrt(Umagi)/ci;
+        scalar pti = pi*pow(1 + 0.5*(g-1)*Mi*Mi, g/(g-1));
+        pl += (ptin-pti)*rhoUni*areas[i];
+    }
+    return pl;
+}
 
 //objective = objectiveDrag
 /*#objective = objectivePressureLoss*/
