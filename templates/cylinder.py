@@ -8,7 +8,7 @@ from adFVM.density import RCF
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
+primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/adj_lax2/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
@@ -99,8 +99,8 @@ parameters = 'source'
 #perturb = [makePerturb(1.)]
 #parameters = ('BCs', 'p', 'left', 'U0')
 
-nSteps = 10
-writeInterval = 5
+nSteps = 50000
+writeInterval = 5000
 reportInterval = 1
 startTime = 4.0
-dt = 8e-8
+dt = 1e-10

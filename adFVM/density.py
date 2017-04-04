@@ -93,28 +93,26 @@ class RCF(Solver):
     # only reads fields
     @config.timeFunction('Time for reading fields')
     def readFields(self, t, suffix=''):
-        firstRun = False
 
         with IOField.handle(t):
-            U = IOField.read('U' + suffix, skipField=firstRun)
-            T = IOField.read('T' + suffix, skipField=firstRun)
-            p = IOField.read('p' + suffix, skipField=firstRun)
+            U = IOField.read('U' + suffix, skipField=False)
+            T = IOField.read('T' + suffix, skipField=False)
+            p = IOField.read('p' + suffix, skipField=False)
             if self.readConservative:
-                rho = IOField.read('rho' + suffix, skipField=firstRun)
-                rhoU = IOField.read('rhoU' + suffix, skipField=firstRun)
-                rhoE = IOField.read('rhoE' + suffix, skipField=firstRun)
+                rho = IOField.read('rho' + suffix, skipField=False)
+                rhoU = IOField.read('rhoU' + suffix, skipField=False)
+                rhoE = IOField.read('rhoE' + suffix, skipField=False)
                 U.field, T.field, p.field = [phi.field for phi in self.primitive(rho, rhoU, rhoE)]
             if self.dynamicMesh:
                 self.mesh.read(IOField._handle)
         fields = [U, T, p]
         # IO Fields, with phi attribute as a CellField
-        self.U, self.T, self.p = fields
-        self.fields = fields
-        #if firstRun:
-        #    self.U, self.T, self.p = fields
-        #    self.fields = fields
-        #else:
-        #    self.updateFields(fields)
+        if self.firstRun:
+            self.U, self.T, self.p = fields
+            self.fields = fields
+        else:
+            self.updateFields(fields)
+        self.firstRun = False
         return list(self.conservative(*self.fields))
 
     # reads and updates ghost cells

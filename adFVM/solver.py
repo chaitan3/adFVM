@@ -51,6 +51,7 @@ class Solver(object):
         self.nStages = self.timeStepCoeff[0].shape[0]
         self.stage = 0
         self.init = None
+        self.firstRun = True
         return
 
     def compile(self, adjoint=None):
@@ -185,10 +186,11 @@ class Solver(object):
         with IOField.handle(t):
             for name in self.names:
                 fields.append(IOField.read(name))
-        if self.init is None:
+        if self.firstRun:
             self.fields = fields
         else:
             self.updateFields(fields)
+        self.firstRun = False
         return self.getFields(self.fields, IOField)
     
     def updateFields(self, fields):

@@ -27,6 +27,7 @@ class Adjoint(Solver):
         self.names = [name + 'a' for name in primal.names]
         self.dimensions = primal.dimensions
         self.sensTimeSeriesFile = self.mesh.case + 'sensTimeSeries.txt'
+        self.firstRun = True
         return
 
     def initFields(self, fields):
@@ -39,7 +40,7 @@ class Adjoint(Solver):
             phi = np.zeros((self.mesh.origMesh.nInternalCells, dims[0]), config.precision)
             fields.append(IOField(name, phi, dims, self.mesh.defaultBoundary))
         self.fields = fields
-        return
+        return fields
 
     def compile(self):
         #self.compileInit(functionName='adjoint_init')
@@ -108,7 +109,7 @@ class Adjoint(Solver):
         if (firstCheckpoint > 0) or readFields:
             fields = self.readFields(startTime)
         else:
-            fields = self.getFields(self.fields, IOField)
+            fields = self.createFields()
 
         pprint('STARTING ADJOINT')
         pprint('Number of steps:', nSteps)
@@ -257,7 +258,6 @@ def main():
     adjoint = Adjoint(primal, user.scaling)
     adjoint.initPrimalData()
 
-    adjoint.createFields()
     primal.readFields(adjoint.timeSteps[nSteps-writeInterval][0])
     adjoint.compile()
 

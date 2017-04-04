@@ -9,8 +9,8 @@
 //#define faceReconstructor firstOrder
 #define riemannSolver eulerRoe
 //#define riemannSolver eulerLaxFriedrichs
-#define boundaryRiemannSolver eulerRoe
-//#define boundaryRiemannSolver eulerLaxFriedrichs
+//#define boundaryRiemannSolver eulerRoe
+#define boundaryRiemannSolver eulerLaxFriedrichs
 
 class RCF {
     
