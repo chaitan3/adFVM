@@ -17,14 +17,9 @@ def central(phi, mesh):
     logger.info('interpolating {0}'.format(phi.name))
     factor = mesh.weights
     # for tensor
-    if not isinstance(phi.field, np.ndarray):
-        if len(phi.dimensions) == 2:
-            factor = ad.reshape(factor, (-1, 1, 1))
-        faceField = Field('{0}F'.format(phi.name), ad.gather(phi.field, mesh.owner)*factor + ad.gather(phi.field, mesh.neighbour)*(1.-factor), phi.dimensions)
-    else:
-        if len(phi.dimensions) == 2:
-            factor = np.reshape(factor, (-1, 1, 1))
-        faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1.-factor), phi.dimensions)
+    if len(phi.dimensions) == 2:
+        factor = np.reshape(factor, (-1, 1, 1))
+    faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner]*factor + phi.field[mesh.neighbour]*(1.-factor), phi.dimensions)
     #faceField = Field('{0}F'.format(phi.name), phi.field[mesh.owner] + phi.field[mesh.neighbour], phi.dimensions)
     # retain pattern broadcasting
     #if hasattr(mesh, 'origMesh'):

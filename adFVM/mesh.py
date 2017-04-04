@@ -587,7 +587,7 @@ class Mesh(object):
         deltas = P-N
         deltasNorm = norm(deltas, axis=1, keepdims=True)
         deltasUnit = deltas/deltasNorm
-        return deltas, deltasUnit
+        return deltasNorm, deltasUnit
 
     def getWeights(self):
         logger.info('generated face deltas')

@@ -23,8 +23,7 @@ if not times:
     times = mesh.getTimes()
 
 solver.readFields(times[0])
-solver.compileInit()
-computer = computeGradients(solver)
+solver.compile()
 
 for index, time in enumerate(times):
     pprint('Time:', time)
@@ -36,11 +35,12 @@ for index, time in enumerate(times):
 
     with IOField.handle(time):
 
-        outputs = computer(U.field, T.field, p.field)
+        outputs = computeGradients(solver, U, T, p)
         outputsF = []
         for field, name, dim in zip(outputs, names, dimensions):
             outputsF.append(IOField(name, field, dim))
             if len(dim) != 2:
+                outputsF[-1].defaultComplete()
                 outputsF[-1].write()
         pprint()
 
@@ -67,11 +67,12 @@ for index, time in enumerate(times):
         #rhoa = IOField.read('rhoa')
         #rhoUa = IOField.read('rhoUa')
         #rhoEa = IOField.read('rhoEa')
-        rhoa = IOField.read('rho')
-        rhoUa = IOField.read('rhoU')
-        rhoEa = IOField.read('rhoE')
-        adjNorm = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
+        rhoa = IOField.read('rhoa')
+        rhoUa = IOField.read('rhoUa')
+        rhoEa = IOField.read('rhoEa')
+        adjNorm, energy = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
         adjNorm.write()
+        energy.write()
         pprint()
 
         #adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)

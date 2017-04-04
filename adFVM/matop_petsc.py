@@ -139,6 +139,7 @@ def laplacian(phi, DT, correction=True):
 
     il, ih = A.getOwnershipRange()
     jl, jh = A.getOwnershipRangeColumn()
+    import pdb;pdb.set_trace()
     faceData = (mesh.areas*DT.field/mesh.deltas).flatten()
     if correction:
         s = mesh.cellCentres[mesh.neighbour]-mesh.cellCentres[mesh.owner]

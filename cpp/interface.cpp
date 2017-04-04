@@ -8,6 +8,7 @@ tuple<scalar, scalar> (*timeIntegrator)(RCF*, const vec&, const mat&, const vec&
 
 template <typename dtype, integer shape1, integer shape2>
 void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shape2>& tmp) {
+    //cout << attr << endl;
     PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
     //cout << attr << " " << PyArray_DESCR(array)->elsize << endl;
     getArray(array, tmp);
@@ -20,8 +21,14 @@ void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp) {
     assert(array);
     int nDims = PyArray_NDIM(array);
     npy_intp* dims = PyArray_DIMS(array);
-    if (nDims > 1) assert(dims[1] == shape1);
-    if (nDims > 2) assert(dims[2] == shape2);
+    if (nDims > 1) {
+        assert(dims[1] == shape1);
+        //cout << dims[1] << " " << shape1 << endl;
+    }
+    if (nDims > 2) {
+        assert(dims[2] == shape2);
+        //cout << dims[2] << " " << shape2 << endl;
+    }
     assert(PyArray_IS_C_CONTIGUOUS(array));
     dtype *data = (dtype *) PyArray_DATA(array);
     //cout << rows << " " << cols << endl;

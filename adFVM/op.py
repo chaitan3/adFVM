@@ -9,7 +9,7 @@ logger = config.Logger(__name__)
 
 
 def internal_sum(phi, mesh, absolute=False):
-    if 1:#config.device == "cpu":
+    if 0:#config.device == "cpu":
         if not absolute:
             sumOp = mesh.sumOp
         else:
@@ -19,12 +19,12 @@ def internal_sum(phi, mesh, absolute=False):
     else:
         phiF = phi.field*mesh.areas
         dimensions = (np.product(phi.dimensions),)
-        x = ad.bcalloc(config.precision(0.), (mesh.nInternalCells+1,) + dimensions)
-        x = ad.inc_subtensor(x[mesh.owner], phiF)
+        x = np.zeros((mesh.nInternalCells+1,) + dimensions, config.precision)
+        np.add.at(x, mesh.owner, phiF)
         if not absolute:
-            x = ad.inc_subtensor(x[mesh.neighbour[:mesh.nInternalFaces]], -phiF[:mesh.nInternalFaces])
+            np.add.at(x, mesh.neighbour[:mesh.nInternalFaces], -phiF[:mesh.nInternalFaces])
         else:
-            x = ad.inc_subtensor(x[mesh.neighbour[:mesh.nInternalFaces]], phiF[:mesh.nInternalFaces])
+            np.add.at(x, mesh.neighbour[:mesh.nInternalFaces], phiF[:mesh.nInternalFaces])
         x = x[:-1]/mesh.volumes
 
     # retain pattern broadcasting

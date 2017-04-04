@@ -287,6 +287,7 @@ class CellField(Field):
     def getInternalField(self):
         return self.field[:self.mesh.nInternalCells]
 
+
     def updateGhostCells(self):
         logger.info('updating ghost cells for {0}'.format(self.name))
         patches = sorted(self.mesh.localPatches, key=lambda x: self.mesh.origMesh.boundary[x]['startFace'])
@@ -492,6 +493,9 @@ class IOField(Field):
 
     def getInternalField(self):
         return self.field[:self.mesh.origMesh.nInternalCells]
+
+    def getInternal(self):
+        return self.__class__(self.name, self.getInternalField(), self.dimensions, self.boundary)
 
     def defaultComplete(self):
         mesh = self.mesh.origMesh

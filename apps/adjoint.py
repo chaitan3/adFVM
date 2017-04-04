@@ -5,7 +5,7 @@ from adFVM import config, parallel
 from adFVM.config import ad
 from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
-#from adFVM.matop_petsc import laplacian, ddt
+from adFVM.matop_petsc import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, computeGradients
@@ -48,8 +48,6 @@ class Adjoint(Solver):
         adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in primal.fields] + [primal.__class__.defaultConfig]))
         primal.adjoint = self
         #self.map = primal.gradient
-        if self.scaling:
-            getAdjointViscosity.computer = computeGradients(primal)
         return
 
     def getGradFields(self):
