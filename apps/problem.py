@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('caseFile')
 user, args = parser.parse_known_args(config.args)
 
-source = lambda *args: []
+source = lambda *args: [0.]*len(args[0])
 perturb = []
 locals()['reportInterval'] = 1
 parameters = []

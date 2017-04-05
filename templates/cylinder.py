@@ -8,8 +8,8 @@ from adFVM.density import RCF
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-#primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/adj_lax2/',
 primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
+#primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
@@ -80,7 +80,8 @@ def makePerturb(scale):
         #mid = np.array([-0.012, 0.0, 0.])
         #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
         mid = np.array([-0.0005, 0.0, 0.])
-        G = scale*np.exp(-2.5e9*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+        #G = scale*np.exp(-2.5e9*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+        G = scale*np.exp(-2.5e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
         rho = G
         rhoU = np.zeros((mesh.nInternalCells, 3))
         rhoU[:, 0] += G.flatten()*100
@@ -88,7 +89,7 @@ def makePerturb(scale):
         return rho, rhoU, rhoE
     return perturb
  
-perturb = [makePerturb(1e-5)]
+perturb = [makePerturb(1e-1)]
 parameters = 'source'
 
 #def makePerturb(pt_per):
@@ -100,8 +101,6 @@ parameters = 'source'
 #perturb = [makePerturb(1.)]
 #parameters = ('BCs', 'p', 'left', 'U0')
 
-#nSteps = 50000
-#writeInterval = 5000
 nSteps = 10
 writeInterval = 5
 reportInterval = 1

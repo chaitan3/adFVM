@@ -175,6 +175,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
                     np.dstack((np.hstack((Z,Z,Z)).reshape(-1,3,1), gradU, (a*gradp/(2*p)).reshape(-1, 3, 1))),
                     np.hstack((Z, 2*grada/g1, g1*divU/2)).reshape(-1,1,5)),
                     axis=1)
+    D = np.diag([100., 100., 100., 100., 1e3]).reshape(1,5,5)
     T = np.stack((
             np.hstack((b/rho, Z, Z, Z, Z)),
             np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
@@ -185,25 +186,28 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
     suffix = ''
 
     # Entropy
-    #M1 = np.stack((np.hstack((divU, gradc, Z)),
-    #           np.hstack((gradc[:,[0]], divU, Z, Z, Z)),
-    #           np.hstack((gradc[:,[1]], Z, divU, Z, Z)),
-    #           np.hstack((gradc[:,[2]], Z, Z, divU, Z)),
-    #           np.hstack((Z, Z, Z, Z, divU))),
-    #           axis=1)
-    #M2 = np.concatenate((np.hstack((g1*divU/2, gradp/(rho*c), divU/(2*rho*c))).reshape(-1,1,5),
-    #                np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp/(2*g*rho*c)).reshape((-1, 3, 1)))),
-    #                np.hstack((Z, gradp-c*c*gradrho, Z)).reshape(-1,1,5)),
-    #                axis=1)
-    #T = np.stack((
-    #        np.hstack((b/rho, -g1*U/(c*rho), g1/(c*rho))),
-    #        np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
-    #        np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
-    #        np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
-    #        np.hstack((-c*c+g1/2*(U*U).sum(axis=1,keepdims=1), -g1*U, (g-1)*np.ones_like(Z))),
-    #    ), axis=2)
+    M1 = np.stack((np.hstack((divU, gradc, Z)),
+               np.hstack((gradc[:,[0]], divU, Z, Z, Z)),
+               np.hstack((gradc[:,[1]], Z, divU, Z, Z)),
+               np.hstack((gradc[:,[2]], Z, Z, divU, Z)),
+               np.hstack((Z, Z, Z, Z, divU))),
+               axis=1)
+    M2 = np.concatenate((np.hstack((g1*divU/2, gradp/(rho*c), divU/(2*rho*c))).reshape(-1,1,5),
+                    np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp/(2*g*rho*c)).reshape((-1, 3, 1)))),
+                    np.hstack((Z, gradp-c*c*gradrho, Z)).reshape(-1,1,5)),
+                    axis=1)
+    D = np.diag([1e3, 100., 100., 100., 1e5]).reshape(1,5,5)
+    #D = np.diag([1.,1.,1.,1.,1.]).reshape(1,5,5)
+    T = np.stack((
+            np.hstack((b/rho, -g1*U/(c*rho), g1/(c*rho))),
+            np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
+            np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
+            np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
+            np.hstack((-c*c+g1/2*(U*U).sum(axis=1,keepdims=1), -g1*U, (g-1)*np.ones_like(Z))),
+        ), axis=2)
 
-    #suffix = '_entropy'
+    suffix = '_entropy'
+    #suffix += '_factor'
 
     M = M1/2-M2
     #MS = (M + M.transpose((0, 2, 1)))/2
@@ -218,14 +222,26 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
     if rhoa is not None:
         w = np.hstack((rhoa.field, rhoUa.field, rhoEa.field))
         v = dot(Ti, w)
-        energy = np.sum(dot(M, v)*v, axis=-1,keepdims=1)
+        v2 = dot(np.matmul(D*D, Ti), w)
+        energy = np.sum(dot(M, v)*v2, axis=-1,keepdims=1)
         energy = IOField('energy' + suffix, 1e-30*energy, (1,))
 
-    X = np.diag([1, 1./100, 1./100, 1./100, 1/2e5]).reshape(1,5,5)
+    X = np.diag([1, 1./100, 1./100, 1./100, 1/1e5]).reshape(1,5,5)
     Ti = np.matmul(Ti, X)
-    M = np.matmul(Ti.transpose(0, 2, 1), np.matmul(M, Ti))
+    Ti2 = np.matmul(D*D, Ti)
+    M = np.matmul(Ti2.transpose(0, 2, 1), np.matmul(M, Ti))
     MS = (M + M.transpose((0, 2, 1)))/2
     M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
+
+    #print parallel.min(M_2norm)
+    #M_2norm /= parallel.max(M_2norm)
+    #M_2norm = 1/(1+np.exp(-10*(M_2norm-1)))
+    #parallel.pprint(parallel.max(M_2norm))
+    #parallel.pprint(parallel.min(M_2norm))
+
+    #M_2norm /= np.sqrt(parallel.sum(M_2norm**2*mesh.volumes)/parallel.sum(mesh.volumes))
+    parallel.pprint(parallel.max(M_2norm))
+    parallel.pprint(parallel.min(M_2norm))
     M_2norm = IOField('M_2norm' + suffix, M_2norm, (1,))
     #M_2norm.write()
     
@@ -252,13 +268,7 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True):
     if not outputs:
         outputs = computeGradients(solver, U, T, p)
     M_2norm, _ = getAdjointMatrixNorm(None, None, None, rho, rhoU, rhoE, U, T, p, *outputs)
-    M_2normLim = parallel.min(M_2norm.field), parallel.max(M_2norm.field)
-    assert M_2normLim[0] > 0.
-    viscosityScale = float(scaling)
-    #pprint('M_2norm: ' +  str(M_2normScale))
-    #factor = (M_2norm*(1./M_2normLim[0])-1).exp()-1
-    factor = M_2norm*(1./M_2normLim[1])
-    viscosity = viscosityScale * factor
+    viscosity = M_2norm*float(scaling)
     viscosity.name = 'mua'
     viscosity.boundary = mesh.calculatedBoundary
     return viscosity

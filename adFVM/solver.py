@@ -400,7 +400,7 @@ class Solver(object):
             if self.localTimeStep:
                 t += 1
             else:
-                t = round(t+dt, 9)
+                t = round(t+dt, 12)
             if self.localTimeStep:
                 dt = dtc
             elif isinstance(dts, np.ndarray):

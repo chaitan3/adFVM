@@ -63,7 +63,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     this->boundary(this->boundaries[1], T);
     this->boundary(this->boundaries[2], p);
     objective = this->objective(this, U, T, p);
-    //cout << objective << endl;
+    ///cout << std::setprecision (std::numeric_limits<double>::digits10 + 1) << objective << endl;
     //U.info();
     //T.info();
     //p.info();
