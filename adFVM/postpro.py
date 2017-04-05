@@ -196,8 +196,8 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
                     np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp/(2*g*rho*c)).reshape((-1, 3, 1)))),
                     np.hstack((Z, gradp-c*c*gradrho, Z)).reshape(-1,1,5)),
                     axis=1)
-    D = np.diag([1e3, 100., 100., 100., 1e5]).reshape(1,5,5)
-    #D = np.diag([1.,1.,1.,1.,1.]).reshape(1,5,5)
+    #D = np.diag([1e3, 100., 100., 100., 1e5]).reshape(1,5,5)
+    D = np.diag([1.,1.,1.,1.,1.]).reshape(1,5,5)
     T = np.stack((
             np.hstack((b/rho, -g1*U/(c*rho), g1/(c*rho))),
             np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
@@ -240,8 +240,8 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
     #parallel.pprint(parallel.min(M_2norm))
 
     #M_2norm /= np.sqrt(parallel.sum(M_2norm**2*mesh.volumes)/parallel.sum(mesh.volumes))
-    parallel.pprint(parallel.max(M_2norm))
-    parallel.pprint(parallel.min(M_2norm))
+    #parallel.pprint(parallel.max(M_2norm))
+    #parallel.pprint(parallel.min(M_2norm))
     M_2norm = IOField('M_2norm' + suffix, M_2norm, (1,))
     #M_2norm.write()
     
