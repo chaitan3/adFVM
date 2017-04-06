@@ -90,7 +90,7 @@ class Adjoint(Solver):
         if parallel.rank == 0:
             self.timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
             assert self.timeSteps.shape == (nSteps, 2)
-            self.timeSteps = np.concatenate((self.timeSteps, np.array([[np.sum(self.timeSteps[-1]).round(9), 0]])))
+            self.timeSteps = np.concatenate((self.timeSteps, np.array([[np.sum(self.timeSteps[-1]).round(12), 0]])))
         else:
             self.timeSteps = np.zeros((nSteps + 1, 2))
         #print(self.timeSteps.shape)
