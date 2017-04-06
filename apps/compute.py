@@ -70,9 +70,10 @@ for index, time in enumerate(times):
         rhoa = IOField.read('rhoa')
         rhoUa = IOField.read('rhoUa')
         rhoEa = IOField.read('rhoEa')
-        adjNorm, energy = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
+        adjNorm, energy, diss = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
         adjNorm.write()
         energy.write()
+        diss.write()
         pprint()
 
         #adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
