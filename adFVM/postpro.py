@@ -150,11 +150,18 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     sge = sg1*sg
     energy = None
     diss = None
-    if 'visc' in kwargs:
-        visc = kwargs['visc']
-    else:
-        visc = 'entropy'
+
+    def getArg(arg, default):
+        if arg in kwargs:
+            if kwargs[arg]:
+                return kwargs[arg]
+        return default
+            
+    visc = getArg('visc', 'entropy')
     suffix = '_' + visc
+    scale = getArg('scale', lambda x: x)
+    if 'scale' in kwargs:
+        suffix += '_factor'
 
     gradrho, gradU, gradp, gradc, divU = outputs
     U = U.getInternal()
@@ -241,15 +248,20 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     MS = (Mc + Mc.transpose((0, 2, 1)))/2
     M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
 
-    M_2norm /= parallel.max(M_2norm)
-    M_2norm = 1/(1+np.exp(-5*(M_2norm-1)))
-    suffix += '_factor'
+    M_2norm = scale(M_2norm)
 
     #print parallel.min(M_2norm)
     #parallel.pprint(parallel.max(M_2norm))
     #parallel.pprint(parallel.min(M_2norm))
 
-    #M_2norm /= np.sqrt(parallel.sum(M_2norm**2*mesh.volumes)/parallel.sum(mesh.volumes))
+    def inner(F, G):
+        if not hasattr(inner, 'Vs'):
+            inner.Vs = parallel.sum(mesh.volumes)
+        Vs = inner.Vs
+        return parallel.sum(F*G*mesh.volumes)/Vs
+    l2_norm = lambda F: np.sqrt(inner(F, F))
+
+    M_2norm /= l2_norm(M_2norm)
     #parallel.pprint(parallel.max(M_2norm))
     #parallel.pprint(parallel.min(M_2norm))
     if visc == "uniform":
@@ -277,9 +289,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         diss = M_2norm.field*gradwN
         diss = IOField('diss' + suffix, 1e-30*diss, (1,))
 
-        dissn = np.sqrt(parallel.sum(diss.field**2*mesh.volumes)/Vs)
-        en = np.sqrt(parallel.sum(energy.field**2*mesh.volumes)/Vs)
-        corr = parallel.sum(diss.field*energy.field*mesh.volumes)/(Vs*dissn*en)
+        corr = inner(diss.field, energy.field)/(l2_norm(diss.field)*l2_norm(energy.field))
         parallel.pprint('energy and M_2norm corr:', corr)
 
         diss.defaultComplete()
@@ -290,7 +300,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     return M_2norm, energy, diss
 
 
-def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True):
+def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True, **kwargs):
     solver = rho.solver
     mesh = rho.mesh
     if init:
@@ -299,8 +309,8 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True):
 
     if not outputs:
         outputs = computeGradients(solver, U, T, p)
-    M_2norm, _ = getAdjointMatrixNorm(None, None, None, rho, rhoU, rhoE, U, T, p, *outputs)
+    M_2norm = getAdjointMatrixNorm(None, None, None, rho, rhoU, rhoE, U, T, p, *outputs, **kwargs)[0]
     viscosity = M_2norm*float(scaling)
     viscosity.name = 'mua'
-    viscosity.boundary = mesh.calculatedBoundary
+    viscosity.boundary = mesh.defaultBoundary
     return viscosity

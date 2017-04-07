@@ -49,3 +49,4 @@ writeInterval = 2
 startTime = 0.0
 dt = 1e-4
 
+#adjParams = [1e-3, 'entropy', None]

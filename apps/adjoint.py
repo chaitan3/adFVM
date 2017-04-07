@@ -8,10 +8,10 @@ from adFVM.field import IOField, Field
 from adFVM.matop_petsc import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
-from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, computeGradients
+from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
 from adFVM.solver import Solver
 
-from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source
+from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams
 
 import numpy as np
 import time
@@ -20,8 +20,10 @@ import argparse
 import adFVMcpp_ad as adFVMcpp
 
 class Adjoint(Solver):
-    def __init__(self, primal, scaling):
-        self.scaling = scaling
+    def __init__(self, primal):
+        self.scaling = adjParams[0]
+        self.viscosityType = adjParams[1]
+        self.viscosityScaler = adjParams[2]
         self.mesh = primal.mesh
         self.statusFile = primal.statusFile
         self.names = [name + 'a' for name in primal.names]
@@ -190,7 +192,8 @@ class Adjoint(Solver):
                     nInternalCells = mesh.origMesh.nInternalCells
                     start2 = time.time() 
                     inputs = previousSolution + [self.scaling]
-                    weight = central(getAdjointViscosity(*inputs), mesh.origMesh)
+                    kwargs = {'visc': self.viscosityType, 'scale': self.viscosityScaler}
+                    weight = central(getAdjointViscosity(*inputs, **kwargs), mesh.origMesh)
                     start3 = time.time()
 
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
@@ -249,11 +252,10 @@ class Adjoint(Solver):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--scaling', required=False)
     parser.add_argument('--readFields', action='store_true')
     user, args = parser.parse_known_args()
 
-    adjoint = Adjoint(primal, user.scaling)
+    adjoint = Adjoint(primal)
     adjoint.initPrimalData()
 
     primal.readFields(adjoint.timeSteps[nSteps-writeInterval][0])

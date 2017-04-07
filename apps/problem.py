@@ -17,6 +17,7 @@ source = lambda *args: [0.]*len(args[0])
 perturb = []
 locals()['reportInterval'] = 1
 parameters = []
+adjParams = [None, None, None]
 
 config.importModule(locals(), user.caseFile)
 #print(locals().keys())
