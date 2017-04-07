@@ -261,11 +261,11 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         return parallel.sum(F*G*mesh.volumes)/Vs
     l2_norm = lambda F: np.sqrt(inner(F, F))
 
-    M_2norm /= l2_norm(M_2norm)
     #parallel.pprint(parallel.max(M_2norm))
     #parallel.pprint(parallel.min(M_2norm))
     if visc == "uniform":
         M_2norm = np.ones_like(M_2norm)
+    M_2norm /= l2_norm(M_2norm)
     M_2norm = IOField('M_2norm' + suffix, M_2norm, (1,))
     #M_2norm.write()
     
