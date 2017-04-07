@@ -29,6 +29,7 @@ class Adjoint(Solver):
         self.names = [name + 'a' for name in primal.names]
         self.dimensions = primal.dimensions
         self.sensTimeSeriesFile = self.mesh.case + 'sensTimeSeries.txt'
+        self.energyTimeSeriesFile = self.mesh.case + 'energyTimeSeries.txt'
         self.firstRun = True
         return
 
@@ -104,6 +105,7 @@ class Adjoint(Solver):
         result, firstCheckpoint = self.result, self.firstCheckpoint
         timeSteps = self.timeSteps
         sensTimeSeries = []
+        energyTimeSeries = []
 
         startTime = timeSteps[nSteps - firstCheckpoint*writeInterval][0]
         if (firstCheckpoint > 0) or readFields:
@@ -160,7 +162,7 @@ class Adjoint(Solver):
                     start = time.time()
                     for phi in fields:
                         phi.info()
-                    pprint('Adjoint Energy Norm: ', getAdjointEnergy(primal, *fields))
+                    energyTimeSeries.append(getAdjointEnergy(primal, *fields))
                     pprint('Time step', adjointIndex)
 
 
@@ -244,6 +246,8 @@ class Adjoint(Solver):
             if parallel.rank == 0:
                 with open(self.sensTimeSeriesFile, 'a') as f:
                     np.savetxt(f, sensTimeSeries[-writeInterval:])
+                with open(self.energyTimeSeriesFile, 'a') as f:
+                    np.savetxt(f, energyTimeSeries[-writeInterval:])
 
         for index in range(0, nPerturb):
             writeResult('adjoint', result[index], '{} {}'.format(index, self.scaling))
