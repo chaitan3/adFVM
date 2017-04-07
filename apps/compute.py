@@ -70,11 +70,12 @@ for index, time in enumerate(times):
         rhoa = IOField.read('rhoa')
         rhoUa = IOField.read('rhoUa')
         rhoEa = IOField.read('rhoEa')
-        adjNorm, energy, diss = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
-        adjNorm.write()
-        energy.write()
-        diss.write()
-        pprint()
+        for visc in ["abarbanel", "entropy", "uniform"]:
+            adjNorm, energy, diss = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs, visc=visc)
+            adjNorm.write()
+            energy.write()
+            diss.write()
+            pprint()
 
         #adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
         #pprint('L2 norm adjoint', time, adjEnergy)

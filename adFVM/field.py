@@ -500,7 +500,7 @@ class IOField(Field):
     def defaultComplete(self):
         mesh = self.mesh.origMesh
         field = np.zeros((mesh.nCells,) + self.dimensions)
-        field[:mesh.nInternalCells] = self.field
+        field[:mesh.nInternalCells] = self.field[:mesh.nInternalCells]
         for patchID in self.boundary:
             patch = self.boundary[patchID]
             startFace, endFace, cellStartFace, cellEndFace, nFaces = mesh.getPatchFaceCellRange(patchID)

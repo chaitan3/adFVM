@@ -139,7 +139,7 @@ def getAdjointEnergy(solver, rhoa, rhoUa, rhoEa):
     adjEnergy = (parallel.sum(adjEnergy)**0.5)/(solver.Jref*solver.tref)
     return adjEnergy
 
-def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs):
+def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs, **kwargs):
     mesh = rho.mesh
     solver = rho.solver
     Uref, Tref, pref = solver.Uref, solver.Tref, solver.pref
@@ -150,6 +150,11 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
     sge = sg1*sg
     energy = None
     diss = None
+    if 'visc' in kwargs:
+        visc = kwargs['visc']
+    else:
+        visc = 'entropy'
+    suffix = '_' + visc
 
     gradrho, gradU, gradp, gradc, divU = outputs
     U = U.getInternal()
@@ -166,60 +171,59 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
     grada = gradc*sg1/sg
     Z = np.zeros_like(divU)
     
-    # Abarbanel
-    M1 = np.stack((np.hstack((divU, gradb, Z)),
-               np.hstack((gradb[:,[0]], divU, Z, Z, grada[:,[0]])),
-               np.hstack((gradb[:,[1]], Z, divU, Z, grada[:,[1]])),
-               np.hstack((gradb[:,[2]], Z, Z, divU, grada[:,[2]])),
-               np.hstack((Z, grada, divU))),
-               axis=1)
-    M2 = np.concatenate((np.hstack((Z, b*gradrho/rho, sg1*divU/2)).reshape(-1,1,5),
-                    np.dstack((np.hstack((Z,Z,Z)).reshape(-1,3,1), gradU, (a*gradp/(2*p)).reshape(-1, 3, 1))),
-                    np.hstack((Z, 2*grada/g1, g1*divU/2)).reshape(-1,1,5)),
-                    axis=1)
-    T = np.stack((
-            np.hstack((b/rho, Z, Z, Z, Z)),
-            np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
-            np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
-            np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
-            np.hstack(((-2*c*c+g*g1*(U*U).sum(axis=1,keepdims=1))/(2*c*sge*rho), -sge*U[:,[0]]/(c*rho), -sge*U[:,[1]]/(c*rho), -sge*U[:,[2]]/(c*rho), sge/(c*rho))),
-        ), axis=2)
-    suffix = ''
+    if visc == 'abarbanel':
+        M1 = np.stack((np.hstack((divU, gradb, Z)),
+                   np.hstack((gradb[:,[0]], divU, Z, Z, grada[:,[0]])),
+                   np.hstack((gradb[:,[1]], Z, divU, Z, grada[:,[1]])),
+                   np.hstack((gradb[:,[2]], Z, Z, divU, grada[:,[2]])),
+                   np.hstack((Z, grada, divU))),
+                   axis=1)
+        M2 = np.concatenate((np.hstack((Z, b*gradrho/rho, sg1*divU/2)).reshape(-1,1,5),
+                        np.dstack((np.hstack((Z,Z,Z)).reshape(-1,3,1), gradU, (a*gradp/(2*p)).reshape(-1, 3, 1))),
+                        np.hstack((Z, 2*grada/g1, g1*divU/2)).reshape(-1,1,5)),
+                        axis=1)
+        T = np.stack((
+                np.hstack((b/rho, Z, Z, Z, Z)),
+                np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
+                np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
+                np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
+                np.hstack(((-2*c*c+g*g1*(U*U).sum(axis=1,keepdims=1))/(2*c*sge*rho), -sge*U[:,[0]]/(c*rho), -sge*U[:,[1]]/(c*rho), -sge*U[:,[2]]/(c*rho), sge/(c*rho))),
+            ), axis=2)
 
     # Entropy
-    M1 = np.stack((np.hstack((divU, gradc, Z)),
-               np.hstack((gradc[:,[0]], divU, Z, Z, Z)),
-               np.hstack((gradc[:,[1]], Z, divU, Z, Z)),
-               np.hstack((gradc[:,[2]], Z, Z, divU, Z)),
-               np.hstack((Z, Z, Z, Z, divU))),
-               axis=1)
-    #M2 = np.concatenate((np.hstack((g1*divU/2, gradp/(rho*c), divU/(2*rho*c))).reshape(-1,1,5),
-    #                np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp/(2*g*rho*c)).reshape((-1, 3, 1)))),
-    #                np.hstack((Z, gradp-c*c*gradrho, Z)).reshape(-1,1,5)),
-    #                axis=1)
-    #T = np.stack((
-    #        np.hstack((b/rho, -g1*U/(c*rho), g1/(c*rho))),
-    #        np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
-    #        np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
-    #        np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
-    #        np.hstack((-c*c+g1/2*(U*U).sum(axis=1,keepdims=1), -g1*U, (g-1)*np.ones_like(Z))),
-    #    ), axis=2)
+    elif visc == 'entropy' or visc == 'uniform':
+        M1 = np.stack((np.hstack((divU, gradc, Z)),
+                   np.hstack((gradc[:,[0]], divU, Z, Z, Z)),
+                   np.hstack((gradc[:,[1]], Z, divU, Z, Z)),
+                   np.hstack((gradc[:,[2]], Z, Z, divU, Z)),
+                   np.hstack((Z, Z, Z, Z, divU))),
+                   axis=1)
+        #M2 = np.concatenate((np.hstack((g1*divU/2, gradp/(rho*c), divU/(2*rho*c))).reshape(-1,1,5),
+        #                np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp/(2*g*rho*c)).reshape((-1, 3, 1)))),
+        #                np.hstack((Z, gradp-c*c*gradrho, Z)).reshape(-1,1,5)),
+        #                axis=1)
+        #T = np.stack((
+        #        np.hstack((b/rho, -g1*U/(c*rho), g1/(c*rho))),
+        #        np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
+        #        np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
+        #        np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
+        #        np.hstack((-c*c+g1/2*(U*U).sum(axis=1,keepdims=1), -g1*U, (g-1)*np.ones_like(Z))),
+        #    ), axis=2)
 
-    M2 = np.concatenate((np.hstack((g1*divU/2, gradp/(rho*c), divU*pref/(2*rho*c*Uref))).reshape(-1,1,5),
-                    np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp*pref/(2*g*rho*c*Uref)).reshape((-1, 3, 1)))),
-                    np.hstack((Z, (gradp-c*c*gradrho)*Uref/pref, Z)).reshape(-1,1,5)),
-                    axis=1)
-    U2 = (U*U).sum(axis=1,keepdims=1)
-    T = np.stack((
-            np.hstack((g1*U2/(2*c*rho*Uref), -g1*U/(c*rho*Uref), g1/(c*rho*Uref))),
-            np.hstack((-U[:,[0]]/(rho*Uref), 1/(rho*Uref), Z, Z, Z)),
-            np.hstack((-U[:,[1]]/(rho*Uref), Z, 1/(rho*Uref), Z, Z)),
-            np.hstack((-U[:,[2]]/(rho*Uref), Z, Z, 1/(rho*Uref), Z)),
-            np.hstack(((-2*g*p+g1*rho*U2)/(2*pref*rho), -g1*U/pref, (g-1)/pref*np.ones_like(Z))),
-        ), axis=2)
+        M2 = np.concatenate((np.hstack((g1*divU/2, gradp/(rho*c), divU*pref/(2*rho*c*Uref))).reshape(-1,1,5),
+                        np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp*pref/(2*g*rho*c*Uref)).reshape((-1, 3, 1)))),
+                        np.hstack((Z, (gradp-c*c*gradrho)*Uref/pref, Z)).reshape(-1,1,5)),
+                        axis=1)
+        U2 = (U*U).sum(axis=1,keepdims=1)
+        T = np.stack((
+                np.hstack((g1*U2/(2*c*rho*Uref), -g1*U/(c*rho*Uref), g1/(c*rho*Uref))),
+                np.hstack((-U[:,[0]]/(rho*Uref), 1/(rho*Uref), Z, Z, Z)),
+                np.hstack((-U[:,[1]]/(rho*Uref), Z, 1/(rho*Uref), Z, Z)),
+                np.hstack((-U[:,[2]]/(rho*Uref), Z, Z, 1/(rho*Uref), Z)),
+                np.hstack(((-2*g*p+g1*rho*U2)/(2*pref*rho), -g1*U/pref, (g-1)/pref*np.ones_like(Z))),
+            ), axis=2)
 
-    suffix = '_entropy'
-    #suffix += '_factor'
+        #suffix += '_factor'
 
     M = M1/2-M2
     #MS = (M + M.transpose((0, 2, 1)))/2
@@ -231,31 +235,35 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs)
         return np.sum(a*b.reshape(-1,1,5), axis=-1)
     Ti = np.linalg.inv(T)
 
-    if rhoa is not None:
-        w = np.hstack((rhoa.field, rhoUa.field, rhoEa.field))
-        v = dot(Ti, w)
-        energy = np.sum(dot(M, v)*v, axis=-1,keepdims=1)
-        energy = IOField('energy' + suffix, 1e-30*energy, (1,))
-
     X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref]).reshape(1,5,5)
-    Ti = np.matmul(Ti, X)
-    M = np.matmul(Ti.transpose(0, 2, 1), np.matmul(M, Ti))
-    MS = (M + M.transpose((0, 2, 1)))/2
+    TiX = np.matmul(Ti, X)
+    Mc = np.matmul(TiX.transpose(0, 2, 1), np.matmul(M, TiX))
+    MS = (Mc + Mc.transpose((0, 2, 1)))/2
     M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
 
+    M_2norm /= parallel.max(M_2norm)
+    M_2norm = 1/(1+np.exp(-5*(M_2norm-1)))
+    suffix += '_factor'
+
     #print parallel.min(M_2norm)
-    #M_2norm /= parallel.max(M_2norm)
-    #M_2norm = 1/(1+np.exp(-10*(M_2norm-1)))
     #parallel.pprint(parallel.max(M_2norm))
     #parallel.pprint(parallel.min(M_2norm))
 
     #M_2norm /= np.sqrt(parallel.sum(M_2norm**2*mesh.volumes)/parallel.sum(mesh.volumes))
     #parallel.pprint(parallel.max(M_2norm))
     #parallel.pprint(parallel.min(M_2norm))
+    if visc == "uniform":
+        M_2norm = np.ones_like(M_2norm)
     M_2norm = IOField('M_2norm' + suffix, M_2norm, (1,))
     #M_2norm.write()
     
     if rhoa is not None:
+        w = np.hstack((rhoa.field[:mesh.nInternalCells], rhoUa.field[:mesh.nInternalCells], rhoEa.field[:mesh.nInternalCells]))
+        v = dot(Ti, w)
+        energy = np.sum(dot(M, v)*v, axis=-1,keepdims=1)
+        energy = np.maximum(0, energy)
+        energy = IOField('energy' + suffix, 1e-30*energy, (1,))
+
         Vs = parallel.sum(mesh.volumes)
         rhoa.defaultComplete()
         rhoUa.defaultComplete()
