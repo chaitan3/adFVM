@@ -25,6 +25,7 @@ class Mesh {
         int nLocalCells;
         int nLocalPatches;
         int nRemotePatches;
+        int nProcs;
 
         imat faces;
         umat points;
@@ -34,7 +35,8 @@ class Mesh {
         umat normals;
         umat faceCentres;
         uvec areas;
-        imat cellFaces;
+        arrType<integer, 6> cellFaces;
+        arrType<integer, 6> cellNeighbours;
         umat cellCentres;
         uvec volumes;
         uvec deltas;

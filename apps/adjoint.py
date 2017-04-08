@@ -5,7 +5,7 @@ from adFVM import config, parallel
 from adFVM.config import ad
 from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
-from adFVM.matop_petsc import laplacian, ddt
+#from adFVM.matop_petsc import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
@@ -72,16 +72,6 @@ class Adjoint(Solver):
             elif isinstance(param, ad.TensorType):
                 variables.append(param)
         return variables
-
-    def viscosity(self, rho, rhoU, rhoE):
-        #U, T, p = primal.primitive(rho, rhoU, rhoE)
-        #outputs = self.computer(U, T, p)
-        #M_2norm = getAdjointNorm(rho, rhoU, rhoE, U, T, p, *outputs)[0]
-        #M_2normScale = max(parallel.max(M_2norm.field), abs(parallel.min(M_2norm.field)))
-        #pprint('M_2norm: ' +  str(M_2normScale))
-        viscosityScale = float(self.scaling)
-        return viscosityScale*rho/rho
-        #return M_2norm*(viscosityScale/M_2normScale)
 
     def initPrimalData(self):
         if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
@@ -200,9 +190,10 @@ class Adjoint(Solver):
 
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
                     stackedFields = np.ascontiguousarray(stackedFields)
-                    stackedPhi = Field('a', stackedFields, (5,))
-                    stackedPhi.old = stackedFields
-                    newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight, correction=False)).solve()
+                    #stackedPhi = Field('a', stackedFields, (5,))
+                    #stackedPhi.old = stackedFields
+                    #newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight, correction=False)).solve()
+                    newStackedFields = adFVMcpp.viscosity(stackedFields, weight, dt)
                     #newStackedFields = stackedFields/(1 + weight*dt)
                     newFields = [newStackedFields[:,[0]], 
                                  newStackedFields[:,[1,2,3]], 

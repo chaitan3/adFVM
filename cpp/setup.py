@@ -15,8 +15,15 @@ os.environ['CXX'] = 'mpicxx'
 
 incdirs = [np.get_include(), home + '/sources/CoDiPack/include']
 libdirs = []
+libs = ['AMPI'] 
+
 #incdirs += ['/projects/LESOpt/talnikar/local/include']
 #libdirs += ['/projects/LESOpt/talnikar/local/lib/']
+
+petscdir = home + '/sources/petsc/linux-gnu-c-opt'
+incdirs += [petscdir + '/../include', petscdir + '/include']
+libdirs += [petscdir + '/lib']
+libs += ['petsc']
 
 for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], ['', '-DADIFF']):
     compile_args = ['-std=c++11', '-O3']#, '-march=native']
@@ -24,10 +31,10 @@ for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], ['', '-DADIFF']):
     if len(args) > 0:
         compile_args += [args]
     mod = Extension(module,
-                    sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp'],
+                    sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp', 'matop.cpp'],
                     extra_compile_args=compile_args,
                     library_dirs=libdirs,
-                    libraries=['AMPI'],
+                    libraries=libs,
                     include_dirs=incdirs)
 
     setup (name = module,

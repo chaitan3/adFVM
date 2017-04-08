@@ -315,3 +315,21 @@ def ddt(phi, dt):
 
     return M
 
+if __name__ == "__main__":
+    from mesh import Mesh
+    mesh = Mesh.create('cases/cylinder/')
+    #mesh = Mesh.create('cases/laplacian/')
+    Field.setMesh(mesh)
+    timer = 1.0
+    T = IOField.read('T', mesh, timer)
+    T.partialComplete(300.)
+    DT = Field('DT', 1., (1,))
+    T.old = T.field
+    res = (ddt(T, 1.) + laplacian(T, DT)).solve()
+    #res = laplacian(T, DT).solve()
+    TL = IOField(T.name + 'L2', res, res.shape[1:])
+    TL.partialComplete()
+    TL.write(timer)
+
+
+

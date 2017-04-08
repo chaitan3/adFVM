@@ -2,8 +2,10 @@
 #include "timestep.hpp"
 #include "density.hpp"
 #include "objective.hpp"
+#include "matop.hpp"
 
 RCF* rcf;
+Matop* matop;
 tuple<scalar, scalar> (*timeIntegrator)(RCF*, const vec&, const mat&, const vec&, vec&, mat&, vec&, scalar, scalar) = SSPRK;
 
 template <typename dtype, integer shape1, integer shape2>
@@ -54,6 +56,15 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     Mesh *mesh = new Mesh(meshObject);
     rcf = new RCF();
     rcf->setMesh(mesh);
+
+    integer argc = 0;
+    PetscInitialize(&argc, NULL, NULL, NULL);
+    matop = new Matop(rcf);
+
+    if (PyTuple_Size(args) == 1) {
+        return Py_None;
+    }
+
     for (integer i = 1; i < 4; i++) {
         PyObject *boundaryObject = PyTuple_GetItem(args, i);
         Py_INCREF(boundaryObject);
@@ -108,6 +119,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
             }
         }
     }
+
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -291,6 +303,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         
         return Py_BuildValue("(NNN)", rhoNObject, rhoUNObject, rhoENObject);
     }
+    
 #else
     #define initFunc initadFVMcpp
     #define modName "adFVMcpp"
@@ -381,7 +394,27 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         return Py_BuildValue("(NNN)", rhoNObject, rhoUNObject, rhoENObject);
     }
 #endif
-   
+
+static PyObject* viscosity(PyObject *self, PyObject *args) {
+
+    //cout << "forward 1" << endl;
+    PyObject *uObject, *DTObject;
+    uscalar dt;
+    PyArg_ParseTuple(args, "OOd", &uObject, &DTObject, &dt);
+
+    arrType<uscalar, 5> u;
+    uvec DT;
+    getArray((PyArrayObject *)uObject, u);
+    getArray((PyArrayObject *)DTObject, DT);
+    const Mesh& mesh = *(rcf->mesh);
+
+    arrType<uscalar, 5> un(mesh.nInternalCells);
+    matop->heat_equation(rcf, u, DT, dt, un);
+    
+    PyObject *uNObject = putArray(un);
+    return uNObject;
+}
+
 PyMODINIT_FUNC
 initFunc(void)
 {
@@ -391,6 +424,7 @@ initFunc(void)
         {"forward",  forwardSolver, METH_VARARGS, "boo"},
         {"init",  initSolver, METH_VARARGS, "Execute a shell command."},
         {"ghost",  ghost, METH_VARARGS, "Execute a shell command."},
+        {"viscosity",  viscosity, METH_VARARGS, "Execute a shell command."},
         {NULL, NULL, 0, NULL}        /* Sentinel */
     };
 
@@ -436,6 +470,7 @@ Mesh::Mesh (PyObject* meshObject) {
     getMeshArray(this->mesh, "faceCentres", this->faceCentres);
     getMeshArray(this->mesh, "areas", this->areas);
     getMeshArray(this->mesh, "cellFaces", this->cellFaces);
+    getMeshArray(this->mesh, "cellNeighboursMatOp", this->cellNeighbours);
     getMeshArray(this->mesh, "cellCentres", this->cellCentres);
     getMeshArray(this->mesh, "volumes", this->volumes);
 
@@ -459,6 +494,7 @@ void Mesh::init () {
         integer nFaces = stoi(patchInfo.at("nFaces"));
         this->boundaryFaces[patchID] = make_pair(startFace, nFaces);
     }
+    MPI_Comm_size(MPI_COMM_WORLD, &this->nProcs);
 }
 
 Mesh::~Mesh () {
@@ -542,7 +578,7 @@ Boundary getBoundary(PyObject *dict) {
             else if (PyString_Check(value2)) {
                 cvalue = PyString_AsString(value2);
             }
-            else if (ckey2[0] == '_') {
+            else if (ckey2[0] == '_' || ckey2 == "loc_neighbourIndices") {
                 Py_INCREF(value2);
                 PyArrayObject* val = (PyArrayObject*) value2;
                 char* data = (char *) PyArray_DATA(val);
