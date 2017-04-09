@@ -81,7 +81,7 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
             MatSetValue(A, index, neighbourIndex, data, INSERT_VALUES);
         }
     } 
-    delete ranges;
+    delete[] ranges;
 
     MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
