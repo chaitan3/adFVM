@@ -15,16 +15,14 @@ Matop::Matop(RCF* rcf) {
             boundaryProcs[patch.first] = stoi(patchInfo.at("neighbProcNo"));
         }
     }
-    KSPCreate(PETSC_COMM_WORLD, &(ksp));
-    KSPGetPC(ksp, &(pc));
-    KSPSetType(ksp, "gmres");
-    PCSetType(pc, "hypre");
     //KSPSetFromOptions(ksp);
 }
 void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec DT, const uscalar dt, arrType<uscalar, nrhs>& un) {
     const Mesh& mesh = *(rcf->mesh);
     Vec x, b;
     Mat A;
+    KSP ksp;
+    PC pc;
 
     integer n = mesh.nInternalCells;
     integer il, ih;
@@ -34,7 +32,11 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
     MatSetSizes(A, n, n, PETSC_DETERMINE, PETSC_DETERMINE);
     MatSetType(A, "aij");
     MatSetFromOptions(A);
-    MatMPIAIJSetPreallocation(A, 7, NULL, 0, NULL);
+    if (mesh.nProcs > 1) {
+        MatMPIAIJSetPreallocation(A, 7, NULL, 1, NULL);
+    } else {
+        MatSeqAIJSetPreallocation(A, 7, NULL);
+    }
     MatGetOwnershipRange(A, &il, &ih);
     MatGetOwnershipRangeColumn(A, &jl, &jh);
 
@@ -86,6 +88,10 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
     MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
     
+    KSPCreate(PETSC_COMM_WORLD, &(ksp));
+    KSPGetPC(ksp, &(pc));
+    KSPSetType(ksp, "gmres");
+    PCSetType(pc, "hypre");
     KSPSetOperators(ksp, A, A);
     KSPSetFromOptions(ksp);
 

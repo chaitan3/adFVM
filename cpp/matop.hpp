@@ -3,8 +3,6 @@
 #include <petscksp.h>
 
 class Matop {
-    KSP ksp;
-    PC pc;
     map<string, ivec> boundaryNeighbours;
     map<string, integer> boundaryProcs;
 
