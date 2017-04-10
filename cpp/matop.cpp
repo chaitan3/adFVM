@@ -8,7 +8,7 @@ Matop::Matop(RCF* rcf) {
         auto& patchInfo = patch.second;
         integer startFace, nFaces;
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patch.first);
-        if (startFace >= mesh.nLocalFaces) {
+        if (startFace >= mesh.nLocalFaces && nFaces > 0) {
             ivec tmp(nFaces, patchInfo.at("loc_neighbourIndices"));
             //cout << patch.first << tmp(0) << " " << tmp(1) << endl;
             boundaryNeighbours[patch.first] = tmp;
@@ -31,10 +31,10 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
     integer jl, jh;
 
     MatCreate(PETSC_COMM_WORLD, &A);
-    MatSetType(A, "aij");
     MatSetSizes(A, n, n, PETSC_DETERMINE, PETSC_DETERMINE);
-    MatMPIAIJSetPreallocation(A, 7, NULL, 6, NULL);
-    MatSetUp(A);
+    MatSetType(A, "aij");
+    MatSetFromOptions(A);
+    MatMPIAIJSetPreallocation(A, 7, NULL, 0, NULL);
     MatGetOwnershipRange(A, &il, &ih);
     MatGetOwnershipRangeColumn(A, &jl, &jh);
 
