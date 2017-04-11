@@ -16,6 +16,7 @@ Matop::Matop(RCF* rcf) {
         }
     }
     //KSPSetFromOptions(ksp);
+    //cout << "Matop" << endl;
 }
 void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec DT, const uscalar dt, arrType<uscalar, nrhs>& un) {
     const Mesh& mesh = *(rcf->mesh);
@@ -31,12 +32,13 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
     MatCreate(PETSC_COMM_WORLD, &A);
     MatSetSizes(A, n, n, PETSC_DETERMINE, PETSC_DETERMINE);
     MatSetType(A, "aij");
-    MatSetFromOptions(A);
+    //MatSetFromOptions(A);
     if (mesh.nProcs > 1) {
-        MatMPIAIJSetPreallocation(A, 7, NULL, 1, NULL);
+        MatMPIAIJSetPreallocation(A, 7, NULL, 6, NULL);
     } else {
         MatSeqAIJSetPreallocation(A, 7, NULL);
     }
+    //MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
     MatGetOwnershipRange(A, &il, &ih);
     MatGetOwnershipRangeColumn(A, &jl, &jh);
 
@@ -89,11 +91,11 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
     MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
     
     KSPCreate(PETSC_COMM_WORLD, &(ksp));
-    KSPGetPC(ksp, &(pc));
-    KSPSetType(ksp, "gmres");
-    PCSetType(pc, "hypre");
     KSPSetOperators(ksp, A, A);
-    KSPSetFromOptions(ksp);
+    KSPSetType(ksp, "gmres");
+    KSPGetPC(ksp, &(pc));
+    PCSetType(pc, "hypre");
+    //KSPSetFromOptions(ksp);
 
     MatCreateVecs(A, &x, &b);
     for (integer i = 0; i < nrhs; i++) {

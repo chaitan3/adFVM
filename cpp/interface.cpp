@@ -57,9 +57,11 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     rcf = new RCF();
     rcf->setMesh(mesh);
 
-    integer argc = 0;
-    PetscInitialize(&argc, NULL, NULL, NULL);
-    matop = new Matop(rcf);
+    #ifdef ADIFF
+        integer argc = 0;
+        PetscInitialize(&argc, NULL, NULL, NULL);
+        matop = new Matop(rcf);
+    #endif
 
     if (PyTuple_Size(args) == 1) {
         return Py_None;
