@@ -16,14 +16,16 @@ Matop::Matop(RCF* rcf) {
         }
     }
     //KSPSetFromOptions(ksp);
-    //cout << "Matop" << endl;
+    KSPCreate(PETSC_COMM_WORLD, &(ksp));
+    //KSPSetType(ksp, "mumps");
+    KSPSetType(ksp, "gmres");
+    KSPGetPC(ksp, &(pc));
+    PCSetType(pc, "hypre");
 }
 void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec DT, const uscalar dt, arrType<uscalar, nrhs>& un) {
     const Mesh& mesh = *(rcf->mesh);
     Vec x, b;
     Mat A;
-    KSP ksp;
-    PC pc;
 
     integer n = mesh.nInternalCells;
     integer il, ih;
@@ -90,11 +92,7 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
     MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
     
-    KSPCreate(PETSC_COMM_WORLD, &(ksp));
     KSPSetOperators(ksp, A, A);
-    KSPSetType(ksp, "gmres");
-    KSPGetPC(ksp, &(pc));
-    PCSetType(pc, "hypre");
     //KSPSetFromOptions(ksp);
     KSPSetUp(ksp);
 

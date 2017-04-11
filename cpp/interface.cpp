@@ -130,7 +130,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 #ifdef ADIFF
     #define initFunc initadFVMcpp_ad
     #define modName "adFVMcpp_ad"
-    auto& tape = codi::RealReverse::getGlobalTape();    
+    auto& tape = scalar::getGlobalTape();    
 
     static PyObject* forwardSolver(PyObject *self, PyObject *args) {
 

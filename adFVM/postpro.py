@@ -177,6 +177,11 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     gradb = gradc/sg
     grada = gradc*sg1/sg
     Z = np.zeros_like(divU)
+
+    U1 = U[:,[0]]
+    U2 = U[:,[1]]
+    U3 = U[:,[2]]
+    c2 = c*c
     
     if visc == 'abarbanel':
         M1 = np.stack((np.hstack((divU, gradb, Z)),
@@ -189,12 +194,19 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
                         np.dstack((np.hstack((Z,Z,Z)).reshape(-1,3,1), gradU, (a*gradp/(2*p)).reshape(-1, 3, 1))),
                         np.hstack((Z, 2*grada/g1, g1*divU/2)).reshape(-1,1,5)),
                         axis=1)
-        T = np.stack((
-                np.hstack((b/rho, Z, Z, Z, Z)),
-                np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
-                np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
-                np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
-                np.hstack(((-2*c*c+g*g1*(U*U).sum(axis=1,keepdims=1))/(2*c*sge*rho), -sge*U[:,[0]]/(c*rho), -sge*U[:,[1]]/(c*rho), -sge*U[:,[2]]/(c*rho), sge/(c*rho))),
+        #T = np.stack((
+        #        np.hstack((b/rho, Z, Z, Z, Z)),
+        #        np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
+        #        np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
+        #        np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
+        #        np.hstack(((-2*c*c+g*g1*(U*U).sum(axis=1,keepdims=1))/(2*c*sge*rho), -sge*U[:,[0]]/(c*rho), -sge*U[:,[1]]/(c*rho), -sge*U[:,[2]]/(c*rho), sge/(c*rho))),
+        #    ), axis=2)
+        Ti = np.stack((
+                np.hstack((rho/b, Z, Z, Z, Z)),
+                np.hstack((rho*U1/b, rho, Z, Z, Z)),
+                np.hstack((rho*U2/b, Z, rho, Z, Z)),
+                np.hstack((rho*U3/b, Z, Z, rho, Z)),
+                np.hstack((rho*(2*c2/(g1*g)+U2)/(2*b), rho*U1, rho*U2, rho*U3, c*rho/sge)),
             ), axis=2)
 
     # Entropy
@@ -222,25 +234,26 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
                         np.hstack((Z, (gradp-c*c*gradrho)*Uref/pref, Z)).reshape(-1,1,5)),
                         axis=1)
         U2 = (U*U).sum(axis=1,keepdims=1)
-        T = np.stack((
-                np.hstack((g1*U2/(2*c*rho*Uref), -g1*U/(c*rho*Uref), g1/(c*rho*Uref))),
-                np.hstack((-U[:,[0]]/(rho*Uref), 1/(rho*Uref), Z, Z, Z)),
-                np.hstack((-U[:,[1]]/(rho*Uref), Z, 1/(rho*Uref), Z, Z)),
-                np.hstack((-U[:,[2]]/(rho*Uref), Z, Z, 1/(rho*Uref), Z)),
-                np.hstack(((-2*g*p+g1*rho*U2)/(2*pref*rho), -g1*U/pref, (g-1)/pref*np.ones_like(Z))),
-            ), axis=2)
-
-        #suffix += '_factor'
-
+        #T = np.stack((
+        #        np.hstack((g1*U2/(2*c*rho*Uref), -g1*U/(c*rho*Uref), g1/(c*rho*Uref))),
+        #        np.hstack((-U[:,[0]]/(rho*Uref), 1/(rho*Uref), Z, Z, Z)),
+        #        np.hstack((-U[:,[1]]/(rho*Uref), Z, 1/(rho*Uref), Z, Z)),
+        #        np.hstack((-U[:,[2]]/(rho*Uref), Z, Z, 1/(rho*Uref), Z)),
+        #        np.hstack(((-2*g*p+g1*rho*U2)/(2*pref*rho), -g1*U/pref, (g-1)/pref*np.ones_like(Z))),
+        #    ), axis=2)
+        Ti = np.stack((
+            np.hstack((rho*Uref/c, Z, Z, Z, -pref/c2)),
+            np.hstack((rho*U1*Uref/c, rho*Uref, Z, Z, -pref*U1/c2)),                                    #suffix += '_factor'
+            np.hstack((rho*U2*Uref/c, Z, rho*Uref, Z, -pref*U2/c2)),                                    #suffix += '_factor'
+            np.hstack((rho*U3*Uref/c, Z, Z, rho*Uref, -pref*U3/c2)),                                    #suffix += '_factor'
+            np.hstack((c*rho*Uref/g1 + rho*U2*Uref/(2*c), rho*U1*Uref, rho*U2*Uref, rho*U3*Uref, -pref*U2/(2*c2))),    #MS = (M + M.transpose((0, 2, 1)))/2
+        ), axis=2)                                                                                   #M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
     M = M1/2-M2
-    #MS = (M + M.transpose((0, 2, 1)))/2
-    #M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
     #M_2norm = IOField('M_2norm_old' + suffix, M_2norm, (1,), boundary=mesh.calculatedBoundary)
     #M_2norm.write()
     
     def dot(a, b):
         return np.sum(a*b.reshape(-1,1,5), axis=-1)
-    Ti = np.linalg.inv(T)
 
     X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref]).reshape(1,5,5)
     TiX = np.matmul(Ti, X)

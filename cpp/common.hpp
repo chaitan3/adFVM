@@ -16,6 +16,8 @@ using namespace std;
 #ifdef ADIFF
     #include "codi.hpp"
     typedef codi::RealReverse scalar;
+    //typedef codi::RealReversePrimal scalar;
+    //typedef codi::RealReversePrimalIndex scalar;
 #else 
     #include "mpi.h"
     #define AMPI_Irecv MPI_Irecv
@@ -167,7 +169,7 @@ class arrType {
                 this -> data[i] = udata[i];
             }
         }
-        void adInit(codi::RealReverse::TapeType& tape) {
+        void adInit(scalar::TapeType& tape) {
             for (integer i = 0; i < this->size; i++) {
                 tape.registerInput(this->data[i]);
             }
