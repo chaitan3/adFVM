@@ -5,8 +5,6 @@
 class Matop {
     map<string, ivec> boundaryNeighbours;
     map<string, integer> boundaryProcs;
-    KSP ksp;
-    PC pc;
 
     public:
 

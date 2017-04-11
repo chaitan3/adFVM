@@ -15,12 +15,6 @@ Matop::Matop(RCF* rcf) {
             boundaryProcs[patch.first] = stoi(patchInfo.at("neighbProcNo"));
         }
     }
-    //KSPSetFromOptions(ksp);
-    KSPCreate(PETSC_COMM_WORLD, &(ksp));
-    //KSPSetType(ksp, "mumps");
-    KSPSetType(ksp, "gmres");
-    KSPGetPC(ksp, &(pc));
-    PCSetType(pc, "hypre");
 }
 void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec DT, const uscalar dt, arrType<uscalar, nrhs>& un) {
     const Mesh& mesh = *(rcf->mesh);
@@ -92,6 +86,14 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
     MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
     
+    KSP ksp;
+    PC pc;
+    //KSPSetFromOptions(ksp);
+    KSPCreate(PETSC_COMM_WORLD, &(ksp));
+    //KSPSetType(ksp, "mumps");
+    KSPSetType(ksp, "gmres");
+    KSPGetPC(ksp, &(pc));
+    PCSetType(pc, "hypre");
     KSPSetOperators(ksp, A, A);
     //KSPSetFromOptions(ksp);
     KSPSetUp(ksp);
