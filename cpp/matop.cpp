@@ -96,22 +96,25 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
     KSPGetPC(ksp, &(pc));
     PCSetType(pc, "hypre");
     //KSPSetFromOptions(ksp);
+    KSPSetUp(ksp);
 
     MatCreateVecs(A, &x, &b);
+    uscalar *data1 = new uscalar[n];
+    VecPlaceArray(b, data1);
     for (integer i = 0; i < nrhs; i++) {
-        for (integer j = il; j < ih; j++) {
-            VecSetValue(b, j, u(j-il,i)/dt, INSERT_VALUES);
+        for (integer j = 0; j < n; j++) {
+            data1[j] = u(j, i)/dt;
         }
-        VecAssemblyBegin(b);
-        VecAssemblyEnd(b);
-
         KSPSolve(ksp, b, x);
-        uscalar *data;
-        VecGetArray(x, &data);
-        for (integer j = il; j < ih; j++) {
-            un(j-il, i) = data[j-il];
+        uscalar *data2;
+        VecGetArray(x, &data2);
+        for (integer j = 0; j < n; j++) {
+            un(j, i) = data2[j];
         }
+        VecRestoreArray(x, &data2);
     }
+    VecResetArray(b);
+    delete[] data1;
 
     //KSPDestroy(&ksp);
     VecDestroy(&b);
