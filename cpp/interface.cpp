@@ -2,10 +2,12 @@
 #include "timestep.hpp"
 #include "density.hpp"
 #include "objective.hpp"
-#include "matop.hpp"
+#ifdef MATOP
+    #include "matop.hpp"
+    Matop* matop;
+#endif
 
 RCF* rcf;
-Matop* matop;
 tuple<scalar, scalar> (*timeIntegrator)(RCF*, const vec&, const mat&, const vec&, vec&, mat&, vec&, scalar, scalar) = SSPRK;
 
 template <typename dtype, integer shape1, integer shape2>
@@ -57,11 +59,13 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     rcf = new RCF();
     rcf->setMesh(mesh);
 
-    //#ifdef ADIFF
-    //    integer argc = 0;
-    //    PetscInitialize(&argc, NULL, NULL, NULL);
-    //    matop = new Matop(rcf);
-    //#endif
+    #ifdef MATOP
+    #ifdef ADIFF
+        integer argc = 0;
+        PetscInitialize(&argc, NULL, NULL, NULL);
+        matop = new Matop(rcf);
+    #endif
+    #endif
 
     if (PyTuple_Size(args) == 1) {
         return Py_None;
@@ -397,25 +401,27 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     }
 #endif
 
-static PyObject* viscosity(PyObject *self, PyObject *args) {
+    static PyObject* viscosity(PyObject *self, PyObject *args) {
 
-    //cout << "forward 1" << endl;
-    PyObject *uObject, *DTObject;
-    uscalar dt;
-    PyArg_ParseTuple(args, "OOd", &uObject, &DTObject, &dt);
+        //cout << "forward 1" << endl;
+        PyObject *uObject, *DTObject;
+        uscalar dt;
+        PyArg_ParseTuple(args, "OOd", &uObject, &DTObject, &dt);
 
-    arrType<uscalar, 5> u;
-    uvec DT;
-    getArray((PyArrayObject *)uObject, u);
-    getArray((PyArrayObject *)DTObject, DT);
-    const Mesh& mesh = *(rcf->mesh);
+        arrType<uscalar, 5> u;
+        uvec DT;
+        getArray((PyArrayObject *)uObject, u);
+        getArray((PyArrayObject *)DTObject, DT);
+        const Mesh& mesh = *(rcf->mesh);
 
-    arrType<uscalar, 5> un(mesh.nInternalCells);
-    matop->heat_equation(rcf, u, DT, dt, un);
-    
-    PyObject *uNObject = putArray(un);
-    return uNObject;
-}
+        arrType<uscalar, 5> un(mesh.nInternalCells);
+        #ifdef MATOP
+            matop->heat_equation(rcf, u, DT, dt, un);
+        #endif
+        
+        PyObject *uNObject = putArray(un);
+        return uNObject;
+    }
 
 PyMODINIT_FUNC
 initFunc(void)
