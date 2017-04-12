@@ -15,17 +15,20 @@ os.environ['CXX'] = 'mpicxx'
 
 incdirs = [np.get_include(), home + '/sources/CoDiPack/include']
 libdirs = []
-libs = ['AMPI'] 
+libs = []
+#libs += ['AMPI'] 
 
 #incdirs += ['/projects/LESOpt/talnikar/local/include']
 #libdirs += ['/projects/LESOpt/talnikar/local/lib/']
 
-petscdir = home + '/sources/petsc/linux-gnu-c-opt'
+petscdir = '/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real/'
+#petscdir = home + '/sources/petsc/linux-gnu-c-opt'
 incdirs += [petscdir + '/../include', petscdir + '/include']
 libdirs += [petscdir + '/lib']
 libs += ['petsc']
 
-for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], ['', '-DADIFF']):
+#for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], ['', '-DADIFF']):
+for module, args in zip(['adFVMcpp'], ['']):
     compile_args = ['-std=c++11', '-O3']#, '-march=native']
     #compile_args=['-std=c++11', '-O0', '-g']
     if len(args) > 0:
