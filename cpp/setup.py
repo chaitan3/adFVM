@@ -18,7 +18,7 @@ libdirs = []
 libs = []
 #sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp', 'matop.cpp'],
 sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp']
-#libs += ['AMPI'] 
+libs += ['AMPI'] 
 
 #incdirs += ['/projects/LESOpt/talnikar/local/include']
 #libdirs += ['/projects/LESOpt/talnikar/local/lib/']
