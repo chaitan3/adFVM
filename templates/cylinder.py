@@ -106,4 +106,4 @@ writeInterval = 5
 reportInterval = 1
 startTime = 4.0
 dt = 1e-10
-#adjParams = [1e-3, None, None]
+adjParams = [1e-3, None, None]
