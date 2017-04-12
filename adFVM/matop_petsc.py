@@ -134,7 +134,7 @@ def laplacian(phi, DT, correction=True):
     m = mesh.nInternalFaces
     o = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
 
-    M = Matrix.create(n, n, 7, nrhs)
+    M = Matrix.create(n, n, (7, 6), nrhs)
     A, b = M.A, M.b
 
     il, ih = A.getOwnershipRange()
