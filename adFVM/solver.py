@@ -389,7 +389,7 @@ class Solver(object):
                 end = time.time()
                 pprint('Time for iteration:', end-start)
                 pprint('Time since beginning:', end-config.runtime)
-                pprint('Running average objective: ', parallel.sum(result)/(timeIndex + 1))
+                #pprint('Running average objective: ', parallel.sum(result)/(timeIndex + 1))
 
                 if self.localTimeStep:
                     pprint('Simulation Time:', t, 'Time step: min', parallel.min(dt), 'max', parallel.max(dt))

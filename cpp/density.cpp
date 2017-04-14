@@ -491,7 +491,7 @@ void RCF::boundaryInit(integer startField) {
     this->reqIndex = 0;
     this->reqField = startField;
     if (mesh->nRemotePatches > 0) {
-        //MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
         this->req = (void *)new AMPI_Request[2*3*mesh->nRemotePatches];
     }
 }
