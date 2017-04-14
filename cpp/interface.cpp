@@ -295,9 +295,11 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
             rhoEN(i) = rhoE(i);
         }
 
+        rcf->boundaryInit();
         rcf->boundary(mesh.defaultBoundary, rhoN);
         rcf->boundary(mesh.defaultBoundary, rhoUN);
         rcf->boundary(mesh.defaultBoundary, rhoEN);
+        rcf->boundaryEnd();
 
         //cout << "forward 3" << endl;
         
@@ -378,9 +380,11 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rcf->U = &U;
         rcf->T = &T;
         rcf->p = &p;
+        rcf->boundaryInit();
         rcf->boundary(rcf->boundaries[0], U);
         rcf->boundary(rcf->boundaries[1], T);
         rcf->boundary(rcf->boundaries[2], p);
+        rcf->boundaryEnd();
 
         //cout << "forward 3" << endl;
         vec rhoN(mesh.nCells);
@@ -491,6 +495,7 @@ Mesh::Mesh (PyObject* meshObject) {
     this->boundary = getMeshBoundary(this->mesh, "boundary");
     this->calculatedBoundary = getMeshBoundary(this->mesh, "calculatedBoundary");
     this->defaultBoundary = getMeshBoundary(this->mesh, "defaultBoundary");
+    this->tags = getTags(this->mesh, "tags");
     this->init();
 }
 
@@ -530,7 +535,17 @@ string getString(PyObject *mesh, const string attr) {
     return result;
 }
 
-
+map<string, integer> getTags(PyObject *mesh, const string attr) {
+    PyObject *dict = PyObject_GetAttrString(mesh, attr.c_str());
+    map<string, integer> tags;
+    PyObject *key2, *value2;
+    Py_ssize_t pos2 = 0;
+    while (PyDict_Next(dict, &pos2, &key2, &value2)) {
+        string ckey2 = PyString_AsString(key2);
+        tags[ckey2] = PyInt_AsLong(value2);
+    }
+    return tags;
+}
 
 Boundary getMeshBoundary(PyObject *mesh, const string attr) {
     PyObject *dict = PyObject_GetAttrString(mesh, attr.c_str());

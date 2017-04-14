@@ -37,6 +37,7 @@ tuple<scalar, scalar> SSPRK(RCF *rcf, const vec& rho, const mat& rhoU, const vec
 
     for (integer stage = 0; stage < n; stage++) {
         //solver.t = solver.t0 + gamma[i]*solver.dt
+        rcf->stage = stage;
         rcf->equation(rhos[stage], rhoUs[stage], rhoEs[stage], drho, drhoU, drhoE, objective[stage], dtc[stage]);
         integer curr = stage + 1;
         scalar b = beta[stage][stage];

@@ -45,6 +45,11 @@ class RCF {
     vec* rhoES;
     Boundary* boundaries;
 
+    void* req;
+    integer reqIndex;
+    integer reqField;
+    integer stage;
+
     Interpolator* interpolate;
     Operator* operate;
     Mesh const* mesh;
@@ -66,6 +71,7 @@ class RCF {
         this->operate = new Operator(mesh);
         this->boundaries = new Boundary[3];
         this->mu = &RCF::sutherland;
+        this->stage = 0;
     }
 
     ~RCF() {
@@ -73,6 +79,12 @@ class RCF {
         delete this->operate;
         delete[] this->boundaries;
     }
+
+    void boundaryInit() {
+        this->boundaryInit(0);
+    }
+    void boundaryInit(integer);
+    void boundaryEnd();
 };
 
 #endif

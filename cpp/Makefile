@@ -2,7 +2,7 @@ all:
 	python2 setup.py build
 
 install: 
-	python2 setup.py install --user
+	python2 setup.py install #--user
 
 clean:
 	rm -rf build

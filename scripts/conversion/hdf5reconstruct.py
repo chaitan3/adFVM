@@ -173,7 +173,7 @@ for time in times:
             continue
         if name == 'parallel':
             continue
-        print 'reading field ' + name
+        #print 'reading field ' + name
         fieldData = field[name]['field'][:]
         boundaryData = field[name]['boundary'][:]
         parallelStart = field[name]['parallel/start']
@@ -203,7 +203,7 @@ for time in times:
                 cellEndFace = cellStartFace + patch['nFaces']
                 dataSerial[addressing-nInternalFaces+data.shape[0]] = fieldData[cellStartFace:cellEndFace]
 
-        print('writing serial field ' + name)
+        #print('writing serial field ' + name)
         fieldGroup = fieldSerial.create_group(name)
         fieldGroup.create_dataset('field', data=dataSerial)
         fieldGroup.create_dataset('boundary', data=np.array(boundary, dtype='S100'))

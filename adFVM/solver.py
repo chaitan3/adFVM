@@ -358,6 +358,9 @@ class Solver(object):
                 #    with IOField.handle(t):
                 #        fields[index].write()
                 #    exit(1)
+            else:
+                pprint('Time step', timeIndex)
+                pprint()
 
             inputs = [phi.field for phi in fields] + \
                      [phi[1] for phi in self.sourceTerms] + \

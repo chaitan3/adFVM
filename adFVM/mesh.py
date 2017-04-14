@@ -97,6 +97,7 @@ class Mesh(object):
         self.nRemotePatches = len(self.remotePatches)
         self.sortedPatches = copy.copy(self.localPatches)
         self.sortedPatches.sort()
+        self.tags = {patchID: self.getProcessorPatchInfo(patchID)[2] for patchID in self.remotePatches}
         self.boundaryTensor = {}
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()

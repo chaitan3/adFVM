@@ -59,11 +59,11 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     this->U = &U;
     this->T = &T;
     this->p = &p;
+    this->boundaryInit();    
     this->boundary(this->boundaries[0], U);
     this->boundary(this->boundaries[1], T);
     this->boundary(this->boundaries[2], p);
-    objective = this->objective(this, U, T, p);
-    ///cout << std::setprecision (std::numeric_limits<double>::digits10 + 1) << objective << endl;
+    //this->boundaryEnd();    
     //U.info();
     //T.info();
     //p.info();
@@ -74,6 +74,9 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     gradU.zero();
     gradT.zero();
     gradp.zero();
+
+
+    
     auto faceUpdate = [&](const integer start, const integer end, const bool neighbour) {
         for (integer i = start; i < end; i++) {
             scalar UF[3], TF, pF;
@@ -88,6 +91,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
         //cout << end << " " << gradT.checkNAN() << endl;
     };
     faceUpdate(0, mesh.nInternalFaces, true);
+    this->boundaryEnd();    
     for (auto& patch: mesh.boundary) {
         auto& patchInfo = patch.second;
         integer startFace, nFaces;
@@ -112,16 +116,20 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     //cout << "gradU " << gradU.checkNAN() << endl;
     
     //cout << "c++: equation 3" << endl;
+    this->boundaryInit(this->reqField);    
     this->boundary(mesh.defaultBoundary, gradU);
     this->boundary(mesh.defaultBoundary, gradT);
     this->boundary(mesh.defaultBoundary, gradp);
+    //this->boundaryEnd();    
     
+    vec dtc(mesh.nCells);
     drho.zero();
     drhoU.zero();
     drhoE.zero();
-
-    vec dtc(mesh.nCells);
     dtc.zero();
+    objective = this->objective(this, U, T, p);
+    ///cout << std::setprecision (std::numeric_limits<double>::digits10 + 1) << objective << endl;
+
     /*auto viscousFluxUpdate = [&](const scalar UF[3], const scalar TF, scalar rhoUFlux[3], scalar& rhoEFlux, integer ind) {*/
         //scalar qF = 0, sigmadotUF = 0., sigmaF[3];
         //scalar mu = (this->*(this->mu))(TF);
@@ -275,6 +283,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
         //cout << end << " " << drhoU.checkNAN() << endl;
     };
     faceFluxUpdate(0, mesh.nInternalFaces, true, false);
+    this->boundaryEnd();    
     //cout << "c++: equation 4" << endl;
     // characteristic boundary
     for (auto& patch: mesh.boundary) {
@@ -338,11 +347,11 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
     //MPI_Barrier(MPI_COMM_WORLD);
 
     arrType<dtype, shape1, shape2> phiBuf(mesh.nCells-mesh.nLocalCells);
-    AMPI_Request* req = NULL;
-    integer reqIndex = 0;
+    integer reqPos;
     if (mesh.nRemotePatches > 0) {
-        req = new AMPI_Request[2*mesh.nRemotePatches];
+        reqPos = reqIndex/(2*mesh.nRemotePatches);
     }
+    
 
     for (auto& patch: boundary) {
         string patchType = patch.second.at("type");
@@ -453,7 +462,6 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
             integer bufStartFace = cellStartFace - mesh.nLocalCells;
             integer size = nFaces*shape1*shape2;
             integer dest = stoi(patchInfo.at("neighbProcNo"));
-            integer tag = 0;
             for (integer i = 0; i < nFaces; i++) {
                 integer p = mesh.owner(startFace + i);
                 integer b = bufStartFace + i;
@@ -463,9 +471,12 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
                     }
                 }
             }
-            AMPI_Isend(&phiBuf(bufStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[reqIndex]);
-            AMPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[reqIndex+1]);
-            reqIndex += 2;
+            AMPI_Request *req = (AMPI_Request*) this->req;
+            integer tag = this->stage*100 + this->reqField*10 + mesh.tags.at(patchID);
+            //cout << patchID << " " << tag << endl;
+            AMPI_Isend(&phiBuf(bufStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex]);
+            AMPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex+1]);
+            this->reqIndex += 2;
         }
         else if (patchType == "calculated") {
         } 
@@ -473,9 +484,23 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
             cout << "patch not found " << patchType << " for " << patchID << endl;
         }
     }
-    if (mesh.nRemotePatches > 0) {
-        AMPI_Waitall(2*mesh.nRemotePatches, req, MPI_STATUSES_IGNORE);
-        delete[] req;
+    this->reqField++;
+}
+
+void RCF::boundaryInit(integer startField) {
+    this->reqIndex = 0;
+    this->reqField = startField;
+    if (mesh->nRemotePatches > 0) {
+        //MPI_Barrier(MPI_COMM_WORLD);
+        this->req = (void *)new AMPI_Request[2*3*mesh->nRemotePatches];
+    }
+}
+
+void RCF::boundaryEnd() {
+    if (mesh->nRemotePatches > 0) {
+        AMPI_Waitall(2*3*mesh->nRemotePatches, ((AMPI_Request*)this->req), MPI_STATUSES_IGNORE);
+        delete[] ((AMPI_Request*)this->req);
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 }
 

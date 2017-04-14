@@ -50,6 +50,7 @@ class Mesh {
 
         Boundary boundary;
         map<string, pair<integer, integer>> boundaryFaces;
+        map<string, integer> tags;
         Boundary defaultBoundary;
         Boundary calculatedBoundary;
 
@@ -67,6 +68,7 @@ class Mesh {
 int getInteger(PyObject*, const string);
 string getString(PyObject*, const string);
 void getDict(PyObject* dict, map<string, string>& cDict);
+map<string, integer> getTags(PyObject *mesh, const string attr);
 
 //template<typename dtype, integer shape1, integer shape2>
 // PyObject * putArray(arrType<dtype, shape1, shape2>&);
