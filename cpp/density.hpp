@@ -48,6 +48,7 @@ class RCF {
     void* req;
     integer reqIndex;
     integer reqField;
+    scalar* reqBuf[3];
     integer stage;
 
     Interpolator* interpolate;

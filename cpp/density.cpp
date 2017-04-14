@@ -74,7 +74,6 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     gradU.zero();
     gradT.zero();
     gradp.zero();
-    this->boundaryEnd();    
     
     auto faceUpdate = [&](const integer start, const integer end, const bool neighbour) {
         for (integer i = start; i < end; i++) {
@@ -90,6 +89,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
         //cout << end << " " << gradT.checkNAN() << endl;
     };
     faceUpdate(0, mesh.nInternalFaces, true);
+    this->boundaryEnd();    
     for (auto& patch: mesh.boundary) {
         auto& patchInfo = patch.second;
         integer startFace, nFaces;
@@ -125,7 +125,6 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     drhoE.zero();
     dtc.zero();
     objective = this->objective(this, U, T, p);
-    this->boundaryEnd();    
     ///cout << std::setprecision (std::numeric_limits<double>::digits10 + 1) << objective << endl;
 
     /*auto viscousFluxUpdate = [&](const scalar UF[3], const scalar TF, scalar rhoUFlux[3], scalar& rhoEFlux, integer ind) {*/
@@ -281,6 +280,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
         //cout << end << " " << drhoU.checkNAN() << endl;
     };
     faceFluxUpdate(0, mesh.nInternalFaces, true, false);
+    this->boundaryEnd();    
     //cout << "c++: equation 4" << endl;
     // characteristic boundary
     for (auto& patch: mesh.boundary) {
@@ -343,12 +343,13 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
     const Mesh& mesh = *this->mesh;
     //MPI_Barrier(MPI_COMM_WORLD);
 
-    arrType<dtype, shape1, shape2> phiBuf(mesh.nCells-mesh.nLocalCells);
-    integer reqPos;
+    dtype* phiBuf = NULL;
+    integer reqPos = 0;
     if (mesh.nRemotePatches > 0) {
         reqPos = reqIndex/(2*mesh.nRemotePatches);
+        phiBuf = new dtype[(mesh.nCells-mesh.nLocalCells)*shape1*shape2];
+        this->reqBuf[reqPos] = phiBuf;
     }
-    
 
     for (auto& patch: boundary) {
         string patchType = patch.second.at("type");
@@ -464,14 +465,14 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
                 integer b = bufStartFace + i;
                 for (integer j = 0; j < shape1; j++) {
                     for (integer k = 0; k < shape2; k++) {
-                        phiBuf(b, j, k) = phi(p, j, k);
+                        phiBuf[b*shape1*shape2 + j*shape2 + k] = phi(p, j, k);
                     }
                 }
             }
             AMPI_Request *req = (AMPI_Request*) this->req;
             integer tag = this->stage*100 + this->reqField*10 + mesh.tags.at(patchID);
             //cout << patchID << " " << tag << endl;
-            AMPI_Isend(&phiBuf(bufStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex]);
+            AMPI_Isend(&phiBuf[bufStartFace], size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex]);
             AMPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex+1]);
             this->reqIndex += 2;
         }
@@ -498,6 +499,9 @@ void RCF::boundaryEnd() {
         AMPI_Waitall(2*3*mesh->nRemotePatches, ((AMPI_Request*)this->req), MPI_STATUSES_IGNORE);
         delete[] ((AMPI_Request*)this->req);
         //MPI_Barrier(MPI_COMM_WORLD);
+        for (integer i = 0; i < 3; i++) {
+            delete[] this->reqBuf[i];
+        }
     }
 }
 
