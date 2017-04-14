@@ -74,8 +74,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     gradU.zero();
     gradT.zero();
     gradp.zero();
-
-
+    this->boundaryEnd();    
     
     auto faceUpdate = [&](const integer start, const integer end, const bool neighbour) {
         for (integer i = start; i < end; i++) {
@@ -91,7 +90,6 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
         //cout << end << " " << gradT.checkNAN() << endl;
     };
     faceUpdate(0, mesh.nInternalFaces, true);
-    this->boundaryEnd();    
     for (auto& patch: mesh.boundary) {
         auto& patchInfo = patch.second;
         integer startFace, nFaces;
@@ -120,7 +118,6 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     this->boundary(mesh.defaultBoundary, gradU);
     this->boundary(mesh.defaultBoundary, gradT);
     this->boundary(mesh.defaultBoundary, gradp);
-    //this->boundaryEnd();    
     
     vec dtc(mesh.nCells);
     drho.zero();
@@ -128,6 +125,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     drhoE.zero();
     dtc.zero();
     objective = this->objective(this, U, T, p);
+    this->boundaryEnd();    
     ///cout << std::setprecision (std::numeric_limits<double>::digits10 + 1) << objective << endl;
 
     /*auto viscousFluxUpdate = [&](const scalar UF[3], const scalar TF, scalar rhoUFlux[3], scalar& rhoEFlux, integer ind) {*/
@@ -283,7 +281,6 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
         //cout << end << " " << drhoU.checkNAN() << endl;
     };
     faceFluxUpdate(0, mesh.nInternalFaces, true, false);
-    this->boundaryEnd();    
     //cout << "c++: equation 4" << endl;
     // characteristic boundary
     for (auto& patch: mesh.boundary) {
@@ -491,7 +488,7 @@ void RCF::boundaryInit(integer startField) {
     this->reqIndex = 0;
     this->reqField = startField;
     if (mesh->nRemotePatches > 0) {
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
         this->req = (void *)new AMPI_Request[2*3*mesh->nRemotePatches];
     }
 }
@@ -500,7 +497,7 @@ void RCF::boundaryEnd() {
     if (mesh->nRemotePatches > 0) {
         AMPI_Waitall(2*3*mesh->nRemotePatches, ((AMPI_Request*)this->req), MPI_STATUSES_IGNORE);
         delete[] ((AMPI_Request*)this->req);
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
     }
 }
 

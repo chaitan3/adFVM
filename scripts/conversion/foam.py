@@ -2,6 +2,7 @@
 import sys
 import glob
 import h5py
+import os
 
 from adFVM import parallel, config
 from adFVM.mesh import Mesh
@@ -19,6 +20,7 @@ times = glob.glob(mesh.case + '*.hdf5')
 # tested in serial
 for timeF in times:
     if timeF.endswith('mesh.hdf5'): continue
+    if os.path.exists(os.path.basename(timeF)[:-5]): continue
     fieldNames = h5py.File(timeF, 'r', driver='mpio', comm=parallel.mpi).keys()
     time = float(timeF[:-5].split('/')[-1])
 
