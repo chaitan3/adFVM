@@ -47,8 +47,6 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     // optimal memory layout? combine everything?
     //cout << "c++: equation 1" << endl;
     const Mesh& mesh = *this->mesh;
-    integer rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     mat U(mesh.nCells);
     vec T(mesh.nCells);
@@ -92,8 +90,6 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     };
     faceUpdate(0, mesh.nInternalFaces, true);
     this->boundaryEnd();    
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) cout << "here" << endl;
     for (auto& patch: mesh.boundary) {
         auto& patchInfo = patch.second;
         integer startFace, nFaces;
@@ -500,13 +496,8 @@ void RCF::boundaryInit(integer startField) {
 }
 
 void RCF::boundaryEnd() {
-    integer rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (mesh->nRemotePatches > 0) {
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (rank == 0) cout << "boundary 1" << endl;
         AMPI_Waitall(2*3*mesh->nRemotePatches, ((AMPI_Request*)this->req), MPI_STATUSES_IGNORE);
-        if (rank == 0) cout << "boundary 2" << endl;
         delete[] ((AMPI_Request*)this->req);
         //MPI_Barrier(MPI_COMM_WORLD);
         for (integer i = 0; i < 3; i++) {
