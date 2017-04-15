@@ -154,7 +154,8 @@ class Adjoint(Solver):
                         phi.info()
                     energyTimeSeries.append(getAdjointEnergy(primal, *fields))
                     pprint('Time step', adjointIndex)
-
+                else:
+                    pprint('Time step', adjointIndex)
 
                 inputs = [phi.field for phi in previousSolution] + \
                          [phi[1] for phi in primal.sourceTerms] + \

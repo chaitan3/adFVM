@@ -71,8 +71,8 @@ for index, time in enumerate(times):
         rhoUa = IOField.read('rhoUa')
         rhoEa = IOField.read('rhoEa')
 
-        scale = lambda x: 1/(1+np.exp(-10*(x/parallel.max(x)-1)))
-        #scale = None
+        #scale = lambda x: 1/(1+np.exp(-10*(x/parallel.max(x)-1)))
+        scale = None
         for visc in ["abarbanel", "entropy", "uniform"]:
             adjNorm, energy, diss = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs, visc=visc, scale=scale)
             adjNorm.write()

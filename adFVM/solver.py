@@ -410,14 +410,15 @@ class Solver(object):
             elif isinstance(dts, np.ndarray):
                 dt = dts[timeIndex]
             elif not self.fixedTimeStep:
-                dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
+                dt = dt
+                #dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
 
             if self.dynamicMesh:
                 mesh.update(t, dt)
 
             # objective management
             result += objective
-            timeSeries.append(parallel.sum(objective))
+            #timeSeries.append(parallel.sum(objective))
 
             # write management
             if mode == 'forward':
