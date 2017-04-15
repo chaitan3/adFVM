@@ -268,49 +268,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         
         return Py_BuildValue("(NNNNNN)", rhoaNObject, rhoUaNObject, rhoEaNObject, rhoSaObject, rhoUSaObject, rhoESaObject);
     }
-    static PyObject* ghost(PyObject *self, PyObject *args) {
-
-        //cout << "forward 1" << endl;
-        PyObject *rhoObject, *rhoUObject, *rhoEObject;
-        PyArg_ParseTuple(args, "OOO", &rhoObject, &rhoUObject, &rhoEObject);
-
-        uvec rho, rhoE;
-        umat rhoU;
-        getArray((PyArrayObject *)rhoObject, rho);
-        getArray((PyArrayObject *)rhoUObject, rhoU);
-        getArray((PyArrayObject *)rhoEObject, rhoE);
-        //cout << "forward 2" << endl;
-        //
-        
-        const Mesh& mesh = *(rcf->mesh);
-        uvec rhoN(mesh.nCells);
-        umat rhoUN(mesh.nCells);
-        uvec rhoEN(mesh.nCells);
-
-        for (integer i = 0; i < mesh.nInternalCells; i++) {
-            rhoN(i) = rho(i);
-            for (integer j = 0; j < 3; j++) {
-                rhoUN(i, j) = rhoU(i, j);
-            }
-            rhoEN(i) = rhoE(i);
-        }
-
-        rcf->boundaryInit();
-        rcf->boundary(mesh.defaultBoundary, rhoN);
-        rcf->boundary(mesh.defaultBoundary, rhoUN);
-        rcf->boundary(mesh.defaultBoundary, rhoEN);
-        rcf->boundaryEnd();
-
-        //cout << "forward 3" << endl;
-        
-        PyObject *rhoNObject, *rhoUNObject, *rhoENObject;
-        rhoNObject = putArray(rhoN);
-        rhoUNObject = putArray(rhoUN);
-        rhoENObject = putArray(rhoEN);
-        //cout << "forward 5" << endl;
-        
-        return Py_BuildValue("(NNN)", rhoNObject, rhoUNObject, rhoENObject);
-    }
+    
     
 #else
     #define initFunc initadFVMcpp
@@ -403,6 +361,49 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         
         return Py_BuildValue("(NNN)", rhoNObject, rhoUNObject, rhoENObject);
     }
+    static PyObject* ghost_default(PyObject *self, PyObject *args) {
+
+        //cout << "forward 1" << endl;
+        PyObject *rhoObject, *rhoUObject, *rhoEObject;
+        PyArg_ParseTuple(args, "OOO", &rhoObject, &rhoUObject, &rhoEObject);
+
+        uvec rho, rhoE;
+        umat rhoU;
+        getArray((PyArrayObject *)rhoObject, rho);
+        getArray((PyArrayObject *)rhoUObject, rhoU);
+        getArray((PyArrayObject *)rhoEObject, rhoE);
+        //cout << "forward 2" << endl;
+        //
+        
+        const Mesh& mesh = *(rcf->mesh);
+        uvec rhoN(mesh.nCells);
+        umat rhoUN(mesh.nCells);
+        uvec rhoEN(mesh.nCells);
+
+        for (integer i = 0; i < mesh.nInternalCells; i++) {
+            rhoN(i) = rho(i);
+            for (integer j = 0; j < 3; j++) {
+                rhoUN(i, j) = rhoU(i, j);
+            }
+            rhoEN(i) = rhoE(i);
+        }
+
+        rcf->boundaryInit();
+        rcf->boundary(mesh.defaultBoundary, rhoN);
+        rcf->boundary(mesh.defaultBoundary, rhoUN);
+        rcf->boundary(mesh.defaultBoundary, rhoEN);
+        rcf->boundaryEnd();
+
+        //cout << "forward 3" << endl;
+        
+        PyObject *rhoNObject, *rhoUNObject, *rhoENObject;
+        rhoNObject = putArray(rhoN);
+        rhoUNObject = putArray(rhoUN);
+        rhoENObject = putArray(rhoEN);
+        //cout << "forward 5" << endl;
+        
+        return Py_BuildValue("(NNN)", rhoNObject, rhoUNObject, rhoENObject);
+    }
 #endif
 
     static PyObject* viscosity(PyObject *self, PyObject *args) {
@@ -435,7 +436,10 @@ initFunc(void)
     static PyMethodDef Methods[] = {
         {"forward",  forwardSolver, METH_VARARGS, "boo"},
         {"init",  initSolver, METH_VARARGS, "Execute a shell command."},
+        #ifndef ADIFF
         {"ghost",  ghost, METH_VARARGS, "Execute a shell command."},
+        {"ghost_default",  ghost_default, METH_VARARGS, "Execute a shell command."},
+        #endif
         {"viscosity",  viscosity, METH_VARARGS, "Execute a shell command."},
         {NULL, NULL, 0, NULL}        /* Sentinel */
     };

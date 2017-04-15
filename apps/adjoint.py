@@ -34,7 +34,7 @@ class Adjoint(Solver):
         return
 
     def initFields(self, fields):
-        newFields = adFVMcpp.ghost(*[phi.field for phi in fields])
+        newFields = primal.adFVMcpp.ghost_default(*[phi.field for phi in fields])
         return self.getFields(newFields, IOField, refFields=fields)
 
     def createFields(self):

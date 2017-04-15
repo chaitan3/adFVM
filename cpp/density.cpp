@@ -510,8 +510,3 @@ void RCF::boundaryEnd() {
 template void RCF::boundary(const Boundary& boundary, arrType<scalar, 1, 1>& phi);
 template void RCF::boundary(const Boundary& boundary, arrType<scalar, 3, 1>& phi);
 template void RCF::boundary(const Boundary& boundary, arrType<scalar, 3, 3>& phi);
-#ifdef ADIFF
-    template void RCF::boundary(const Boundary& boundary, arrType<uscalar, 1, 1>& phi);
-    template void RCF::boundary(const Boundary& boundary, arrType<uscalar, 3, 1>& phi);
-    template void RCF::boundary(const Boundary& boundary, arrType<uscalar, 3, 3>& phi);
-#endif
