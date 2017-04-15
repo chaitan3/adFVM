@@ -476,7 +476,7 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
             }
             AMPI_Request *req = (AMPI_Request*) this->req;
             integer tag = (this->stage*1000+1) + this->reqField*100 + mesh.tags.at(patchID);
-            cout << patchID << " " << tag << endl;
+            //cout << patchID << " " << tag << endl;
             AMPI_Isend(&phiBuf[bufStartFace*shape1*shape2], size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex]);
             AMPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex+1]);
             this->reqIndex += 2;
@@ -500,8 +500,13 @@ void RCF::boundaryInit(integer startField) {
 }
 
 void RCF::boundaryEnd() {
+    integer rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (mesh->nRemotePatches > 0) {
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (rank == 0) cout << "boundary 1" << endl;
         AMPI_Waitall(2*3*mesh->nRemotePatches, ((AMPI_Request*)this->req), MPI_STATUSES_IGNORE);
+        if (rank == 0) cout << "boundary 2" << endl;
         delete[] ((AMPI_Request*)this->req);
         //MPI_Barrier(MPI_COMM_WORLD);
         for (integer i = 0; i < 3; i++) {
