@@ -409,16 +409,16 @@ class Solver(object):
                 dt = dtc
             elif isinstance(dts, np.ndarray):
                 dt = dts[timeIndex]
-            elif not self.fixedTimeStep:
-                dt = dt
-                #dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
+            #elif not self.fixedTimeStep:
+            elif (not self.fixedTimeStep) and report:
+                dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
 
             if self.dynamicMesh:
                 mesh.update(t, dt)
 
             # objective management
             result += objective
-            #timeSeries.append(parallel.sum(objective))
+            timeSeries.append(objective)
 
             # write management
             if mode == 'forward':
@@ -440,14 +440,19 @@ class Solver(object):
                     #self.writeFields(fields + [dtc, local], t)
 
                 # write timeSeries if in orig mode (problem.py)
+                if mode == 'orig' or mode == 'perturb':
+                    timeSeries = mpi.gather(timeSeries, root=0)
+                    if parallel.rank == 0:
+                        timeSeries = np.sum(timeSeries, axis=0)
                 if parallel.rank == 0:
-                    lastIndex = timeIndex - (startIndex + writeInterval)
                     if mode == 'orig':
                         with open(self.timeStepFile, 'a') as f:
-                            np.savetxt(f, timeSteps[lastIndex:])
+                            np.savetxt(f, timeSteps)
                     if mode == 'orig' or mode == 'perturb':
                         with open(self.timeSeriesFile, 'a') as f:
-                            np.savetxt(f, timeSeries[lastIndex:])
+                            np.savetxt(f, timeSeries)
+                timeSeries = []
+                timeSteps = []
                 self.writeStatusFile([timeIndex, t, dt, result])
 
         if mode == 'forward':

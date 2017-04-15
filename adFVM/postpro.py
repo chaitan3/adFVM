@@ -268,9 +268,9 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     #parallel.pprint(parallel.min(M_2norm))
 
     def inner(F, G):
-        if not hasattr(inner, 'Vs'):
-            inner.Vs = parallel.sum(mesh.volumes)
-        Vs = inner.Vs
+        if not hasattr(getAdjointMatrixNorm, 'Vs'):
+            getAdjointMatrixNorm.Vs = parallel.sum(mesh.volumes)
+        Vs = getAdjointMatrixNorm.Vs
         return parallel.sum(F*G*mesh.volumes)/Vs
     l2_norm = lambda F: np.sqrt(inner(F, F))
 

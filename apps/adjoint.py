@@ -112,18 +112,19 @@ class Adjoint(Solver):
         for checkpoint in range(firstCheckpoint, totalCheckpoints):
             pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
             primalIndex = nSteps - (checkpoint + 1)*writeInterval
-            t, dt = timeSteps[primalIndex]
+            t = timeSteps[primalIndex, 0]
+            dts = timeSteps[primalIndex:primalIndex+writeInterval+1, 1]
 
             #self.fields = fields
             #print(fields[0].field.max())
-            solutions = primal.run(startTime=t, dt=dt, nSteps=writeInterval, mode='forward')
+            solutions = primal.run(startTime=t, dt=dts, nSteps=writeInterval, mode='forward', reportInterval=reportInterval)
             #print(fields[0].field.max())
 
             pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
             pprint('Time marching for', ' '.join(self.names))
 
             if checkpoint == 0:
-                t, dt = timeSteps[-1]
+                t, _ = timeSteps[-1]
                 if primal.dynamicMesh:
                     lastMesh, lastSolution = solutions[-1]
                     mesh.origMesh.boundary = lastMesh.boundarydata[m:].reshape(-1,1)
@@ -223,7 +224,7 @@ class Adjoint(Solver):
                     for derivative, delphi in zip(paramGradient, perturbation):
                         sensitivity = np.sum(derivative * delphi)
                         result[index] += sensitivity
-                        sensTimeSeries[-1][index] += parallel.sum(sensitivity)
+                        sensTimeSeries[-1][index] = sensitivity
 
                 #parallel.mpi.Barrier()
                 if report:
@@ -237,11 +238,17 @@ class Adjoint(Solver):
             self.writeFields(fields, t, skipProcessor=True)
             #print(fields[0].field.max())
             self.writeStatusFile([checkpoint + 1, result])
+            sensTimeSeries = mpi.gather(timeSeries, root=0)
+            #energyTimeSeries = mpi.gather(timeSeries, root=0)
+            if parallel.rank == 0:
+                sensTimeSeries = np.sum(sensTimeSeries, axis=0)
             if parallel.rank == 0:
                 with open(self.sensTimeSeriesFile, 'a') as f:
-                    np.savetxt(f, sensTimeSeries[-writeInterval:])
+                    np.savetxt(f, sensTimeSeries)
                 with open(self.energyTimeSeriesFile, 'a') as f:
-                    np.savetxt(f, energyTimeSeries[-writeInterval:])
+                    np.savetxt(f, energyTimeSeries)
+            sensTimeSeries = []
+            energyTimeSeries = []
 
         for index in range(0, nPerturb):
             writeResult('adjoint', result[index], '{} {}'.format(index, self.scaling))
