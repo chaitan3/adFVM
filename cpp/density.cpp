@@ -47,6 +47,8 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     // optimal memory layout? combine everything?
     //cout << "c++: equation 1" << endl;
     const Mesh& mesh = *this->mesh;
+    integer rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     mat U(mesh.nCells);
     vec T(mesh.nCells);
@@ -63,7 +65,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     this->boundary(this->boundaries[0], U);
     this->boundary(this->boundaries[1], T);
     this->boundary(this->boundaries[2], p);
-    this->boundaryEnd();    
+    //this->boundaryEnd();    
     //U.info();
     //T.info();
     //p.info();
@@ -89,7 +91,9 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
         //cout << end << " " << gradT.checkNAN() << endl;
     };
     faceUpdate(0, mesh.nInternalFaces, true);
-    //this->boundaryEnd();    
+    this->boundaryEnd();    
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (rank == 0) cout << "here" << endl;
     for (auto& patch: mesh.boundary) {
         auto& patchInfo = patch.second;
         integer startFace, nFaces;
@@ -118,7 +122,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     this->boundary(mesh.defaultBoundary, gradU);
     this->boundary(mesh.defaultBoundary, gradT);
     this->boundary(mesh.defaultBoundary, gradp);
-    this->boundaryEnd();
+    //this->boundaryEnd();
     
     vec dtc(mesh.nCells);
     drho.zero();
@@ -281,7 +285,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
         //cout << end << " " << drhoU.checkNAN() << endl;
     };
     faceFluxUpdate(0, mesh.nInternalFaces, true, false);
-    //this->boundaryEnd();    
+    this->boundaryEnd();    
     //cout << "c++: equation 4" << endl;
     // characteristic boundary
     for (auto& patch: mesh.boundary) {
@@ -471,7 +475,7 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
                 }
             }
             AMPI_Request *req = (AMPI_Request*) this->req;
-            integer tag = this->stage*100 + this->reqField*10 + mesh.tags.at(patchID);
+            integer tag = this->stage*1000 + this->reqField*100 + mesh.tags.at(patchID);
             //cout << patchID << " " << tag << endl;
             AMPI_Isend(&phiBuf[bufStartFace*shape1*shape2], size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex]);
             AMPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex+1]);
