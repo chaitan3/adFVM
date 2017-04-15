@@ -118,6 +118,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     this->boundary(mesh.defaultBoundary, gradU);
     this->boundary(mesh.defaultBoundary, gradT);
     this->boundary(mesh.defaultBoundary, gradp);
+    //this->boundaryEnd();
     
     vec dtc(mesh.nCells);
     drho.zero();
@@ -346,7 +347,7 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
     dtype* phiBuf = NULL;
     integer reqPos = 0;
     if (mesh.nRemotePatches > 0) {
-        reqPos = reqIndex/(2*mesh.nRemotePatches);
+        reqPos = this->reqIndex/(2*mesh.nRemotePatches);
         phiBuf = new dtype[(mesh.nCells-mesh.nLocalCells)*shape1*shape2];
         this->reqBuf[reqPos] = phiBuf;
     }
@@ -472,7 +473,7 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
             AMPI_Request *req = (AMPI_Request*) this->req;
             integer tag = this->stage*100 + this->reqField*10 + mesh.tags.at(patchID);
             //cout << patchID << " " << tag << endl;
-            AMPI_Isend(&phiBuf[bufStartFace], size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex]);
+            AMPI_Isend(&phiBuf[bufStartFace*shape1*shape2], size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex]);
             AMPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex+1]);
             this->reqIndex += 2;
         }
