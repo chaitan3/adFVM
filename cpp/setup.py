@@ -5,7 +5,7 @@ import os
 
 from os.path import expanduser
 home = expanduser("~")
-matop = True
+matop = False
 
 os.environ['CC'] = 'ccache mpicc'
 os.environ['CXX'] = 'mpicxx'

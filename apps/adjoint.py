@@ -5,7 +5,7 @@ from adFVM import config, parallel
 from adFVM.config import ad
 from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
-#from adFVM.matop_petsc import laplacian, ddt
+from adFVM.matop_petsc import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
@@ -193,11 +193,11 @@ class Adjoint(Solver):
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
                     stackedFields = np.ascontiguousarray(stackedFields)
 
-                    #stackedPhi = Field('a', stackedFields, (5,))
-                    #stackedPhi.old = stackedFields
-                    #newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight, correction=False)).solve()
-                    newStackedFields = adFVMcpp.viscosity(stackedFields, weight.field, dt)
-                    newStackedFields = stackedFields/(1 + weight*dt)
+                    stackedPhi = Field('a', stackedFields, (5,))
+                    stackedPhi.old = stackedFields
+                    newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight, correction=False)).solve()
+                    #newStackedFields = adFVMcpp.viscosity(stackedFields, weight.field, dt)
+                    #newStackedFields = stackedFields/(1 + weight*dt)
 
                     newFields = [newStackedFields[:,[0]], 
                                  newStackedFields[:,[1,2,3]], 
