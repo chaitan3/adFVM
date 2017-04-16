@@ -278,7 +278,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     #parallel.pprint(parallel.min(M_2norm))
     if visc == "uniform":
         M_2norm = np.ones_like(M_2norm)
-    M_2norm /= l2_norm(M_2norm)
+    #M_2norm /= l2_norm(M_2norm)
     M_2norm = IOField('M_2norm' + suffix, M_2norm, (1,))
     #M_2norm.write()
     
