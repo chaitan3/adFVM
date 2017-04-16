@@ -185,7 +185,7 @@ class Adjoint(Solver):
                     nInternalCells = mesh.origMesh.nInternalCells
                     start2 = time.time() 
                     inputs = previousSolution + [self.scaling]
-                    kwargs = {'visc': self.viscosityType, 'scale': self.viscosityScaler}
+                    kwargs = {'visc': self.viscosityType, 'scale': self.viscosityScaler, 'report':report}
                     weight = central(getAdjointViscosity(*inputs, **kwargs), mesh.origMesh)
                     start3 = time.time()
 

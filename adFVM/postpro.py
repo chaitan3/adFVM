@@ -160,6 +160,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     visc = getArg('visc', 'entropy')
     suffix = '_' + visc
     scale = getArg('scale', lambda x: x)
+    report = getArg('report', 1)
     if 'scale' in kwargs:
         suffix += '_factor'
 
@@ -278,7 +279,9 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     #parallel.pprint(parallel.min(M_2norm))
     if visc == "uniform":
         M_2norm = np.ones_like(M_2norm)
-    #M_2norm /= l2_norm(M_2norm)
+    if report:
+        getAdjointMatrixNorm.l2_norm = l2_norm(M_2norm)
+    M_2norm /= getAdjointMatrixNorm.l2_norm
     M_2norm = IOField('M_2norm' + suffix, M_2norm, (1,))
     #M_2norm.write()
     
