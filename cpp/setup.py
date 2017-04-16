@@ -1,10 +1,10 @@
-from distutils.core import setup, Extension
 import numpy as np
 import mpi4py
 import os
 
 from os.path import expanduser
 home = expanduser("~")
+matop = True
 
 os.environ['CC'] = 'ccache mpicc'
 os.environ['CXX'] = 'mpicxx'
@@ -16,27 +16,34 @@ os.environ['CXX'] = 'mpicxx'
 incdirs = [np.get_include(), home + '/sources/CoDiPack/include']
 libdirs = []
 libs = []
-#sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp', 'matop.cpp'],
-sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp']
 libs += ['AMPI'] 
+if matop:
+    sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp', 'matop.cpp']
+else:
+    sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp']
 
-#incdirs += [home + '/.local/include']
-#libdirs += [home + '/.local/lib']
+incdirs += [home + '/.local/include']
+libdirs += [home + '/.local/lib']
 #incdirs += ['/projects/LESOpt/talnikar/local/include']
 #libdirs += ['/projects/LESOpt/talnikar/local/lib/']
 
+if matop:
 #petscdir = '/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real/'
-petscdir = home + '/sources/petsc-3.7.5/arch-linux2-c-opt'
-incdirs += [petscdir + '/../include', petscdir + '/include']
-libdirs += [petscdir + '/lib']
-libs += ['petsc', 'HYPRE', 'fblas', 'flapack']
+    petscdir = home + '/sources/petsc-3.7.5/arch-linux2-c-opt'
+    incdirs += [petscdir + '/../include', petscdir + '/include']
+    libdirs += [petscdir + '/lib']
+    libs += ['petsc']
 
-for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], [[''], ['-DADIFF', '-DMATOP']]):
+adjargs = '-DADIFF'
+if matop:
+    adjargs += ' -DMATOP'
+
+for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], ['', adjargs]):
 #for module, args in zip(['adFVMcpp'], ['']):
     compile_args = ['-std=c++11', '-O3']#, '-march=native']
     #compile_args=['-std=c++11', '-O0', '-g']
     if len(args) > 0:
-        compile_args += args
+        compile_args += [args]
     mod = Extension(module,
                     sources=sources,
                     extra_compile_args=compile_args,
@@ -48,4 +55,5 @@ for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], [[''], ['-DADIFF', '-DMATOP
            version = '0.0.1',
            description = 'This is a demo package',
            ext_modules = [mod])
+
 
