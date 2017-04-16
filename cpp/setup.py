@@ -20,6 +20,8 @@ libs = []
 sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp']
 libs += ['AMPI'] 
 
+#incdirs += [home + '/.local/include']
+#libdirs += [home + '/.local/lib']
 #incdirs += ['/projects/LESOpt/talnikar/local/include']
 #libdirs += ['/projects/LESOpt/talnikar/local/lib/']
 

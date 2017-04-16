@@ -1,5 +1,5 @@
 #!/bin/sh
-sudo apt-get install -y build-essential 
+sudo apt-get install -y build-essential gfortran
 sudo apt-get install -y python-numpy python-scipy python-matplotlib python-mpi4py 
 sudo apt-get install -y python-nose python-pip
 sudo apt-get install -y libmetis-dev 
@@ -16,6 +16,27 @@ sudo apt-get install -y python-h5py
 #python setup.py install --prefix=~/.local && \
 #cd .. && rm -rf h5py
 #
+#sudo apt-get install -y petsc-dev
 
-sudo apt-get install -y ccache
-sudo apt-get install -y petsc-dev
+sudo apt-get install -y ccache autoconf
+
+mkdir -p ~/sources
+cd ~/sources
+    git clone git@github.com:michel2323/AdjointMPI.git
+    cd AdjointMPI
+        ./bootstrap.sh
+        ./configure --prefix=$HOME/.local && make && make install
+    cd ..
+    git clone git@github.com:SciCompKL/CoDiPack.git
+
+#petsc 
+    export PETSC_DIR=~/sources/petsc-3.7.5
+    export PETSC_ARCH=arch-linux2-c-opt
+    cd petsc-3.7.5
+        ./configure --with-cc=mpicc --with-cxx=mpicxx --with-fc=mpif90 --download-fblaslapack --download-hypre --with-debugging=0 --with-shared-libraries=1 --COPTFLAGS=-O3 --CXXOPTFLAGS=-O3 --FOPTFLAGS=-O3
+        make
+    cd ..
+    cd petsc4py-3.7.0
+        python setup.py build
+        python setup.py install --prefix=~/.local
+cd
