@@ -441,7 +441,7 @@ class Solver(object):
 
                 # write timeSeries if in orig mode (problem.py)
                 if mode == 'orig' or mode == 'perturb':
-                    timeSeries = mpi.gather(timeSeries, root=0)
+                    timeSeries = parallel.mpi.gather(timeSeries, root=0)
                     if parallel.rank == 0:
                         timeSeries = np.sum(timeSeries, axis=0)
                 if parallel.rank == 0:

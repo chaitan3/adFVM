@@ -238,7 +238,7 @@ class Adjoint(Solver):
             self.writeFields(fields, t, skipProcessor=True)
             #print(fields[0].field.max())
             self.writeStatusFile([checkpoint + 1, result])
-            sensTimeSeries = mpi.gather(timeSeries, root=0)
+            sensTimeSeries = parallel.mpi.gather(sensTimeSeries, root=0)
             #energyTimeSeries = mpi.gather(timeSeries, root=0)
             if parallel.rank == 0:
                 sensTimeSeries = np.sum(sensTimeSeries, axis=0)
