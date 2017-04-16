@@ -18,10 +18,9 @@ incdirs = [np.get_include(), home + '/sources/CoDiPack/include']
 libdirs = []
 libs = []
 libs += ['AMPI'] 
+sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp']
 if matop:
-    sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp', 'matop.cpp']
-else:
-    sources = ['density.cpp', 'interface.cpp', 'interp.cpp', 'op.cpp', 'timestep.cpp', 'riemann.cpp', 'objective.cpp']
+    sources += ['matop.cpp']
 
 incdirs += [home + '/.local/include']
 libdirs += [home + '/.local/lib']

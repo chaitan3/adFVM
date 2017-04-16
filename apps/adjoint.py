@@ -5,7 +5,6 @@ from adFVM import config, parallel
 from adFVM.config import ad
 from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
-from adFVM.matop_petsc import laplacian, ddt
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
@@ -193,11 +192,13 @@ class Adjoint(Solver):
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
                     stackedFields = np.ascontiguousarray(stackedFields)
 
-                    stackedPhi = Field('a', stackedFields, (5,))
-                    stackedPhi.old = stackedFields
-                    newStackedFields = (ddt(stackedPhi, dt) - laplacian(stackedPhi, weight, correction=False)).solve()
-                    #newStackedFields = adFVMcpp.viscosity(stackedFields, weight.field, dt)
-                    #newStackedFields = stackedFields/(1 + weight*dt)
+                    if self.matop:
+                        newStackedFields = adFVMcpp.viscosity(stackedFields, weight.field, dt)
+                    else:
+                        stackedPhi = Field('a', stackedFields, (5,))
+                        stackedPhi.old = stackedFields
+                        newStackedFields = (matop_petsc.ddt(stackedPhi, dt) - matop_petsc.laplacian(stackedPhi, weight, correction=False)).solve()
+                        #newStackedFields = stackedFields/(1 + weight*dt)
 
                     newFields = [newStackedFields[:,[0]], 
                                  newStackedFields[:,[1,2,3]], 
@@ -258,10 +259,15 @@ class Adjoint(Solver):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--readFields', action='store_true')
+    parser.add_argument('--matop', action='store_true')
     user, args = parser.parse_known_args()
 
     adjoint = Adjoint(primal)
     adjoint.initPrimalData()
+    adjoint.matop = user.matop
+    if not adjoint.matop:
+        global matop_petsc
+        from adFVM import matop_petsc
 
     primal.readFields(adjoint.timeSteps[nSteps-writeInterval][0])
     adjoint.compile()
