@@ -1,3 +1,4 @@
+from distutils.core import setup, Extension
 import numpy as np
 import mpi4py
 import os
