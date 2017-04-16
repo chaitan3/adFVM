@@ -26,17 +26,17 @@ libs += ['AMPI']
 #libdirs += ['/projects/LESOpt/talnikar/local/lib/']
 
 #petscdir = '/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real/'
-##petscdir = home + '/sources/petsc/linux-gnu-c-opt'
-#incdirs += [petscdir + '/../include', petscdir + '/include']
-#libdirs += [petscdir + '/lib']
-#libs += ['petsc']
+petscdir = home + '/sources/petsc-3.7.5/arch-linux2-c-opt'
+incdirs += [petscdir + '/../include', petscdir + '/include']
+libdirs += [petscdir + '/lib']
+libs += ['petsc', 'HYPRE', 'fblas', 'flapack']
 
-for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], ['', '-DADIFF']):
+for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], [[''], ['-DADIFF', '-DMATOP']]):
 #for module, args in zip(['adFVMcpp'], ['']):
     compile_args = ['-std=c++11', '-O3']#, '-march=native']
     #compile_args=['-std=c++11', '-O0', '-g']
     if len(args) > 0:
-        compile_args += [args]
+        compile_args += args
     mod = Extension(module,
                     sources=sources,
                     extra_compile_args=compile_args,
