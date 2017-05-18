@@ -71,7 +71,6 @@ N = len(s[0])
 
 t = np.zeros(Np)
 import ar
-import matplotlib.pyplot as plt
 for i in range(0, n-1):
     A = ar.arsel(s[i], 0, 1, "CIC", p, p)
     c = -np.array(A.AR[0][1:])
@@ -83,15 +82,15 @@ for i in range(0, n-1):
     zp = lfiltic([1], A.AR[0], s[i][:p][::-1])
     yp = A.mu[0] + lfilter([1], A.AR[0], np.sqrt(A.sigma2eps[0])*np.random.randn(3000), zi=zp)[0]
     #yp = -np.convolve(s[i], A.AR[0][1:], 'valid')
-    plt.plot(np.arange(0, len(yp)), yp, label='model')
+    #plt.plot(np.arange(0, len(yp)), yp, label='model')
     #plt.plot(np.arange(0, len(s[i][p:])), s[i][p:], label='data')
     #plt.legend()
     #plt.show()
     #print A.AR[0], A.sigma2eps[0]
     #plt.plot(m.AR[0], 'o', label=os.path.basename(f))
     #print m.sigma2eps[0]
-plt.savefig('series_sim.pdf')
-plt.clf()
+#plt.savefig('series_sim.pdf')
+#plt.clf()
 
 t[n*p:(n+1)*p] = 1.
 t[-1] = t[(2*n-1)*p:].max()
@@ -130,99 +129,150 @@ def kalman_filter(params, s, p):
     Ets = []
     Ps = []
     Pts = []
+    Ss = []
+    Cs = []
+    Ys = []
     L = 0
     print 'param:', params
     print 'constraint:', constraint(params)
+    if (constraint(params)[1:] < 0).any():
+        raise Exception("constraint failure")
 
     Ei = np.concatenate((Y[:p], np.zeros((p, 1))), axis=1)
     E = sum([np.matmul(A[i], np.reshape(Ei[p-i-1], (n,1))) for i in range(0, p)])
     E = np.reshape(np.concatenate((np.reshape(E, (1,n)), Ei[::-1][:-1]), axis=0), (n*p, 1))
     Et = E
-    Pr = Q[:]**0.5
     Pt = Q
 
-    for i in range(p, N):
-        E = M(F, Et)
-        P = M(T(Pr), Pr)
-        S = M(H, M(P, T(H)))
-
-        y = np.matrix(Y[i].reshape((n-1, 1)))
-        yt = y-M(H, E)-mu
-        L = L + 0.5*(np.log(np.linalg.det(S)) + M(T(yt), np.linalg.solve(S, yt))[0,0])
-
-        Ets.append(Et)
-        Pts.append(Pt)
-        Ps.append(P)
-        
-        Pt = M(I - M(P, M(T(H), np.linalg.solve(S, H))), P)
-        T2 = np.concatenate((np.zeros((n-1,(n-1)+p*n), np.float64), 
-                  np.concatenate((M(Pr, T(H)), Pr), axis=1)), axis=0)
-        T2R = np.linalg.qr(T2)[1]
-        Pr = T2R[n-1:,n-1:]
-        K1 = np.transpose(T2R[:n-1,n-1:])
-        K2 = T2R[:n-1,:n-1]
-        Et = E + M(K1, np.linalg.solve(T(K2), yt))
-        T1 = np.concatenate((M(Pr, T(F)), Q**0.5), axis=0)
-        Pr = np.linalg.qr(T1)[1][:n*p]
-
-    #Pt = Q
-    ## forward recursions
+    #Pr = Q[:]**0.5
     #for i in range(p, N):
-
     #    E = M(F, Et)
-    #    P = M(F, M(Pt, T(F))) + Q
+    #    P = M(T(Pr), Pr)
     #    S = M(H, M(P, T(H)))
+    #    Ss.append(S)
 
-    #    y = Y[i].reshape((n-1, 1))
+    #    y = np.matrix(Y[i].reshape((n-1, 1)))
     #    yt = y-M(H, E)-mu
+    #    Ys.append(yt)
     #    L = L + 0.5*(np.log(np.linalg.det(S)) + M(T(yt), np.linalg.solve(S, yt))[0,0])
+    #    C = I - M(P, M(T(H), np.linalg.solve(S, H)))
 
     #    Ets.append(Et)
     #    Pts.append(Pt)
     #    Ps.append(P)
+    #    Cs.append(C)
+    #    
+    #    Pt = M(C, P)
+    #    T2 = np.concatenate((np.zeros((n-1,(n-1)+p*n), np.float64), 
+    #              np.concatenate((M(Pr, T(H)), Pr), axis=1)), axis=0)
+    #    T2R = np.linalg.qr(T2)[1]
+    #    Pr = T2R[n-1:,n-1:]
+    #    K1 = np.transpose(T2R[:n-1,n-1:])
+    #    K2 = T2R[:n-1,:n-1]
+    #    Et = E + M(K1, np.linalg.solve(T(K2), yt))
+    #    T1 = np.concatenate((M(Pr, T(F)), Q**0.5), axis=0)
+    #    Pr = np.linalg.qr(T1)[1][:n*p]
 
-    #    Et = E + M(P, M(T(H), np.linalg.solve(S, yt)))
-    #    Pt = M(I - M(P, M(T(H), np.linalg.solve(S, H))), P)
+    ## forward recursions
+    for i in range(p, N):
 
-    Eb = Et
-    Pb = Pt
-    Pb2 = M(I - M(P, M(T(H), np.linalg.solve(S, H))), M(F, Pts[-1]))
+        E = M(F, Et)
+        P = M(F, M(Pt, T(F))) + Q
+        S = M(H, M(P, T(H)))
+        Ss.append(S)
 
-    Js = []
-    Ebs = []
-    Pbs = []
-    # backward recursions
-    for i in range(N-p-1, -1, -1):
+        y = Y[i].reshape((n-1, 1))
+        yt = y-M(H, E)-mu
+        Ys.append(yt)
+        L = L + 0.5*(np.log(np.linalg.det(S)) + M(T(yt), np.linalg.solve(S, yt))[0,0])
+        C = I - M(P, M(T(H), np.linalg.solve(S, H)))
+
+        Ets.append(Et)
+        Pts.append(Pt)
+        Ps.append(P)
+        Cs.append(C)
+
+        Et = E + M(P, M(T(H), np.linalg.solve(S, yt)))
+        Pt = M(C, P)
+    print 'forward pass'
+
+    Ebs = [Et]
+    Pbs = [Pt + np.outer(Et, Et)]
+    Pb2s = []
+    Lh = 0
+    lh = 0
+
+    for i in range(N-p-1,-1,-1):
         P, Pt, Et = Ps[i], Pts[i], Ets[i]
-        J = M(Pt, T(F))
+        C, y, S = Cs[i], Ys[i], Ss[i]
+
+        FC = M(F, C)
+
+        if isinstance(Lh, int):
+            Lh *= M(T(H), np.linalg.solve(S, H))
+            lh *= M(T(H), np.linalg.solve(S, y))
+
+        lh = M(T(FC), lh) - M(T(H), np.linalg.solve(S, y))
+        Eb = Et - M(Pt, M(T(F), lh))
+        Lh = M(T(FC), M(Lh, FC)) + M(T(H), np.linalg.solve(S, H))
+        Pb = Pt - M(Pt, M(M(T(F), M(Lh, F)), Pt))
+        Pb2 = M(I-M(P, Lh), M(F, Pt))
+
+        Pb2s.append(Pb2 + np.outer(Ebs[-1], Eb))
         Ebs.append(Eb)
-        Pbs.append(Pb)
-        Js.append(J)
-        # HACK
-        #P = P + np.diag(1e-39*np.ones_like(np.diag(P)))
+        Pbs.append(Pb + np.outer(Eb, Eb))
 
-        Eb = Et + M(J, np.linalg.solve(P, (Eb-M(F, Et))))
-        Pb = Pt + M(J, M(np.linalg.solve(P, T(np.linalg.solve(P, T(Pb-P)))), T(J)))
-    V = []
-    Vs = []
-    for i in range(N-p-1, 0, -1):
-        P, Pt, Et = Ps[i], Pts[i], Ets[i]
-        Pp = Ps[i-1]
-        J = Js[N-p-1-i]
-        Jp = Js[N-p-2-i]
-        # HACK
-        #P = P + np.diag(1e-39*np.ones_like(np.diag(P)))
-        #Pp = Pp + np.diag(1e-39*np.ones_like(np.diag(P)))
+    A = sum(Pbs[1:])
+    B = sum(Pb2s)
+    C = sum(Pbs[:-1])
 
-        Pb2 = M(T(np.linalg.solve(Pp, T(Pt))), T(Jp)) + M(J, M(np.linalg.solve(P, T(np.linalg.solve(Pp, T(Pb2-M(F, Pt))))), T(Jp)))
-        V.append(Pbs[N-p-1-i] + np.outer(Ebs[N-p-1-i], Ebs[N-p-1-i]))
-        Vs.append(Pb2 + np.outer(Ebs[N-p-1-i], Ebs[N-p-2-i]))
-    V.append(Pbs[-1] + np.outer(Ebs[-1], Ebs[-1]))
+    An = M(B, np.linalg.inv(A))
+    Q = (C-M(B, np.linalg.solve(A, T(B))))/(N-p)
+    #Q = np.abs(Q)
 
-    An = M(sum(Vs), np.linalg.inv(sum(V[1:])))
-    Q = (sum(V[:-1])-M(An, sum([T(x) for x in Vs])))/(N-p-1)
-    import pdb;pdb.set_trace()
-    print An, Q
+    new_params = params.copy()
+    A = np.array(np.hsplit(An[:n], p))
+    new_params[:n*p] = np.concatenate([np.diag(x) for x in A])
+    new_params[n*p:(2*n-1)*p] = np.concatenate([x[:-1,-1] for x in A])
+    new_params[(2*n-1)*p:] = np.diag(Q[:n,:n])/t[(2*n-1)*p:]
+    print 'likelihood:', L
+    print
+    return new_params
+
+    #Js = []
+    #Ebs = []
+    #Pbs = []
+    ## backward recursions
+    #for i in range(N-p-1, -1, -1):
+        #P, Pt, Et = Ps[i], Pts[i], Ets[i]
+        #J = M(Pt, T(F))
+        #Ebs.append(Eb)
+        #Pbs.append(Pb)
+        #Js.append(J)
+        ## HACK
+        ##P = P + np.diag(1e-39*np.ones_like(np.diag(P)))
+
+        #Eb = Et + M(J, np.linalg.solve(P, (Eb-M(F, Et))))
+        #Pb = Pt + M(J, M(np.linalg.solve(P, T(np.linalg.solve(P, T(Pb-P)))), T(J)))
+    #V = []
+    #Vs = []
+    #for i in range(N-p-1, 0, -1):
+        #P, Pt, Et = Ps[i], Pts[i], Ets[i]
+        #Pp = Ps[i-1]
+        #J = Js[N-p-1-i]
+        #Jp = Js[N-p-2-i]
+        ## HACK
+        ##P = P + np.diag(1e-39*np.ones_like(np.diag(P)))
+        ##Pp = Pp + np.diag(1e-39*np.ones_like(np.diag(P)))
+
+        #Pb2 = M(T(np.linalg.solve(Pp, T(Pt))), T(Jp)) + M(J, M(np.linalg.solve(P, T(np.linalg.solve(Pp, T(Pb2-M(F, Pt))))), T(Jp)))
+        #V.append(Pbs[N-p-1-i] + np.outer(Ebs[N-p-1-i], Ebs[N-p-1-i]))
+        #Vs.append(Pb2 + np.outer(Ebs[N-p-1-i], Ebs[N-p-2-i]))
+    #V.append(Pbs[-1] + np.outer(Ebs[-1], Ebs[-1]))
+
+    #An = M(sum(Vs), np.linalg.inv(sum(V[1:])))
+    #Q = (sum(V[:-1])-M(An, sum([T(x) for x in Vs])))/(N-p-1)
+    #print An, Q
 
     #Ei = np.concatenate((Y[:p], np.zeros((p, 1))), axis=1)
     #E = sum([np.matmul(A[i], np.reshape(Ei[p-i-1], (n,1))) for i in range(0, p)])
@@ -248,42 +298,7 @@ def kalman_filter(params, s, p):
     #    Es.append(E.flatten())
     #    Ps.append(P)
 
-    print 'res:', L
-    print 
-
     return L, np.array(Es)[:,0,:n], np.array(Ps)
-
-import tensorflow as tf
-def ols_fit(X, params):
-    n2 = n*n
-
-    a = params[:n*p]
-    b = params[n*p:(2*n-1)*p]
-    #d = params[(2*n-1)*p:(2*n-1)*p + n]
-
-    ii = np.repeat(np.arange(0, p), n).astype(np.int32)
-    jj = np.tile(np.arange(0, n), p).astype(np.int32)
-    Ad = tf.zeros((p, n, n), dtype=np.float64)
-    A = tf.sparse_add(Ad, tf.SparseTensor(np.vstack((ii, jj, jj)).T, a, (p, n, n)))
-    ii = np.repeat(np.arange(0, p), n-1).astype(np.int32)
-    jj = np.tile(np.arange(0, n-1), p).astype(np.int32)
-    kk = (n-1)*np.ones((n-1)*p).astype(np.int32)
-    A = tf.sparse_add(A, tf.SparseTensor(np.vstack((ii, jj, kk)).T, b, (p, n, n)))
-    J = 0
-    Xs = []
-    J = tf.transpose(X[p:N])
-    for i in range(1, p+1):
-        Xs = tf.transpose(X[p-i:N-i])
-        J -= tf.matmul(A[i-1], Xs)
-    Js = J
-    Jt = tf.reduce_sum(Js**2, axis=1)/(N-p)
-    J = tf.reduce_sum(Js**2)
-    print 'here0'
-    grad = tf.gradients(J, params)[0]
-    print 'here1'
-    hess = tf.hessians(J, params)[0]
-    print 'here2'
-    return Js, Jt, grad, hess
 
 def constraint(params):
     #params = get_params(params)
@@ -305,14 +320,47 @@ def constraint(params):
 init_params = t.copy()
 init_params[(2*n-1)*p:] = 1.
 
-def ols_fit_func(E):
-    b, A = sess.run([grad, hess], feed_dict={tf_params:np.zeros(Np-n), X:E})
-    a = np.linalg.solve(A, -b)
-    d = sess.run(J, feed_dict={tf_params:a, X:E})
-    params = np.zeros(Np)
-    params[:(2*n-1)*p] = a
-    params[(2*n-1)*p:] = d/t[(2*n-1)*p:]
-    return params
+#import tensorflow as tf
+#def ols_fit(X, params):
+#    n2 = n*n
+#
+#    a = params[:n*p]
+#    b = params[n*p:(2*n-1)*p]
+#    #d = params[(2*n-1)*p:(2*n-1)*p + n]
+#
+#    ii = np.repeat(np.arange(0, p), n).astype(np.int32)
+#    jj = np.tile(np.arange(0, n), p).astype(np.int32)
+#    Ad = tf.zeros((p, n, n), dtype=np.float64)
+#    A = tf.sparse_add(Ad, tf.SparseTensor(np.vstack((ii, jj, jj)).T, a, (p, n, n)))
+#    ii = np.repeat(np.arange(0, p), n-1).astype(np.int32)
+#    jj = np.tile(np.arange(0, n-1), p).astype(np.int32)
+#    kk = (n-1)*np.ones((n-1)*p).astype(np.int32)
+#    A = tf.sparse_add(A, tf.SparseTensor(np.vstack((ii, jj, kk)).T, b, (p, n, n)))
+#    J = 0
+#    Xs = []
+#    J = tf.transpose(X[p:N])
+#    for i in range(1, p+1):
+#        Xs = tf.transpose(X[p-i:N-i])
+#        J -= tf.matmul(A[i-1], Xs)
+#    Js = J
+#    Jt = tf.reduce_sum(Js**2, axis=1)/(N-p)
+#    J = tf.reduce_sum(Js**2)
+#    print 'here0'
+#    grad = tf.gradients(J, params)[0]
+#    print 'here1'
+#    hess = tf.hessians(J, params)[0]
+#    print 'here2'
+#    return Js, Jt, grad, hess
+
+
+#def ols_fit_func(E):
+#    b, A = sess.run([grad, hess], feed_dict={tf_params:np.zeros(Np-n), X:E})
+#    a = np.linalg.solve(A, -b)
+#    d = sess.run(J, feed_dict={tf_params:a, X:E})
+#    params = np.zeros(Np)
+#    params[:(2*n-1)*p] = a
+#    params[(2*n-1)*p:] = d/t[(2*n-1)*p:]
+#    return params
 
 #sess = tf.Session()
 #init = tf.global_variables_initializer()
@@ -320,6 +368,17 @@ def ols_fit_func(E):
 #tf_params = tf.Variable(tf.zeros((Np-n), np.float64))
 #X = tf.placeholder(np.float64)
 #Js, J, grad, hess = ols_fit(X, tf_params)
+
+params = init_params.copy()
+history = []
+import cPickle as pkl
+for i in range(0, 10000):
+    history.append(params)
+    params = kalman_filter(params, s, p)
+    if i % 100 == 0:
+        with open("optim.pkl", 'w') as f:
+            pkl.dump(history, f)
+exit(0)
 
 def plot_params(params):
     L, E, _ = kalman_filter(params, s, p)
