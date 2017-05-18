@@ -16,7 +16,7 @@ colors = [cmap(i) for i in np.linspace(0, 1, n)]
 c = 0
 for f in sys.argv[1:]:
     y = np.loadtxt(f)
-    y = y[-200000:][::-1]
+    #y = y[-200000:][::-1]
     #index = np.abs(y) > 3e-10
     #y[index] = np.sign(y[index])*3e-10
     #print y.sum()

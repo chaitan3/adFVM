@@ -10,6 +10,7 @@ from libc.stdio cimport sprintf
 
 import copy
 import numpy as np
+import scipy as sp
 ctypedef double dtype
 
 def add_at(np.ndarray[dtype, ndim=2] a, np.ndarray[int] indices, np.ndarray[dtype,ndim=2] b):
@@ -450,4 +451,75 @@ def selectMultipleRange(np.ndarray[int] start, np.ndarray[int] count):
             arr[pos] = start[i]+j
             pos += 1
     return arr
+
+def ARLogLikelihood(np.ndarray[dtype] params, np.ndarray[dtype, ndim=2] s, int p):
+
+    cdef int n = len(s) + 1
+    cdef int n2 = n*n
+    cdef int n3 = n*n*n
+    cdef int Np = n*p + (n-1)*p + n
+    cdef int N = len(s[0])
+
+    cdef np.ndarray[dtype, ndim=2] a = params[:n*p].reshape(p, n)
+    cdef np.ndarray[dtype, ndim=2] b = params[n*p:(2*n-1)*p].reshape(p, n-1)
+    cdef np.ndarray[dtype] d = params[(2*n-1)*p:(2*n-1)*p + n]
+
+    cdef np.ndarray[dtype, ndim=3] A = np.zeros((p, n, n))
+    cdef np.ndarray[dtype, ndim=2] B = np.zeros(((p+1)*n*n, (p+1)*n*n))
+    ii = np.arange(0, n)
+    A[:,ii,ii] = a
+    A[:,:n-1,-1] = b
+
+    E = np.diag(d)
+    #cdef np.ndarray[dtype, ndim=2] E = np.diag(d)
+
+    cdef int i, j, k, l, m
+    cdef int index
+    print a, b, d
+    for i in range(0, p+1):
+        for j in range(i*n2, (i+1)*n2):
+            B[j, j] += 1
+        index = 0
+        for j in range(i-1, -1, -1):
+            for m in range(0, n):
+                for k in range(0, n):
+                    for l in range(0, n):
+                        B[i*n2 + m*n + k, j*n2 + m*n + l] += -A[index, k, l]
+            index += 1
+        for j in range(1, p-i+1):
+            for m in range(0, n):
+                for k in range(0, n):
+                    for l in range(0, n):
+                        B[i*n2 + m*n + k, j*n2 + l*n + m] += -A[index, k, l]
+            index += 1
+    r = np.zeros((p+1)*n2)
+    r[:n2] = E.flatten()
+    Ej = np.linalg.solve(B, r)
+    Ej = Ej.reshape(p+1, n2)
+    cdef np.ndarray[dtype, ndim=2] Es = np.zeros((N, n2))
+    #print Ej
+    Es[:p+1] = Ej
+    for i in range(p+1, N):
+        for j in range(i-1, i-p-1, -1):
+            for k in range(0, n):
+                for l in range(0, n):
+                    for m in range(0, n):
+                        Es[i, l*n + k] += A[i-j-1, k, m]*Es[j, l*n + m]
+        #print np.abs(Es).max()
+    cdef int n1 = n-1
+    cdef np.ndarray[dtype, ndim=2] S = np.zeros((N*n1, N*n1))
+    #print (np.abs(Es)).max(axis=1)
+    for i in range(0, N):
+        for j in range(i, N):
+            for k in range(0, n1):
+                for l in range(0, n1):
+                    S[i*n1 + k, j*n1 + l] = Es[j-i, l*n + k]
+    S = np.triu(S) + np.triu(S, k=1).T
+    R = sp.linalg.cholesky(S)
+    Y = (s.T)[::-1].flatten()
+    z1 = np.dot(Y, sp.linalg.cho_solve((R, False), Y))
+    z2 = 2*np.log(np.diag(R)).sum()
+    print z1, z2
+    res = 0.5*z1 + 0.5*z2
+    return res
 
