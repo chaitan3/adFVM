@@ -4,7 +4,7 @@ import sys
 import os
 import pyflux as pf
 
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 #plt.rcParams.update({'legend.fontsize': 18,
 #                     'xtick.labelsize': 14,
 #                     'ytick.labelsize': 14,
@@ -60,8 +60,8 @@ for f in fs:
     #plt.annotate(str(c), xy=(xy[0][-1], xy[1][-1]))
     c += 1
 
-p = 3
-#p = 6
+#p = 3
+p = 6
 n = len(s) + 1
 Np = (2*n-1)*p + n
 s = np.array(s)
@@ -95,7 +95,7 @@ for i in range(0, n-1):
 t[n*p:(n+1)*p] = 1.
 t[-1] = t[(2*n-1)*p:].max()
 
-def kalman_filter(params, s, p):
+def kalman_filter(params, s, p, sim=False):
     n2 = n*n
 
     a = params[:n*p].reshape(p, n)
@@ -132,6 +132,7 @@ def kalman_filter(params, s, p):
     Ss = []
     Cs = []
     Ys = []
+    Es = []
     L = 0
     print 'param:', params
     print 'constraint:', constraint(params)
@@ -175,11 +176,11 @@ def kalman_filter(params, s, p):
 
     ## forward recursions
     for i in range(p, N):
-
         E = M(F, Et)
         P = M(F, M(Pt, T(F))) + Q
         S = M(H, M(P, T(H)))
         Ss.append(S)
+        Es.append(E)
 
         y = Y[i].reshape((n-1, 1))
         yt = y-M(H, E)-mu
@@ -195,6 +196,9 @@ def kalman_filter(params, s, p):
         Et = E + M(P, M(T(H), np.linalg.solve(S, yt)))
         Pt = M(C, P)
     print 'forward pass'
+
+    if sim:
+        return L, np.array(Es)[:,:n, 0], np.array(Ys)[:,:,0]
 
     Ebs = [Et]
     Pbs = [Pt + np.outer(Et, Et)]
@@ -298,7 +302,6 @@ def kalman_filter(params, s, p):
     #    Es.append(E.flatten())
     #    Ps.append(P)
 
-    return L, np.array(Es)[:,0,:n], np.array(Ps)
 
 def constraint(params):
     #params = get_params(params)
@@ -370,25 +373,35 @@ init_params[(2*n-1)*p:] = 1.
 #Js, J, grad, hess = ols_fit(X, tf_params)
 
 params = init_params.copy()
-history = []
-import cPickle as pkl
+bounds = np.vstack((
+    np.hstack((-10*np.ones((n*p, 1)), 10*np.ones((n*p, 1)))),
+    np.hstack((-5*np.ones(((n-1)*p, 1)), 5*np.ones(((n-1)*p, 1)))),
+    np.hstack((0.01*np.ones(((1+0)*n, 1)), 100*np.ones(((1+0)*n, 1)))),
+    ))
+con = 0.1
+params = params + con*np.random.rand(Np)*(bounds[:,1]-bounds[:,0])
+#params = bounds[:,0] + np.random.rand(Np)*(bounds[:,1]-bounds[:,0])
+#history = []
+#import cPickle as pkl
 for i in range(0, 10000):
-    history.append(params)
     params = kalman_filter(params, s, p)
-    if i % 100 == 0:
-        with open("optim.pkl", 'w') as f:
-            pkl.dump(history, f)
+    #history.append(params)
+    #if i % 100 == 0:
+    #    with open("optim.pkl", 'w') as f:
+    #        pkl.dump(history, f)
 exit(0)
 
 def plot_params(params):
-    L, E, _ = kalman_filter(params, s, p)
-    print params, L
+    L, E, Y = kalman_filter(params, s, p, True)
     plt.plot(E[:,-1])
     #err = sess.run(Js, feed_dict={tf_params: params[:Np-n], X:E})
+    #for i in range(0, n):
     #for i in range(0, n-1):
-    #    print (err[i]**2).sum()
-    #    plt.plot(err[i])
-    #plt.show()
+        #print (err[i]**2).sum()
+        #plt.plot(E[:,i], label=i)
+        #plt.plot(Y[:,i], label=i)
+    plt.legend()
+    plt.show()
 
 from plot.richardson import extrapolation
 def extrapolate(params):
@@ -403,19 +416,30 @@ def extrapolate(params):
     ex_params.append(extrapolation(visc, d[:n-1]))
     return ex_params
 
-params = init_params.copy()
-plot_params(params)
-print extrapolate(params)
-plt.savefig('params1_E.pdf')
-plt.clf()
-exit(0)
+#params = init_params.copy()
+#plot_params(params)
+#print extrapolate(params)
+#plt.savefig('params1_E.pdf')
+#plt.clf()
+#exit(0)
+# brute p = 3
 #params2 = np.array([ 2.93999432,  2.94073627 , 2.95828042,  1.88773472, -2.9040424 , -2.8992611,
 # -2.93165969, -1.06189888 , 0.96356349,  0.95824646,  0.97320128,  0.10177968,
 #  0.42558045,  0.16601026 , 0.10827181, -0.72850299, -0.278598  , -0.19839493,
 #  0.3787633 ,  0.14254076 , 0.10047673,  0.63210986,  0.01      ,  0.24412381,
 #  1.35018268])
-#plot_params(params2)
-#print extrapolate(params2)
+# em p = 3
+params2 = np.array([2.93294357e+00,   2.94489346e+00,   2.95499603e+00,   4.48920488e-01,
+  -2.89080719e+00,  -2.91524974e+00,  -2.92527273e+00,   5.31430329e-02,
+   9.57159872e-01,   9.69908475e-01,   9.70076277e-01,   3.24547378e-01,
+   1.36746222e+00,   5.70607845e-01,   3.34668395e-01,   7.00653917e-02,
+  -6.27574559e-02,  -1.29696872e-01,  -3.48325020e-01,  -9.10048541e-02,
+  -1.24047059e-01,   6.23879973e-01,   8.34992331e-05,   2.89422126e-01,
+   1.14696342e-01])
+plot_params(params2)
+print extrapolate(params2)
+exit(0)
+# brute p = 5
 #plt.savefig('p5_nomean/params.pdf')
 #params2 = np.array([ 3.06921995 , 2.84828593 , 3.47139109 , 0.5991141 , -3.2209785,  -2.28585814,
 # -4.68346759,  0.13287314,  1.505171  , -0.05635432 , 3.50637432,  0.0371567,
@@ -440,13 +464,13 @@ exit(0)
 
 from scipy.optimize import *
 objective = lambda x: kalman_filter(x, s, p)[0]
-con = 0.0
 bounds = np.vstack((
     np.hstack((-10*np.ones((n*p, 1)), 10*np.ones((n*p, 1)))),
     np.hstack((-5*np.ones(((n-1)*p, 1)), 5*np.ones(((n-1)*p, 1)))),
     np.hstack((0.01*np.ones(((1+0)*n, 1)), 100*np.ones(((1+0)*n, 1)))),
     ))
 
+con = 0.0
 params = params + con*np.random.rand(Np)*(bounds[:,1]-bounds[:,0])
 #params = bounds[:,0] + np.random.rand(Np)*(bounds[:,1]-bounds[:,0])
 # nelder mead

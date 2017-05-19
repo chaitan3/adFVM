@@ -2,8 +2,10 @@ import numpy as np
 import scipy as sp
 import scipy.linalg
 from scipy.stats import norm
-from scipy.optimize import *
+#from scipy.optimize import *
+import nlopt
 import matplotlib.pyplot as plt
+from pyDOE import *
 
 def _sanitize(x):
     if isinstance(x, list):
@@ -12,13 +14,40 @@ def _sanitize(x):
         return x.reshape(-1, x.shape[0])
     return x
 
+def _optimize(fun, bounds):
+    #res = differential_evolution(fun, bounds)
+    #return res.x, res.fun[0]
+    def nlopt_fun(x, grads):
+        if grads.size > 0:
+            raise Exception("!")
+        else:
+            return fun(x)
+    opt = nlopt.opt(nlopt.GN_DIRECT_L, bounds.shape[0])
+    opt.set_min_objective(nlopt_fun)
+    opt.set_lower_bounds(bounds[:,0])
+    opt.set_upper_bounds(bounds[:,1])
+    opt.set_maxeval(1000)
+    #opt.add_inequality_constraint(nlopt_constraint)
+    x = (bounds[:,0] + bounds[:,1])/2
+    res = opt.optimize(x)
+
+    opt = nlopt.opt(nlopt.LN_SBPLX, bounds.shape[0])
+    opt.set_min_objective(nlopt_fun)
+    opt.set_lower_bounds(bounds[:,0])
+    opt.set_upper_bounds(bounds[:,1])
+    opt.set_maxeval(100)
+    res = opt.optimize(res)
+
+    return res, opt.last_optimum_value()
+
 class Kernel(object):
     pass
 
 class SquaredExponentialKernel(Kernel):
-    def __init__(self, L, sigma):
+    def __init__(self, L, sigma, noise=None):
         self.L = np.array(L)
         self.sigma = sigma
+        self.noise = noise
 
     def evaluate(self, x, xp):
         L, sigma = self.L, self.sigma
@@ -78,22 +107,33 @@ class GaussianProcess(object):
     def explore(self, n, func):
         assert len(self.x) == 0
 
-        x = np.random.rand(self.ndim, n)
-        x = self.bounds[:,[0]]+ x*(self.bounds[:,[1]]-self.bounds[:,[0]])
-        x = x.T
-        y, yd = func(x)
-        self.train(list(x), list(y), list(yd))
+        x = lhs(self.ndim, samples=n, criterion='center')
+        bounds = self.bounds.T
+        x = bounds[[0]] + x*(bounds[[1]]-bounds[[0]])
+        res = func(x)
+        if len(res) > 2:
+            y, yd, yn, ydn = res
+            self.train(list(x), list(y), list(yd), list(yn), list(ydn))
+        else:
+            y, yd = res
+            self.train(list(x), list(y), list(yd))
 
     def train(self, x, y, yd, yn=0., ydn=0.):
         if len(np.array(x).shape) == 1:
             x = [x]
             y = [y]
             yd = [yd]
+            if not isinstance(yn, float):
+                yn = [yn]
+            if not isinstance(ydn, float):
+                ydn = [ydn]
         self.x.extend(x)
         self.y.extend(y)
         self.yd.extend(yd)
         Kd = self.kernel.gradient(self.x, self.x)
         self.Kd = np.vstack((np.hstack((self.kernel.evaluate(self.x, self.x), -Kd)), np.hstack((-Kd.T, self.kernel.hessian(self.x, self.x)))))
+        if self.kernel.noise is not None:
+            yn, ydn = self.kernel.noise
         if isinstance(yn, float):
             yn = list(yn*np.ones_like(np.array(y)))
         if isinstance(ydn, float):
@@ -103,23 +143,34 @@ class GaussianProcess(object):
         self.Kd += np.diag(np.concatenate((np.array(self.yn), np.array(self.ydn).flatten())))
         # do noise analysis.
 
+    def posterior_min(self):
+        res = _optimize(lambda x: self.evaluate(x)[0][0], self.bounds)
+        print "gp min:", res
+        return res[1]
+
+    def data_min(self):
+        ys = np.array(self.y).flatten()
+        i = np.argmin(ys)
+        print "eval min:", (self.x[i], self.y[i])
+        return self.y[i]
+
 class AcquisitionFunction(object):
     def __init__(self, gp):
         self.gp = gp
 
 class ExpectedImprovement(AcquisitionFunction):
     def evaluate(self, xs):
-        fmin = np.min(self.gp.y)
+        fmin = self.fmin
         mu, cov = self.gp.evaluate(xs)
         std = np.diag(cov)**0.5
         delta = fmin-mu
         Z = delta/std
-        return (delta*norm.cdf(Z) + std*norm.pdf(Z))[0]
+        return (delta*norm.cdf(Z) + std*norm.pdf(Z))
 
     def optimize(self):
-        res = differential_evolution(lambda x: -self.evaluate(x), self.gp.bounds)
-        xd = res.x
-        return xd
+        self.fmin = self.gp.posterior_min()
+        res = _optimize(lambda x: -self.evaluate(x)[0], self.gp.bounds)
+        return res[0]
 
 def test_func(x):
     x = _sanitize(x)
