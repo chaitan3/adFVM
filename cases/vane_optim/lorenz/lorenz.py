@@ -2,7 +2,9 @@ from numpy import *
 import numpy as np
 from scipy.integrate import odeint
 from lssode import *
-orig_bounds = np.array([[25.,35.], [2.5, 3.5]])
+orig_bounds = np.array([[26.5,30.], [2.5, 2.7]])
+
+set_fd_step(1e-20j)
 
 def lorenz(rho, sigma, beta, dt, T):
     init_state = array([[1, 0, 1]]) + random.rand(1,3)
@@ -35,15 +37,16 @@ def lss_lorenz(rho, sigma, beta, dt, T, init_state=None):
         #N0 = int(round(burnin / dt))
         #N = int(round(.2 / dt))
         #samples = data[N0::N]
-        zr = 50
-        xr = 12
+        zr = 23
+        xr = -3
         obj = (u[:,2]-zr)**2 + (u[:,0]**2 - xr**2)**2/2
-        import matplotlib.pyplot as plt
-        plt.plot(u[:,2])
-        plt.plot(u[:,0])
-        plt.show()
-        return (obj-5e3)/5e3#*(1+np.sin(2*np.pi*(rhos-orig_bounds[0,0])/(orig_bounds[0,1]-orig_bounds[0,0]))*\
-                            #   np.sin(2*np.pi*(betas-orig_bounds[1,0])/(orig_bounds[1,1]-orig_bounds[1,0])))
+        print betas, u[:,2].mean(), u[:,0].mean()
+        #import matplotlib.pyplot as plt
+        #plt.plot(u[::100,2])
+        #plt.plot(u[::100,0])
+        #plt.show()
+        return (obj)/5e3*(1+np.sin(2*np.pi*(rhos-orig_bounds[0,0])/(orig_bounds[0,1]-orig_bounds[0,0]))/6*
+                               np.sin(2*np.pi*(betas-orig_bounds[1,0])/(orig_bounds[1,1]-orig_bounds[1,0])))
 
     t = (arange(0, T / dt) + 1) * dt
     adj = Adjoint(ddt, init_state, [rho, beta], t, objective)

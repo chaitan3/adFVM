@@ -4,7 +4,6 @@ from multiprocessing import Pool
 import cPickle as pkl
 from functools import partial
 
-from ar import arsel
 #from clorenz import lorenz
 import lorenz
 import gp as GP
@@ -94,25 +93,31 @@ def objective_single(params):
 def minimum():
     #print objective_single([58.,1.24])
     #print objective_single([51.8,1.8])
-    x1 = np.linspace(orig_bounds[0,0], orig_bounds[0,1], 40)
-    #x2 = np.linspace(orig_bounds[1,0], orig_bounds[1,1], 10)
-    x2 = [orig_bounds[1,0]]
+    #x1 = np.linspace(orig_bounds[0,0], orig_bounds[0,1], 40)
+    x1 = [orig_bounds[0,0] + 1]
+    x2 = np.linspace(orig_bounds[1,0], orig_bounds[1,1], 40)
     miny = np.inf
     minx = None
     ys = []
     yns = []
+    yds = []
     for y1 in x1:
         for y2 in x2:
             x = [y1, y2]
-            y, _, yn, _ = objective_single(x)
+            y, yd, yn, _ = objective_single(x)
             ys.append(y)
+            yds.append(yd)
             yns.append(yn**0.5)
             if y < miny:
                 miny = y
                 minx = x
                 print x, y
     #plt.plot(x1, ys)
-    plt.errorbar(x1, ys, yerr=yns)
+    plt.errorbar(x2, ys, yerr=yns)
+    for x, y, yd in zip(x2, ys, yds):
+        xd = np.linspace(x-0.1, x+0.1, 100)
+        yd = y + yd[0]*(xd-x)
+        plt.plot(xd, yd)
     plt.show()
 
 def optim():
