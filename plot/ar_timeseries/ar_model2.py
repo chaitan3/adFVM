@@ -20,7 +20,8 @@ visc = lambda x: float(os.path.basename(x)[:-4])
 fs = sorted(sys.argv[1:], key=visc)
 visc = [visc(x) for x in fs]
 
-submean = True
+#submean = True
+submean = False
 ms = []
 
 for f in fs:
@@ -60,10 +61,12 @@ for f in fs:
     #plt.annotate(str(c), xy=(xy[0][-1], xy[1][-1]))
     c += 1
 
-#p = 3
-p = 6
+p = 3
+#p = 6
 n = len(s) + 1
 Np = (2*n-1)*p + n
+if not submean:
+    Np += n
 s = np.array(s)
 # HACK
 #s = s[:,:100]
@@ -77,6 +80,8 @@ for i in range(0, n-1):
     t[i:n*p:n] = c
     t[n-1:n*p:n] = c
     t[(2*n-1)*p + i] = A.sigma2eps[0]
+    if not submean:
+        t[(2*n-1)*p + n + i] = ms[i]
 
     from scipy.signal import lfilter, lfiltic
     zp = lfiltic([1], A.AR[0], s[i][:p][::-1])
@@ -93,7 +98,9 @@ for i in range(0, n-1):
 #plt.clf()
 
 t[n*p:(n+1)*p] = 1.
-t[-1] = t[(2*n-1)*p:].max()
+t[(2*n-1)*p+n-1] = t[(2*n-1)*p:(2*n-1)*p+n].max()
+if not submean:
+    t[-1] = t[(2*n-1)*p+n:].max()
 
 def kalman_filter(params, s, p, sim=False):
     n2 = n*n
@@ -103,7 +110,7 @@ def kalman_filter(params, s, p, sim=False):
     dt = params[(2*n-1)*p:]*t[(2*n-1)*p:]
     if not submean:
         d = dt[:n]
-        mu = tf.reshape(dt[n:], (n,1))[:-1]
+        mu = np.reshape(dt[n:], (n,1))[:-1]
     else:
         d = dt
         mu = np.zeros((n-1,1))
@@ -139,7 +146,7 @@ def kalman_filter(params, s, p, sim=False):
     if (constraint(params)[1:] < 0).any():
         raise Exception("constraint failure")
 
-    Ei = np.concatenate((Y[:p], np.zeros((p, 1))), axis=1)
+    Ei = np.concatenate((Y[:p]-mu.reshape(1, n-1), np.zeros((p, 1))), axis=1)
     E = sum([np.matmul(A[i], np.reshape(Ei[p-i-1], (n,1))) for i in range(0, p)])
     E = np.reshape(np.concatenate((np.reshape(E, (1,n)), Ei[::-1][:-1]), axis=0), (n*p, 1))
     Et = E
@@ -232,13 +239,18 @@ def kalman_filter(params, s, p, sim=False):
 
     An = M(B, np.linalg.inv(A))
     Q = (C-M(B, np.linalg.solve(A, T(B))))/(N-p)
+    mun = ((Y[p:].sum(axis=0).reshape(n-1,1))-M(H, sum(Ebs[:-1])))/(N-p)
+    #import pdb;pdb.set_trace()
+    mun = np.concatenate((mun.flatten(), [0]))
     #Q = np.abs(Q)
 
     new_params = params.copy()
     A = np.array(np.hsplit(An[:n], p))
     new_params[:n*p] = np.concatenate([np.diag(x) for x in A])
     new_params[n*p:(2*n-1)*p] = np.concatenate([x[:-1,-1] for x in A])
-    new_params[(2*n-1)*p:] = np.diag(Q[:n,:n])/t[(2*n-1)*p:]
+    new_params[(2*n-1)*p:(2*n-1)*p+n] = np.diag(Q[:n,:n])/t[(2*n-1)*p:(2*n-1)*p+n]
+    if not submean:
+        new_params[(2*n-1)*p+n:] = mun/t[(2*n-1)*p+n:]
     print 'likelihood:', L
     print
     return new_params
@@ -303,22 +315,25 @@ def kalman_filter(params, s, p, sim=False):
     #    Ps.append(P)
 
 
-def constraint(params):
+def constraint(params, ns=n):
     #params = get_params(params)
-    a = params[:n*p].reshape(p, n)
-    b = params[n*p:(2*n-1)*p].reshape(p, n-1)
-    d = params[(2*n-1)*p:]*t[(2*n-1)*p:]
+    a = params[:ns*p].reshape(p, ns)
+    b = params[ns*p:(2*ns-1)*p].reshape(p, ns-1)
+    if ns == n:
+        d = params[(2*ns-1)*p:]*t[(2*ns-1)*p:]
+    else:
+        d = params[(2*ns-1)*p:]
 
-    A = np.zeros((p, n, n))
-    B = np.zeros(((p+1)*n*n, (p+1)*n*n))
-    ii = np.arange(0, n)
+    A = np.zeros((p, ns, ns))
+    B = np.zeros(((p+1)*ns*ns, (p+1)*ns*ns))
+    ii = np.arange(0, ns)
     A[:,ii,ii] = a
-    A[:,:n-1,-1] = b
+    A[:,:ns-1,-1] = b
 
-    I = np.hstack((np.eye(n*(p-1)), np.zeros((n*(p-1), n))))
+    I = np.hstack((np.eye(ns*(p-1)), np.zeros((ns*(p-1), ns))))
     As = np.hstack([x[0] for x in np.split(A, p, axis=0)])
     F = np.vstack((As, I))
-    return np.concatenate([[1-np.absolute(np.linalg.eig(F)[0]).max()], params[(2*n-1)*p:]])
+    return np.concatenate([[1-np.absolute(np.linalg.eig(F)[0]).max()], params[(2*ns-1)*p:(2*ns-1)*p+n]])
 
 init_params = t.copy()
 init_params[(2*n-1)*p:] = 1.
@@ -378,11 +393,18 @@ bounds = np.vstack((
     np.hstack((-5*np.ones(((n-1)*p, 1)), 5*np.ones(((n-1)*p, 1)))),
     np.hstack((0.01*np.ones(((1+0)*n, 1)), 100*np.ones(((1+0)*n, 1)))),
     ))
-con = 0.1
+if not submean:
+    bounds = np.vstack((
+        bounds, 
+        np.hstack((0.5*np.ones((n, 1)), 1.5*np.ones((n, 1)))),
+        ))
+
+
+con = 0.0
 params = params + con*np.random.rand(Np)*(bounds[:,1]-bounds[:,0])
 #params = bounds[:,0] + np.random.rand(Np)*(bounds[:,1]-bounds[:,0])
 #history = []
-#import cPickle as pkl
+import cPickle as pkl
 for i in range(0, 10000):
     params = kalman_filter(params, s, p)
     #history.append(params)
@@ -393,28 +415,39 @@ exit(0)
 
 def plot_params(params):
     L, E, Y = kalman_filter(params, s, p, True)
-    plt.plot(E[:,-1])
+    #plt.plot(E[:,-1])
     #err = sess.run(Js, feed_dict={tf_params: params[:Np-n], X:E})
     #for i in range(0, n):
     #for i in range(0, n-1):
-        #print (err[i]**2).sum()
-        #plt.plot(E[:,i], label=i)
-        #plt.plot(Y[:,i], label=i)
+    x = params[:n*p].reshape(p, n)[:,:n-1].T
+    y = init_params[:n*p].reshape(p, n)[:,:n-1].T
+    plt.xlim([0, p+1])
+    for xi,yi,l in zip(x, y, visc):
+        print xi, yi
+        plt.plot(1+np.arange(0, len(xi)), yi, 'o', label=l)
+    #    #print (err[i]**2).sum()
+    #    #plt.plot(E[:,i], label=i)
+    #    plt.plot(Y[:,i], label=i)
     plt.legend()
     plt.show()
+    #plt.savefig('p6_nomean/error.pdf')
 
 from plot.richardson import extrapolation
 def extrapolate(params):
     a = params[:n*p].reshape(p, n)
     b = params[n*p:(2*n-1)*p].reshape(p, n-1)
     d = params[(2*n-1)*p:]*t[(2*n-1)*p:]
-    ex_params = []
+    ax = []
     for ai in a:
-        ex_params.append(extrapolation(visc, ai[:n-1]))
+        ax.append(extrapolation(visc, ai[:n-1]))
+    a = np.hstack((a[:,:n-1], np.array(ax).reshape(-1,1), a[:,[n-1]]))
+    bx = []
     for bi in b:
-        ex_params.append(extrapolation(visc, bi))
-    ex_params.append(extrapolation(visc, d[:n-1]))
-    return ex_params
+        bx.append(extrapolation(visc, bi))
+    b = np.hstack((b, np.array(bx).reshape(-1,1)))
+    dx = extrapolation(visc, d[:n-1])
+    d = np.concatenate((d, [dx]))
+    return np.concatenate((a.flatten(), b.flatten(), d))
 
 #params = init_params.copy()
 #plot_params(params)
@@ -429,16 +462,26 @@ def extrapolate(params):
 #  0.3787633 ,  0.14254076 , 0.10047673,  0.63210986,  0.01      ,  0.24412381,
 #  1.35018268])
 # em p = 3
-params2 = np.array([2.93294357e+00,   2.94489346e+00,   2.95499603e+00,   4.48920488e-01,
-  -2.89080719e+00,  -2.91524974e+00,  -2.92527273e+00,   5.31430329e-02,
-   9.57159872e-01,   9.69908475e-01,   9.70076277e-01,   3.24547378e-01,
-   1.36746222e+00,   5.70607845e-01,   3.34668395e-01,   7.00653917e-02,
-  -6.27574559e-02,  -1.29696872e-01,  -3.48325020e-01,  -9.10048541e-02,
-  -1.24047059e-01,   6.23879973e-01,   8.34992331e-05,   2.89422126e-01,
-   1.14696342e-01])
-plot_params(params2)
-print extrapolate(params2)
-exit(0)
+#params2 = np.array([2.93294357e+00,   2.94489346e+00,   2.95499603e+00,   4.48920488e-01,
+#  -2.89080719e+00,  -2.91524974e+00,  -2.92527273e+00,   5.31430329e-02,
+#   9.57159872e-01,   9.69908475e-01,   9.70076277e-01,   3.24547378e-01,
+#   1.36746222e+00,   5.70607845e-01,   3.34668395e-01,   7.00653917e-02,
+#  -6.27574559e-02,  -1.29696872e-01,  -3.48325020e-01,  -9.10048541e-02,
+#  -1.24047059e-01,   6.23879973e-01,   8.34992331e-05,   2.89422126e-01,
+#   1.14696342e-01])
+#params2 = np.array([ 2.93119140e+00,   2.93788739e+00,   2.95929401e+00,   5.43782472e-01,
+#  -2.88730213e+00,  -2.90067796e+00,  -2.93341500e+00,  -4.81718719e-02,
+#   9.55374838e-01,   9.62239845e-01,   9.73971343e-01,   3.43325738e-01,
+#   5.72468133e-02,   3.79970086e-02,   4.96946838e-03,   3.64388745e-01,
+#   1.35409872e-01,   8.70698333e-02,  -1.45682150e-01,  -6.98844948e-02,
+#  -7.39961223e-02,   6.24760147e-01,   5.15732788e-04,   2.67172022e-01,
+#   1.57948398e+00])
+#plot_params(params2)
+###plt.savefig('p3_nomean/error.pdf')
+##plt.savefig('p3_nomean/latent.pdf')
+#params_exp = extrapolate(params2)
+#print constraint(params_exp, n+1)
+#exit(0)
 # brute p = 5
 #plt.savefig('p5_nomean/params.pdf')
 #params2 = np.array([ 3.06921995 , 2.84828593 , 3.47139109 , 0.5991141 , -3.2209785,  -2.28585814,
@@ -450,10 +493,23 @@ exit(0)
 #  0.05925965,  0.09797584, -0.07180606,  0.27900204 , 0.07439238,  0.06803588,
 #  0.63530284,  0.03992902,  0.13110956,  0.70080074]
 #    )
-#plot_params(params2)
-#print extrapolate(params2)
+params2 = np.array([ 3.04271419e+00,   3.27232776e+00,   3.32519524e+00,   1.61380744e+00,
+  -3.17156376e+00,  -3.81636232e+00,  -3.97678465e+00,  -1.09715563e+00,
+   1.47639100e+00,   2.04960940e+00,   2.16764909e+00,   2.48034334e-01,
+  -9.90626733e-01,  -1.09948669e+00,  -9.65428783e-01,   8.85794108e-02,
+   1.00943797e+00,   9.46113546e-01,   7.03642580e-01,  -1.02773628e-02,
+  -3.67741387e-01,  -3.52826015e-01,  -2.54441647e-01,   5.52058806e-02,
+  -1.18239928e-11,  -3.74374337e-12,  -2.44370267e-12,   1.45340750e-13,
+   1.19948842e-12,  -5.62892198e-13,   4.90069996e-11,   1.68715801e-11,
+   1.50791945e-11,  -6.46738781e-11,  -2.41712266e-11,  -2.13791666e-11,
+   3.45998486e-11,   1.42226650e-11,   1.29567589e-11,  -4.02928388e-12,
+  -2.29039721e-12,  -3.08592974e-12,   6.10092035e-01,   9.17503605e-02,
+   1.17136836e-01,   1.85025409e+20])
+plot_params(params2)
+params_exp = extrapolate(params2)
+print constraint(params_exp, n+1)
 #plt.savefig('p5_nomean/params.pdf')
-#exit(0)
+exit(0)
 
 #for i in range(0, 100):
 #    print params

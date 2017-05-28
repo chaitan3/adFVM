@@ -1,15 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
+import cPickle as pkl
+from functools import partial
 
 from ar import arsel
 #from clorenz import lorenz
 import lorenz
 import gp as GP
+optime = 'optim'
+#import gp_noder as GP
+#optim = 'optim_noder'
 
 dimension = 2
 
-orig_bounds = np.array([[30.,70.], [0.5, 3.5]])
+orig_bounds = lorenz.orig_bounds
 # if threshold is negative constraint passes all points
 constraint = lambda points: np.linalg.norm(points - np.array([-1,-1]), axis=1) > -0.2
 
@@ -27,10 +32,14 @@ parallel = 4
 min_T = 50
 #min_T = 300
 burnin = 2.
+#reps = 10
+reps = 8
+parallel = True
 
 def objective(args):
-    pool = Pool(len(args))
-    data = pool.map(objective_single, args)
+    data = []
+    for arg in args:
+        data.append(objective_single(arg))
     y = [x[0] for x in data]
     yd = [x[1] for x in data]
     yn = [x[2] for x in data]
@@ -45,18 +54,28 @@ def objective_single(params):
     print 'lorenz: rho = {0}, sigma = {1}, beta = {2}'.format(p1, p2, p3)
     dt = 0.01
     T = min_T
-    ys = []
-    yds = []
-    for i in range(0, 10):
-        y, yd = lorenz.lss_lorenz(p1, p2, p3, dt, T)
-        ys.append(y)
-        yds.append(yd)
+    if parallel:
+        pool = Pool(reps)
+        lss_lorenz = partial(lorenz.lss_lorenz, p1, p2, p3, dt, T)
+        rng = [np.random.rand(3) for i in range(0, reps)]
+        data = pool.map(lss_lorenz, rng)
+        ys = [x[0] for x in data]
+        yds = [x[1] for x in data]
+    else:
+        ys = []
+        yds = []
+        for i in range(0, reps):
+            y, yd = lorenz.lss_lorenz(p1, p2, p3, dt, T)
+            print y, yd
+            ys.append(y)
+            yds.append(yd)
     ys = np.array(ys)
     yds = np.array(yds)
     y = np.mean(ys)
     yd = np.mean(yds, axis=0)
     yn = np.var(ys)
     ydn = np.var(yds, axis=0)
+    print 'value:', y, yd, yn, ydn
     return y, yd, yn, ydn
     #mean, scale = 5e3, 5e3
     #scaled = (obj - mean)/scale
@@ -72,9 +91,33 @@ def objective_single(params):
 #    #return objective_single([new_params, jobid])[:2]
 #    return objective_single([new_params, jobid])[0]
 
+def minimum():
+    #print objective_single([58.,1.24])
+    #print objective_single([51.8,1.8])
+    x1 = np.linspace(orig_bounds[0,0], orig_bounds[0,1], 40)
+    #x2 = np.linspace(orig_bounds[1,0], orig_bounds[1,1], 10)
+    x2 = [orig_bounds[1,0]]
+    miny = np.inf
+    minx = None
+    ys = []
+    yns = []
+    for y1 in x1:
+        for y2 in x2:
+            x = [y1, y2]
+            y, _, yn, _ = objective_single(x)
+            ys.append(y)
+            yns.append(yn**0.5)
+            if y < miny:
+                miny = y
+                minx = x
+                print x, y
+    #plt.plot(x1, ys)
+    plt.errorbar(x1, ys, yerr=yns)
+    plt.show()
+
 def optim():
-    kernel = GP.SquaredExponentialKernel([10., 1.], 1.)#, [1e-2, 1e-2])
-    gp = GP.GaussianProcess(kernel, orig_bounds)
+    kernel = GP.SquaredExponentialKernel([5., 0.5], 1.)#, [1e-2, 1e-2])
+    gp = GP.GaussianProcess(kernel, orig_bounds, noise=[1e-4, [1e-6, 1e-5]], noiseGP=True)
     #print objective_single(orig_bounds[:,0])
     gp.explore(4, objective)
     x1 = np.linspace(gp.bounds[0,0], gp.bounds[0,1], 40)
@@ -83,40 +126,61 @@ def optim():
     xs = np.vstack((x1.flatten(), x2.flatten())).T
     ei = GP.ExpectedImprovement(gp)
 
-    # test noise and multiD support
+    # acquisition function improvements:
+    # * noise: using EI with std for now
+    # * batch
+    # * finite budget
 
     print
-    for i in range(0, 100):
-        x = ei.optimize()
-        gp.data_min()
-        print 'ei choice:', i, x
+    values = []
+    evals = []
+    gps = []
+    nj = 1
+    for j in range(0, nj):
+        evals.append([])
+        gps.append([])
+        print optim, j
+        fail = False
+        for i in range(0, 100):
+            try:
+                x = ei.optimize()
+            except:
+                fail = True
+                break
+            evals[-1].append(gp.data_min())
+            gps[-1].append(gp.posterior_min())
+            print 'ei choice:', i, x
 
-        #plt.ylim([-2,2])
-        #plt.scatter(gp.x, gp.y, c='k')
-        eix = ei.evaluate(xs)
-        plt.contourf(x1, x2, eix.reshape(x1.shape), 100)
-        plt.colorbar()
-        plt.savefig('ei_{}.pdf'.format(i))
-        plt.clf()
-        #plt.plot(xs, expected_improvement(xs))
+            #eix = ei.evaluate(xs)
+            #plt.contourf(x1, x2, eix.reshape(x1.shape), 100)
+            #plt.colorbar()
+            #plt.savefig('ei_{}.pdf'.format(i))
+            #plt.clf()
 
-        mu, cov = gp.evaluate(xs)
-        std = np.diag(cov)**0.5
-        plt.contourf(x1, x2, mu.reshape(x1.shape), 100)
-        plt.colorbar()
-        plt.savefig('mu_{}.pdf'.format(i))
-        plt.clf()
-        plt.contourf(x1, x2, std.reshape(x1.shape), 100)
-        plt.colorbar()
-        plt.savefig('cov_{}.pdf'.format(i))
-        plt.clf()
-        #std = np.diag(cov)**0.5
-        #plt.plot(xs.flatten(), mu)
-        #plt.fill_between(xs.flatten(), mu-std, mu + std, facecolor='gray')
+            #mu, cov = gp.evaluate(xs)
+            mu, cov = gp.noiseGP[0].exponential(xs)
+            std = np.diag(cov)**0.5
+            plt.contourf(x1, x2, mu.reshape(x1.shape)*gp.noise[0], 1000)
+            plt.colorbar()
+            #plt.savefig('mu_{}.pdf'.format(i))
+            #plt.clf()
+            plt.show()
+            #plt.contourf(x1, x2, std.reshape(x1.shape), 1000)
+            #plt.colorbar()
+            #plt.savefig('cov_{}.pdf'.format(i))
+            #plt.clf()
 
-        y, yd, yn, ydn = objective_single(x)
-        gp.train(x, y, yd, yn, ydn)
-        print
+            y, yd, yn, ydn = objective_single(x)
+            gp.train(x, y, yd, yn, ydn)
+            print
+        if not fail:
+            values.append(gp.y)
+        else:
+            evals = evals[:-1]
+            gps = gps[:-1]
+        with open('{}.pkl'.format(optime), 'w') as f:
+            pkl.dump([evals, gps, values], f)
 
 if __name__ == "__main__":
-    optim()
+    #optim()
+    minimum()

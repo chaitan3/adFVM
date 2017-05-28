@@ -2,6 +2,7 @@ from numpy import *
 import numpy as np
 from scipy.integrate import odeint
 from lssode import *
+orig_bounds = np.array([[25.,35.], [2.5, 3.5]])
 
 def lorenz(rho, sigma, beta, dt, T):
     init_state = array([[1, 0, 1]]) + random.rand(1,3)
@@ -17,8 +18,11 @@ def lorenz(rho, sigma, beta, dt, T):
     state = odeint(ddt, init_state[-1], t)
     return vstack([init_state, state])
 
-def lss_lorenz(rho, sigma, beta, dt, T):
-    init_state = array([1, 0, 1]) + random.rand(3)
+def lss_lorenz(rho, sigma, beta, dt, T, init_state=None):
+    if init_state is None:
+        init_state = array([1, 0, 1]) + random.rand(3)
+    else:
+        init_state = array([1, 0, 1]) + init_state
     t = 30 + dt*np.arange(int(T/dt))
 
     def ddt(u, (rhos, betas)):
@@ -34,7 +38,12 @@ def lss_lorenz(rho, sigma, beta, dt, T):
         zr = 50
         xr = 12
         obj = (u[:,2]-zr)**2 + (u[:,0]**2 - xr**2)**2/2
-        return (obj-5e3)/5e3
+        import matplotlib.pyplot as plt
+        plt.plot(u[:,2])
+        plt.plot(u[:,0])
+        plt.show()
+        return (obj-5e3)/5e3#*(1+np.sin(2*np.pi*(rhos-orig_bounds[0,0])/(orig_bounds[0,1]-orig_bounds[0,0]))*\
+                            #   np.sin(2*np.pi*(betas-orig_bounds[1,0])/(orig_bounds[1,1]-orig_bounds[1,0])))
 
     t = (arange(0, T / dt) + 1) * dt
     adj = Adjoint(ddt, init_state, [rho, beta], t, objective)
