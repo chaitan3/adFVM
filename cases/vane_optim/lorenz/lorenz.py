@@ -2,7 +2,7 @@ from numpy import *
 import numpy as np
 from scipy.integrate import odeint
 from lssode import *
-orig_bounds = np.array([[26.5,30.], [2.5, 2.7]])
+orig_bounds = np.array([[26,30.], [2.5, 2.7]])
 
 set_fd_step(1e-20j)
 
@@ -40,13 +40,13 @@ def lss_lorenz(rho, sigma, beta, dt, T, init_state=None):
         zr = 23
         xr = -3
         obj = (u[:,2]-zr)**2 + (u[:,0]**2 - xr**2)**2/2
-        print betas, u[:,2].mean(), u[:,0].mean()
+        #print betas, u[:,2].mean(), u[:,0].mean()
         #import matplotlib.pyplot as plt
         #plt.plot(u[::100,2])
         #plt.plot(u[::100,0])
         #plt.show()
         return (obj)/5e3*(1+np.sin(2*np.pi*(rhos-orig_bounds[0,0])/(orig_bounds[0,1]-orig_bounds[0,0]))/6*
-                               np.sin(2*np.pi*(betas-orig_bounds[1,0])/(orig_bounds[1,1]-orig_bounds[1,0])))
+                               np.cos(2*np.pi*(betas-orig_bounds[1,0])/(orig_bounds[1,1]-orig_bounds[1,0])))
 
     t = (arange(0, T / dt) + 1) * dt
     adj = Adjoint(ddt, init_state, [rho, beta], t, objective)

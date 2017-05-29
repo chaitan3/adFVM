@@ -4,7 +4,7 @@ import scipy.linalg
 from scipy.stats import norm
 #from scipy.optimize import *
 import nlopt
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from pyDOE import *
 
 def _sanitize(x):

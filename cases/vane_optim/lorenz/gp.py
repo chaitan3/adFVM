@@ -2,9 +2,9 @@ import numpy as np
 import scipy as sp
 import scipy.linalg
 from scipy.stats import norm
-#from scipy.optimize import *
+from scipy.optimize import *
 import nlopt
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from pyDOE import *
 import gp_noder
 
@@ -94,10 +94,10 @@ class GaussianProcess(object):
             self.noise = [0., np.zeros(self.ndim)]
         self.noiseGP = None
         if noiseGP:
-            kernel = gp_noder.SquaredExponentialKernel(kernel.L*2, kernel.sigma)
+            kernel = gp_noder.SquaredExponentialKernel(kernel.L, kernel.sigma)
             self.noiseGP = [gp_noder.GaussianProcess(kernel, bounds, noise=kernel.sigma**2/5)]
             for i in range(0, self.ndim):
-                kernel = gp_noder.SquaredExponentialKernel(kernel.L*2, kernel.sigma)
+                kernel = gp_noder.SquaredExponentialKernel(kernel.L, kernel.sigma)
                 self.noiseGP.append(gp_noder.GaussianProcess(kernel, bounds, noise=kernel.sigma**2/5))
     
     def evaluate(self, xs):
@@ -142,8 +142,9 @@ class GaussianProcess(object):
     def train(self, x, y, yd, yn=0., ydn=0.):
         if len(np.array(x).shape) == 1:
             x = [x]
-            y = [y]
-            yd = [yd]
+            if len(np.array(yd).shape) == 1:
+                y = [y]
+                yd = [yd]
             if not isinstance(yn, float):
                 yn = [yn]
             if not isinstance(ydn, float):
@@ -154,7 +155,7 @@ class GaussianProcess(object):
         Kd = self.kernel.gradient(self.x, self.x)
         self.Kd = np.vstack((np.hstack((self.kernel.evaluate(self.x, self.x), -Kd)), np.hstack((-Kd.T, self.kernel.hessian(self.x, self.x)))))
         if self.noiseGP is None:
-            yn, ydn = self.kernel.noise
+            yn, ydn = self.noise
         if isinstance(yn, float):
             yn = list(yn*np.ones_like(np.array(y)))
         if isinstance(ydn, float):
@@ -162,8 +163,9 @@ class GaussianProcess(object):
         yn = np.array(yn)
         ydn = np.array(ydn)
         if self.noiseGP is None:
-            yn = np.tile(yn, len(self.x))
-            ydn = np.tile(ydn, (len(self.x), 1))
+            if len(self.x) != len(yn):
+                yn = np.tile(yn[0], len(self.x))
+                ydn = np.tile(ydn[0], (len(self.x), 1))
         else:
             self.noiseGP[0].train(x, np.log(yn/self.noise[0]))
             for i in range(1, 1 + self.ndim):
@@ -211,11 +213,15 @@ def test_func(x):
            sig**2, \
            sig**2
 
+
 def _test_main():
     kernel = SquaredExponentialKernel([3.], 1.)
     bounds = [[0, 4*2*np.pi]]
+    #kernel = SquaredExponentialKernel([1., 1.], 10.)
+    #bounds = [[-10, 10], [-10.,10]]
+
     gp = GaussianProcess(kernel, bounds)
-    gp.explore(3, test_func)
+    gp.explore(4, test_func)
     xs = np.linspace(gp.bounds[0,0], gp.bounds[0,1], 500).reshape(-1,1)
 
     ei = ExpectedImprovement(gp)
@@ -224,14 +230,15 @@ def _test_main():
         y, yd, yn, ydn = test_func(x)
         gp.train(x, y, yd, yn, ydn)
 
-        plt.ylim([-2,2])
+        #plt.ylim([-2,2])
         #plt.plot(xs, expected_improvement(xs))
 
         mu, cov = gp.evaluate(xs)
         std = np.diag(cov)**0.5
-        plt.plot(xs.flatten(), mu)
-        plt.fill_between(xs.flatten(), mu-std, mu + std, facecolor='gray')
-        plt.scatter(gp.x, gp.y, c='k')
+        plt.contourf()
+        #plt.plot(xs.flatten(), mu)
+        #plt.fill_between(xs.flatten(), mu-std, mu + std, facecolor='gray')
+        #plt.scatter(gp.x, gp.y, c='k')
 
         plt.show()
 
