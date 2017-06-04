@@ -49,29 +49,33 @@ def perturb_bspline(param, c, t, index):
     return c[1][0][c_index], c[1][1][c_index]
 
 def create_displacement(param, base, case):
-    from mpi4py import MPI
-    mpi = MPI.COMM_WORLD
-    rank = mpi.rank
-    if mpi.Get_size() > 1:
-        case = case + 'processor{}/'.format(rank)
 
-    if rank == 0:
-        with open(base + 'vane_coords.txt', 'r') as f:
-            v1 = []
-            v2 = []
-            n = int(f.readline().split(' ')[0])
-            for l in f.readlines():
-                t = l.split()
-                v1.append(t[0])
-                v2.append(t[1])
-        v1 = np.array(v1, dtype=float)/1000
-        v2 = np.array(v2, dtype=float)/1000
-        suction = [v1[:n], v2[:n]]
-        pressure = [v1[n:], v2[n:]]
-    else:
-        suction = pressure = None
-    suction = mpi.bcast(suction, root=0)
-    pressure = mpi.bcast(pressure, root=0)
+    with open(base + 'vane_coords.txt', 'r') as f:
+        v1 = []
+        v2 = []
+        n = int(f.readline().split(' ')[0])
+        for l in f.readlines():
+            t = l.split()
+            v1.append(t[0])
+            v2.append(t[1])
+    v1 = np.array(v1, dtype=float)/1000
+    v2 = np.array(v2, dtype=float)/1000
+    suction = [v1[:n], v2[:n]]
+    pressure = [v1[n:], v2[n:]]
+
+    #with open(base + '../vane_coords_baseline.txt', 'r') as f:
+    #    v1 = []
+    #    v2 = []
+    #    n = int(f.readline().split(' ')[0])
+    #    for l in f.readlines():
+    #        t = l.split()
+    #        v1.append(t[0])
+    #        v2.append(t[1])
+    #v1 = np.array(v1, dtype=float)/1000
+    #v2 = np.array(v2, dtype=float)/1000
+    #suction2 = [v1[:n], v2[:n]]
+    #pressure2 = [v1[n:], v2[n:]]
+
 
     #for prof in [suction, pressure]:
     #    plt.scatter(prof[0], prof[1])
@@ -86,40 +90,45 @@ def create_displacement(param, base, case):
         pass
     shutil.copytree(case + '0', case + '1')
 
-    #config.fileFormat = 'ascii'
+    config.fileFormat = 'ascii'
 
     repl = {}
     index = 0
     t = []
     spline_points = []
+    spline_points2 = []
     spline_coeffs = []
+    #import pdb;pdb.set_trace()
     for coords, patch in [(suction, 'suction'), (pressure, 'pressure')]:
+    #for coords, coords2, patch in [(suction, suction2, 'suction'), (pressure, pressure2, 'pressure')]:
         points = np.loadtxt(case + '{}_points.txt'.format(patch))
-        if points.shape[0] == 0:
-            points = points.reshape((0, 3))
         t, tn = fit_bspline(coords, points[:,[0,1]])
+        #t2, tn2 = fit_bspline(coords, points[:,[0,1]])
+        #points2 = interpolate.splev(tn, t2) 
         spline_points.append(points)
+        #spline_points2.append(points2)
         spline_coeffs.append((t, tn))
 
     for index, patch in enumerate(['suction', 'pressure']):
         points = spline_points[index]
         t, tn = spline_coeffs[index]
-        #if rank == 0:
-        if points.shape[0] > 0:
-            c = copy.deepcopy(t)
-            perturb_bspline(param, c, spline_coeffs[0][0], 0)
-            xc, yc = perturb_bspline(param, c, spline_coeffs[1][0], 1)
-            newPoints = interpolate.splev(tn, c)
-            if rank == 0:
-                index = np.argsort(tn)
-                plt.scatter(xc, yc, s=80, marker='*', c='k')
-                plt.plot(points[:,0], points[:,1], 'b.')
-                plt.plot(newPoints[0][index], newPoints[1][index], 'k')
-                #plt.quiver(points[:,0], points[:,1], newPoints[0]-points[:,0], newPoints[1]-points[:,1])
-        else:
-            newPoints = [np.zeros((0.,)), np.zeros((0.,))]
-        #if patch == 'pressure':
-        #    import pdb;pdb.set_trace()
+        #if points.shape[0] > 0:
+        #    c = copy.deepcopy(t)
+        #    perturb_bspline(param, c, spline_coeffs[0][0], 0)
+        #    xc, yc = perturb_bspline(param, c, spline_coeffs[1][0], 1)
+        #    newPoints = interpolate.splev(tn, c)
+
+        #    index = np.argsort(tn)
+        #    plt.scatter(xc, yc, s=80, marker='*', c='k')
+        #    plt.plot(points[:,0], points[:,1], 'b.')
+        #    plt.plot(newPoints[0][index], newPoints[1][index], 'k')
+        #    #plt.quiver(points[:,0], points[:,1], newPoints[0]-points[:,0], newPoints[1]-points[:,1])
+        #else:
+        #    newPoints = [np.zeros((0.,)), np.zeros((0.,))]
+        ##if patch == 'pressure':
+        ##    import pdb;pdb.set_trace()
+        newPoints = points[:,[0,1]].T
+
         pointDisplacement = np.vstack((newPoints[0]-points[:,0], newPoints[1]-points[:,1], 0*points[:,2])).T
         pointDisplacement = np.ascontiguousarray(pointDisplacement)
         handle = StringIO()
@@ -127,18 +136,18 @@ def create_displacement(param, base, case):
         repl[patch] = handle.getvalue()
         index += 1
     
-    if rank == 0:
-        plt.axis('scaled')
-        plt.axis('off')
-        plt.xlim([0.026,0.040])
-        plt.ylim([-0.055,-0.040])
-        plt.legend()
-        np.savetxt(case + 'params.txt', param)
-        #plt.savefig(case + 'perturbation.png')
-        import re
-        num = re.search('param[0-9]+', case).group(0)
-        plt.savefig(base + 'perturbation_{}.png'.format(num))
-        #plt.show()
+    plt.axis('scaled')
+    plt.axis('off')
+    plt.xlim([0.026,0.040])
+    plt.ylim([-0.055,-0.040])
+    plt.legend()
+    np.savetxt(case + 'params.txt', param)
+    #plt.savefig(case + 'perturbation.png')
+    import re
+    #num = re.search('param[0-9]+', case).group(0)
+    num = 'test'
+    plt.savefig(base + 'perturbation_{}.png'.format(num))
+    #plt.show()
 
     dispFile = case + '1/pointDisplacement'
     with open(dispFile) as f:
@@ -161,6 +170,7 @@ def extrude_mesh(case, spawn_job):
     spawn_job([foam_dir + 'transformPoints', '-translate', '(0 0 -0.01)', '-case', case])
     shutil.copyfile(case + 'system/createPatchDict.cyclic', case + 'system/createPatchDict')
     spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case])
+    map(os.remove, glob.glob('*.obj'))
         
 def perturb_mesh(base, case, spawn_job):
     # serial 
@@ -170,6 +180,10 @@ def perturb_mesh(base, case, spawn_job):
     time = '3.0'
     spawn_job([scripts_dir + 'field/map_fields.py', base + '3d_baseline/', case, time, time])
     spawn_job([foam_dir + 'decomposePar', '-time', time, '-case', case])
+    # convert to hdf5
+    spawn_job([scripts_dir + 'conversion/hdf5serial.py', case, time])
+    spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5'])
+    spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + '3.hdf5'])
 
     # if done this way, no mapping and hdf5 conversion needed
     # serial for laminar
@@ -177,7 +191,7 @@ def perturb_mesh(base, case, spawn_job):
     # parallel
     #spawn_job([foam_dir + 'moveMesh', '-case', case, '-parallel'])
     #spawn_job([sys.executable, os.path.join(scripts_dir, 'conversion', 'hdf5mesh.py'), case, '1.0001'])
-    return
+    return 
 
 def gen_mesh_param(param, base, case, spawn_job, perturb=True):
     case = case +'/'
@@ -189,14 +203,13 @@ def gen_mesh_param(param, base, case, spawn_job, perturb=True):
     for folder in glob.glob(base + 'processor*'):
         shutil.copytree(folder, case + os.path.basename(folder))
 
-    with open('params.pkl', 'w') as f:
-        pickle.dump([param, base, case], f)
-    #create_displacement(param, base, case)
-    spawn_job([sys.executable, __file__, 'create_displacement', 'params.pkl'])
+    create_displacement(param, base, case)
+    #with open('params.pkl', 'w') as f:
+    #    pickle.dump([param, base, case], f)
+    #spawn_job([sys.executable, __file__, 'create_displacement', 'params.pkl'])
     if perturb:
         perturb_mesh(base, case, spawn_job)
 
-    map(os.remove, glob.glob('*.obj'))
     return
 
 if __name__ == '__main__':

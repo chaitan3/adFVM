@@ -3,14 +3,15 @@
 import os
 import sys
 import h5py
+import shutil
 
 files = sys.argv[1:]
 
-
-os.makedirs('swapped')
 for f in files:
-    orig = h5py.File(f)
-    swap = h5py.File('swapped/' + f, 'w')
+    origf = f[:-5] + '_orig.hdf5'
+    shutil.move(f, origf)
+    orig = h5py.File(origf)
+    swap = h5py.File(f, 'w')
 
     def recurse(h, h2, loc):
         for key, val in h.items():
@@ -26,4 +27,4 @@ for f in files:
     recurse(orig, swap, '')
     orig.close()
     swap.close()
-    os.remove(f)
+    os.remove(origf)
