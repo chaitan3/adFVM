@@ -42,7 +42,7 @@ def writeResult(option, result, info='-', timeSeriesFile=None):
         noise = 0
         if option == 'perturb':
             previousResult = float(open(resultFile).readline().split(' ')[3])
-            globalResult -= previousResult
+            globalResult[0] -= previousResult
         noise = [0. for res in result]
         if timeSeriesFile:
             import ar
@@ -50,7 +50,7 @@ def writeResult(option, result, info='-', timeSeriesFile=None):
             if len(timeSeries.shape) == 1:
                 timeSeries = timeSeries.reshape(-1,1)
             for index in range(0, len(result)):
-                noise[index] = ar.arsel(timeSeries[:, index]).mu_sigma**2
+                noise[index] = (ar.arsel(timeSeries[:, index]).mu_sigma**2)[0]
         with open(resultFile, 'a') as handle:
             for index in range(0, len(result)):
                 handle.write('{} {} {} {} {}\n'.format(option, index, info, globalResult[index], noise[index]))

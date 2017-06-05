@@ -40,6 +40,7 @@ if matop:
 
 for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], ['', adjargs]):
 #for module, args in zip(['adFVMcpp'], ['']):
+#for module, args in zip(['adFVMcpp_ad'], [adjargs]):
     compile_args = ['-std=c++11', '-O3']#, '-march=native']
     #compile_args=['-std=c++11', '-O0', '-g']
     if len(args) > 0:

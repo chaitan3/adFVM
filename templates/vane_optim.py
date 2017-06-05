@@ -7,7 +7,9 @@ from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
 config.hdf5 = True
-primal = RCF('./', faceReconstructor='SecondOrder')
+caseDir = './'
+primal = RCF(caseDir, objective='pressureLoss', objectivePLInfo={})
+nParam = 4
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
@@ -45,6 +47,7 @@ def getPlane(solver):
     #print interCells.shape, interArea.sum()
     solver.postpro.extend([(ad.ivector(), interCells), (ad.bcmatrix(), interArea)])
     return solver.postpro[-2][0], solver.postpro[-1][0], normal
+primal.defaultConfig["objectivePLInfo"] = getPlane(primal)
     
 def objectivePressureLoss(fields, mesh):
     #if not hasattr(objectivePressureLoss, interArea):
@@ -72,7 +75,7 @@ objective = objectivePressureLoss
 def makePerturb(index):
     def perturbMesh(fields, mesh, t):
         if not hasattr(perturbMesh, 'perturbation'):
-            perturbMesh.perturbation = mesh.getPerturbation(os.path.join(CASEDIR), 'grad{}'.format(index))
+            perturbMesh.perturbation = mesh.getPerturbation(caseDir + 'grad{}/'.format(index))
         return perturbMesh.perturbation
     return perturbMesh
 perturb = []
@@ -80,9 +83,10 @@ for index in range(0, nParam):
     perturb.append(makePerturb(index))
 
 parameters = 'mesh'
-
 nSteps = 100000
 writeInterval = 5000
+reportInterval = 1
+avgStart = 500
 startTime = 3.0
 dt = 1e-8
 

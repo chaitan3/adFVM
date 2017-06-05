@@ -8,7 +8,7 @@ from adFVM.density import RCF
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
+primal = RCF('/home/talnikar/backup/voya_hyper/cylinder/test/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              timeIntegrator='SSPRK', 
@@ -89,7 +89,7 @@ def makePerturb(scale):
         return rho, rhoU, rhoE
     return perturb
  
-perturb = [makePerturb(1e-1)]
+perturb = [makePerturb(1e6)]
 parameters = 'source'
 
 #def makePerturb(pt_per):
@@ -104,6 +104,6 @@ parameters = 'source'
 nSteps = 10
 writeInterval = 5
 reportInterval = 1
-startTime = 4.0
+startTime = 3.0
 dt = 1e-10
-adjParams = [1e-3, None, None]
+#adjParams = [1e-3, None, None]

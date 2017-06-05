@@ -17,10 +17,11 @@ scalar objectiveDrag(RCF* rcf, const mat& U, const vec& T, const vec& p) {
         integer o = mesh.owner(f);
         scalar nx = mesh.normals(f, 0);
         scalar d = 0;
-        for (integer j = 0; j < 3; j++) {
-            d += pow(mesh.cellCentres(c, j)-mesh.cellCentres(o, j), 2);
-        }
-        d = sqrt(d);
+        //for (integer j = 0; j < 3; j++) {
+        //    d += pow(mesh.cellCentres(c, j)-mesh.cellCentres(o, j), 2);
+        //}
+        //d = sqrt(d);
+        d = mesh.deltas(f);
         scalar U0 = U(c, 0);
         scalar U0i = U(o, 0);
         scalar mungUx = (rcf->*rcf->mu)(T(c))*(U0-U0i)/d;

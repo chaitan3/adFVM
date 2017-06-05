@@ -56,11 +56,12 @@ def readObjectiveFile(objectiveFile):
 def evaluate(param, genAdjoint=True, runSimulation=True):
     index = len(paramHistory)
     paramHistory.append(param)
-    paramDir = os.path.join(workDir, 'param{}/'.format(index))
+    base = 'param{}/'.format(index)
+    paramDir = os.path.join(workDir, base)
 
     # get mesh from remote server
     os.makedirs(paramDir)
-    client.get_mesh(param, paramDir)
+    client.get_mesh(param, paramDir, base)
     
     # copy caseFile
     shutil.copy(caseFile, paramDir)
@@ -70,13 +71,10 @@ def evaluate(param, genAdjoint=True, runSimulation=True):
         for index in range(0, len(param)):
             perturbedParam = param.copy()
             perturbedParam[index] += eps
-            gradDir = os.path.join(paramDir, 'grad{}'.format(index))
+            base2 = base + 'grad{}'.format(index)
+            gradDir = os.path.join(paramDir, base2)
             os.makedirs(gradDir)
-            try:
-                genMeshParam(perturbedParam, gradDir)
-            except (OSError, subprocess.CalledProcessError) as e:
-                print('Gen adjoint mesh param failed')
-                raise
+            get_mesh(perturbedParam, gradDir, base2)
 
     if runSimulation:
         spawnJob([sys.executable, primal, problemFile])

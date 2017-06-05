@@ -159,7 +159,9 @@ class Adjoint(Solver):
 
                 inputs = [phi.field for phi in previousSolution] + \
                          [phi[1] for phi in primal.sourceTerms] + \
-                         [phi.field for phi in fields] + [dt, t, nSteps]
+                         [phi.field for phi in fields] + [dt, t] + \
+                         [(parameters[0] == 'source')*1]
+
                 #outputs = self.map(*inputs)
                 #print(fields[0].field.max())
                 outputs = adFVMcpp.forward(*inputs)

@@ -89,9 +89,9 @@ void Operator::snGrad(const arrType<scalar, shape1>& phi, scalar* snGradPhi, int
     
     integer p = mesh.owner(index);
     integer n = mesh.neighbour(index);
-    integer d = mesh.deltas(index);
+    scalar d = mesh.deltas(index);
     for (integer i = 0; i < shape1; i++) {
-        snGradPhi[i] = (phi(n, i)-phi(p, i))*d;
+        snGradPhi[i] = (phi(n, i)-phi(p, i))/d;
     }
 }
 template void Operator::snGrad(const arrType<scalar, 1>& phi, scalar* snGradPhi, integer index);

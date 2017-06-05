@@ -40,7 +40,7 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
 
     uvec faceData(mesh.nFaces);
     for (integer j = 0; j < mesh.nFaces; j++) {
-        faceData(j) = mesh.areas(j)*DT(j)/mesh.deltas(j);
+        faceData(j) = mesh.areas(j).value()*DT(j)/mesh.deltas(j).value();
     }
 
     for (integer j = il; j < ih; j++) {
@@ -50,7 +50,7 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
         integer cols[6];
         for (integer k = 0; k < 6; k++) {
             integer f = mesh.cellFaces(index, k);
-            neighbourData[k] = -faceData(f)/mesh.volumes(index);
+            neighbourData[k] = -faceData(f)/mesh.volumes(index).value();
             cols[k] = mesh.cellNeighbours(index, k);
             if (cols[k] > -1) {
                 cols[k] += jl;
@@ -77,7 +77,7 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
             integer p = mesh.owner(f);
             integer index = il + p;
             integer neighbourIndex = ranges[proc] + neighbourIndices(j);
-            uscalar data = -faceData(f)/mesh.volumes(p);
+            uscalar data = -faceData(f)/mesh.volumes(p).value();
             MatSetValue(A, index, neighbourIndex, data, INSERT_VALUES);
         }
     } 

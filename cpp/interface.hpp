@@ -32,21 +32,17 @@ class Mesh {
         ivec owner;
         ivec neighbour;
 
-        umat normals;
-        umat faceCentres;
-        uvec areas;
         arrType<integer, 6> cellFaces;
         arrType<integer, 6> cellNeighbours;
-        umat cellCentres;
-        uvec volumes;
-        uvec deltas;
-        umat deltasUnit;
-        uvec weights;
-        arrType<uscalar, 2> linearWeights;
-        arrType<uscalar, 2, 3> quadraticWeights;
 
-        //spmat sumOp;
-        //spmat sumOpT;
+        vec areas, volumes, weights, deltas;
+        mat normals;
+        arrType<scalar, 2> linearWeights;
+        arrType<scalar, 2, 3> quadraticWeights;
+
+        umat deltasUnit;
+        umat faceCentres;
+        umat cellCentres;
 
         Boundary boundary;
         map<string, pair<integer, integer>> boundaryFaces;

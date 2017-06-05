@@ -164,6 +164,13 @@ class arrType {
     }
 
     #ifdef ADIFF 
+        template <typename T = dtype,
+        typename std::enable_if<!std::is_same<T, uscalar>::value, int>::type = 0> arrType(const integer shape, uscalar* data) {
+            this -> init(shape);
+            this -> data = new dtype[this->size];
+            this -> adCopy(data);
+            this -> ownData = true;
+        }
         void adCopy(uscalar* udata) {
             for (integer i = 0; i < this->size; i++) {
                 this -> data[i] = udata[i];

@@ -34,10 +34,13 @@ void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp) {
         //cout << dims[2] << " " << shape2 << endl;
     }
     assert(PyArray_IS_C_CONTIGUOUS(array));
-    dtype *data = (dtype *) PyArray_DATA(array);
+
+    using dtype_res = typename std::conditional<!std::is_same<dtype, uscalar>::value && !std::is_same<dtype, integer>::value, uscalar, dtype>::type;
+    arrType<dtype, shape1, shape2> result(dims[0], (dtype_res *) PyArray_DATA(array));
     //cout << rows << " " << cols << endl;
-    arrType<dtype, shape1, shape2> result(dims[0], data);
+    //if ((typeid(dtype) != type(uscalar)) && (typeid(dtype) != typeid(integer))) {
     tmp = result;
+    result.ownData = false;
 }
 
 template <typename dtype, integer shape1>
@@ -46,6 +49,15 @@ PyObject* putArray(arrType<dtype, shape1> &tmp) {
     uscalar* data = tmp.data;
     tmp.ownData = false;
     PyObject* array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
+    PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
+    return array;
+}
+template <typename dtype, integer shape1, integer shape2>
+PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
+    npy_intp shape[3] = {tmp.shape, shape1, shape2};
+    uscalar* data = tmp.data;
+    tmp.ownData = false;
+    PyObject* array = PyArray_SimpleNewFromData(3, shape, NPY_DOUBLE, data);
     PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
     return array;
 }
@@ -143,10 +155,10 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         PyArrayObject *rhoSObject, *rhoUSObject, *rhoESObject;
         PyObject *rhoaObject, *rhoUaObject, *rhoEaObject;
         uscalar t, dt;
-        integer nSteps;
-        PyArg_ParseTuple(args, "OOOOOOOOOddi", &rhoObject, &rhoUObject, &rhoEObject, &rhoSObject, &rhoUSObject, &rhoESObject, &rhoaObject, &rhoUaObject, &rhoEaObject, &dt, &t, &nSteps);
+        integer source;
+        PyArg_ParseTuple(args, "OOOOOOOOOddi", &rhoObject, &rhoUObject, &rhoEObject, &rhoSObject, &rhoUSObject, &rhoESObject, &rhoaObject, &rhoUaObject, &rhoEaObject, &dt, &t, &source);
 
-        const Mesh& mesh = *(rcf->mesh);
+        Mesh& mesh = *(const_cast<Mesh*>(rcf->mesh));
         vec rho(mesh.nInternalCells), rhoE(mesh.nInternalCells);
         mat rhoU(mesh.nInternalCells);
         //assert(PyArray_IS_C_CONTIGUOUS(rhoObject));
@@ -183,9 +195,19 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rho.adInit(tape);
         rhoU.adInit(tape);
         rhoE.adInit(tape);
-        rhoS.adInit(tape);
-        rhoUS.adInit(tape);
-        rhoES.adInit(tape);
+        if (source) {
+            rhoS.adInit(tape);
+            rhoUS.adInit(tape);
+            rhoES.adInit(tape);
+        } else {
+            mesh.areas.adInit(tape);
+            mesh.volumes.adInit(tape);
+            mesh.weights.adInit(tape);
+            mesh.deltas.adInit(tape);
+            mesh.normals.adInit(tape);
+            mesh.linearWeights.adInit(tape);
+            mesh.quadraticWeights.adInit(tape);
+        }
 
         vec rhoN(mesh.nInternalCells);
         mat rhoUN(mesh.nInternalCells);
@@ -193,7 +215,6 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 
         scalar objective, dtc;
         tie(objective, dtc) = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
-
 
         //mat U(mesh.nCells);
         //vec T(mesh.nCells);
@@ -215,7 +236,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         //
         scalar adjoint = 0.;
         for (integer i = 0; i < mesh.nInternalCells; i++) {
-            uscalar v = mesh.volumes(i);
+            uscalar v = mesh.volumes(i).value();
             adjoint += rhoN(i)*rhoa(i)*v;
             for (integer j = 0; j < 3; j++) {
                 adjoint += rhoUN(i, j)*rhoUa(i, j)*v;
@@ -226,7 +247,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         tape.registerOutput(objective);
         tape.setPassive();
 
-        adjoint.setGradient(1.0);
+        objective.setGradient(1.0);
         tape.evaluate();
         uvec rhoaN(mesh.nInternalCells);
         umat rhoUaN(mesh.nInternalCells);
@@ -234,18 +255,12 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoaN.adGetGrad(rho);
         rhoUaN.adGetGrad(rhoU);
         rhoEaN.adGetGrad(rhoE);
-        uvec rhoSa(mesh.nInternalCells);
-        umat rhoUSa(mesh.nInternalCells);
-        uvec rhoESa(mesh.nInternalCells);
-        rhoSa.adGetGrad(rhoS);
-        rhoUSa.adGetGrad(rhoUS);
-        rhoESa.adGetGrad(rhoES);
-
         tape.clearAdjoints();
-        objective.setGradient(1.0);
+
+        adjoint.setGradient(1.0);
         tape.evaluate();
         for (integer i = 0; i < mesh.nInternalCells; i++) {
-            uscalar v = mesh.volumes(i);
+            uscalar v = mesh.volumes(i).value();
             //rhoaN(i) = rhoaN(i)/v + rho(i).getGradient()/(v*nSteps);
             //for (integer j = 0; j < 3; j++) {
             //    rhoUaN(i, j) = rhoUaN(i, j)/v + rhoU(i, j).getGradient()/(v*nSteps);
@@ -256,23 +271,50 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
                 rhoUaN(i, j) = rhoUaN(i, j)/v + rhoU(i, j).getGradient()/v;
             }
             rhoEaN(i) = rhoEaN(i)/v + rhoE(i).getGradient()/v;
-
         }
-        tape.reset();
-        
-        //cout << "evaluated tape" << endl;
-
         PyObject *rhoaNObject, *rhoUaNObject, *rhoEaNObject;
         rhoaNObject = putArray(rhoaN);
         rhoUaNObject = putArray(rhoUaN);
         rhoEaNObject = putArray(rhoEaN);
-        PyObject *rhoSaObject, *rhoUSaObject, *rhoESaObject;
-        rhoSaObject = putArray(rhoSa);
-        rhoUSaObject = putArray(rhoUSa);
-        rhoESaObject = putArray(rhoESa);
-        //cout << "forward 5" << endl;
-        
-        return Py_BuildValue("(NNNNNN)", rhoaNObject, rhoUaNObject, rhoEaNObject, rhoSaObject, rhoUSaObject, rhoESaObject);
+        if (source) {
+            uvec rhoSa(mesh.nInternalCells);
+            umat rhoUSa(mesh.nInternalCells);
+            uvec rhoESa(mesh.nInternalCells);
+            rhoSa.adGetGrad(rhoS);
+            rhoUSa.adGetGrad(rhoUS);
+            rhoESa.adGetGrad(rhoES);
+            tape.reset();
+            PyObject *rhoSaObject, *rhoUSaObject, *rhoESaObject;
+            rhoSaObject = putArray(rhoSa);
+            rhoUSaObject = putArray(rhoUSa);
+            rhoESaObject = putArray(rhoESa);
+            //cout << "forward 5" << endl;
+            return Py_BuildValue("(NNNNNN)", rhoaNObject, rhoUaNObject, rhoEaNObject, rhoSaObject, rhoUSaObject, rhoESaObject);
+
+        } else {
+            uvec areas, volumes, weights, deltas;
+            umat normals;
+            arrType<uscalar, 2> linearWeights;
+            arrType<uscalar, 2, 3> quadraticWeights;
+            areas.adGetGrad(mesh.areas);
+            volumes.adGetGrad(mesh.volumes);
+            normals.adGetGrad(mesh.normals);
+            weights.adGetGrad(mesh.weights);
+            deltas.adGetGrad(mesh.deltas);
+            linearWeights.adGetGrad(mesh.linearWeights);
+            quadraticWeights.adGetGrad(mesh.quadraticWeights);
+            tape.reset();
+            PyObject *areasObject = putArray(areas);
+            PyObject *volumesObject = putArray(volumes);
+            PyObject *normalsObject = putArray(normals);
+            PyObject *weightsObject = putArray(weights);
+            PyObject *deltasObject = putArray(deltas);
+            PyObject *linearWeightsObject = putArray(linearWeights);
+            PyObject *quadraticWeightsObject = putArray(quadraticWeights);
+            return Py_BuildValue("(NNNNNNNNNN)", rhoaNObject, rhoUaNObject, rhoEaNObject, areasObject, volumesObject, weightsObject, \
+                    deltasObject, normalsObject, linearWeightsObject, quadraticWeightsObject);
+
+        }
     }
     
     

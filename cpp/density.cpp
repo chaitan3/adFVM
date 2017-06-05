@@ -28,7 +28,7 @@ void RCF::conservative(const scalar U[3], const scalar T, const scalar p, scalar
 }
 
 
-void RCF::getFlux(const scalar U[3], const scalar T, const scalar p, const uscalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux) {
+void RCF::getFlux(const scalar U[3], const scalar T, const scalar p, const scalar N[3], scalar& rhoFlux, scalar rhoUFlux[3], scalar& rhoEFlux) {
     scalar rho, rhoU[3], rhoE;
     this->conservative(U, T, p, rho, rhoU, rhoE);
     scalar Un = 0.;
@@ -191,7 +191,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
         scalar gradTF[3];
         scalar snGradT;
         //const uscalar* S = &mesh.deltasUnit(ind);
-        const uscalar* N = &mesh.normals(ind);
+        const scalar* N = &mesh.normals(ind);
         this->operate->snGrad(T, &snGradT, ind);
         //this->interpolate->central(gradT, gradTF, ind);
         this->interpolate->average(gradT, gradTF, ind);
@@ -434,11 +434,11 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
         } else if (patchType == "CBC_TOTAL_PT") {
             uvec Tt(nFaces, patch.second.at("_Tt"));
             uvec pt(nFaces, patch.second.at("_pt"));
-            umat *direction;
+            mat *direction;
             if (patch.second.count("_direction")) {
-                direction = new umat(nFaces, patch.second.at("_direction"));
+                direction = new mat(nFaces, patch.second.at("_direction"));
             } else {
-                direction = new umat(nFaces, &mesh.normals(startFace));
+                direction = new mat(nFaces, &mesh.normals(startFace));
             }
 
             for (integer i = 0; i < nFaces; i++) {
