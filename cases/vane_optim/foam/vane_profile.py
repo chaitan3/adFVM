@@ -93,29 +93,31 @@ def create_displacement(param, base, case):
 
     tsuction = transform(suction)
     tpressure = transform(pressure)
-    plt.scatter(tsuction[0], tsuction[1])
-    plt.scatter(tpressure[0], tpressure[1])
-    plt.axis('scaled')
-    plt.show()
+    #plt.scatter(tsuction[0], tsuction[1])
+    #plt.scatter(tpressure[0], tpressure[1])
+    #plt.axis('scaled')
+    #plt.show()
 
     points = np.hstack((tpressure[:,-5:-1], tsuction[:,-5:][:,::-1]))
     t = interpolate.splrep(points[0], points[1], k=4, s=5e-7)
     x = np.linspace(points[0,0], points[0,-1], 10000)
     y = interpolate.splev(x, t)
-    yd = interpolate.splev(x, t, der=1)
-    #plt.plot(x, yd)
+    #plt.plot(x, y)
+    #plt.scatter(points[0], points[1])
+    #plt.axis('scaled')
     #plt.show()
     ts = []
     ys = []
     for i in range(1, 5):
         per_points = np.loadtxt('../vane_coords_l{}.txt'.format(i))
         points2 = np.hstack((tpressure[:,-5:-2], per_points.T, tsuction[:,-5:-2][:,::-1]))
-        ts.append(interpolate.splrep(points2[0], points2[1], k=4, s=5e-7))
+        ts.append(interpolate.splrep(points2[0], points2[1], k=4, s=1e-6))
         ys.append(interpolate.splev(x, ts[-1]))
-        plt.plot(x, y)
-        plt.scatter(points2[0], points2[1])
-        plt.axis('scaled')
-        plt.show()
+        #plt.plot(x, ys[-1])
+        #plt.scatter(points2[0], points2[1])
+        #plt.axis('scaled')
+        #plt.show()
+    #plt.show()
 
 
     #ti = interpolate.splrep(x, yd)
@@ -125,7 +127,7 @@ def create_displacement(param, base, case):
     #yn = interpolate.splev(np.linspace(0, 1, 1000), tn)
     #plt.plot(yn[0], yn[1])
     #yn = y[0] + integrate.cumtrapz(yd, x, initial=0)
-    yn = (1-sum(param))*y + [param[i]*ys[i] for i in range(0,4)]
+    yn = (1-sum(param))*y + sum([param[i]*ys[i] for i in range(0,4)])
     tn = interpolate.splrep(x, yn)
     plt.plot(x, yn)
     plt.plot(x, y)
