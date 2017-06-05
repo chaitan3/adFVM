@@ -15,27 +15,40 @@ def _sanitize(x):
         return x.reshape(-1, x.shape[0])
     return x
 
-def _optimize(fun, bounds):
+def _optimize(fun, bounds, cons=None):
     #res = differential_evolution(fun, bounds)
     #return res.x, res.fun[0]
     def nlopt_fun(x, grads):
         if grads.size > 0:
             raise Exception("!")
         else:
-            return fun(x)
+            #return fun(x)
+            if cons:
+                return fun(x) + 100*max(0, cons(x))
+
+    def nlopt_constraint(x, grads):
+        if grads.size > 0:
+            raise Exception("!")
+        else:
+            return 0.5-cons(x)
+
     opt = nlopt.opt(nlopt.GN_DIRECT_L, bounds.shape[0])
     opt.set_min_objective(nlopt_fun)
     opt.set_lower_bounds(bounds[:,0])
     opt.set_upper_bounds(bounds[:,1])
     opt.set_maxeval(1000)
-    #opt.add_inequality_constraint(nlopt_constraint)
+    #if cons:
+    #    opt.add_inequality_constraint(nlopt_constraint)
     x = (bounds[:,0] + bounds[:,1])/2
     res = opt.optimize(x)
 
     opt = nlopt.opt(nlopt.LN_SBPLX, bounds.shape[0])
+    #opt = nlopt.opt(nlopt.LN_COBYLA, bounds.shape[0])
     opt.set_min_objective(nlopt_fun)
     opt.set_lower_bounds(bounds[:,0])
     opt.set_upper_bounds(bounds[:,1])
+    #if cons:
+    #    opt.add_inequality_constraint(nlopt_constraint)
     opt.set_maxeval(100)
     res = opt.optimize(res)
 
@@ -80,7 +93,7 @@ class SquaredExponentialKernel(Kernel):
         return K
 
 class GaussianProcess(object):
-    def __init__(self, kernel, bounds, noise=None, noiseGP=False):
+    def __init__(self, kernel, bounds, noise=None, noiseGP=False, cons=None):
         self.kernel = kernel
         self.x = []
         self.y = []
@@ -90,6 +103,7 @@ class GaussianProcess(object):
         self.bounds = np.array(bounds)
         self.ndim = self.bounds.shape[0]
         self.noise = noise
+        self.cons = cons
         if noise is None:
             self.noise = [0., np.zeros(self.ndim)]
         self.noiseGP = None
@@ -123,11 +137,20 @@ class GaussianProcess(object):
     def explore(self, n, func):
         assert len(self.x) == 0
 
-        #x = lhs(self.ndim, samples=n, criterion='center')
-        x = lhs(self.ndim, samples=n, criterion='maximin')
         bounds = self.bounds.T
-        x = bounds[[0]] + x*(bounds[[1]]-bounds[[0]])
-        res = func(x)
+        #x = lhs(self.ndim, samples=n, criterion='center')
+        if self.cons:
+            xa = []
+            while len(xa) < n:
+                x = lhs(self.ndim, samples=n, criterion='maximin')
+                x = bounds[[0]] + x*(bounds[[1]]-bounds[[0]])
+                xa.extend(filter(lambda y: self.cons(y) <= 0., x))
+            x = xa[:n]
+        else:
+            x = lhs(self.ndim, samples=n, criterion='maximin')
+            x = bounds[[0]] + x*(bounds[[1]]-bounds[[0]])
+        if self.cons:
+                    res = func(x)
         if len(res) > 2:
             y, yd, yn, ydn = res
             if not isinstance(yn, float):
@@ -178,7 +201,7 @@ class GaussianProcess(object):
         self.Kd += np.diag(np.concatenate((yn, np.hstack(ydn).flatten())))
 
     def posterior_min(self):
-        res = _optimize(lambda x: self.evaluate(x)[0][0], self.bounds)
+        res = _optimize(lambda x: self.evaluate(x)[0][0], self.bounds, cons=self.cons)
         return res
 
     def data_min(self):
@@ -202,7 +225,7 @@ class ExpectedImprovement(AcquisitionFunction):
     def optimize(self):
         res = self.gp.posterior_min()
         self.fmin = res[1] + 1.*self.gp.evaluate(res[0])[1][0][0]**0.5
-        res = _optimize(lambda x: -self.evaluate(x)[0], self.gp.bounds)
+        res = _optimize(lambda x: -self.evaluate(x)[0], self.gp.bounds, cons=self.gp.cons)
         return res[0]
 
 sig = 0.2

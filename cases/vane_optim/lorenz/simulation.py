@@ -124,7 +124,9 @@ def optim():
     #gp.explore(2, objective)
 
     kernel = GP.SquaredExponentialKernel([2., 0.1], 1.)#, [1e-2, 1e-2])
-    gp = GP.GaussianProcess(kernel, orig_bounds, noise=[1e-4, [1e-5, 1e-3]], noiseGP=True)
+    def constraint(x):
+        return sum(x) - 30.6
+    gp = GP.GaussianProcess(kernel, orig_bounds, noise=[1e-4, [1e-5, 1e-3]], noiseGP=True, cons=constraint)
     gp.explore(4, objective)
     #orig_bounds = np.array([[-3., 3], [-3, 3.]])
     #kernel = GP.SquaredExponentialKernel([1., 1], 100.)#, [1e-2, 1e-2])
