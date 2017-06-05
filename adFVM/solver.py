@@ -269,7 +269,7 @@ class Solver(object):
         return boundaryFields
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, reportInterval=1, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
-            startIndex=0, result=0., mode='simulation', source=lambda *args: [0.]*len(args[0]), perturbation=None):
+            startIndex=0, result=0., mode='simulation', source=lambda *args: [0.]*len(args[0]), perturbation=None, avgStart=0):
 
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
@@ -417,7 +417,8 @@ class Solver(object):
                 mesh.update(t, dt)
 
             # objective management
-            result += objective
+            if timeIndex > avgStart:
+                result += objective
             timeSeries.append(objective)
 
             # write management

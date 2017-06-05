@@ -15,9 +15,10 @@ user, args = parser.parse_known_args(config.args)
 
 source = lambda *args: [0.]*len(args[0])
 perturb = []
-locals()['reportInterval'] = 1
+reportInterval = 1
 parameters = []
 adjParams = [None, None, None]
+avgStart = 0
 
 config.importModule(locals(), user.caseFile)
 #print(locals().keys())
@@ -33,18 +34,26 @@ nPerturb = len(perturb)
 primal.timeStepFile = primal.mesh.case + '{0}.{1}.txt'.format(nSteps, writeInterval)
 pprint('')
 
-def writeResult(option, result, info=''):
-    globalResult = parallel.sum(result)
+def writeResult(option, result, info='-', timeSeriesFile=None):
+
+    globalResult = [parallel.sum(res)/(nSteps-avgStart) for res in result]
     resultFile = primal.resultFile
     if parallel.rank == 0:
+        noise = 0
         if option == 'perturb':
-            previousResult = float(open(resultFile).readline().split(' ')[2])
+            previousResult = float(open(resultFile).readline().split(' ')[3])
             globalResult -= previousResult
+        noise = [0. for res in result]
+        if timeSeriesFile:
+            import ar
+            timeSeries = np.loadtxt(primal.timeSeriesFile)[avgStart:]
+            if len(timeSeries.shape) == 1:
+                timeSeries = timeSeries.reshape(-1,1)
+            for index in range(0, len(result)):
+                noise[index] = ar.arsel(timeSeries[:, index]).mu_sigma**2
         with open(resultFile, 'a') as handle:
-            if len(info) > 0:
-                handle.write('{} {} {}\n'.format(option, info, globalResult))
-            else:
-                handle.write('{} {}\n'.format(option, globalResult))
+            for index in range(0, len(result)):
+                handle.write('{} {} {} {} {}\n'.format(option, index, info, globalResult[index], noise[index]))
 
 if __name__ == "__main__":
     mesh = primal.mesh.origMesh
@@ -95,7 +104,7 @@ if __name__ == "__main__":
         result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, 
                             writeInterval=writeInterval, reportInterval=reportInterval, 
                             mode=user.option, startIndex=startIndex, source=source, perturbation=perturbation)
-        writeResult(user.option, result/nSteps, '{}'.format(sim))
+        writeResult(user.option, [result], '{}'.format(sim), primal.timeSeriesFile)
         primal.removeStatusFile()
         # if running multiple sims reset starting index and result
         startIndex = 0

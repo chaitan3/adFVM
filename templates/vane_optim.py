@@ -7,48 +7,10 @@ from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
 config.hdf5 = True
-#caseDir = '/projects/LESOpt/talnikar/vane-optim/'
-#foamDir = caseDir + '/foam/'
-caseDir = '/home/talnikar/adFVM/cases/vane_optim/foam/laminar/'
-foamDir = caseDir
-
-nParam = 8
-paramBounds = 1e-3*np.ones(nParam).reshape(-1,1)
-paramBounds = np.hstack((-paramBounds, paramBounds))
-
-if not sys.argv[0].endswith('optim.py'):
-    primal = RCF(CASEDIR, faceReconstructor='SecondOrder')
+primal = RCF('./', faceReconstructor='SecondOrder')
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
-
-def spawnJob(args, cwd='.'):
-    import subprocess
-    return subprocess.check_call(args, cwd=cwd)
-    #subprocess.call(args)
-    nProcs = 4096
-    #nProcs = 16
-    nProcsPerNode = 16
-    #subprocess.check_call(['mpirun', '-np', nProcs] + args, cwd=cwd)
-    with open('output.log', 'w') as f:
-        subprocess.check_call(['runjob', 
-                         '-n', str(nProcs), 
-                         '-p', str(nProcsPerNode),
-                         '--block', os.environ['COBALT_PARTNAME'],
-                         #'--exp-env', 'BGLOCKLESSMPIO_F_TYPE', 
-                         #'--exp-env', 'PYTHONPATH',
-                         '--env_all',
-                         '--verbose', 'INFO',
-                         ':'] 
-                        + args, stdout=f, stderr=f)
-
-def genMeshParam(param, paramDir):
-    sys.path.append(foamDir)
-    from vane_profile import gen_mesh_param
-    gen_mesh_param(param, foamDir, paramDir + '/foam/', spawnJob, perturb=True)
-    #import shutil
-    #shutil.move(paramDir + 'foam/mesh.hdf5', paramDir + 'mesh.hdf5')
-    return
 
 # heat transfer
 def objectiveHeatTransfer(fields, mesh):

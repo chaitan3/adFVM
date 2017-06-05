@@ -251,8 +251,9 @@ class Adjoint(Solver):
             sensTimeSeries = []
             energyTimeSeries = []
 
-        for index in range(0, nPerturb):
-            writeResult('adjoint', result[index], '{} {}'.format(index, self.scaling))
+        writeResult('adjoint', result, str(self.scaling), self.sensTimeSeriesFile)
+        #for index in range(0, nPerturb):
+        #    writeResult('adjoint', result[index], '{} {}'.format(index, self.scaling))
         self.removeStatusFile()
         return
 

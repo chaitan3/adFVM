@@ -246,11 +246,17 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         tape.evaluate();
         for (integer i = 0; i < mesh.nInternalCells; i++) {
             uscalar v = mesh.volumes(i);
-            rhoaN(i) = rhoaN(i)/v + rho(i).getGradient()/(v*nSteps);
+            //rhoaN(i) = rhoaN(i)/v + rho(i).getGradient()/(v*nSteps);
+            //for (integer j = 0; j < 3; j++) {
+            //    rhoUaN(i, j) = rhoUaN(i, j)/v + rhoU(i, j).getGradient()/(v*nSteps);
+            //}
+            //rhoEaN(i) = rhoEaN(i)/v + rhoE(i).getGradient()/(v*nSteps);
+            rhoaN(i) = rhoaN(i)/v + rho(i).getGradient()/v;
             for (integer j = 0; j < 3; j++) {
-                rhoUaN(i, j) = rhoUaN(i, j)/v + rhoU(i, j).getGradient()/(v*nSteps);
+                rhoUaN(i, j) = rhoUaN(i, j)/v + rhoU(i, j).getGradient()/v;
             }
-            rhoEaN(i) = rhoEaN(i)/v + rhoE(i).getGradient()/(v*nSteps);
+            rhoEaN(i) = rhoEaN(i)/v + rhoE(i).getGradient()/v;
+
         }
         tape.reset();
         
