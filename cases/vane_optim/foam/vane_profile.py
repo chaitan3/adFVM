@@ -1,5 +1,5 @@
 import numpy as np
-from scipy import interpolate, spatial
+from scipy import interpolate, spatial, integrate
 import matplotlib.pyplot as plt
 
 from cStringIO import StringIO
@@ -27,7 +27,7 @@ def fit_bspline(coords, mesh):
     #plt.axis('scaled')
     return t, tn
 
-c_index = [-2, -4]
+c_index = [-1, -4]
 c_scale = [1e-3, 4e-3]
 c_bound = [0.5, 0.5]
 c_count = len(c_index)
@@ -76,13 +76,61 @@ def create_displacement(param, base, case):
     #suction2 = [v1[:n], v2[:n]]
     #pressure2 = [v1[n:], v2[n:]]
 
+    # transformation
+    def transform(coords, rev=False):
+        t1 = 0.036461,-0.052305
+        t2 = 0.0356125, -0.0494455
+        theta = np.arctan((t2[0]-t1[0])/(t2[1]-t1[1]))
+        if rev:
+            theta = -theta
+        tcoords = np.array(coords)
+        rot = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+        t1 = np.array(t1).reshape(-1,1)
+        if rev:
+            return np.matmul(rot, tcoords) + t1
+        else:
+            return np.matmul(rot, tcoords-t1)
 
-    #for prof in [suction, pressure]:
-    #    plt.scatter(prof[0], prof[1])
-    #    for i in range(0, len(prof[0])):
-    #        plt.annotate(str(i), (prof[0][i], prof[1][i]))
-    #plt.axis('scaled')
+    tsuction = transform(suction)
+    tpressure = transform(pressure)
+    plt.scatter(tsuction[0], tsuction[1])
+    plt.scatter(tpressure[0], tpressure[1])
+    plt.axis('scaled')
+    plt.show()
+
+    points = np.hstack((tpressure[:,-5:-1], tsuction[:,-5:][:,::-1]))
+    t = interpolate.splrep(points[0], points[1], k=4, s=5e-7)
+    x = np.linspace(points[0,0], points[0,-1], 10000)
+    y = interpolate.splev(x, t)
+    yd = interpolate.splev(x, t, der=1)
+    #plt.plot(x, yd)
     #plt.show()
+    ts = []
+    ys = []
+    for i in range(1, 5):
+        per_points = np.loadtxt('../vane_coords_l{}.txt'.format(i))
+        points2 = np.hstack((tpressure[:,-5:-2], per_points.T, tsuction[:,-5:-2][:,::-1]))
+        ts.append(interpolate.splrep(points2[0], points2[1], k=4, s=5e-7))
+        ys.append(interpolate.splev(x, ts[-1]))
+        plt.plot(x, y)
+        plt.scatter(points2[0], points2[1])
+        plt.axis('scaled')
+        plt.show()
+
+
+    #ti = interpolate.splrep(x, yd)
+    #tn = interpolate.splantider(ti)
+    #yn = points[1, 0] + interpolate.splev(x, tn)
+    #tn, u = interpolate.splprep([x, yn])
+    #yn = interpolate.splev(np.linspace(0, 1, 1000), tn)
+    #plt.plot(yn[0], yn[1])
+    #yn = y[0] + integrate.cumtrapz(yd, x, initial=0)
+    yn = (1-sum(param))*y + [param[i]*ys[i] for i in range(0,4)]
+    tn = interpolate.splrep(x, yn)
+    plt.plot(x, yn)
+    plt.plot(x, y)
+    plt.axis('scaled')
+    plt.show()
 
     try:
         shutil.rmtree(case + '1')
@@ -93,48 +141,34 @@ def create_displacement(param, base, case):
     config.fileFormat = 'ascii'
 
     repl = {}
-    index = 0
-    t = []
-    spline_points = []
-    spline_points2 = []
-    spline_coeffs = []
     #import pdb;pdb.set_trace()
     for coords, patch in [(suction, 'suction'), (pressure, 'pressure')]:
     #for coords, coords2, patch in [(suction, suction2, 'suction'), (pressure, pressure2, 'pressure')]:
-        points = np.loadtxt(case + '{}_points.txt'.format(patch))
-        t, tn = fit_bspline(coords, points[:,[0,1]])
-        #t2, tn2 = fit_bspline(coords, points[:,[0,1]])
-        #points2 = interpolate.splev(tn, t2) 
-        spline_points.append(points)
-        #spline_points2.append(points2)
-        spline_coeffs.append((t, tn))
+        meshPoints = np.loadtxt(case + '{}_points.txt'.format(patch))
+        newPoints = meshPoints[:,[0,1]].copy()
+        indices = np.logical_and(meshPoints[:,0] > coords[0][-5], meshPoints[:,1] < coords[1][-5])
 
-    for index, patch in enumerate(['suction', 'pressure']):
-        points = spline_points[index]
-        t, tn = spline_coeffs[index]
-        #if points.shape[0] > 0:
-        #    c = copy.deepcopy(t)
-        #    perturb_bspline(param, c, spline_coeffs[0][0], 0)
-        #    xc, yc = perturb_bspline(param, c, spline_coeffs[1][0], 1)
-        #    newPoints = interpolate.splev(tn, c)
+        tpoints = transform(meshPoints[indices][:,[0,1]].T)
+        data = np.vstack((x, y)).T
+        dist = np.cumsum(np.sqrt(((data[1:]-data[:-1])**2).sum(axis=1)))
+        p1 = dist/dist[-1]
+        ind  = spatial.distance.cdist(data, tpoints.T).argmin(axis=0)
+        p1 = p1[ind]
+        data = np.vstack((x, yn)).T
+        dist = np.cumsum(np.sqrt(((data[1:]-data[:-1])**2).sum(axis=1)))
+        p2 = dist/dist[-1]
 
-        #    index = np.argsort(tn)
-        #    plt.scatter(xc, yc, s=80, marker='*', c='k')
-        #    plt.plot(points[:,0], points[:,1], 'b.')
-        #    plt.plot(newPoints[0][index], newPoints[1][index], 'k')
-        #    #plt.quiver(points[:,0], points[:,1], newPoints[0]-points[:,0], newPoints[1]-points[:,1])
-        #else:
-        #    newPoints = [np.zeros((0.,)), np.zeros((0.,))]
-        ##if patch == 'pressure':
-        ##    import pdb;pdb.set_trace()
-        newPoints = points[:,[0,1]].T
+        p = np.abs(p2[:,None]-p1[None,:])
+        pi = np.argmin(p, axis=0)
+        xn = x[pi]
+        ynp = interpolate.splev(xn, tn)
+        newPoints[indices] = transform((xn, ynp), rev=True).T
 
-        pointDisplacement = np.vstack((newPoints[0]-points[:,0], newPoints[1]-points[:,1], 0*points[:,2])).T
+        pointDisplacement = np.vstack((newPoints[:,0]-meshPoints[:,0], newPoints[:,1]-meshPoints[:,1], 0*meshPoints[:,2])).T
         pointDisplacement = np.ascontiguousarray(pointDisplacement)
         handle = StringIO()
         writeField(handle, pointDisplacement, 'vector', 'value')
         repl[patch] = handle.getvalue()
-        index += 1
     
     plt.axis('scaled')
     plt.axis('off')
