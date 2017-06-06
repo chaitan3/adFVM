@@ -16,6 +16,7 @@ user, args = parser.parse_known_args(config.args)
 source = lambda *args: [0.]*len(args[0])
 perturb = []
 reportInterval = 1
+sampleInterval = 1
 parameters = []
 adjParams = [None, None, None]
 avgStart = 0
@@ -46,7 +47,7 @@ def writeResult(option, result, info='-', timeSeriesFile=None):
         noise = [0. for res in result]
         if timeSeriesFile:
             import ar
-            timeSeries = np.loadtxt(timeSeriesFile)[avgStart:]
+            timeSeries = np.loadtxt(timeSeriesFile)[avgStart::sampleInterval]
             if len(timeSeries.shape) == 1:
                 timeSeries = timeSeries.reshape(-1,1)
             for index in range(0, len(result)):

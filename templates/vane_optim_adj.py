@@ -10,7 +10,7 @@ config.hdf5 = True
 caseDir = './'
 #primal = RCF(caseDir, objective='pressureLoss', objectivePLInfo={})
 #primal = RCF(caseDir, objective='heatTransfer', objectiveDragInfo="pressure|suction")
-primal = RCF(caseDir, fixedTimeStep=True, objective='optim', objectivePLInfo={}, objectiveDragInfo="pressure|suction")
+primal = RCF(caseDir, timeSeriesAppend='2', fixedTimeStep=True, objective='optim', objectivePLInfo={}, objectiveDragInfo="pressure|suction")
 nParam = 4
 
 # pressure loss
@@ -38,11 +38,11 @@ for index in range(0, nParam):
 
 parameters = 'mesh'
 reportInterval = 1
-nSteps = 200000
-writeInterval = 10000
-avgStart = 10000
-sampleInterval = 100
-startTime = 3.0
+nSteps = 20000
+writeInterval = 1000
+avgStart = 4000
+sampleInterval = 20
+startTime = 3.0004
 dt = 2e-8
 
 # definition of 1 flow through time

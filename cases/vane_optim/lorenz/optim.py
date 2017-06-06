@@ -13,6 +13,7 @@ import gp as GP
 appsDir = '/home/talnikar/adFVM/apps/'
 workDir = '/home/talnikar/adFVM/cases/vane_optim/test/'
 caseFile = '/home/talnikar/adFVM/templates/vane_optim.py'
+adjCaseFile = '/home/talnikar/adFVM/templates/vane_optim_adj.py'
 
 primal = os.path.join(appsDir, 'problem.py')
 adjoint = os.path.join(appsDir, 'adjoint.py')
@@ -44,7 +45,7 @@ def readObjectiveFile(objectiveFile, gradEps):
     with open(objectiveFile, 'r') as f:
         for line in f.readlines(): 
             words = line.split(' ')
-            if words[0] == 'orig':
+            if words[0] == 'orig' and len(objective) == 0:
                 objective += [float(words[-2]), float(words[-1])]
             elif words[0] == 'adjoint':
                 per = gradEps[index]
@@ -96,10 +97,13 @@ def evaluate(param, genAdjoint=False, runSimulation=False):
     # copy caseFile
     shutil.copy(caseFile, paramDir)
     problemFile = paramDir + os.path.basename(caseFile)
+    shutil.copy(adjCaseFile, paramDir)
+    adjointFile = paramDir + os.path.basename(adjCaseFile)
 
     if runSimulation:
         spawnJob([sys.executable, primal, problemFile], cwd=paramDir)
-        spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
+        spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
+        spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
         return readObjectiveFile(os.path.join(paramDir, 'objective.txt'), gradEps)
     return
 

@@ -26,7 +26,8 @@ class Solver(object):
                         'fixedTimeStep': False,
                         'stepFactor': 1.0,
                         'postpro': [],
-                        'sourceTerms': []
+                        'sourceTerms': [],
+                        'timeSeriesAppend': ''
                     }
 
     def __init__(self, case, **userConfig):
@@ -44,7 +45,7 @@ class Solver(object):
         self.mesh = Mesh.create(case)
         self.resultFile = self.mesh.case + 'objective.txt'
         self.statusFile = self.mesh.case + 'status.pkl'
-        self.timeSeriesFile = self.mesh.case + 'timeSeries.txt'
+        self.timeSeriesFile = self.mesh.case + 'timeSeries{}.txt'.format(self.timeSeriesAppend)
         Field.setSolver(self)
 
         self.timeStepCoeff = getattr(timestep, self.timeIntegrator)()
