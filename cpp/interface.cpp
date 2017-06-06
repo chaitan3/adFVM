@@ -292,10 +292,10 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
             return Py_BuildValue("(NNNNNN)", rhoaNObject, rhoUaNObject, rhoEaNObject, rhoSaObject, rhoUSaObject, rhoESaObject);
 
         } else {
-            uvec areas, volumes, weights, deltas;
-            umat normals;
-            arrType<uscalar, 2> linearWeights;
-            arrType<uscalar, 2, 3> quadraticWeights;
+            uvec areas(mesh.nFaces), volumes(mesh.nInternalCells), weights(mesh.nFaces), deltas(mesh.nFaces);
+            umat normals(mesh.nFaces);
+            arrType<uscalar, 2> linearWeights(mesh.nFaces);
+            arrType<uscalar, 2, 3> quadraticWeights(mesh.nFaces);
             areas.adGetGrad(mesh.areas);
             volumes.adGetGrad(mesh.volumes);
             normals.adGetGrad(mesh.normals);

@@ -43,10 +43,13 @@ def objectiveHeatTransfer(fields, mesh):
 def getPlane(solver):
     point = np.array([0.052641,-0.1,0.005])
     normal = np.array([1.,0.,0.])
+    ptin = 175158.
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
-    #print interCells.shape, interArea.sum()
-    solver.postpro.extend([(ad.ivector(), interCells), (ad.bcmatrix(), interArea)])
-    return solver.postpro[-2][0], solver.postpro[-1][0], normal
+    return {'cells':interCells.astype(np.int32), 
+            'areas': interArea, 
+            'normal': normal, 
+            'ptin': ptin
+           }
 primal.defaultConfig["objectivePLInfo"] = getPlane(primal)
     
 def objectivePressureLoss(fields, mesh):
@@ -83,10 +86,10 @@ for index in range(0, nParam):
     perturb.append(makePerturb(index))
 
 parameters = 'mesh'
-nSteps = 100000
-writeInterval = 5000
+nSteps = 10
+writeInterval = 5
 reportInterval = 1
-avgStart = 500
+avgStart = 2
 startTime = 3.0
 dt = 1e-8
 

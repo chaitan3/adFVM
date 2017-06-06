@@ -46,7 +46,7 @@ def writeResult(option, result, info='-', timeSeriesFile=None):
         noise = [0. for res in result]
         if timeSeriesFile:
             import ar
-            timeSeries = np.loadtxt(primal.timeSeriesFile)[avgStart:]
+            timeSeries = np.loadtxt(timeSeriesFile)[avgStart:]
             if len(timeSeries.shape) == 1:
                 timeSeries = timeSeries.reshape(-1,1)
             for index in range(0, len(result)):

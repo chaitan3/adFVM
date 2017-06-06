@@ -3,13 +3,13 @@ from subprocess import check_output
 import os
 import pickle
 
-def get_mesh(param, work_dir, work_dir_base):
+def get_mesh(param, work_dir, work_dir_base, fields=True):
     server = 'kolmogorov.mit.edu'
     base = '/home/talnikar/adFVM/cases/vane_optim/foam/laminar/'
     case = base + work_dir_base + '/'
     mesh_log = work_dir + 'mesh.log'
     with open(work_dir + 'params.pkl', 'w') as f:
-        pickle.dump([param, base, case], f)
+        pickle.dump([param, base, case, fields], f)
     #configure timeouts
     #copy profile to server
     try:
@@ -19,14 +19,18 @@ def get_mesh(param, work_dir, work_dir_base):
 
     #run mesh generator
     try:
-        ret = check_call('ssh {} \"python {}/test.py {}\"'.format(server, base, case + 'params.pkl'), shell=True, stderr=STDOUT)
-        write_log(mesh_log, ret)
+        #ret = check_output('ssh {} \"python {}/vane_profile.py gen_mesh_param {}\"'.format(server, base, case + 'params.pkl'), shell=True, stderr=STDOUT)
+        ret = check_call('ssh {} \"python {}/vane_profile.py gen_mesh_param {}\"'.format(server, base, case + 'params.pkl'), shell=True)
+        #write_log(mesh_log, ret)
     except:
         raise Exception('Could not run mesh generator')
     
     #copy the mesh
     try:
-        for f in ['mesh.hdf5', '3.hdf5']:
+        f = 'mesh.hdf5'
+        check_output(['scp', '{0}:{1}'.format(server, case + f), work_dir + f])
+        if fields:
+            f = '3.hdf5'
             check_output(['scp', '{0}:{1}'.format(server, case + f), work_dir + f])
     except:
         raise Exception('Could not copy mesh from server')

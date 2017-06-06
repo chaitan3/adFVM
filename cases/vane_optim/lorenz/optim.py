@@ -3,9 +3,11 @@
 import numpy as np
 import os, sys, glob, shutil
 import subprocess
+import cPickle as pkl
 
 from adFVM import config
 import client
+import gp as GP
 
 appsDir = '/home/talnikar/adFVM/apps/'
 workDir = '/home/talnikar/adFVM/cases/vane_optim/test/'
@@ -17,68 +19,66 @@ paramHistory = []
 eps = 1e-5
 
 def spawnJob(args, cwd='.'):
-    import subprocess
-    return subprocess.check_call(args, cwd=cwd)
-    #subprocess.call(args)
-    nProcs = 4096
-    #nProcs = 16
-    nProcsPerNode = 16
-    #subprocess.check_call(['mpirun', '-np', nProcs] + args, cwd=cwd)
-    with open('output.log', 'w') as f, open('error.log', 'w') as fe:
-        subprocess.check_call(['runjob', 
-                         '-n', str(nProcs), 
-                         '-p', str(nProcsPerNode),
-                         '--block', os.environ['COBALT_PARTNAME'],
-                         #'--exp-env', 'BGLOCKLESSMPIO_F_TYPE', 
-                         #'--exp-env', 'PYTHONPATH',
-                         '--env_all',
-                         '--verbose', 'INFO',
-                         ':'] 
-                        + args, stdout=f, stderr=fe)
+    #nProcs = 4096
+    #nProcsPerNode = 16
+    nProcs = 16
+    with open(cwd + 'output.log', 'w') as f, open(cwd + 'error.log', 'w') as fe:
+        subprocess.check_call(['mpirun', '-np', str(nProcs)] + args, cwd=cwd, stdout=f, stderr=fe)
+        #subprocess.check_call(['runjob', 
+        #                 '-n', str(nProcs), 
+        #                 '-p', str(nProcsPerNode),
+        #                 '--block', os.environ['COBALT_PARTNAME'],
+        #                 #'--exp-env', 'BGLOCKLESSMPIO_F_TYPE', 
+        #                 #'--exp-env', 'PYTHONPATH',
+        #                 '--env_all',
+        #                 '--verbose', 'INFO',
+        #                 ':'] 
+        #                + args, cwd=cwd stdout=f, stderr=fe)
 
 def readObjectiveFile(objectiveFile):
-    objective = None
+    objective = []
     gradient = []
     gradientNoise = []
     with open(objectiveFile, 'r') as f:
         for line in f.readlines(): 
             words = line.split(' ')
-            if words[0] == 'objective':
-                objective = [float(words[-2]), float(words[-1])]
-                
+            if words[0] == 'orig':
+                objective += [float(words[-2]), float(words[-1])]
             elif words[0] == 'adjoint':
                 gradient.append(float(words[-2])/eps)
                 gradientNoise.append(float(words[-1])/(eps**2))
-    assert objective
+    assert len(objective) > 0
     assert len(gradient) > 0
     return objective + gradient + gradientNoise
 
 def evaluate(param, genAdjoint=True, runSimulation=True):
+    param = np.array(param)
     index = len(paramHistory)
     paramHistory.append(param)
     base = 'param{}/'.format(index)
     paramDir = os.path.join(workDir, base)
 
     # get mesh from remote server
-    os.makedirs(paramDir)
-    client.get_mesh(param, paramDir, base)
+    #os.makedirs(paramDir)
+    #client.get_mesh(param, paramDir, base)
     
     # copy caseFile
     shutil.copy(caseFile, paramDir)
     problemFile = paramDir + os.path.basename(caseFile)
 
+    genAdjoint=False
     if genAdjoint:
         for index in range(0, len(param)):
             perturbedParam = param.copy()
             perturbedParam[index] += eps
-            base2 = base + 'grad{}'.format(index)
-            gradDir = os.path.join(paramDir, base2)
+            base2 = base + 'grad{}/'.format(index)
+            gradDir = os.path.join(workDir, base2)
             os.makedirs(gradDir)
-            get_mesh(perturbedParam, gradDir, base2)
+            client.get_mesh(perturbedParam, gradDir, base2, fields=False)
 
-    if runSimulation:
-        spawnJob([sys.executable, primal, problemFile])
-        spawnJob([sys.executable, adjoint, problemFile])
+    #if runSimulation:
+        #spawnJob([sys.executable, primal, problemFile], cwd=paramDir)
+        #spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
 
     return readObjectiveFile(os.path.join(paramDir, 'objective.txt'))
 
@@ -91,6 +91,8 @@ def constraint(x):
     return sum(x) - 1.
 
 def optim():
+    print evaluate([1.,0.,0.,0.])
+
     orig_bounds = np.array([[0.,1.], [0,1], [0,1], [0,1]])
     L = 0.25
     sigma = 1.
@@ -108,8 +110,8 @@ def optim():
     for i in range(0, 100):
         res = gp.posterior_min()
         gps.append(res)
-        print 'data min:', gp.data_min())
-        print 'posterior min:', res)
+        print 'data min:', gp.data_min()
+        print 'posterior min:', res
         print 'ei choice:', i, x
 
         x = ei.optimize()
