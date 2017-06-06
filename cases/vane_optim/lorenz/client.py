@@ -13,7 +13,8 @@ def get_mesh(param, work_dir, work_dir_base, fields=True):
     #configure timeouts
     #copy profile to server
     try:
-        check_output(['rsync', '-av', work_dir + 'params.pkl', '{0}:{1}'.format(server, case)])
+        check_output(['ssh', server, 'mkdir', '-p', case])
+        check_output(['scp', work_dir + 'params.pkl', '{0}:{1}'.format(server, case)])
     except:
         raise Exception('Could not copy profile to server')
 

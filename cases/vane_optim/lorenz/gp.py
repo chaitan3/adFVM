@@ -134,23 +134,23 @@ class GaussianProcess(object):
         ecov = np.outer(emu, emu)*(np.exp(cov)-1)
         return emu, ecov
 
-    def explore(self, n, func):
+    def explore(self, n, func, x=None):
         assert len(self.x) == 0
 
         bounds = self.bounds.T
         #x = lhs(self.ndim, samples=n, criterion='center')
-        if self.cons:
-            xa = []
-            while len(xa) < n:
+        if x is None:
+            if self.cons:
+                xa = []
+                while len(xa) < n:
+                    x = lhs(self.ndim, samples=n, criterion='maximin')
+                    x = bounds[[0]] + x*(bounds[[1]]-bounds[[0]])
+                    xa.extend(filter(lambda y: self.cons(y) <= 0., x))
+                x = xa[:n]
+            else:
                 x = lhs(self.ndim, samples=n, criterion='maximin')
                 x = bounds[[0]] + x*(bounds[[1]]-bounds[[0]])
-                xa.extend(filter(lambda y: self.cons(y) <= 0., x))
-            x = xa[:n]
-        else:
-            x = lhs(self.ndim, samples=n, criterion='maximin')
-            x = bounds[[0]] + x*(bounds[[1]]-bounds[[0]])
-        if self.cons:
-                    res = func(x)
+        res = func(x)
         if len(res) > 2:
             y, yd, yn, ydn = res
             if not isinstance(yn, float):
