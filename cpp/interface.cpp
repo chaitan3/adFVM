@@ -125,6 +125,12 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
                 if (cvalue == "pressureLoss") {
                     rcf->objective = objectivePressureLoss;
                 }
+                if (cvalue == "heatTransfer") {
+                    rcf->objective = objectiveHeatTransfer;
+                }
+                if (cvalue == "optim") {
+                    rcf->objective = objectiveOptim;
+                }
             }
         } else if (ckey == "objectiveDragInfo") {
             if (value != Py_None) {

@@ -226,7 +226,8 @@ class Adjoint(Solver):
                     
                     for derivative, delphi in zip(paramGradient, perturbation):
                         sensitivity = np.sum(derivative * delphi)
-                        result[index] += sensitivity
+                        if result > avgStart:
+                            result[index] += sensitivity
                         sensTimeSeries[-1][index] = sensitivity
 
                 #parallel.mpi.Barrier()
@@ -241,10 +242,7 @@ class Adjoint(Solver):
             self.writeFields(fields, t, skipProcessor=True)
             #print(fields[0].field.max())
             self.writeStatusFile([checkpoint + 1, result])
-            sensTimeSeries = parallel.mpi.gather(sensTimeSeries, root=0)
             #energyTimeSeries = mpi.gather(timeSeries, root=0)
-            if parallel.rank == 0:
-                sensTimeSeries = np.sum(sensTimeSeries, axis=0)
             if parallel.rank == 0:
                 with open(self.sensTimeSeriesFile, 'a') as f:
                     np.savetxt(f, sensTimeSeries)

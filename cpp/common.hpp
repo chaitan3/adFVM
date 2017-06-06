@@ -18,12 +18,16 @@ using namespace std;
     typedef codi::RealReverse scalar;
     //typedef codi::RealReversePrimal scalar;
     //typedef codi::RealReversePrimalIndex scalar;
+
+    #include "ampi_tape.hpp"
 #else 
     #include "mpi.h"
     #define AMPI_Irecv MPI_Irecv
     #define AMPI_Isend MPI_Isend
     #define AMPI_Waitall MPI_Waitall
     #define AMPI_Request MPI_Request
+    #define AMPI_Allreduce MPI_Allreduce
+    #define AMPI_Reduce MPI_Reduce
     typedef double scalar;
 #endif
 

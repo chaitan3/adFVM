@@ -112,7 +112,27 @@ def constraint(x):
     return sum(x) - 1.
 
 def optim():
-    print evaluate([0.15,0.15,0.3,0.14])
+    #print evaluate([0.15,0.15,0.3,0.14])
+
+        # exploration? deterministic?
+    #gp.explore(16, evaluate)
+    xe = np.array([[.99,0,0,0],
+                   [0,.99,0,0],
+                   [0,0,.99,0],
+                   [0,0,0,.99],
+                   [0,0,0,0],
+                   [0.24,0.24,0.24,0.24],
+                   #[0.49, 0.49, 0, 0]
+                   #[0.33, 0.33, 0.33, 0]
+        ])
+
+    for i in range(0, 10):
+        evaluate(xe[i])
+    #gp.explore(10, evaluate, x=xe)
+
+    values = []
+    evals = []
+    gps = []
 
     orig_bounds = np.array([[0.,1.], [0,1], [0,1], [0,1]])
     L = 0.25
@@ -121,28 +141,6 @@ def optim():
     gp = GP.GaussianProcess(kernel, orig_bounds, noise=[0.1, [0.5, 0.5, 0.5, 0.5]], noiseGP=True, cons=constraint)
     ei = GP.ExpectedImprovement(gp)
     
-    # exploration? deterministic?
-    #gp.explore(16, evaluate)
-    xe = np.array([[1,0,0,0],
-                   [0,1,0,0],
-                   [0,0,1,0],
-                   [0,0,0,1],
-                   [0,0,0,0],
-                   [0.25,0.25,0.25,0.25],
-                   [0.34,0.33,0.33,0],
-                   [0.34,0,0.33,0.33],
-                   [0.34,0.33,0,0.33],
-                   [0,0.33,0.33,0.33],
-        ])
-
-    for i in range(0, 10):
-        evaluate(xe[i])
-    #gp.explore(10, evaluate, x=xe)
-    exit(1)
-
-    values = []
-    evals = []
-    gps = []
 
     for i in range(0, 100):
         res = gp.posterior_min()

@@ -36,7 +36,7 @@ pprint('')
 
 def writeResult(option, result, info='-', timeSeriesFile=None):
 
-    globalResult = [parallel.sum(res)/(nSteps-avgStart) for res in result]
+    globalResult = [res/(nSteps-avgStart) for res in result]
     resultFile = primal.resultFile
     if parallel.rank == 0:
         noise = 0
@@ -103,7 +103,7 @@ if __name__ == "__main__":
             perturbation = None
         result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, 
                             writeInterval=writeInterval, reportInterval=reportInterval, 
-                            mode=user.option, startIndex=startIndex, source=source, perturbation=perturbation)
+                            mode=user.option, startIndex=startIndex, source=source, perturbation=perturbation, avgStart=avgStart)
         writeResult(user.option, [result], '{}'.format(sim), primal.timeSeriesFile)
         primal.removeStatusFile()
         # if running multiple sims reset starting index and result

@@ -5,6 +5,8 @@
 #ifndef DENSITY_HPP
 #define DENSITY_HPP
 
+
+
 #define faceReconstructor secondOrder
 //#define faceReconstructor firstOrder
 #define riemannSolver eulerRoe

@@ -8,7 +8,9 @@ from adFVM.density import RCF
 
 config.hdf5 = True
 caseDir = './'
-primal = RCF(caseDir, objective='pressureLoss', objectivePLInfo={})
+#primal = RCF(caseDir, objective='pressureLoss', objectivePLInfo={})
+#primal = RCF(caseDir, objective='heatTransfer', objectiveDragInfo="pressure|suction")
+primal = RCF(caseDir, objective='optim', objectivePLInfo={}, objectiveDragInfo="pressure|suction")
 nParam = 4
 
 def dot(a, b):

@@ -234,18 +234,14 @@ class Solver(object):
 
     def readStatusFile(self):
         data = None
-        scatterData = None
         if parallel.rank == 0:
             with open(self.statusFile, 'rb') as status:
                 readData = pkl.load(status)
-            data = readData[:-1]
-            scatterData = readData[-1]
+            data = readData
         data = parallel.mpi.bcast(data, root=0)
-        data.append(parallel.mpi.scatter(scatterData, root=0))
         return data
 
     def writeStatusFile(self, data):
-        data[-1] = parallel.mpi.gather(data[-1], root=0)
         if parallel.rank == 0:
             with open(self.statusFile, 'wb') as status:
                 pkl.dump(data, status)
@@ -441,10 +437,6 @@ class Solver(object):
                     #self.writeFields(fields + [dtc, local], t)
 
                 # write timeSeries if in orig mode (problem.py)
-                if mode == 'orig' or mode == 'perturb':
-                    timeSeries = parallel.mpi.gather(timeSeries, root=0)
-                    if parallel.rank == 0:
-                        timeSeries = np.sum(timeSeries, axis=0)
                 if parallel.rank == 0:
                     if mode == 'orig':
                         with open(self.timeStepFile, 'a') as f:

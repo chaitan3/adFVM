@@ -97,8 +97,8 @@ def create_displacement(param, base, case):
 
     tsuction = transform(suction)
     tpressure = transform(pressure)
-    #plt.scatter(tsuction[0], tsuction[1])
-    #plt.scatter(tpressure[0], tpressure[1])
+    #plt.scatter(suction[0], suction[1])
+    #plt.scatter(pressure[0], pressure[1])
     #plt.axis('scaled')
     #plt.show()
 
@@ -256,6 +256,7 @@ def gen_mesh_param(param, base, case, fields=True, perturb=True):
 if __name__ == '__main__':
     func = locals()[sys.argv[1]]
     paramsFile = sys.argv[2]
+    #params = [np.zeros(4), './', 'param0/']
     with open(paramsFile) as f:
         params = pickle.load(f)
     func(*params)
