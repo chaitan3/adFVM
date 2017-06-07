@@ -106,6 +106,7 @@ def create_displacement(param, base, case):
     t = interpolate.splrep(points[0], points[1], k=4, s=5e-7)
     x = np.linspace(points[0,0], points[0,-1], 10000)
     y = interpolate.splev(x, t)
+    yd = interpolate.splev(x, t, der=1)
     #plt.plot(x, y)
     #plt.scatter(points[0], points[1])
     #plt.axis('scaled')
@@ -133,6 +134,7 @@ def create_displacement(param, base, case):
     #yn = y[0] + integrate.cumtrapz(yd, x, initial=0)
     yn = (1-sum(param))*y + sum([param[i]*ys[i] for i in range(0,4)])
     tn = interpolate.splrep(x, yn)
+    ydn = interpolate.splev(x, tn, der=1)
     plt.plot(x, yn)
     plt.plot(x, y)
     plt.axis('scaled')
@@ -159,17 +161,32 @@ def create_displacement(param, base, case):
         data = np.vstack((x, y)).T
         dist = np.cumsum(np.sqrt(((data[1:]-data[:-1])**2).sum(axis=1)))
         p1 = dist/dist[-1]
+        # parameter scaling
+        #p1s = p1[np.argmin(np.abs(yd))]
         ind  = spatial.distance.cdist(data, tpoints.T).argmin(axis=0)
         p1 = p1[ind]
+
         data = np.vstack((x, yn)).T
         dist = np.cumsum(np.sqrt(((data[1:]-data[:-1])**2).sum(axis=1)))
         p2 = dist/dist[-1]
+        p2s = p2[np.argmin(np.abs(ydn))]
+        if patch == 'pressure':
+            p1s = p1[0]
+            assert (p1 <= p1s).all()
+            p1 = p1*p2s/p1s
+        else:
+            p1s = p1[-1]
+            assert (p1 >= p1s).all()
+            p1 = p2s + (p1-p1s)*(1-p2s)/(1-p1s)
 
         p = np.abs(p2[:,None]-p1[None,:])
         pi = np.argmin(p, axis=0)
+        assert pi.shape == p1.shape
+        #print patch, p2[pi].max(), p2[pi]
         xn = x[pi]
         ynp = interpolate.splev(xn, tn)
         newPoints[indices] = transform((xn, ynp), rev=True).T
+        np.savetxt(case + patch + '_newp.txt', newPoints)
 
         pointDisplacement = np.vstack((newPoints[:,0]-meshPoints[:,0], newPoints[:,1]-meshPoints[:,1], 0*meshPoints[:,2])).T
         pointDisplacement = np.ascontiguousarray(pointDisplacement)
@@ -201,7 +218,8 @@ def extrude_mesh(case, spawn_job):
     spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case], shell=True)
     map(os.remove, glob.glob('*.obj'))
         
-def perturb_mesh(base, case, fields=True, extrude=True):
+#def perturb_mesh(base, case, fields=True, extrude=True):
+def perturb_mesh(base, case, fields=True, extrude=False):
     # serial 
     spawn_job([foam_dir + 'moveMesh', '-case', case], shell=True)
     shutil.move(case + '1.0001/polyMesh/points', case + 'constant/polyMesh/points')
@@ -215,12 +233,13 @@ def perturb_mesh(base, case, fields=True, extrude=True):
         spawn_job([scripts_dir + 'field/map_fields.py', mapBase, case, time, time])
         spawn_job([foam_dir + 'decomposePar', '-time', time, '-case', case], shell=True)
         spawn_job([scripts_dir + 'conversion/hdf5serial.py', case, time])
+        spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5', case + '3.hdf5'])
     else:
         spawn_job([foam_dir + 'decomposePar', '-time', 'constant', '-case', case], shell=True)
         spawn_job([scripts_dir + 'conversion/hdf5serial.py', case])
+        spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5'])
     for folder in glob.glob(case + 'processor*'):
         shutil.rmtree(folder)
-    spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5', case + '3.hdf5'])
 
     # if done this way, no mapping and hdf5 conversion needed
     # serial for laminar
@@ -265,4 +284,5 @@ if __name__ == '__main__':
     #params = [np.zeros(4), './', 'param0/']
     with open(paramsFile) as f:
         params = pickle.load(f)
+    params[0][1] *= 0.8
     func(*params)

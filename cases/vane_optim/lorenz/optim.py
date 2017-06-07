@@ -9,11 +9,13 @@ from multiprocessing import Pool
 import client
 import gp as GP
 
-appsDir = '/home/talnikar/adFVM-cpp/apps/'
-#workDir = '/home/talnikar/adFVM/cases/vane_optim/test/'
-workDir = '/projects/LESOpt/talnikar/vane_optim/'
-caseFile = '/home/talnikar/adFVM-cpp/templates/vane_optim.py'
-adjCaseFile = '/home/talnikar/adFVM-cpp/templates/vane_optim_adj.py'
+homeDir = '/home/talnikar/adFVM/'
+workDir = '/home/talnikar/adFVM/cases/vane_optim/test/'
+#homeDir = '/home/talnikar/adFVM-cpp/'
+#workDir = '/projects/LESOpt/talnikar/vane_optim/'
+appsDir = homeDir + 'apps/'
+caseFile = homeDir + 'templates/vane_optim.py'
+adjCaseFile = homeDir + 'templates/vane_optim_adj.py'
 primal = os.path.join(appsDir, 'problem.py')
 adjoint = os.path.join(appsDir, 'adjoint.py')
 eps = 0.01
@@ -71,9 +73,9 @@ def readObjectiveFile(objectiveFile, gradEps):
 def get_mesh(args):
     client.get_mesh(*args)
 
-def evaluate(param, state, genAdjoint=True, runSimulation=True):
-#def evaluate(param, genAdjoint=False, runSimulation=False): 
-    return np.random.rand(),  np.random.rand(4), np.random.rand(), np.random.rand(4)
+#def evaluate(param, state, genAdjoint=True, runSimulation=True):
+def evaluate(param, state, genAdjoint=False, runSimulation=False): 
+    #return np.random.rand(),  np.random.rand(4), np.random.rand(), np.random.rand(4)
     stateIndex = STATES.index(get_state(state))
     assert stateIndex <= 4
     index = len(state['points'])-1
@@ -229,7 +231,7 @@ def optim():
     #    pkl.dump([evals, gps, values], f)
 
 if __name__ == "__main__":
-    optim()
-    #doe()
+    #optim()
+    doe()
 
 

@@ -1,0 +1,63 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.4.0                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       pointVectorField;
+    location    "0";
+    object      pointDisplacement;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [ 0 1 0 0 0 0 0 ];
+
+internalField   uniform ( 0 0 0 );
+
+boundaryField
+{
+    midplane1
+    {
+        type            cyclic;
+    }
+    midplane2
+    {
+        type            cyclic;
+    }
+    z1plane
+    {
+        type            cyclic;
+    }
+    z2plane
+    {
+        type            cyclic;
+    }
+    inlet
+    {
+        type            fixedValue;
+        value           uniform ( 0 0 0 );
+    }
+    outlet
+    {
+        type            fixedValue;
+        value           uniform ( 0 0 0 );
+    }
+    pressure
+    {
+        type            fixedValue;
+        value           uniform ( 111 0 0 );
+    }
+    suction
+    {
+        type            fixedValue;
+        value           uniform ( 222 0 0 );
+    }
+}
+
+
+// ************************************************************************* //
