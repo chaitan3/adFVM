@@ -235,7 +235,8 @@ def spawn_job(args, shell=False):
         subprocess.check_call(args)
 
 def gen_mesh_param(param, base, case, fields=True, perturb=True):
-    case = case +'/'
+    sys.stdout = open(case + 'mesh_output.log', 'a')
+    sys.stderr = open(case + 'mesh_error.log', 'a')
     shutil.copytree(base + 'constant', case + 'constant')
     shutil.copytree(base + '0', case + '0')
     shutil.copytree(base + 'system', case + 'system')
