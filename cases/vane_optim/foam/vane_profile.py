@@ -196,7 +196,7 @@ def extrude_mesh(case, spawn_job):
     shutil.copyfile(case + 'system/createPatchDict.patch', case + 'system/createPatchDict')
     spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case], shell=True)
     spawn_job([foam_dir + 'extrudeMesh'], cwd=case, shell=True)
-    spawn_job([foam_dir + 'transformPoints', '-translate', '(0 0 -0.01)', '-case', case], shell=True)
+    spawn_job([foam_dir + 'transformPoints', '-translate', '\"(0 0 -0.01)\"', '-case', case], shell=True)
     shutil.copyfile(case + 'system/createPatchDict.cyclic', case + 'system/createPatchDict')
     spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case], shell=True)
     map(os.remove, glob.glob('*.obj'))
@@ -230,14 +230,14 @@ def perturb_mesh(base, case, fields=True, extrude=True):
     #spawn_job([sys.executable, os.path.join(scripts_dir, 'conversion', 'hdf5mesh.py'), case, '1.0001'])
     return 
 
-def spawn_job(args, shell=False):
+def spawn_job(args, cwd='.', shell=False):
     if shell:
         cmd = ' '.join(args)
-        subprocess.check_call('source /opt/openfoam240/etc/bashrc; {}'.format(cmd), shell=True, executable='/bin/bash',
+        subprocess.check_call('source /opt/openfoam240/etc/bashrc; {}'.format(cmd), cwd=cwd, shell=True, executable='/bin/bash',
                 stdout=sys.stdout, stderr=sys.stderr)
     else:
         subprocess.check_call(args,
-                stdout=sys.stdout, stderr=sys.stderr)
+                stdout=sys.stdout, stderr=sys.stderr, cwd=cwd)
 
 def gen_mesh_param(param, base, case, fields=True, perturb=True):
     sys.stdout = open(case + 'mesh_output.log', 'a')
