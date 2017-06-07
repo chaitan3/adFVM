@@ -7,10 +7,10 @@ from os.path import expanduser
 home = expanduser("~")
 matop = False
 
-os.environ['CC'] = 'ccache mpicc'
-os.environ['CXX'] = 'mpicxx'
-#os.environ['CC'] = 'mpicc'
+#os.environ['CC'] = 'ccache mpicc'
 #os.environ['CXX'] = 'mpicxx'
+os.environ['CC'] = 'mpicc'
+os.environ['CXX'] = 'mpicxx'
 #os.environ['CC'] = '/home/talnikar/local/bin/gcc'
 #os.environ['CXX'] = '/home/talnikar/local/bin/gcc'
 
@@ -24,8 +24,8 @@ if matop:
 
 incdirs += [home + '/.local/include']
 libdirs += [home + '/.local/lib']
-#incdirs += ['/projects/LESOpt/talnikar/local/include']
-#libdirs += ['/projects/LESOpt/talnikar/local/lib/']
+incdirs += ['/projects/LESOpt/talnikar/local/include']
+libdirs += ['/projects/LESOpt/talnikar/local/lib/']
 
 if matop:
 #petscdir = '/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real/'

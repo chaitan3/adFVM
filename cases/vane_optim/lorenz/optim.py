@@ -6,19 +6,31 @@ import subprocess
 import cPickle as pkl
 from multiprocessing import Pool
 
-from adFVM import config
 import client
 import gp as GP
 
-appsDir = '/home/talnikar/adFVM/apps/'
-workDir = '/home/talnikar/adFVM/cases/vane_optim/test/'
-caseFile = '/home/talnikar/adFVM/templates/vane_optim.py'
-adjCaseFile = '/home/talnikar/adFVM/templates/vane_optim_adj.py'
-
+appsDir = '/home/talnikar/adFVM-cpp/apps/'
+#workDir = '/home/talnikar/adFVM/cases/vane_optim/test/'
+workDir = '/projects/LESOpt/talnikar/vane_optim/'
+caseFile = '/home/talnikar/adFVM-cpp/templates/vane_optim.py'
+adjCaseFile = '/home/talnikar/adFVM-cpp/templates/vane_optim_adj.py'
 primal = os.path.join(appsDir, 'problem.py')
 adjoint = os.path.join(appsDir, 'adjoint.py')
-paramHistory = []
 eps = 0.01
+
+stateFile = 'state.pkl'
+STATES = ['BEGIN', 'MESH', 'PRIMAL1', 'PRIMAL2', 'ADJOINT', 'DONE']
+def save_state(state):
+    with open(stateFile, 'w') as f:
+        pkl.dump(state, f)
+def load_state():
+    with open(stateFile, 'r') as f:
+        return pkl.load(f)
+def update_state(state, value):
+    state['state'][-1] = value
+    save_state(state)
+def get_state(state):
+    return state['state'][-1]
 
 def spawnJob(args, cwd='.'):
     #nProcs = 4096
@@ -59,21 +71,23 @@ def readObjectiveFile(objectiveFile, gradEps):
 def get_mesh(args):
     client.get_mesh(*args)
 
-#def evaluate(param, genAdjoint=True, runSimulation=True):
-def evaluate(param, genAdjoint=False, runSimulation=False):
+def evaluate(param, state, genAdjoint=True, runSimulation=True):
+#def evaluate(param, genAdjoint=False, runSimulation=False): 
+    return np.random.rand(),  np.random.rand(4), np.random.rand(), np.random.rand(4)
+    stateIndex = STATES.index(get_state(state))
+    assert stateIndex <= 4
+    index = len(state['points'])-1
     param = np.array(param)
-    index = len(paramHistory)
-    paramHistory.append(param)
     base = 'param{}/'.format(index)
     paramDir = os.path.join(workDir, base)
 
     # get mesh from remote server
-    os.makedirs(paramDir)
     args = [(param, paramDir, base, True)]
-    #get_mesh(args[0])
-
     gradEps = []
 
+    if not os.path.exists(paramDir):
+        os.makedirs(paramDir)
+    #get_mesh(args[0])
     if genAdjoint:
         for index in range(0, len(param)):
             perturbedParam = param.copy()
@@ -87,12 +101,15 @@ def evaluate(param, genAdjoint=False, runSimulation=False):
 
             base2 = base + 'grad{}/'.format(index)
             gradDir = os.path.join(workDir, base2)
-            os.makedirs(gradDir)
+            if not os.path.exists(gradDir):
+                os.makedirs(gradDir)
             args.append((perturbedParam, gradDir, base2, False))
             #get_mesh(args[-1])
 
-    pool = Pool(len(args))
-    res = pool.map(get_mesh, args)
+    if stateIndex == 0:
+        pool = Pool(len(args))
+        res = pool.map(get_mesh, args)
+        update_state(state, 'MESH')
 
     # copy caseFile
     shutil.copy(caseFile, paramDir)
@@ -101,9 +118,18 @@ def evaluate(param, genAdjoint=False, runSimulation=False):
     adjointFile = paramDir + os.path.basename(adjCaseFile)
 
     if runSimulation:
-        spawnJob([sys.executable, primal, problemFile], cwd=paramDir)
-        spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
-        spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
+        if stateIndex <= 1:
+            spawnJob([sys.executable, primal, problemFile], cwd=paramDir)
+            update_state(state, 'PRIMAL1')
+
+        if stateIndex <= 2:
+            spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
+            update_state(state, 'PRIMAL2')
+
+        if stateIndex <= 3:
+            spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
+            update_state(state, 'ADJOINT')
+
         return readObjectiveFile(os.path.join(paramDir, 'objective.txt'), gradEps)
     return
 
@@ -115,11 +141,7 @@ def evaluate(param, genAdjoint=False, runSimulation=False):
 def constraint(x):
     return sum(x) - 1.
 
-def optim():
-    #print evaluate([0.15,0.15,0.3,0.14])
-
-        # exploration? deterministic?
-    #gp.explore(16, evaluate)
+def doe():
     xe = np.array([[.99,0,0,0],
                    [0,.99,0,0],
                    [0,0,.99,0],
@@ -129,15 +151,18 @@ def optim():
                    #[0.49, 0.49, 0, 0]
                    #[0.33, 0.33, 0.33, 0]
         ])
+    state = {'points':[], 'evals':[], 'state': []}
+    for i in range(0, len(xe)):
+        x = xe[i]
+        state['points'].append(x)
+        state['state'].append('BEGIN')
+        save_state(state)
+        res = evaluate(x, state)
+        state['evals'].append(res)
+        update_state(state, 'DONE')
 
-    for i in range(0, 10):
-        evaluate(xe[i])
-    #gp.explore(10, evaluate, x=xe)
-
-    values = []
-    evals = []
-    gps = []
-
+def optim():
+    
     orig_bounds = np.array([[0.,1.], [0,1], [0,1], [0,1]])
     L = 0.25
     sigma = 1.
@@ -146,16 +171,35 @@ def optim():
     ei = GP.ExpectedImprovement(gp)
     
 
-    for i in range(0, 100):
-        res = gp.posterior_min()
-        gps.append(res)
+    assert os.path.exists(stateFile)
+    state = load_state()
+    if get_state(state) != 'DONE':
+        x = state['points'][-1]
+        res = evaluate(x, state)
+        state['evals'].append(res)
+        update_state(state, 'DONE')
+    x = state['points']
+    y = [res[0] for res in state['evals']]
+    yd = [res[1] for res in state['evals']]
+    yn = [res[2] for res in state['evals']]
+    ydn = [res[3] for res in state['evals']]
+    gp.train(x, y, yd, yn, ydn)
+
+    for i in range(len(state['points']), 100):
         print 'data min:', gp.data_min()
-        print 'posterior min:', res
-        print 'ei choice:', i, x
+        print 'posterior min:', gp.posterior_min()
 
         x = ei.optimize()
-        y, yd, yn, ydn = evaluate(x)
-        gp.train(x, y, yd, yn, ydn)
+        print 'ei choice:', i, x
+        state['points'].append(x)
+        state['state'].append('BEGIN')
+        save_state(state)
+        res = evaluate(x, state)
+        print 'result:', res
+        state['evals'].append(res)
+        update_state(state, 'DONE')
+
+        gp.train(x, *res)
 
         #eix = ei.evaluate(xs)
         #plt.plot(x1, eix.reshape(x1.shape))
@@ -186,6 +230,6 @@ def optim():
 
 if __name__ == "__main__":
     optim()
-    #minimum()
+    #doe()
 
 
