@@ -1,5 +1,7 @@
 #include "common.hpp"
 #include "density.hpp"
+
+#ifdef MATOP
 #include <petscksp.h>
 
 class Matop {
@@ -11,3 +13,4 @@ class Matop {
     Matop(RCF* rcf);    
     void heat_equation(RCF *rcf, const arrType<uscalar, 5> u, const uvec DT, const uscalar dt, arrType<uscalar, 5>& un);
 };
+#endif

@@ -1,6 +1,8 @@
 #include "matop.hpp"
 #define nrhs 5
 
+#ifdef MATOP
+
 Matop::Matop(RCF* rcf) {
     const Mesh& mesh = *(rcf->mesh);
 
@@ -122,3 +124,4 @@ void Matop::heat_equation(RCF *rcf, const arrType<uscalar, nrhs> u, const uvec D
     MatDestroy(&A);
 }
 
+#endif

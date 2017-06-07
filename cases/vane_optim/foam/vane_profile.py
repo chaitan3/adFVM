@@ -220,7 +220,7 @@ def perturb_mesh(base, case, fields=True, extrude=True):
         spawn_job([scripts_dir + 'conversion/hdf5serial.py', case])
     for folder in glob.glob(case + 'processor*'):
         shutil.rmtree(folder)
-    #spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5', case + '3.hdf5'])
+    spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5', case + '3.hdf5'])
 
     # if done this way, no mapping and hdf5 conversion needed
     # serial for laminar
