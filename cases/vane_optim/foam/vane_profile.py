@@ -284,5 +284,4 @@ if __name__ == '__main__':
     #params = [np.zeros(4), './', 'param0/']
     with open(paramsFile) as f:
         params = pickle.load(f)
-    params[0][1] *= 0.8
     func(*params)
