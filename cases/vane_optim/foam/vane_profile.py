@@ -201,15 +201,18 @@ def extrude_mesh(case, spawn_job):
     spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case], shell=True)
     map(os.remove, glob.glob('*.obj'))
         
-def perturb_mesh(base, case, fields=True):
+def perturb_mesh(base, case, fields=True, extrude=True):
     # serial 
     spawn_job([foam_dir + 'moveMesh', '-case', case], shell=True)
     shutil.move(case + '1.0001/polyMesh/points', case + 'constant/polyMesh/points')
     time = '3.0'
-    #extrude_mesh(case, spawn_job)
-    #spawn_job([scripts_dir + 'field/map_fields.py', base + '3d_baseline/', case, time, time])
+    mapBase = base
+    if extrude:
+        extrude_mesh(case, spawn_job)
+        mapBase += '3d_baseline/'
+        shutil.copyfile(base + 'system/decomposeParDict.extrude', case + 'system/decomposeParDict')
     if fields:
-        spawn_job([scripts_dir + 'field/map_fields.py', base, case, time, time])
+        spawn_job([scripts_dir + 'field/map_fields.py', mapBase, case, time, time])
         spawn_job([foam_dir + 'decomposePar', '-time', time, '-case', case], shell=True)
         spawn_job([scripts_dir + 'conversion/hdf5serial.py', case, time])
     else:
@@ -230,9 +233,11 @@ def perturb_mesh(base, case, fields=True):
 def spawn_job(args, shell=False):
     if shell:
         cmd = ' '.join(args)
-        subprocess.check_call('source /opt/openfoam240/etc/bashrc; {}'.format(cmd), shell=True, executable='/bin/bash')
+        subprocess.check_call('source /opt/openfoam240/etc/bashrc; {}'.format(cmd), shell=True, executable='/bin/bash',
+                stdout=sys.stdout, stderr=sys.stderr)
     else:
-        subprocess.check_call(args)
+        subprocess.check_call(args,
+                stdout=sys.stdout, stderr=sys.stderr)
 
 def gen_mesh_param(param, base, case, fields=True, perturb=True):
     sys.stdout = open(case + 'mesh_output.log', 'a')
