@@ -5,12 +5,12 @@ import os
 
 from os.path import expanduser
 home = expanduser("~")
-matop = False
+matop = True
 
-#os.environ['CC'] = 'ccache mpicc'
-#os.environ['CXX'] = 'mpicxx'
 os.environ['CC'] = 'mpicc'
 os.environ['CXX'] = 'mpicxx'
+#os.environ['CC'] = 'mpicc'
+#os.environ['CXX'] = 'mpicxx'
 #os.environ['CC'] = '/home/talnikar/local/bin/gcc'
 #os.environ['CXX'] = '/home/talnikar/local/bin/gcc'
 
@@ -24,12 +24,13 @@ if matop:
 
 incdirs += [home + '/.local/include']
 libdirs += [home + '/.local/lib']
-incdirs += ['/projects/LESOpt/talnikar/local/include']
-libdirs += ['/projects/LESOpt/talnikar/local/lib/']
+#incdirs += ['/projects/LESOpt/talnikar/local/include']
+#libdirs += ['/projects/LESOpt/talnikar/local/lib/']
 
 if matop:
-#petscdir = '/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real/'
-    petscdir = home + '/sources/petsc-3.7.5/arch-linux2-c-opt'
+    #petscdir = '/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real/'
+    #petscdir = home + '/sources/petsc-3.7.5/arch-linux2-c-opt'
+    petscdir = home + '/sources/petsc/linux-gnu-c-opt'
     incdirs += [petscdir + '/../include', petscdir + '/include']
     libdirs += [petscdir + '/lib']
     libs += ['petsc']
@@ -38,9 +39,9 @@ adjargs = '-DADIFF'
 if matop:
     adjargs += ' -DMATOP'
 
-for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], ['', adjargs]):
+#for module, args in zip(['adFVMcpp', 'adFVMcpp_ad'], ['', adjargs]):
 #for module, args in zip(['adFVMcpp'], ['']):
-#for module, args in zip(['adFVMcpp_ad'], [adjargs]):
+for module, args in zip(['adFVMcpp_ad'], [adjargs]):
     compile_args = ['-std=c++11', '-O3']#, '-march=native']
     #compile_args=['-std=c++11', '-O0', '-g']
     if len(args) > 0:

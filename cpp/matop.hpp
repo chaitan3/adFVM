@@ -1,7 +1,9 @@
 #include "common.hpp"
 #include "density.hpp"
 
-#ifdef MATOP
+#ifndef MATOP_HPP
+#define MATOP_HPP
+
 #include <petscksp.h>
 
 class Matop {

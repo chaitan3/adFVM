@@ -233,11 +233,11 @@ def perturb_mesh(base, case, fields=True, extrude=False):
         spawn_job([scripts_dir + 'field/map_fields.py', mapBase, case, time, time])
         spawn_job([foam_dir + 'decomposePar', '-time', time, '-case', case], shell=True)
         spawn_job([scripts_dir + 'conversion/hdf5serial.py', case, time])
-        spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5', case + '3.hdf5'])
+        #spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5', case + '3.hdf5'])
     else:
         spawn_job([foam_dir + 'decomposePar', '-time', 'constant', '-case', case], shell=True)
         spawn_job([scripts_dir + 'conversion/hdf5serial.py', case])
-        spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5'])
+        #spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5'])
     for folder in glob.glob(case + 'processor*'):
         shutil.rmtree(folder)
 
@@ -258,7 +258,8 @@ def spawn_job(args, cwd='.', shell=False):
         subprocess.check_call(args,
                 stdout=sys.stdout, stderr=sys.stderr, cwd=cwd)
 
-def gen_mesh_param(param, base, case, fields=True, perturb=True):
+#def gen_mesh_param(param, base, case, fields=True, perturb=True):
+def gen_mesh_param(param, base, case, fields=True, perturb=False):
     sys.stdout = open(case + 'mesh_output.log', 'a')
     sys.stderr = open(case + 'mesh_error.log', 'a')
     shutil.copytree(base + 'constant', case + 'constant')

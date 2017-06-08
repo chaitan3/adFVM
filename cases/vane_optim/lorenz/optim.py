@@ -18,7 +18,10 @@ caseFile = homeDir + 'templates/vane_optim.py'
 adjCaseFile = homeDir + 'templates/vane_optim_adj.py'
 primal = os.path.join(appsDir, 'problem.py')
 adjoint = os.path.join(appsDir, 'adjoint.py')
-eps = 0.01
+#eps = 1e-2
+#eps = 1e-3
+# from norm of new points displacement less than 1e-5 needed
+eps = 1e-5
 
 stateFile = 'state.pkl'
 STATES = ['BEGIN', 'MESH', 'PRIMAL1', 'PRIMAL2', 'ADJOINT', 'DONE']
@@ -73,8 +76,8 @@ def readObjectiveFile(objectiveFile, gradEps):
 def get_mesh(args):
     client.get_mesh(*args)
 
-#def evaluate(param, state, genAdjoint=True, runSimulation=True):
-def evaluate(param, state, genAdjoint=False, runSimulation=False): 
+def evaluate(param, state, genAdjoint=True, runSimulation=True):
+#def evaluate(param, state, genAdjoint=True, runSimulation=False): 
     #return np.random.rand(),  np.random.rand(4), np.random.rand(), np.random.rand(4)
     stateIndex = STATES.index(get_state(state))
     assert stateIndex <= 4
@@ -123,14 +126,17 @@ def evaluate(param, state, genAdjoint=False, runSimulation=False):
         if stateIndex <= 1:
             spawnJob([sys.executable, primal, problemFile], cwd=paramDir)
             update_state(state, 'PRIMAL1')
+        if stateIndex <= 1:
+            spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
+            update_state(state, 'PRIMAL1')
 
-        if stateIndex <= 2:
-            spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
-            update_state(state, 'PRIMAL2')
+        #if stateIndex <= 2:
+        #    spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
+        #    update_state(state, 'PRIMAL2')
 
-        if stateIndex <= 3:
-            spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
-            update_state(state, 'ADJOINT')
+        #if stateIndex <= 3:
+        #    spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
+        #    update_state(state, 'ADJOINT')
 
         return readObjectiveFile(os.path.join(paramDir, 'objective.txt'), gradEps)
     return
@@ -144,12 +150,13 @@ def constraint(x):
     return sum(x) - 1.
 
 def doe():
-    xe = np.array([[.99,0,0,0],
-                   [0,.99,0,0],
-                   [0,0,.99,0],
-                   [0,0,0,.99],
-                   [0,0,0,0],
+    xe = np.array([#[.99,0,0,0],
+                   #[0,.99,0,0],
+                   #[0,0,.99,0],
+                   #[0,0,0,.99],
+                   #[0,0,0,0],
                    [0.24,0.24,0.24,0.24],
+
                    #[0.49, 0.49, 0, 0]
                    #[0.33, 0.33, 0.33, 0]
         ])
@@ -159,7 +166,8 @@ def doe():
         state['points'].append(x)
         state['state'].append('BEGIN')
         save_state(state)
-        res = evaluate(x, state)
+        #res = evaluate(x, state)
+        res = evaluate(x, state, runSimulation=False)
         state['evals'].append(res)
         update_state(state, 'DONE')
 
@@ -172,7 +180,6 @@ def optim():
     gp = GP.GaussianProcess(kernel, orig_bounds, noise=[0.1, [0.5, 0.5, 0.5, 0.5]], noiseGP=True, cons=constraint)
     ei = GP.ExpectedImprovement(gp)
     
-
     assert os.path.exists(stateFile)
     state = load_state()
     if get_state(state) != 'DONE':

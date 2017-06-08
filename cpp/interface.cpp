@@ -2,10 +2,14 @@
 #include "timestep.hpp"
 #include "density.hpp"
 #include "objective.hpp"
+
 #ifdef MATOP
     #include "matop.hpp"
     Matop* matop;
 #endif
+
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
 
 RCF* rcf;
 tuple<scalar, scalar> (*timeIntegrator)(RCF*, const vec&, const mat&, const vec&, vec&, mat&, vec&, scalar, scalar) = SSPRK;
@@ -71,8 +75,8 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     rcf = new RCF();
     rcf->setMesh(mesh);
 
-    #ifdef MATOP
     #ifdef ADIFF
+    #ifdef MATOP
         integer argc = 0;
         PetscInitialize(&argc, NULL, NULL, NULL);
         matop = new Matop(rcf);
@@ -460,6 +464,8 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     }
 #endif
 
+#ifdef MATOP
+    #pragma message "content: " STR(MATOP)
     static PyObject* viscosity(PyObject *self, PyObject *args) {
 
         //cout << "forward 1" << endl;
@@ -474,13 +480,12 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         const Mesh& mesh = *(rcf->mesh);
 
         arrType<uscalar, 5> un(mesh.nInternalCells);
-        #ifdef MATOP
-            matop->heat_equation(rcf, u, DT, dt, un);
-        #endif
+        matop->heat_equation(rcf, u, DT, dt, un);
         
         PyObject *uNObject = putArray(un);
         return uNObject;
     }
+#endif
 
 PyMODINIT_FUNC
 initFunc(void)
@@ -494,7 +499,9 @@ initFunc(void)
         {"ghost",  ghost, METH_VARARGS, "Execute a shell command."},
         {"ghost_default",  ghost_default, METH_VARARGS, "Execute a shell command."},
         #endif
+        #ifdef MATOP
         {"viscosity",  viscosity, METH_VARARGS, "Execute a shell command."},
+        #endif
         {NULL, NULL, 0, NULL}        /* Sentinel */
     };
 
