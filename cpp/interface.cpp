@@ -3,6 +3,8 @@
 #include "density.hpp"
 #include "objective.hpp"
 
+//#define MATOP 1
+
 #ifdef MATOP
     #include "matop.hpp"
     Matop* matop;
