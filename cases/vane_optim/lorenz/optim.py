@@ -151,17 +151,27 @@ def doe():
                    [0,0,0,.99],
                    [0,0,0,0],
                    [0.24,0.24,0.24,0.24],
-
-                   #[0.49, 0.49, 0, 0]
+                   [0.49, 0., 0.49, 0],
+                   [0., 0.49, 0.49, 0],
                    #[0.33, 0.33, 0.33, 0]
         ])
-    state = {'points':[], 'evals':[], 'state': []}
-    for i in range(0, len(xe)):
+    if os.path.exists(stateFile):
+        state = load_state()
+        for index in range(0, len(state['state'])):
+            if get_state(state, index) != 'MESH':
+                x = state['points'][index]
+                res = evaluate(x, state, index, runSimulation=False)
+                #state['evals'].append(res)
+                #update_state(state, 'DONE', index)
+
+    else:
+        state = {'points':[], 'evals':[], 'state': []}
+    for i in range(len(state['points']), len(xe)):
         x = xe[i]
         state['points'].append(x)
         state['state'].append('BEGIN')
         save_state(state)
-        evaluate(x, state, runSimulation=False)
+        res = evaluate(x, state, runSimulation=False)
         #res = evaluate(x, state)
         #state['evals'].append(res)
         #update_state(state, 'DONE')

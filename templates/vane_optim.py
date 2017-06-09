@@ -46,8 +46,8 @@ sampleInterval = 100
 #writeInterval = 5
 #avgStart = 0
 #sampleInterval = 1
-#startTime = 3.0
-#dt = 2e-8
+startTime = 3.0
+dt = 2e-8
 
 # definition of 1 flow through time
 # 4e-4s = (0.08m)/(200m/s)
