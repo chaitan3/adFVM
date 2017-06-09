@@ -190,12 +190,14 @@ def create_displacement(param, base, case):
 
         pointDisplacement = np.vstack((newPoints[:,0]-meshPoints[:,0], newPoints[:,1]-meshPoints[:,1], 0*meshPoints[:,2])).T
         pointDisplacement = np.ascontiguousarray(pointDisplacement)
+        pointDisplacement /= 1e-4
         handle = StringIO()
         writeField(handle, pointDisplacement, 'vector', 'value')
         repl[patch] = handle.getvalue()
     
 
-    dispFile = case + '1/pointDisplacement'
+    #dispFile = case + '1/pointDisplacement'
+    dispFile = case + '1/pointMotionU'
     with open(dispFile) as f:
         data = f.readlines()
     for index, line in enumerate(data):
@@ -218,8 +220,8 @@ def extrude_mesh(case, spawn_job):
     spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case], shell=True)
     map(os.remove, glob.glob('*.obj'))
         
-#def perturb_mesh(base, case, fields=True, extrude=True):
-def perturb_mesh(base, case, fields=True, extrude=False):
+def perturb_mesh(base, case, fields=True, extrude=True):
+#def perturb_mesh(base, case, fields=True, extrude=False):
     # serial 
     spawn_job([foam_dir + 'moveMesh', '-case', case], shell=True)
     shutil.move(case + '1.0001/polyMesh/points', case + 'constant/polyMesh/points')
@@ -233,11 +235,11 @@ def perturb_mesh(base, case, fields=True, extrude=False):
         spawn_job([scripts_dir + 'field/map_fields.py', mapBase, case, time, time])
         spawn_job([foam_dir + 'decomposePar', '-time', time, '-case', case], shell=True)
         spawn_job([scripts_dir + 'conversion/hdf5serial.py', case, time])
-        #spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5', case + '3.hdf5'])
+        spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5', case + '3.hdf5'])
     else:
         spawn_job([foam_dir + 'decomposePar', '-time', 'constant', '-case', case], shell=True)
         spawn_job([scripts_dir + 'conversion/hdf5serial.py', case])
-        #spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5'])
+        spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5'])
     for folder in glob.glob(case + 'processor*'):
         shutil.rmtree(folder)
 
@@ -258,8 +260,8 @@ def spawn_job(args, cwd='.', shell=False):
         subprocess.check_call(args,
                 stdout=sys.stdout, stderr=sys.stderr, cwd=cwd)
 
-#def gen_mesh_param(param, base, case, fields=True, perturb=True):
-def gen_mesh_param(param, base, case, fields=True, perturb=False):
+def gen_mesh_param(param, base, case, fields=True, perturb=True):
+#def gen_mesh_param(param, base, case, fields=True, perturb=False):
     sys.stdout = open(case + 'mesh_output.log', 'a')
     sys.stderr = open(case + 'mesh_error.log', 'a')
     shutil.copytree(base + 'constant', case + 'constant')

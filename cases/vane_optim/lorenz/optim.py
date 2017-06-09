@@ -126,35 +126,30 @@ def evaluate(param, state, genAdjoint=True, runSimulation=True):
         if stateIndex <= 1:
             spawnJob([sys.executable, primal, problemFile], cwd=paramDir)
             update_state(state, 'PRIMAL1')
-        if stateIndex <= 1:
-            spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
-            update_state(state, 'PRIMAL1')
+        #if stateIndex <= 1:
+        #    spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
+        #    update_state(state, 'PRIMAL1')
 
-        #if stateIndex <= 2:
-        #    spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
-        #    update_state(state, 'PRIMAL2')
+        if stateIndex <= 2:
+            spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
+            update_state(state, 'PRIMAL2')
 
-        #if stateIndex <= 3:
-        #    spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
-        #    update_state(state, 'ADJOINT')
+        if stateIndex <= 3:
+            spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
+            update_state(state, 'ADJOINT')
 
         return readObjectiveFile(os.path.join(paramDir, 'objective.txt'), gradEps)
     return
-
-#from adFVM.optim import designOfExperiment
-#print designOfExperiment(lambda x: evaluate(x, False, False), paramBounds, 2*nParam)
-#print evaluate(np.zeros(8)*1., False, False)
-
 
 def constraint(x):
     return sum(x) - 1.
 
 def doe():
-    xe = np.array([#[.99,0,0,0],
-                   #[0,.99,0,0],
-                   #[0,0,.99,0],
-                   #[0,0,0,.99],
-                   #[0,0,0,0],
+    xe = np.array([[.99,0,0,0],
+                   [0,.99,0,0],
+                   [0,0,.99,0],
+                   [0,0,0,.99],
+                   [0,0,0,0],
                    [0.24,0.24,0.24,0.24],
 
                    #[0.49, 0.49, 0, 0]

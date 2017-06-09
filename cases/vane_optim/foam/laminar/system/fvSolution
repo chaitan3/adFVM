@@ -52,9 +52,14 @@ solvers
 
     "(cellMotionU|cellMotionUz)"
     {
-        $p;
+        solver          GAMG;
         tolerance       1e-08;
         relTol          0;
+        smoother        GaussSeidel;
+        cacheAgglomeration true;
+        nCellsInCoarsestLevel 10;
+        agglomerator    faceAreaPair;
+        mergeLevels     1;
     }
 
 }

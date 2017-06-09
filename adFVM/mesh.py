@@ -1045,7 +1045,7 @@ def writeField(handle, field, dtype, initial):
             if dtype == 'scalar':
                 handle.write(str(value[0]) + '\n')
             else:
-                handle.write('(' + ' '.join(np.char.mod('%.12f', value)) + ')\n')
+                handle.write('(' + ' '.join(np.char.mod('%.30f', value)) + ')\n')
     handle.write(')\n;\n')
 
 
