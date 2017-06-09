@@ -218,7 +218,10 @@ def extrude_mesh(case, spawn_job):
     spawn_job([foam_dir + 'transformPoints', '-translate', '\"(0 0 -0.01)\"', '-case', case], shell=True)
     shutil.copyfile(case + 'system/createPatchDict.cyclic', case + 'system/createPatchDict')
     spawn_job([foam_dir + 'createPatch', '-overwrite', '-case', case], shell=True)
-    map(os.remove, glob.glob('*.obj'))
+    try:
+        map(os.remove, glob.glob('*.obj'))
+    except:
+        pass
         
 def perturb_mesh(base, case, fields=True, extrude=True):
 #def perturb_mesh(base, case, fields=True, extrude=False):
