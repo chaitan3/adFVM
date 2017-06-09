@@ -9,10 +9,10 @@ from multiprocessing import Pool
 import client
 import gp as GP
 
-homeDir = '/home/talnikar/adFVM/'
-workDir = '/home/talnikar/adFVM/cases/vane_optim/test/'
-#homeDir = '/home/talnikar/adFVM-cpp/'
-#workDir = '/projects/LESOpt/talnikar/vane_optim/'
+#homeDir = '/home/talnikar/adFVM/'
+#workDir = '/home/talnikar/adFVM/cases/vane_optim/test/'
+homeDir = '/home/talnikar/adFVM-cpp/'
+workDir = '/projects/LESOpt/talnikar/vane_optim/doe/'
 appsDir = homeDir + 'apps/'
 caseFile = homeDir + 'templates/vane_optim.py'
 adjCaseFile = homeDir + 'templates/vane_optim_adj.py'
@@ -31,11 +31,11 @@ def save_state(state):
 def load_state():
     with open(stateFile, 'r') as f:
         return pkl.load(f)
-def update_state(state, value):
-    state['state'][-1] = value
+def update_state(state, value, index=-1):
+    state['state'][index] = value
     save_state(state)
-def get_state(state):
-    return state['state'][-1]
+def get_state(state, index=-1):
+    return state['state'][index]
 
 def spawnJob(args, cwd='.'):
     #nProcs = 4096
@@ -76,10 +76,10 @@ def readObjectiveFile(objectiveFile, gradEps):
 def get_mesh(args):
     client.get_mesh(*args)
 
-def evaluate(param, state, genAdjoint=True, runSimulation=True):
+def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
 #def evaluate(param, state, genAdjoint=True, runSimulation=False): 
     #return np.random.rand(),  np.random.rand(4), np.random.rand(), np.random.rand(4)
-    stateIndex = STATES.index(get_state(state))
+    stateIndex = STATES.index(get_state(state, currIndex))
     assert stateIndex <= 4
     index = len(state['points'])-1
     param = np.array(param)
@@ -114,7 +114,7 @@ def evaluate(param, state, genAdjoint=True, runSimulation=True):
     if stateIndex == 0:
         pool = Pool(len(args))
         res = pool.map(get_mesh, args)
-        update_state(state, 'MESH')
+        update_state(state, 'MESH', currIndex)
 
     # copy caseFile
     shutil.copy(caseFile, paramDir)
@@ -125,18 +125,18 @@ def evaluate(param, state, genAdjoint=True, runSimulation=True):
     if runSimulation:
         if stateIndex <= 1:
             spawnJob([sys.executable, primal, problemFile], cwd=paramDir)
-            update_state(state, 'PRIMAL1')
+            update_state(state, 'PRIMAL1', currIndex)
         #if stateIndex <= 1:
         #    spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
         #    update_state(state, 'PRIMAL1')
 
         if stateIndex <= 2:
             spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
-            update_state(state, 'PRIMAL2')
+            update_state(state, 'PRIMAL2', currIndex)
 
         if stateIndex <= 3:
             spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
-            update_state(state, 'ADJOINT')
+            update_state(state, 'ADJOINT', currIndex)
 
         return readObjectiveFile(os.path.join(paramDir, 'objective.txt'), gradEps)
     return
@@ -161,10 +161,10 @@ def doe():
         state['points'].append(x)
         state['state'].append('BEGIN')
         save_state(state)
+        evaluate(x, state, runSimulation=False)
         #res = evaluate(x, state)
-        res = evaluate(x, state, runSimulation=False)
-        state['evals'].append(res)
-        update_state(state, 'DONE')
+        #state['evals'].append(res)
+        #update_state(state, 'DONE')
 
 def optim():
     
@@ -177,11 +177,12 @@ def optim():
     
     assert os.path.exists(stateFile)
     state = load_state()
-    if get_state(state) != 'DONE':
-        x = state['points'][-1]
-        res = evaluate(x, state)
-        state['evals'].append(res)
-        update_state(state, 'DONE')
+    for index in range(0, len(state['state'])):
+        if get_state(state, index) != 'DONE':
+            x = state['points'][index]
+            res = evaluate(x, state, index)
+            state['evals'].append(res)
+            update_state(state, 'DONE', index)
     x = state['points']
     y = [res[0] for res in state['evals']]
     yd = [res[1] for res in state['evals']]
