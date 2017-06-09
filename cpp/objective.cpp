@@ -129,8 +129,8 @@ scalar objectiveOptim(RCF *rcf, const mat& U, const vec& T, const vec& p) {
     scalar ht = objectiveHeatTransfer(rcf, U, T, p);
     scalar pc = objectivePressureLoss(rcf, U, T, p);
     scalar k = (rcf->*rcf->mu)(300)*rcf->Cp/rcf->Pr;
-    scalar Nu = -ht*0.05/(120.*k);
-    scalar obj = Nu/5600. + pc*33.;
+    scalar Nu = -ht*0.71e-3/(120.*k);
+    scalar obj = Nu/2000. + pc*0.4;
     //cout << "Nu " << Nu << endl;
     //cout << "pc " << pc << endl;
     //cout << "obj " << obj << endl;
