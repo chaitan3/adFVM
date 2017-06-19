@@ -102,8 +102,9 @@ parameters = 'source'
 #parameters = ('BCs', 'p', 'left', 'U0')
 
 nSteps = 10
-writeInterval = 5
+writeInterval = 2
 reportInterval = 1
 startTime = 3.0
 dt = 1e-10
 adjParams = [1e-3, 'abarbanel', None]
+runCheckpoints = 3

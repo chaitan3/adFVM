@@ -20,6 +20,7 @@ sampleInterval = 1
 parameters = []
 adjParams = [None, None, None]
 avgStart = 0
+runCheckpoints = 2**30
 
 config.importModule(locals(), user.caseFile)
 #print(locals().keys())

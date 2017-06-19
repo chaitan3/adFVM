@@ -10,7 +10,7 @@ from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
 from adFVM.solver import Solver
 
-from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart
+from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints
 
 import numpy as np
 import time
@@ -108,7 +108,8 @@ class Adjoint(Solver):
         pprint()
 
         totalCheckpoints = nSteps/writeInterval
-        for checkpoint in range(firstCheckpoint, totalCheckpoints):
+        nCheckpoints = min(firstCheckpoint + runCheckpoints, totalCheckpoints)
+        for checkpoint in range(firstCheckpoint, nCheckpoints):
             pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
             primalIndex = nSteps - (checkpoint + 1)*writeInterval
             t = timeSteps[primalIndex, 0]
@@ -250,11 +251,13 @@ class Adjoint(Solver):
                     np.savetxt(f, energyTimeSeries)
             sensTimeSeries = []
             energyTimeSeries = []
+        #pprint(checkpoint, totalCheckpoints)
 
-        writeResult('adjoint', result, str(self.scaling), self.sensTimeSeriesFile)
-        #for index in range(0, nPerturb):
-        #    writeResult('adjoint', result[index], '{} {}'.format(index, self.scaling))
-        self.removeStatusFile()
+        if checkpoint + 1 == totalCheckpoints:
+            writeResult('adjoint', result, str(self.scaling), self.sensTimeSeriesFile)
+            #for index in range(0, nPerturb):
+            #    writeResult('adjoint', result[index], '{} {}'.format(index, self.scaling))
+            self.removeStatusFile()
         return
 
 def main():
