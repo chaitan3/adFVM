@@ -24,7 +24,8 @@ adjoint = os.path.join(appsDir, 'adjoint.py')
 eps = 1e-5
 
 stateFile = 'state.pkl'
-STATES = ['BEGIN', 'MESH', 'PRIMAL1', 'PRIMAL2', 'ADJOINT', 'DONE']
+nAdjoint = 4
+STATES = ['BEGIN', 'MESH', 'PRIMAL1', 'PRIMAL2'] + [ 'ADJOINT' + str(i) for i in range(0, nAdjoint) + [ 'DONE']
 def save_state(state):
     with open(stateFile, 'w') as f:
         pkl.dump(state, f)
@@ -134,9 +135,10 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
             spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
             update_state(state, 'PRIMAL2', currIndex)
 
-        if stateIndex <= 3:
-            spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
-            update_state(state, 'ADJOINT', currIndex)
+        if stateIndex < 3 + nAdjoint:
+            for i in range(max(0, stateIndex-3), 4):
+                spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
+                update_state(state, 'ADJOINT' + str(i), currIndex)
 
         return readObjectiveFile(os.path.join(paramDir, 'objective.txt'), gradEps)
     return

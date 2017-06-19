@@ -48,6 +48,7 @@ sampleInterval = 20
 startTime = 3.0004
 dt = 2e-8
 adjParams = [1e-3, 'abarbanel', None]
+runCheckpoints = 5
 
 # definition of 1 flow through time
 # 4e-4s = (0.08m)/(200m/s)
