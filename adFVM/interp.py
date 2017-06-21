@@ -27,9 +27,8 @@ def central(phi, mesh):
     return faceField
 
 def secondOrder(phiC, phiD, gradPhi, mesh, swap):
-    phiF = ZeroTensor(phiC.shape)
+    phiF = phiC + (phiD-phiC)*mesh.linearWeights[swap] 
     for i in range(0, phiC.shape[0]):
-        phiF[i] = phiC[i] + (phiD[i]-phiC[i])*mesh.linearWeights[swap]
         phiF[i] += mesh.quadraticWeights[swap].dot(gradPhi[i])
     return phiF
 

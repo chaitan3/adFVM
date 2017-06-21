@@ -47,7 +47,7 @@ def exceptInfo(e, info=''):
 
 #class Variable:
 #    pass
-from sympy import Symbol, diff, sqrt
+from sympy import Symbol, diff, sqrt, Piecewise
 import operator
 class Scalar(Symbol):
     _index = 0
@@ -75,7 +75,13 @@ class Tensor(object):
     def _binaryOp(self, b, op):
         if isinstance(b, float) or isinstance(b, int):
             b = Tensor(self.shape, [b for i in range(0, self.size)])
-        assert self.shape == b.shape
+        assert len(self.shape) == len(b.shape)
+        if self.shape != b.shape:
+            # broadcasting
+            assert len(self.shape) == 1
+            if b.shape[0] > self.shape[0]:
+                self, b = b, self
+            b = Tensor(self.shape, [b.scalars[0]]*self.shape[0])
         res = [op(x, y) for x, y in zip(self.scalars, b.scalars)]
         return Tensor(self.shape, res)
 
@@ -96,6 +102,9 @@ class Tensor(object):
 
     def __div__(self, b):
         return self._binaryOp(b, operator.div)
+
+    def __neg__(self):
+        return Tensor(self.shape, [-x for x in self.scalars])
 
 
     def __getitem__(self, b):
@@ -126,7 +135,8 @@ class Tensor(object):
         return Tensor((1,), [res])
 
     def abs(self):
-        return Tensor(self.shape, [abs(x) for x in self.scalars])
+        #return Tensor(self.shape, [abs(x) for x in self.scalars])
+        return Tensor(self.shape, [Piecewise((-x, x<0), (x, True)) for x in self.scalars])
 
     def sqrt(self):
         return Tensor(self.shape, [sqrt(x) for x in self.scalars])
@@ -139,9 +149,11 @@ class Tensor(object):
         return Tensor(self.shape, res)
 
     @classmethod
-    def switch(self, cond, ret1, ret2):
-        res = [Piecewise((ret1, cond), (ret2, True)) for x in self.scalars]
-        return Tensor(self.shape, res)
+    def switch(cls, cond, ret1, ret2):
+        assert ret1.shape == (1,)
+        assert ret2.shape == (1,)
+        res = [Piecewise((ret1.scalars[0], cond), (ret2.scalars[0], True))]
+        return cls(ret1.shape, res)
 
 def ZeroTensor(shape):
     return Tensor(shape, [0. for i in range(0, np.prod(shape))])

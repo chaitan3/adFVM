@@ -55,9 +55,9 @@ def eulerRoe(gamma, pLF, pRF, TLF, TRF, ULF, URF, \
     eps = eps.stabilise(config.SMALL)
 
     #lam1 = Field.switch(ad.(lam1.field, 2.*eps.field), 0.25*lam1*lam1/eps + eps, lam1)
-    lam1 = Tensor.switch(lam1 < 2.*eps, .25*lam1*lam1/eps + eps, lam1)
-    lam2 = Tensor.switch(lam2 < 2.*eps, .25*lam2*lam2/eps + eps, lam2)
-    lam3 = Tensor.switch(lam3 < 2.*eps, .25*lam3*lam3/eps + eps, lam3)
+    lam1 = Tensor.switch(lam1.scalars[0] < 2.*eps.scalars[0], .25*lam1*lam1/eps + eps, lam1)
+    lam2 = Tensor.switch(lam2.scalars[0] < 2.*eps.scalars[0], .25*lam2*lam2/eps + eps, lam2)
+    lam3 = Tensor.switch(lam3.scalars[0] < 2.*eps.scalars[0], .25*lam3*lam3/eps + eps, lam3)
 
     abv1 = 0.5*(lam2 + lam3)
     abv2 = 0.5*(lam2 - lam3)

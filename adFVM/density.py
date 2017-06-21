@@ -116,17 +116,18 @@ class RCF(Solver):
         e = E - 0.5*U.magSqr()
         p = (self.gamma-1)*rho*e
         T = e*(1./self.Cv)
-        U.name, T.name, p.name = 'U', 'T', 'p'
+        if isinstance(U, Field):
+            U.name, T.name, p.name = 'U', 'T', 'p'
         return U, T, p
 
     def conservative(self, U, T, p):
         logger.info('converting fields to conservative')
         e = self.Cv*T
         rho = p/(e*(self.gamma-1))
-        E = e + 0.5*U.magSqr()
+        rhoE = rho*(e + 0.5*U.magSqr())
         rhoU = U*rho
-        rhoE = rho*E
-        rho.name, rhoU.name, rhoE.name = self.names
+        if isinstance(U, Field):
+            rho.name, rhoU.name, rhoE.name = self.names
         return rho, rhoU, rhoE
 
     def getFlux(self, U, T, p, Normals):
@@ -142,7 +143,8 @@ class RCF(Solver):
         rho = p/(e*(self.gamma-1))
         return rho
 
-    def viscousFlux(self, TL, TR, UF, TF, gradTF, gradUF):
+    def viscousFlux(self, TL, TR, UF, TF, gradUF, gradTF):
+        mesh = self.mesh
         mu = self.mu(TF)
         kappa = self.kappa(mu, TF)
 
@@ -150,7 +152,6 @@ class RCF(Solver):
         tmp2 = ZeroTensor((3,))
         tmp3 = ZeroTensor((1,))
         for i in range(0, 3):
-            tmp2[i] = 0
             for j in range(0, 3):
                 tmp2[i] += (gradUF[i,j] + gradUF[j,i])*mesh.normals[j]
             tmp3 += gradUF[i,i];
