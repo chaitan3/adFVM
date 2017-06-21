@@ -1,8 +1,7 @@
 import numpy as np
 
 from . import config
-from .config import ad
-from .field import Field, CellField
+from .field import Field
 
 createFields = lambda internalFields, solver : [Field(solver.names[index], phi, solver.dimensions[index]) for index, phi in enumerate(internalFields)]
 
@@ -33,7 +32,7 @@ def SSPRK():
     gamma = np.array([0.,1,0.5], config.precision)
     return [alpha, beta, gamma]
 
-def timeStepper(equation, boundary, initFields, solver):
+def timeStepper(equation, initFields, solver):
     alpha, beta, gamma = solver.timeStepCoeff
     nStages = alpha.shape[0]
     LHS = []
@@ -51,8 +50,7 @@ def timeStepper(equation, boundary, initFields, solver):
         if i == nStages-1:
             return  [phi.field for phi in internalFields]
         else:
-            fields.append(boundary(*internalFields))
-    return
+            fields.append(internalFields)
 
 # DOES NOT WORK
 #def implicit(equation, boundary, fields, garbage):

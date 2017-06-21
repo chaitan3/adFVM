@@ -7,7 +7,6 @@ import copy
 import os
 
 from . import config, parallel
-from .config import ad, adsparse
 from .compat import norm, decompose, getCells, add_at
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
@@ -34,9 +33,10 @@ class Mesh(object):
               'linearWeights', 'quadraticWeights',
               'cellCentres', 'faceCentres', 
               'cellNeighbours', 'cellFaces',
-              'sumOp', 'gradOp']
+              'sumOp', 'gradOp',
+              'volumesL', 'volumesR']
 
-    gradFields = ['areas', 'volumes',
+    gradFields = ['areas', 'volumesL', 'volumesR',
                   'weights', 'deltas', 'normals',
                   'linearWeights', 'quadraticWeights',
                   #'cellCentres', 'faceCentres', 
@@ -56,12 +56,15 @@ class Mesh(object):
         #self.remoteFaces = None
 
     @classmethod
-    def copy(cls, mesh, constants=True, fields=False):
+    def copy(cls, mesh, constants=True, fields=False, link=False):
         self = cls()
         self.boundary = copy.deepcopy(mesh.boundary)
         if fields:
             for attr in cls.fields:
-                setattr(self, attr, copy.deepcopy(getattr(mesh, attr)))
+                if link:
+                    setattr(self, attr, getattr(mesh, attr))
+                else:
+                    setattr(self, attr, copy.deepcopy(getattr(mesh, attr)))
         if constants:
             for attr in cls.constants:
                 setattr(self, attr, getattr(mesh, attr))
@@ -105,6 +108,8 @@ class Mesh(object):
         self.normals = self.getNormals()
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()
         self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 
+        self.volumesL = self.volumes[self.owner[:self.nInternalFaces]]
+        self.volumesR = self.volumes[self.neighbour[:self.nInternalFaces]]
 
         # ghost cell modification: neighbour and cellCentres
         self.nLocalCells = self.createGhostCells()
@@ -114,16 +119,15 @@ class Mesh(object):
         # uses neighbour
         self.cellNeighboursMatOp = self.getCellNeighbours(boundary=False)
         self.cellNeighbours = self.getCellNeighbours()
-        #self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
+        self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
         #self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)
         self.checkWeights()
 
         # theano shared variables
-        self.origMesh = self
-        #self.origMesh = Mesh.copy(self, fields=True)
+        self.origMesh = Mesh.copy(self, fields=True)
         # update mesh initialization call
         self.update(currTime, 0.)
-        #self.makeTensor()
+        self.makeTensor()
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
         pprint('nFaces:', parallel.sum(self.origMesh.nFaces))
@@ -834,27 +838,32 @@ class Mesh(object):
         return diff
         
     def makeTensor(self):
+        from .config import Tensor
         logger.info('making tensor variables')
-        for attr in Mesh.constants:
-            setattr(self, attr, ad.placeholder(ad.int32))
-        for attr in Mesh.fields:
-            value = getattr(self, attr) 
-            if attr in ['owner', 'neighbour']:
-                setattr(self, attr, ad.placeholder(ad.int32))
-            elif attr in ['cellNeighbours', 'cellFaces']:
-                setattr(self, attr, ad.placeholder(ad.int32))
-            elif attr == 'sumOp' or attr == 'gradOp':
-                setattr(self, attr, self.getSparseTensor(attr))
-            elif value.shape[1] == 1:
-                setattr(self, attr, ad.placeholder(config.dtype))
-            elif len(value.shape) > 2:
-                setattr(self, attr, ad.placeholder(config.dtype))
-            else:
-                setattr(self, attr, ad.placeholder(config.dtype))
+        for attr in Mesh.gradFields:
+            value = getattr(self, attr)
+            setattr(self, attr, Tensor(value.shape[1:]))
 
-        for patchID in self.localPatches:
-            for attr in self.getBoundaryTensor(patchID):
-                self.boundary[patchID][attr[0]] = attr[1]
+        #for attr in Mesh.constants:
+        #    setattr(self, attr, ad.placeholder(ad.int32))
+        #for attr in Mesh.fields:
+        #    value = getattr(self, attr) 
+        #    if attr in ['owner', 'neighbour']:
+        #        setattr(self, attr, ad.placeholder(ad.int32))
+        #    elif attr in ['cellNeighbours', 'cellFaces']:
+        #        setattr(self, attr, ad.placeholder(ad.int32))
+        #    elif attr == 'sumOp' or attr == 'gradOp':
+        #        setattr(self, attr, self.getSparseTensor(attr))
+        #    elif value.shape[1] == 1:
+        #        setattr(self, attr, ad.placeholder(config.dtype))
+        #    elif len(value.shape) > 2:
+        #        setattr(self, attr, ad.placeholder(config.dtype))
+        #    else:
+        #        setattr(self, attr, ad.placeholder(config.dtype))
+
+        #for patchID in self.localPatches:
+        #    for attr in self.getBoundaryTensor(patchID):
+        #        self.boundary[patchID][attr[0]] = attr[1]
 
     def getSparseTensor(self, attr):
         indices = ad.placeholder(ad.int64)

@@ -1,10 +1,12 @@
 from . import config, riemann, interp
-from .config import ad
+from .config import Tensor, ZeroTensor
 from .field import Field, IOField
 from .op import  div, snGrad, grad, internal_sum
 from .solver import Solver
-from .interp import central
-import adFVMcpp
+from .interp import central, secondOrder
+
+import numpy as np
+#import adFVMcpp
 
 logger = config.Logger(__name__)
 
@@ -14,8 +16,7 @@ class RCF(Solver):
                              #specific
                              'Cp': 1004.5, 
                              'gamma': 1.4, 
-                             #'mu': lambda T:  1.4792e-06*T**1.5/(T+116.), 
-                             'mu': None,
+                             'mu': lambda T:  1.4792e-06*T**1.5/(T+116.), 
                              'Pr': 0.7, 
                              'CFL': 1.2,
                              'stepFactor': 1.2,
@@ -57,40 +58,7 @@ class RCF(Solver):
         #self.faceReconstructor = self.faceReconstructor(self)
         return
 
-    def primitive(self, rho, rhoU, rhoE):
-        logger.info('converting fields to primitive')
-        U = rhoU/rho
-        E = rhoE/rho
-        e = E - 0.5*U.magSqr()
-        p = (self.gamma-1)*rho*e
-        T = e*(1./self.Cv)
-        U.name, T.name, p.name = 'U', 'T', 'p'
-        return U, T, p
-
-    def conservative(self, U, T, p):
-        logger.info('converting fields to conservative')
-        e = self.Cv*T
-        rho = p/(e*(self.gamma-1))
-        E = e + 0.5*U.magSqr()
-        rhoU = U*rho
-        rhoE = rho*E
-        rho.name, rhoU.name, rhoE.name = self.names
-        return rho, rhoU, rhoE
-
-    def getFlux(self, U, T, p, Normals):
-        rho, rhoU, rhoE = self.conservative(U, T, p)
-        Un = U.dot(Normals)
-        rhoFlux = rho*Un
-        rhoUFlux = rhoU*Un + p*Normals
-        rhoEFlux = (rhoE + p)*Un
-        return rhoFlux, rhoUFlux, rhoEFlux
-
-    def getRho(self, T, p):
-        e = self.Cv*T
-        rho = p/(e*(self.gamma-1))
-        return rho
-
-    # only reads fields
+        # only reads fields
     @config.timeFunction('Time for reading fields')
     def readFields(self, t, suffix=''):
 
@@ -136,136 +104,127 @@ class RCF(Solver):
             if self.dynamicMesh:
                 self.mesh.write(IOField._handle)
         return
+
+    def initOrder(self, fields):
+        return [fields[2], fields[0], fields[1]]
+
+    # operations
+    def primitive(self, rho, rhoU, rhoE):
+        logger.info('converting fields to primitive')
+        U = rhoU/rho
+        E = rhoE/rho
+        e = E - 0.5*U.magSqr()
+        p = (self.gamma-1)*rho*e
+        T = e*(1./self.Cv)
+        U.name, T.name, p.name = 'U', 'T', 'p'
+        return U, T, p
+
+    def conservative(self, U, T, p):
+        logger.info('converting fields to conservative')
+        e = self.Cv*T
+        rho = p/(e*(self.gamma-1))
+        E = e + 0.5*U.magSqr()
+        rhoU = U*rho
+        rhoE = rho*E
+        rho.name, rhoU.name, rhoE.name = self.names
+        return rho, rhoU, rhoE
+
+    def getFlux(self, U, T, p, Normals):
+        rho, rhoU, rhoE = self.conservative(U, T, p)
+        Un = U.dot(Normals)
+        rhoFlux = rho*Un
+        rhoUFlux = rhoU*Un + p*Normals
+        rhoEFlux = (rhoE + p)*Un
+        return rhoFlux, rhoUFlux, rhoEFlux
+
+    def getRho(self, T, p):
+        e = self.Cv*T
+        rho = p/(e*(self.gamma-1))
+        return rho
+
+    def viscousFlux(self, TL, TR, UF, TF, gradTF, gradUF):
+        mu = self.mu(TF)
+        kappa = self.kappa(mu, TF)
+
+        qF = kappa*snGrad(TL, TR, mesh);
+        tmp2 = ZeroTensor((3,))
+        tmp3 = ZeroTensor((1,))
+        for i in range(0, 3):
+            tmp2[i] = 0
+            for j in range(0, 3):
+                tmp2[i] += (gradUF[i,j] + gradUF[j,i])*mesh.normals[j]
+            tmp3 += gradUF[i,i];
+        sigmaF = mu*(tmp2-2./3*tmp3*mesh.normals)
+        sigmadotUF = ZeroTensor((1,))
+        rhoUFlux = -sigmaF
+        rhoEFlux = -(qF + sigmaF.dot(UF));
+        return rhoUFlux, rhoEFlux
+
+    def flux(self, *args):
+        mesh = self.mesh
+        if not hasattr(self, '_flux'):
+            UL, UR = Tensor((3,)), Tensor((3,))
+            TL, TR = Tensor((1,)), Tensor((1,))
+            pL, pR = Tensor((1,)), Tensor((1,))
+            gradUL, gradUR = Tensor((3,3)), Tensor((3,3))
+            gradTL, gradTR = Tensor((1,3)), Tensor((1,3))
+            gradpL, gradpR = Tensor((1,3)), Tensor((1,3))
+            ULF, URF = secondOrder(UL, UR, gradUL, mesh, 0), secondOrder(UR, UL, gradUR, mesh, 1)
+            TLF, TRF = secondOrder(TL, TR, gradTL, mesh, 0), secondOrder(TR, TL, gradTR, mesh, 1)
+            pLF, pRF = secondOrder(pL, pR, gradpL, mesh, 0), secondOrder(pR, pL, gradpR, mesh, 1)
+
+
+            rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
+            rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
+
+            rhoFlux, rhoUFlux, rhoEFlux = self.riemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
+                rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
+
+
+            UF = 0.5*(ULF + URF)
+            TF = 0.5*(TLF + TRF)
+            gradTF = 0.5*(gradTL + gradTR)
+            gradUF = 0.5*(gradUL + gradUR)
+
+            ret = self.viscousFlux(TL, TR, UF, TF, gradUF, gradTF)
+            rhoUFlux += ret[0]
+            rhoEFlux += ret[1]
+
+            #this->operate->div(&rhoFlux, drho, i, neighbour);
+            #this->operate->div(rhoUFlux, drhoU, i, neighbour);
+            #this->operate->div(&rhoEFlux, drhoE, i, neighbour);
+
+            self._flux = None
+
+        return self._flux(*args)
           
     def equation(self, rho, rhoU, rhoE):
         logger.info('computing RHS/LHS')
-        mesh = self.mesh
+        mesh = self.mesh.origMesh
 
         U, T, p = self.primitive(rho, rhoU, rhoE)
-        #self.setBCFields([U, T, p])
-
-        ## face reconstruction
-        #rhoLF, rhoRF = TVD_dual(rho, gradRho)
-        #rhoULF, rhoURF = TVD_dual(rhoU, gradRhoU)
-        #rhoELF, rhoERF = TVD_dual(rhoE, gradRhoE)
-        #ULF, TLF, pLF = self.primitive(rhoLF, rhoULF, rhoELF)
-        #URF, TRF, pRF = self.primitive(rhoRF, rhoURF, rhoERF)
+        U.field = np.concatenate((U.field, np.zeros((mesh.nGhostCells, 3))))
+        T.field = np.concatenate((T.field, np.zeros((mesh.nGhostCells, 1))))
+        p.field = np.concatenate((p.field, np.zeros((mesh.nGhostCells, 1))))
+        # BC for 
 
         # gradient evaluated using gauss integration rule
-        gradU = grad(central(U, mesh), ghost=True)
-        gradT = grad(central(T, mesh), ghost=True)
-        gradp = grad(central(p, mesh), ghost=True)
-        gradU.updateProcessorCells([gradU, gradT, gradp])
+        gradU = grad(central(U, mesh), ghost=True, numpy=True)
+        gradT = grad(central(T, mesh), ghost=True, numpy=True)
+        gradp = grad(central(p, mesh), ghost=True, numpy=True)
         #gradU = grad(U, ghost=True, op=True)
         #gradT = grad(T, ghost=True, op=True)
         #gradp = grad(p, ghost=True, op=True)
         #self.local = gradp.field
         #self.remote = gradpO.field
 
-        # for zeroGradient boundary
-        UB, TB, pB = self.getBCFields()
-        UB.grad, TB.grad, pB.grad = gradU, gradT, gradp
-        #self.local = gradp.field[:mesh.nInternalCells]
-
-        # face reconstruction
-        #reconstuctor = Reconstruct(mesh, TVD)
-        #ULF, URF = reconstructor.dual(U, gradU)
-        #TLF, TRF = reconstructor.dual(T, gradT)
-        #pLF, pRF = reconstructor.dual(p, gradp)
-        ##ULF, URF = central(U, mesh), central(U, mesh)
-        ##TLF, TRF = central(T, mesh), central(T, mesh)
-        ##pLF, pRF = central(p, mesh), central(p, mesh)
-
-        #rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
-        #rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
-
-        ## don't apply TVD to boundary faces
-        ## instead use the standard scalar dissipation?
-
-        #rhoFlux, rhoUFlux, rhoEFlux, aF, UnF = self.riemannSolver(mesh, self.gamma, \
-        #        pLF, pRF, TLF, TRF, ULF, URF, \
-        #        rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF)
-        rhoFlux = Field('rho', None, rho.dimensions)
-        rhoUFlux = Field('rhoU', None, rhoU.dimensions)
-        rhoEFlux = Field('rhoE', None, rhoE.dimensions)
-        UF = Field('U', None, U.dimensions)
-        TF = Field('T', None, T.dimensions)
-        indices = self.faceReconstructor.indices
-
-        # INTERNAL FLUX: includes internal faces
-        # face reconstruction
-
-        (ULIF, URIF), (TLIF, TRIF), (pLIF, pRIF) = self.faceReconstructor.dualSystem(
-                (U, gradU), (T, gradT), (p, gradp)
-        )
-
-        rhoLIF, rhoULIF, rhoELIF = self.conservative(ULIF, TLIF, pLIF)
-        rhoRIF, rhoURIF, rhoERIF = self.conservative(URIF, TRIF, pRIF)
-        Normals = mesh.Normals.getField(indices)
-
-        rhoIFlux, rhoUIFlux, rhoEIFlux = self.riemannSolver(self.gamma, \
-                pLIF, pRIF, TLIF, TRIF, ULIF, URIF, \
-                rhoLIF, rhoRIF, rhoULIF, rhoURIF, rhoELIF, rhoERIF, Normals)
-        rhoFlux.setField(indices, rhoIFlux)
-        rhoUFlux.setField(indices, rhoUIFlux)
-        rhoEFlux.setField(indices, rhoEIFlux)
-        UF.setField(indices, 0.5*(ULIF + URIF))
-        TF.setField(indices, 0.5*(TLIF + TRIF))
-
-
-        # BOUNDARY FLUX
-        if self.faceReconstructor.boundary:
-            # no riemann stuff
-            indices = self.faceReconstructor.Bindices
-            cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
-            UBF, TBF, pBF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
-            BNormals = mesh.Normals.getField(indices)
-            rhoBFlux, rhoUBFlux, rhoEBFlux = self.getFlux(UBF, TBF, pBF, BNormals)
-            rhoFlux.setField(indices, rhoBFlux)
-            rhoUFlux.setField(indices, rhoUBFlux)
-            rhoEFlux.setField(indices, rhoEBFlux)
-            UF.setField(indices, UBF)
-            TF.setField(indices, TBF)
-        # CHARACTERISTIC BOUNDARY FLUX 
-        if self.faceReconstructor.characteristic:
-            # first order interpolation? really?
-            indices = self.faceReconstructor.Cindices
-            Iindices = ad.gather(mesh.owner, indices)
-            cellIndices = indices - mesh.nInternalFaces + mesh.nInternalCells
-            ULCF, TLCF, pLCF = U.getField(Iindices), T.getField(Iindices), p.getField(Iindices)
-            URCF, TRCF, pRCF = U.getField(cellIndices), T.getField(cellIndices), p.getField(cellIndices)
-            rhoLCF, rhoULCF, rhoELCF = self.conservative(ULCF, TLCF, pLCF)
-            rhoRCF, rhoURCF, rhoERCF = self.conservative(URCF, TRCF, pRCF)
-            CNormals = mesh.Normals.getField(indices)
-            rhoCFlux, rhoUCFlux, rhoECFlux = self.boundaryRiemannSolver(self.gamma, \
-                    pLCF, pRCF, TLCF, TRCF, ULCF, URCF, \
-                    rhoLCF, rhoRCF, rhoULCF, rhoURCF, rhoELCF, rhoERCF, CNormals)
-            rhoFlux.setField(indices, rhoCFlux)
-            rhoUFlux.setField(indices, rhoUCFlux)
-            rhoEFlux.setField(indices, rhoECFlux)
-            UF.setField(indices, 0.5*(ULCF + URCF))
-            TF.setField(indices, 0.5*(TLCF + TRCF))
-
-        rhoFlux.gatherField()
-        rhoUFlux.gatherField()
-        rhoEFlux.gatherField()
-        UF.gatherField()
-        TF.gatherField()
-
-        # viscous part
-        mu = self.mu(TF)
-        kappa = self.kappa(mu, TF)
-        #qF = snGrad(T)*kappa
-        gradTF = central(gradT, mesh)
-        gradTCF = gradTF + snGrad(T)*mesh.Normals - (gradTF.dotN())*mesh.Normals
-        qF = kappa*gradTCF.dotN()
-        
-        #gradUTF = central(gradU.transpose(), mesh)
-        #sigmaF = (snGrad(U) + gradUTF.dotN() - (2./3)*mesh.Normals*gradUTF.trace())*mu
-        gradUF = central(gradU, mesh)
-        gradUCF = gradUF + snGrad(U).outer(mesh.Normals) - (gradUF.dotN()).outer(mesh.Normals)
-        sigmaF = mu*((gradUCF + gradUCF.transpose()).dotN() - (2./3)*gradUCF.trace()*mesh.Normals)
-        sigmadotUF = sigmaF.dot(UF)
+        fields = []
+        for phi in [U, T, p, gradU, gradT, gradp]:
+            fields.append(phi.field[mesh.owner])
+            fields.append(phi.field[mesh.neighbour])
+        for phi in mesh.gradFields:
+            fields.append(getattr(mesh, phi))
+        flux = self.flux(*fields)
 
         # CFL based time step
         self.aF = ((self.gamma-1)*self.Cp*TF).sqrt()
@@ -278,8 +237,6 @@ class RCF(Solver):
                 div(rhoUFlux - sigmaF) - self.sourceFields[1], \
                 div(rhoEFlux - qF - sigmadotUF) - self.sourceFields[2]]
 
-    def initOrder(self, fields):
-        return [fields[2], fields[0], fields[1]]
 
     def boundary(self, rhoN, rhoUN, rhoEN):
         logger.info('correcting boundary')

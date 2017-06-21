@@ -1,7 +1,6 @@
 import numpy as np
 
 from adFVM import config
-from adFVM.config import ad
 from adFVM.density import RCF 
 
 primal = RCF('cases/forwardStep/', timeIntegrator='SSPRK', CFL=1.2, Cp=2.5, mu=lambda T: config.VSMALL*T)

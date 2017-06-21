@@ -2,7 +2,7 @@
 import numpy as np
 
 from . import cfuncs
-from .cfuncs import intersectPlane, getCells, decompose, reduceAbsMin, selectMultipleRange, reduceSum, ARLogLikelihood
+from .cfuncs import intersectPlane, getCells, decompose, reduceAbsMin, selectMultipleRange, reduceSum
 
 def norm(a, axis, **kwuser):
     try:

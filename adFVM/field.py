@@ -6,7 +6,7 @@ from numbers import Number
 from contextlib import contextmanager
 
 from . import config, parallel, BCs
-from .config import ad
+from .config import Variable
 from .parallel import pprint
 from .mesh import extractField, writeField
 
@@ -519,7 +519,7 @@ class IOField(Field):
 
     def completeField(self):
         logger.debug('completing field {0}'.format(self.name))
-        internalField = ad.placeholder(config.dtype)
+        internalField = Variable()
         # CellField for later use
         self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, init=True)
         return internalField

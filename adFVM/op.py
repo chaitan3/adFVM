@@ -2,7 +2,6 @@ from __future__ import print_function
 import numpy as np
 
 from . import config
-from .config import ad, adsparse
 from .field import Field, CellField, IOField
 
 logger = config.Logger(__name__)
@@ -49,11 +48,8 @@ def div(phi, U=None, ghost=False):
     else:
         return Field('div({0})'.format(phi.name), divField, phi.dimensions)
 
-def snGrad(phi):
-    logger.info('snGrad of {0}'.format(phi.name))
-    mesh = phi.mesh
-    gradFdotn = (ad.gather(phi.field, mesh.neighbour)-ad.gather(phi.field, mesh.owner))/mesh.deltas
-    return Field('snGrad({0})'.format(phi.name), gradFdotn, phi.dimensions)
+def snGrad(phiL, phiR, mesh):
+    return (phiR - phiL)/mesh.deltas
 
 def laplacian(phi, DT):
     logger.info('laplacian of {0}'.format(phi.name))
@@ -77,6 +73,7 @@ def grad(phi, ghost=False, op=False, numpy=False):
         loc_internal_sum = internal_sum_numpy
         mod = IOField
         mesh = mesh.origMesh
+        ad = np
     else:
         loc_internal_sum = internal_sum
         mod = CellField

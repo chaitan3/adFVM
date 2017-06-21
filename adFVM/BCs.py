@@ -2,7 +2,7 @@ import numpy as np
 import new
 
 from . import config
-from .config import ad, adsparse
+from .config import Variable
 from .mesh import extractField, extractVector
 logger = config.Logger(__name__)
 
@@ -46,7 +46,7 @@ class BoundaryCondition(object):
         self.startFace, self.endFace, self.cellStartFace, self.cellEndFace, \
             self.nFaces = self.mesh.getPatchFaceCellRange(patchID)
         self.internalIndices = self.mesh.owner[self.startFace:self.endFace]
-        self.normals = self.mesh.normals[self.startFace:self.endFace]
+        #self.normals = self.mesh.normals[self.startFace:self.endFace]
         # used by field writer
         self.getValue = lambda: self.field[self.cellStartFace:self.cellEndFace]
         self.keys = []
@@ -57,7 +57,7 @@ class BoundaryCondition(object):
         nFaces = patch['nFaces']
         value = extractField(self.patch[key], nFaces, dimensions)
         self.patch['_{}'.format(key)] = value
-        symbolic = ad.placeholder(config.dtype)
+        symbolic = Variable()
         self.keys.append(key)
         self.inputs.append((symbolic, value))
         return symbolic

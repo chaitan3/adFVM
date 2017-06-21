@@ -1,5 +1,5 @@
 from . import config
-from .config import ad
+from .config import Tensor
 from .field import Field
 
 def eulerLaxFriedrichs(gamma, pLF, pRF, TLF, TRF, ULF, URF, \
@@ -55,9 +55,9 @@ def eulerRoe(gamma, pLF, pRF, TLF, TRF, ULF, URF, \
     eps = eps.stabilise(config.SMALL)
 
     #lam1 = Field.switch(ad.(lam1.field, 2.*eps.field), 0.25*lam1*lam1/eps + eps, lam1)
-    lam1 = Field.switch(lam1.field < 2.*eps.field, .25*lam1*lam1/eps + eps, lam1)
-    lam2 = Field.switch(lam2.field < 2.*eps.field, .25*lam2*lam2/eps + eps, lam2)
-    lam3 = Field.switch(lam3.field < 2.*eps.field, .25*lam3*lam3/eps + eps, lam3)
+    lam1 = Tensor.switch(lam1 < 2.*eps, .25*lam1*lam1/eps + eps, lam1)
+    lam2 = Tensor.switch(lam2 < 2.*eps, .25*lam2*lam2/eps + eps, lam2)
+    lam3 = Tensor.switch(lam3 < 2.*eps, .25*lam3*lam3/eps + eps, lam3)
 
     abv1 = 0.5*(lam2 + lam3)
     abv2 = 0.5*(lam2 - lam3)

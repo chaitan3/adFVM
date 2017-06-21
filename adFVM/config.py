@@ -45,6 +45,110 @@ def exceptInfo(e, info=''):
     e.args += (info, rank)
     raise 
 
+#class Variable:
+#    pass
+from sympy import Symbol, diff, sqrt
+import operator
+class Scalar(Symbol):
+    _index = 0
+    def __new__(cls):
+        index = Scalar._index
+        Scalar._index += 1
+        return Symbol.__new__(cls, 'Variable_{}'.format(index))
+
+class Tensor(object):
+    def __init__(self, shape, scalars=None):
+        self.shape = shape
+        self.size = np.prod(shape)
+        self.strides = [x/8 for x in np.zeros(shape, np.float64).strides]
+        #print('tensor', shape, scalars)
+        if scalars is None:
+            self.scalars = []
+            for i in range(0, self.size):
+                self.scalars.append(Scalar())
+        else:
+            self.scalars = scalars
+
+    def tolist():
+        return self.scalars
+
+    def _binaryOp(self, b, op):
+        if isinstance(b, float) or isinstance(b, int):
+            b = Tensor(self.shape, [b for i in range(0, self.size)])
+        assert self.shape == b.shape
+        res = [op(x, y) for x, y in zip(self.scalars, b.scalars)]
+        return Tensor(self.shape, res)
+
+    def __add__(self, b):
+        return self._binaryOp(b, operator.add)
+
+    def __radd__(self, b):
+        return self.__add__(b)
+
+    def __sub__(self, b):
+        return self._binaryOp(b, operator.sub)
+
+    def __mul__(self, b):
+        return self._binaryOp(b, operator.mul)
+
+    def __rmul__(self, b):
+        return self.__add__(b)
+
+    def __div__(self, b):
+        return self._binaryOp(b, operator.div)
+
+
+    def __getitem__(self, b):
+        if isinstance(b, int):
+            b = (b,)
+        assert all([isinstance(x, int) for x in b])
+        size = self.strides[len(b)-1]
+        start = sum([self.strides[i]*b[i] for i in range(0, len(b))])
+        shape = self.shape[len(b):]
+        if len(shape) == 0:
+            shape = (1,)
+        res = self.scalars[start:start+size]
+        return Tensor(shape, res)
+
+    def __setitem__(self, b, c):
+        if isinstance(b, int):
+            b = (b,)
+        assert isinstance(c, Tensor)
+        assert len(b) == len(self.shape)
+        assert c.shape == (1,)
+        loc = sum([self.strides[i]*b[i] for i in range(0, len(b))])
+        self.scalars[loc] = c.scalars[0]
+
+    def dot(self, b):
+        assert self.shape == (3,)
+        assert b.shape == (3,)
+        res = sum([self.scalars[i]*b.scalars[i] for i in range(0, 3)])
+        return Tensor((1,), [res])
+
+    def abs(self):
+        return Tensor(self.shape, [abs(x) for x in self.scalars])
+
+    def sqrt(self):
+        return Tensor(self.shape, [sqrt(x) for x in self.scalars])
+
+    def magSqr(self):
+        return self.dot(self)
+
+    def stabilise(self, eps):
+        res = [Piecewise((x - eps, x < 0), (x + eps, True)) for x in self.scalars]
+        return Tensor(self.shape, res)
+
+    @classmethod
+    def switch(self, cond, ret1, ret2):
+        res = [Piecewise((ret1, cond), (ret2, True)) for x in self.scalars]
+        return Tensor(self.shape, res)
+
+def ZeroTensor(shape):
+    return Tensor(shape, [0. for i in range(0, np.prod(shape))])
+
+class Variable(object):
+    pass
+
 # compute type
 if not user.use_gpu:
     device = 'cpu'
@@ -53,11 +157,6 @@ else:
     device = 'gpu0'
     precision = np.float32
 
-ad = np
-adsparse = np
-ad.placeholder = lambda *x: None
-ad.concat = lambda *x: None
-dtype = np.float64
 #import tensorflow as ad
 #ad.sum = ad.reduce_sum
 #import tensorflow as adsparse
@@ -211,7 +310,7 @@ def timeFunction(string):
 
 # CONSTANTS
 if precision == np.float64:
-    SMALL = 1e-15
+    SMALL = 1e-30
     VSMALL = 1e-300
     LARGE = 1e300
 else:

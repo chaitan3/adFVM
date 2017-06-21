@@ -4,9 +4,9 @@ import cPickle as pkl
 import os
 import copy
 
-import adFVMcpp
+#import adFVMcpp
 from . import config, parallel, timestep
-from .config import ad
+from .config import Variable
 from .parallel import pprint
 from .memory import printMemUsage
 
@@ -58,28 +58,26 @@ class Solver(object):
     def compile(self, adjoint=None):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         self.compileInit()
-        adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
-        self.adFVMcpp =adFVMcpp
-        self.map = adFVMcpp.forward
-        return
+        #adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
+        #self.adFVMcpp =adFVMcpp
+        #self.map = adFVMcpp.forward
         mesh = self.mesh
 
-
-        if self.localTimeStep:
-            self.dt = ad.placeholder(config.dtype)
-        else:
-            self.dt = ad.placeholder(config.dtype)
-        self.t0 = ad.placeholder(config.dtype)
+        self.dt = Variable()
+        self.t0 = Variable()
+        fields = self.getSymbolicFields(False)
+        #self.t = self.t0*1.
+        #self.dtc = self.dt
 
         # default values
-        self.t = self.t0*1.
-        self.dtc = self.dt
-        self.local, self.remote = self.mesh.nCells, self.mesh.nFaces
-        self.stage = 1
+        def func(fields):
+            self.stage = 1
+            newFields = timestep.timeStepper(self.equation, fields, self)
+            return newFields
 
-        fields = self.getSymbolicFields(False)
-        initFields = self.boundary(*timestep.createFields(fields, self))
-        newFields = timestep.timeStepper(self.equation, self.boundary, initFields, self)
+        self.map = func
+        return
+
         if self.objective:
             objective = self.objective(initFields, mesh)
         else:
@@ -116,11 +114,11 @@ class Solver(object):
             fields.append(phi.phi)
             internalFields.append(phiI)
             #completeFields.append(phiN)
-        for phi, phiI in zip(self.initOrder(self.fields), self.initOrder(internalFields)):
-            phi.phi.setInternalField(phiI)
-        fields[0].updateProcessorCells(fields)
-        completeFields = [phi.field for phi in fields]
-        self.init = self.function(internalFields, completeFields, functionName, source=False, postpro=False)
+        #for phi, phiI in zip(self.initOrder(self.fields), self.initOrder(internalFields)):
+        #    phi.phi.setInternalField(phiI)
+        #fields[0].updateProcessorCells(fields)
+        #completeFields = [phi.field for phi in fields]
+        #self.init = self.function(internalFields, completeFields, functionName, source=False, postpro=False)
         return
 
     def function(self, inputs, outputs, name, **kwargs):
@@ -155,10 +153,7 @@ class Solver(object):
         names = self.names
         fields = []
         for index, dim in enumerate(self.dimensions):
-            if dim == (1,):
-                field = ad.placeholder(config.dtype)
-            else:
-                field = ad.placeholder(config.dtype)
+            field = Variable()
             if returnField:
                 field = CellField(names[index], field, dim)
             fields.append(field)
@@ -360,11 +355,14 @@ class Solver(object):
                 pprint('Time step', timeIndex)
                 pprint()
 
-            inputs = [phi.field for phi in fields] + \
-                     [phi[1] for phi in self.sourceTerms] + \
-                     [dt, t]
-            #outputs = self.map(*inputs)
-            outputs = adFVMcpp.forward(*inputs)
+            #inputs = [phi.field for phi in fields] + \
+            #         [phi[1] for phi in self.sourceTerms] + \
+            #         [dt, t]
+            self.dt = dt
+            self.t = t
+            self.t0 = t
+            outputs = self.map(fields)
+            #outputs = adFVMcpp.forward(*inputs)
             newFields, objective, dtc = outputs[:3], outputs[3], outputs[4]
             local = remote = 0
 

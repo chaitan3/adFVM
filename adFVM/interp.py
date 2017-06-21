@@ -1,6 +1,6 @@
 from . import config, compat, parallel
-from .config import ad, adsparse
 from .field import Field#, faceExchange
+from .config import ZeroTensor
 
 import itertools
 import numpy as np
@@ -25,6 +25,13 @@ def central(phi, mesh):
     #if hasattr(mesh, 'origMesh'):
     #    faceField.field = ad.patternbroadcast(faceField.field, phi.field.broadcastable)
     return faceField
+
+def secondOrder(phiC, phiD, gradPhi, mesh, swap):
+    phiF = ZeroTensor(phiC.shape)
+    for i in range(0, phiC.shape[0]):
+        phiF[i] = phiC[i] + (phiD[i]-phiC[i])*mesh.linearWeights[swap]
+        phiF[i] += mesh.quadraticWeights[swap].dot(gradPhi[i])
+    return phiF
 
 # only defined on ad
 class Reconstruct(object):
