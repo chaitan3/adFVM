@@ -34,19 +34,26 @@ def internal_sum(phi, mesh, absolute=False):
 def internal_sum_numpy(phi, mesh):
     return (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
 
-def div(phi, U=None, ghost=False):
-    logger.info('divergence of {0}'.format(phi.name))
-    mesh = phi.mesh
-    if U is None:
-        divField = internal_sum(phi, mesh)
-    else:
-        assert phi.dimensions == (1,)
-        divField = internal_sum((phi*U).dotN(), mesh)
-    if ghost:
-        divPhi = CellField('div({0})'.format(phi.name), divField, phi.dimensions, ghost=True)
-        return divPhi
-    else:
-        return Field('div({0})'.format(phi.name), divField, phi.dimensions)
+
+def div(phi, mesh):
+    wp = mesh.areas/mesh.volumesL
+    wn = mesh.areas/mesh.volumesR
+    # for div, contri for owner is pos, neigh is neg
+    return phi*wp, phi*wn
+
+#def div(phi, U=None, ghost=False):
+#    logger.info('divergence of {0}'.format(phi.name))
+    #mesh = phi.mesh
+    #if U is None:
+    #    divField = internal_sum(phi, mesh)
+    #else:
+    #    assert phi.dimensions == (1,)
+    #    divField = internal_sum((phi*U).dotN(), mesh)
+    #if ghost:
+    #    divPhi = CellField('div({0})'.format(phi.name), divField, phi.dimensions, ghost=True)
+    #    return divPhi
+    #else:
+    #    return Field('div({0})'.format(phi.name), divField, phi.dimensions)
 
 def snGrad(phiL, phiR, mesh):
     return (phiR - phiL)/mesh.deltas

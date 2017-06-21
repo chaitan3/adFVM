@@ -1,5 +1,5 @@
 from . import config, riemann, interp
-from .config import Tensor, ZeroTensor
+from .config import Tensor, ZeroTensor, Function
 from .field import Field, IOField
 from .op import  div, snGrad, grad, internal_sum
 from .solver import Solver
@@ -181,7 +181,6 @@ class RCF(Solver):
             rhoFlux, rhoUFlux, rhoEFlux = self.riemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
 
-
             UF = 0.5*(ULF + URF)
             TF = 0.5*(TLF + TRF)
             gradTF = 0.5*(gradTL + gradTR)
@@ -191,11 +190,13 @@ class RCF(Solver):
             rhoUFlux += ret[0]
             rhoEFlux += ret[1]
 
-            #this->operate->div(&rhoFlux, drho, i, neighbour);
-            #this->operate->div(rhoUFlux, drhoU, i, neighbour);
+            drhoL, drhoR = div(rhoFlux, mesh)
+            drhoUL, drhoUR = div(rhoUFlux, mesh)
+            drhoEL, drhoER = div(rhoEFlux, mesh)
             #this->operate->div(&rhoEFlux, drhoE, i, neighbour);
 
-            self._flux = None
+            self._flux = Function([UL, UR, TL, TR, pL, pR, gradUL, gradUR, gradTL, gradTR, gradpL, gradpR],
+                                  [drhoL, drhoR, drhoUL, drhoUR, drhoEL, drhoER])
 
         return self._flux(*args)
           

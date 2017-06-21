@@ -48,6 +48,8 @@ def exceptInfo(e, info=''):
 #class Variable:
 #    pass
 from sympy import Symbol, diff, sqrt, Piecewise
+from sympy.utilities.autowrap import ufuncify
+
 import operator
 class Scalar(Symbol):
     _index = 0
@@ -157,6 +159,9 @@ class Tensor(object):
 
 def ZeroTensor(shape):
     return Tensor(shape, [0. for i in range(0, np.prod(shape))])
+
+def Function(inputs, outputs):
+    return ufuncify(inputs, outputs)
 
 class Variable(object):
     pass
