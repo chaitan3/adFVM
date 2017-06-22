@@ -3,6 +3,7 @@ import numpy as np
 
 from . import config
 from .field import Field, CellField, IOField
+from .tensor import ZeroTensor
 
 logger = config.Logger(__name__)
 
@@ -35,7 +36,16 @@ def internal_sum_numpy(phi, mesh):
     return (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
 
 
-def div(phi, mesh):
+def div(phi, mesh, neighbour):
+    wp = mesh.areas/mesh.volumesL
+    if neighbour:
+        wn = -mesh.areas/mesh.volumesR
+    else:
+        wn = ZeroTensor(wp.shape)
+    # for div, contri for owner is pos, neigh is neg
+    return phi*wp, phi*wn
+
+def absDiv(phi, mesh):
     wp = mesh.areas/mesh.volumesL
     wn = mesh.areas/mesh.volumesR
     # for div, contri for owner is pos, neigh is neg

@@ -3,10 +3,20 @@ import numpy as np
 #    pass
 from sympy import Symbol, sqrt, Piecewise, lambdify
 from sympy.utilities.autowrap import ufuncify
-
+from sympy.core import add, mul, power, numbers, relational
+from sympy.functions.elementary import piecewise
+from sympy.logic import boolalg
 import operator
 
-import operator
+dtype = 'double'
+import adFVM
+import os, sys, subprocess
+import ctypes
+codeDir = os.path.dirname(adFVM.__file__) + '/gencode/'
+
+class Container(object):
+    pass
+
 def prod(factors):
     return reduce(operator.mul, factors, 1)
 
@@ -15,10 +25,14 @@ class Scalar(Symbol):
     def __new__(cls):
         index = Scalar._index
         Scalar._index += 1
-        return Symbol.__new__(cls, 'Variable_{}'.format(index))
+        return Symbol.__new__(cls, 'Scalar_{}'.format(index))
 
 class Tensor(object):
+    _index = 0
     def __init__(self, shape, scalars=None):
+        index = Tensor._index
+        Tensor._index += 1
+        self.name = 'Tensor_{}'.format(index)
         self.shape = shape
         self.size = np.prod(shape)
         self.strides = [x/8 for x in np.zeros(shape, np.float64).strides]
@@ -29,7 +43,6 @@ class Tensor(object):
                 self.scalars.append(Scalar())
         else:
             self.scalars = scalars
-
 
     def tolist():
         return self.scalars
@@ -118,28 +131,44 @@ class Tensor(object):
         return cls(ret1.shape, res)
 
 def ZeroTensor(shape):
-    return Tensor(shape, [0. for i in range(0, np.prod(shape))])
+    return Tensor(shape, [numbers.Zero() for i in range(0, np.prod(shape))])
 
 class Function(object):
+    _index = 0
+    _module = None
     def __init__(self, inputs, outputs, mesh):
+        index = Function._index
+        Function._index += 1
+        self.name = 'Function_{}'.format(index)
         inputs = inputs + [getattr(mesh, attr) for attr in mesh.gradFields]
+        self._inputTensorIndices = {}
+        self._inputTensors = inputs
         self._inputs = []
         for inp in inputs:
             self._inputs.extend(inp.scalars)
+            for index, i in enumerate(inp.scalars):
+                self._inputTensorIndices[i] = (inp.name, len(inp.scalars), index)
+        self._outputTensorIndices = {}
+        self._outputTensors = outputs
         self._outputs = []
         for out in outputs:
             self._outputs.extend(out.scalars)
+            for index, i in enumerate(out.scalars):
+                self._outputTensorIndices[i] = (out.name, len(out.scalars), index)
         #self.func = lambdify(self._inputs, self._outputs)
 
+        self._children = self._getChildren(self._outputs)
+        self._genCode(self._inputs, self._outputs, self._children.copy())
+
+    def _getAdjoint(self):
         gradInputs = [Scalar() for x in self._outputs]
         scalarOutput = sum([x * y for x, y in zip(self._outputs, gradInputs)])
-        self._children = self._getChildren(scalarOutput)
         gradient = self._diff(scalarOutput, self._inputs)
 
-    def _getChildren(self, output):
+    def _getChildren(self, outputs):
         children = {}
         funcs = set()
-        def _children_func(out):
+        def _childrenFunc(out):
             if out.func not in funcs:
                 funcs.add(out.func)
             for inp in out.args:
@@ -147,20 +176,101 @@ class Function(object):
                     children[inp] += 1
                 else:
                     children[inp] = 1
-                    _children_func(inp)
-        _children_func(output)
+                    _childrenFunc(inp)
+
+        for out in outputs:
+            children[out] = 0
+        for out in outputs:
+            _childrenFunc(out)
         #print funcs
         return children
+
+    def _genCode(self, inputs, outputs, children):
+        sortedOps = self._topologicalSort(outputs, children)
+        codeFile = open(codeDir + 'code.c', 'a')
+
+        memString = '' 
+        for inp in self._inputTensors:
+            memString += '{}* {}, '.format(dtype, inp.name)
+        for out in self._outputTensors:
+            memString += '{}* {}, '.format(dtype, out.name)
+        codeFile.write('\nvoid {}(int n, {}) {}\n'.format(self.name, memString[:-2], '{'))
+        codeFile.write('for (int i = 0; i < n; i++) {\n')
+        names = {}
+        for index, op in enumerate(sortedOps):
+            names[op] = 'Intermediate_{}'.format(index)
+            argNames = [names[inp] for inp in op.args]
+            code = ''
+            if op.func == Scalar:
+                tensorIndex = self._inputTensorIndices[op]
+                code = '{} {} = *({} + i*{} + {});'.format(dtype, names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
+            elif op.func == mul.Mul:
+                code = '{} {} = {};'.format(dtype, names[op], '*'.join(argNames))
+            elif op.func == add.Add:
+                code = '{} {} = {};'.format(dtype, names[op], '+'.join(argNames))
+            elif op.func == power.Pow:
+                code = '{} {} = pow({},{});'.format(dtype, names[op], argNames[0], argNames[1])
+            elif op.func == numbers.NegativeOne:
+                code = '{} {} = {};'.format(dtype, names[op], -1)
+            elif op.func == numbers.Float:
+                code = '{} {} = {};'.format(dtype, names[op], op.num)
+            elif op.func == numbers.Integer:
+                code = '{} {} = {};'.format(dtype, names[op], op.p)
+            elif op.func == numbers.Half:
+                code = '{} {} = {};'.format(dtype, names[op], 0.5)
+            elif op.func == numbers.Zero:
+                code = '{} {} = {};'.format(dtype, names[op], 0)
+            elif op.func == numbers.Rational:
+                code = '{} {} = {};'.format(dtype, names[op], float(op.p)/op.q)
+            elif op.func == relational.StrictLessThan:
+                code = 'int {} = {} < {};'.format(names[op], names[op.args[0]], names[op.args[1]])
+            elif op.func == Piecewise:
+                code = """
+                {4} {0};
+                if ({1}) 
+                    {0} = {2};
+                else 
+                    {0} = {3};
+                """.format(names[op], names[op.args[0].args[1]], names[op.args[0].args[0]], names[op.args[1].args[0]], dtype)
+                #code = '{} {} = {};'.format(dtype, names[op], 0.5)
+            else:
+                if op.func not in [boolalg.BooleanTrue, piecewise.ExprCondPair]:
+                    raise Exception("ss", op.func)
+            if op in self._outputTensorIndices:
+                tensorIndex = self._outputTensorIndices[op];
+                code += ' *({} + i*{} + {}) = {};'.format(tensorIndex[0], tensorIndex[1], tensorIndex[2], names[op])
+            codeFile.write(code + '\n')
+            #print op.func, len(op.args)
+        codeFile.write('}\n}')
+        codeFile.close()
+
+        return
+
+    def _topologicalSort(self, outputs, children):
+        output = Container()
+        output.args = tuple(outputs)
+        for out in outputs:
+            children[out] += 1
+        children[output] = 1
+        sortedOps = []
+        def _sort(outputs):
+            for out in outputs:
+                children[out] -= 1
+                if children[out] == 0:
+                    sortedOps.append(out)
+                    _sort(out.args)
+        _sort([output])
+        return sortedOps[1:][::-1]
 
     def _diff(self, output, inputs):
         # optimizations: clubbing, common subexpression elimination
         # rely on compiler to figure it out?
-        from sympy.core import add, mul, power
-        from sympy.functions.elementary import piecewise
         gradients = {}
         gradients[output] = 1.
         children = self._children.copy()
-        def _diff_func(out):
+        for out in self._outputs:
+            children[out] += 1
+        def _diffFunc(out):
             grads = []
             if out.func == add.Add:
                 for inp in out.args:
@@ -194,13 +304,25 @@ class Function(object):
                     gradients[inp] += grad
                 children[inp] -= 1
                 if children[inp] == 0:
-                    _diff_func(inp)
-        _diff_func(output)
+                    _diffFunc(inp)
+        _diffFunc(output)
         return [gradients.get(inp, None) for inp in inputs]
 
-    def __call__(self, *args):
-        print(args)
-        return self.func(*args)
+    @classmethod
+    def clean(self):
+        os.remove(codeDir + 'code.c')
+
+    @classmethod
+    def compile(self):
+        subprocess.check_call(['make'], cwd=codeDir)
+        Function._module = ctypes.cdll.LoadLibrary(codeDir + 'interface.so')
+
+    def __call__(self, inputs, outputs):
+        func = Function._module[self.name] 
+        args = [ctypes.c_int(inputs[0].shape[0])] + \
+                [np.ctypeslib.as_ctypes(x) for x in inputs] + \
+                [np.ctypeslib.as_ctypes(x) for x in outputs]
+        func(*args)
 
 class Variable(object):
     pass

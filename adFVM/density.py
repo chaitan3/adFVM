@@ -56,6 +56,12 @@ class RCF(Solver):
     def compileInit(self):
         super(RCF, self).compileInit()
         #self.faceReconstructor = self.faceReconstructor(self)
+        Function.clean()
+        self._flux = self.flux()
+        self._characteristicFLux = self.flux(True, False)
+        self._coupledFlux = self.flux(False, False)
+        self._boundaryFlux = self.boundaryFlux()
+        Function.compile()
         return
 
         # only reads fields
@@ -138,11 +144,6 @@ class RCF(Solver):
         rhoEFlux = (rhoE + p)*Un
         return rhoFlux, rhoUFlux, rhoEFlux
 
-    def getRho(self, T, p):
-        e = self.Cv*T
-        rho = p/(e*(self.gamma-1))
-        return rho
-
     def viscousFlux(self, TL, TR, UF, TF, gradUF, gradTF):
         mesh = self.mesh
         mu = self.mu(TF)
@@ -161,45 +162,67 @@ class RCF(Solver):
         rhoEFlux = -(qF + sigmaF.dot(UF));
         return rhoUFlux, rhoEFlux
 
-    def flux(self, *args):
+    def flux(self, characteristic=False, neighbour=True):
         mesh = self.mesh
-        if not hasattr(self, '_flux'):
-            UL, UR = Tensor((3,)), Tensor((3,))
-            TL, TR = Tensor((1,)), Tensor((1,))
-            pL, pR = Tensor((1,)), Tensor((1,))
-            gradUL, gradUR = Tensor((3,3)), Tensor((3,3))
-            gradTL, gradTR = Tensor((1,3)), Tensor((1,3))
-            gradpL, gradpR = Tensor((1,3)), Tensor((1,3))
-            ULF, URF = secondOrder(UL, UR, gradUL, mesh, 0), secondOrder(UR, UL, gradUR, mesh, 1)
-            TLF, TRF = secondOrder(TL, TR, gradTL, mesh, 0), secondOrder(TR, TL, gradTR, mesh, 1)
-            pLF, pRF = secondOrder(pL, pR, gradpL, mesh, 0), secondOrder(pR, pL, gradpR, mesh, 1)
+        UL, UR = Tensor((3,)), Tensor((3,))
+        TL, TR = Tensor((1,)), Tensor((1,))
+        pL, pR = Tensor((1,)), Tensor((1,))
+        gradUL, gradUR = Tensor((3,3)), Tensor((3,3))
+        gradTL, gradTR = Tensor((1,3)), Tensor((1,3))
+        gradpL, gradpR = Tensor((1,3)), Tensor((1,3))
+
+        ULF, URF = secondOrder(UL, UR, gradUL, mesh, 0), secondOrder(UR, UL, gradUR, mesh, 1)
+        TLF, TRF = secondOrder(TL, TR, gradTL, mesh, 0), secondOrder(TR, TL, gradTR, mesh, 1)
+        pLF, pRF = secondOrder(pL, pR, gradpL, mesh, 0), secondOrder(pR, pL, gradpR, mesh, 1)
 
 
-            rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
-            rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
+        rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
+        rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
 
+        if characteristic:
+            rhoFlux, rhoUFlux, rhoEFlux = self.boundaryRiemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
+            rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
+        else:
             rhoFlux, rhoUFlux, rhoEFlux = self.riemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
-                rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
+            rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
 
-            UF = 0.5*(ULF + URF)
-            TF = 0.5*(TLF + TRF)
-            gradTF = 0.5*(gradTL + gradTR)
-            gradUF = 0.5*(gradUL + gradUR)
+        UF = 0.5*(ULF + URF)
+        TF = 0.5*(TLF + TRF)
+        gradTF = 0.5*(gradTL + gradTR)
+        gradUF = 0.5*(gradUL + gradUR)
 
-            ret = self.viscousFlux(TL, TR, UF, TF, gradUF, gradTF)
-            rhoUFlux += ret[0]
-            rhoEFlux += ret[1]
+        ret = self.viscousFlux(TL, TR, UF, TF, gradUF, gradTF)
+        rhoUFlux += ret[0]
+        rhoEFlux += ret[1]
 
-            drhoL, drhoR = div(rhoFlux, mesh)
-            drhoUL, drhoUR = div(rhoUFlux, mesh)
-            drhoEL, drhoER = div(rhoEFlux, mesh)
-            #this->operate->div(&rhoEFlux, drhoE, i, neighbour);
+        drhoL, drhoR = div(rhoFlux, mesh, neighbour)
+        drhoUL, drhoUR = div(rhoUFlux, mesh, neighbour)
+        drhoEL, drhoER = div(rhoEFlux, mesh, neighbour)
 
-            self._flux = Function([UL, UR, TL, TR, pL, pR, gradUL, gradUR, gradTL, gradTR, gradpL, gradpR],
+        return Function([UL, UR, TL, TR, pL, pR, gradUL, gradUR, gradTL, gradTR, gradpL, gradpR],
                                   [drhoL, drhoR, drhoUL, drhoUR, drhoEL, drhoER], mesh)
 
-        return self._flux(*args)
-          
+    def boundaryFlux(self):
+        mesh = self.mesh
+        UL, UR = Tensor((3,)), Tensor((3,))
+        TL, TR = Tensor((1,)), Tensor((1,))
+        pL, pR = Tensor((1,)), Tensor((1,))
+        gradUL, gradUR = Tensor((3,3)), Tensor((3,3))
+        gradTL, gradTR = Tensor((1,3)), Tensor((1,3))
+        gradpL, gradpR = Tensor((1,3)), Tensor((1,3))
+
+        rhoFlux, rhoUFlux, rhoEFlux = self.getFlux(UR, TR, pR, mesh.normals)
+        ret = self.viscousFlux(TL, TR, UR, TR, gradUR, gradTR)
+        rhoUFlux += ret[0]
+        rhoEFlux += ret[1]
+
+        drhoL, drhoR = div(rhoFlux, mesh, False)
+        drhoUL, drhoUR = div(rhoUFlux, mesh, False)
+        drhoEL, drhoER = div(rhoEFlux, mesh, False)
+
+        return Function([UL, UR, TL, TR, pL, pR, gradUL, gradUR, gradTL, gradTR, gradpL, gradpR],
+                                  [drhoL, drhoR, drhoUL, drhoUR, drhoEL, drhoER], mesh)
+
     def equation(self, rho, rhoU, rhoE):
         logger.info('computing RHS/LHS')
         mesh = self.mesh.origMesh
@@ -220,39 +243,51 @@ class RCF(Solver):
         #self.local = gradp.field
         #self.remote = gradpO.field
 
-        fields = []
-        for phi in [U, T, p, gradU, gradT, gradp]:
-            fields.append(phi.field[mesh.owner])
-            fields.append(phi.field[mesh.neighbour])
-        for phi in mesh.gradFields:
-            fields.append(getattr(mesh, phi))
-        flux = self.flux(*fields)
+        drhoL, drhoR = np.zeros((mesh.nFaces, 1)), np.zeros((mesh.nFaces, 1))
+        drhoUL, drhoUR = np.zeros((mesh.nFaces, 3)), np.zeros((mesh.nFaces, 3))
+        drhoEL, drhoER = np.zeros((mesh.nFaces, 1)), np.zeros((mesh.nFaces, 1))
+        def _fluxUpdate(start, end, func):
+            nFaces = end-start
+            inputs = []
+            for phi in [U, T, p, gradU, gradT, gradp]:
+                inputs.append(phi.field[mesh.owner][start:end])
+                inputs.append(phi.field[mesh.neighbour][start:end])
+            for phi in mesh.gradFields:
+                inputs.append(getattr(mesh, phi)[start:end])
+            outputs = []
+            for phi in [drhoL, drhoR, drhoUL, drhoUR, drhoEL, drhoER]:
+                outputs.append(phi[start:end])
+            func(inputs, outputs)
+        _fluxUpdate(0, mesh.nInternalFaces, self._flux)
+        for patchID in mesh.boundary:
+            startFace, endFace, nFaces = mesh.getPatchFaceRange(patchID)
+            patchType = mesh.boundary[patchID]['type']
+            if patchType in config.coupledPatches:
+                _fluxUpdate(startFace, endFace, self._characteristicFlux)
+            elif patchType == 'characteristic':
+                _fluxUpdate(startFace, endFace, self._coupledFlux)
+            else:
+                _fluxUpdate(startFace, endFace, self._boundaryFlux)
+
+        drho = np.zeros((mesh.nInternalCells, 1))
+        drhoU = np.zeros((mesh.nInternalCells, 3))
+        drhoE = np.zeros((mesh.nInternalCells, 1))
+        drho[mesh.owner] += drhoL
+        drho[mesh.neighbour[:mesh.nInternalFaces]] += drhoR[:mesh.nInternalFaces]
+        drhoU[mesh.owner] += drhoUL
+        drhoU[mesh.neighbour[:mesh.nInternalFaces]] += drhoUR[:mesh.nInternalFaces]
+        drhoE[mesh.owner] += drhoEL
+        drhoE[mesh.neighbour[:mesh.nInternalFaces]] += drhoER[:mesh.nInternalFaces]
+
+        return [Field('drho', drho, (1,)), Field('drho', drhoU, (1,)), Field('drho', drhoE, (1,))] 
 
         # CFL based time step
-        self.aF = ((self.gamma-1)*self.Cp*TF).sqrt()
-        if self.stage == 1:
-            maxaF = (UF.dotN()).abs() + self.aF
-            self.dtc = 2*self.CFL/internal_sum(maxaF, mesh, absolute=True)
+        #self.aF = ((self.gamma-1)*self.Cp*TF).sqrt()
+        #if self.stage == 1:
+        #    maxaF = (UF.dotN()).abs() + self.aF
+        #    self.dtc = 2*self.CFL/internal_sum(maxaF, mesh, absolute=True)
 
-        return [div(rhoFlux) - self.sourceFields[0], \
-                #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
-                div(rhoUFlux - sigmaF) - self.sourceFields[1], \
-                div(rhoEFlux - qF - sigmadotUF) - self.sourceFields[2]]
-
-
-    def boundary(self, rhoN, rhoUN, rhoEN):
-        logger.info('correcting boundary')
-        UN, TN, pN = self.primitive(rhoN, rhoUN, rhoEN)
-        U, T, p = self.getBCFields()
-        #p.resetField()
-        #U.resetField()
-        #T.resetField()
-        U.field = UN.field
-        T.field = TN.field
-        p.field = pN.field
-        p.setInternalField(pN.field)
-        U.setInternalField(UN.field)
-        T.setInternalField(TN.field)
-        U.updateProcessorCells([U, T, p])
-        return list(self.conservative(U, T, p))
-    
+        #return [div(rhoFlux) - self.sourceFields[0], \
+        #        #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
+        #        div(rhoUFlux - sigmaF) - self.sourceFields[1], \
+        #        div(rhoEFlux - qF - sigmadotUF) - self.sourceFields[2]]
