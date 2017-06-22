@@ -243,6 +243,8 @@ class RCF(Solver):
         #self.local = gradp.field
         #self.remote = gradpO.field
 
+        import time
+        start = time.time()
         drhoL, drhoR = np.zeros((mesh.nFaces, 1)), np.zeros((mesh.nFaces, 1))
         drhoUL, drhoUR = np.zeros((mesh.nFaces, 3)), np.zeros((mesh.nFaces, 3))
         drhoEL, drhoER = np.zeros((mesh.nFaces, 1)), np.zeros((mesh.nFaces, 1))
@@ -278,6 +280,8 @@ class RCF(Solver):
         drhoU[mesh.neighbour[:mesh.nInternalFaces]] += drhoUR[:mesh.nInternalFaces]
         drhoE[mesh.owner] += drhoEL
         drhoE[mesh.neighbour[:mesh.nInternalFaces]] += drhoER[:mesh.nInternalFaces]
+        print time.time()-start
+
 
         return [Field('drho', drho, (1,)), Field('drho', drhoU, (1,)), Field('drho', drhoE, (1,))] 
 

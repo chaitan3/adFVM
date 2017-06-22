@@ -44,7 +44,7 @@ def timeStepper(equation, initFields, solver):
         internalFields = [0]*nFields
         for j in range(0, i+1):
             for index in range(0, nFields):
-                internalFields[index] += alpha[i,j]*fields[j][index].getInternalField()-beta[i,j]*LHS[j][index].field*solver.dt
+                internalFields[index] += alpha[i,j]*fields[j][index].field-beta[i,j]*LHS[j][index].field*solver.dt
         internalFields = createFields(internalFields, solver)
         solver.stage += 1
         if i == nStages-1:

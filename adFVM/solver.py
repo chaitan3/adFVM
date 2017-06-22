@@ -363,7 +363,10 @@ class Solver(object):
             self.t0 = t
             outputs = self.map(fields)
             #outputs = adFVMcpp.forward(*inputs)
-            newFields, objective, dtc = outputs[:3], outputs[3], outputs[4]
+            #newFields, objective, dtc = outputs[:3], outputs[3], outputs[4]
+            newFields = outputs
+            dtc = dt
+            objective = 0
             local = remote = 0
 
             fields = self.getFields(newFields, IOField, refFields=fields)
