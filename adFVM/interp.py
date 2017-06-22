@@ -1,6 +1,6 @@
 from . import config, compat, parallel
 from .field import Field#, faceExchange
-from .config import ZeroTensor
+from .tensor import ZeroTensor
 
 import itertools
 import numpy as np

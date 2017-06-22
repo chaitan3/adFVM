@@ -838,7 +838,7 @@ class Mesh(object):
         return diff
         
     def makeTensor(self):
-        from .config import Tensor
+        from .tensor import Tensor
         logger.info('making tensor variables')
         for attr in Mesh.gradFields:
             value = getattr(self, attr)

@@ -1,5 +1,5 @@
 from . import config
-from .config import Tensor
+from .tensor import Tensor
 from .field import Field
 
 def eulerLaxFriedrichs(gamma, pLF, pRF, TLF, TRF, ULF, URF, \

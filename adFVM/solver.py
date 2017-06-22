@@ -6,7 +6,7 @@ import copy
 
 #import adFVMcpp
 from . import config, parallel, timestep
-from .config import Variable
+from .tensor import Variable
 from .parallel import pprint
 from .memory import printMemUsage
 

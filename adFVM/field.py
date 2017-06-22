@@ -6,7 +6,7 @@ from numbers import Number
 from contextlib import contextmanager
 
 from . import config, parallel, BCs
-from .config import Variable
+from .tensor import Variable
 from .parallel import pprint
 from .mesh import extractField, writeField
 

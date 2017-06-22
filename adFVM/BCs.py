@@ -2,7 +2,7 @@ import numpy as np
 import new
 
 from . import config
-from .config import Variable
+from .tensor import Variable
 from .mesh import extractField, extractVector
 logger = config.Logger(__name__)
 
