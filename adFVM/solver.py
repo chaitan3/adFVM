@@ -102,9 +102,6 @@ class Solver(object):
         #    exit()
         pprint()
 
-    def initOrder(self, fields):
-        return fields
-
     def compileInit(self, functionName='init'):
         internalFields = []
         fields = []

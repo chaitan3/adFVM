@@ -14,6 +14,11 @@ logger = config.Logger(__name__)
 
 # dual defined for np and ad
 def central(phi, mesh):
+    f = mesh.weights
+    phiF = phi.extract(mesh.owner)*f + phi.extract(mesh.neighbour)*(-f+1)
+    return phiF
+
+def centralOld(phi, mesh):
     logger.info('interpolating {0}'.format(phi.name))
     factor = mesh.weights
     # for tensor
@@ -26,10 +31,16 @@ def central(phi, mesh):
     #    faceField.field = ad.patternbroadcast(faceField.field, phi.field.broadcastable)
     return faceField
 
-def secondOrder(phiC, phiD, gradPhi, mesh, swap):
-    phiF = phiC + (phiD-phiC)*mesh.linearWeights[swap] 
-    for i in range(0, phiC.shape[0]):
-        phiF[i] += mesh.quadraticWeights[swap].dot(gradPhi[i])
+def secondOrder(phi, gradPhi, mesh):
+    phiF = [None, None]
+    for swap in [0, 1]:
+        p, n = mesh.owner, mesh.neighbour
+        if swap:
+            n, p = p, n
+        phiC, phiD = phi.extract(p), phi.extract(n)
+        phiF[swap] = phiC + (phiD-phiC)*mesh.linearWeights[swap] 
+        for i in range(0, phiC.shape[0]):
+            phiF[swap][i] += mesh.quadraticWeights[swap].dot(gradPhi.extract(p)[i])
     return phiF
 
 # only defined on ad

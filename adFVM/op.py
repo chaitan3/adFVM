@@ -3,7 +3,7 @@ import numpy as np
 
 from . import config
 from .field import Field, CellField, IOField
-from .tensor import ZeroTensor
+from .tensor import ZeroTensor, Tensor
 
 logger = config.Logger(__name__)
 
@@ -40,10 +40,10 @@ def div(phi, mesh, neighbour):
     wp = mesh.areas/mesh.volumesL
     if neighbour:
         wn = -mesh.areas/mesh.volumesR
+        dphi = Tensor.collate(phi*wp, mesh.owner, phi*wn, mesh.neighbour)
     else:
-        wn = ZeroTensor(wp.shape)
-    # for div, contri for owner is pos, neigh is neg
-    return phi*wp, phi*wn
+        dphi = Tensor.collate(phi*wp, mesh.owner)
+    return dphi
 
 def absDiv(phi, mesh):
     wp = mesh.areas/mesh.volumesL
@@ -65,6 +65,20 @@ def absDiv(phi, mesh):
     #else:
     #    return Field('div({0})'.format(phi.name), divField, phi.dimensions)
 
+def grad(phi, mesh, neighbour):
+    wp = mesh.areas/mesh.volumesL
+    if phi.shape == (1,):
+        phiN = phi*mesh.normals
+    else:
+        phiN = phi.outer(mesh.normals)
+    if neighbour:
+        wn = -mesh.areas/mesh.volumesR
+        gphi = Tensor.collate(phiN*wp, mesh.owner, phiN*wn, mesh.neighbour)
+    else:
+        gphi = Tensor.collate(phiN*wp, mesh.owner)
+    return gphi
+   
+
 def snGrad(phiL, phiR, mesh):
     return (phiR - phiL)/mesh.deltas
 
@@ -76,7 +90,7 @@ def laplacian(phi, DT):
     return Field('laplacian({0})'.format(phi.name), laplacian2, phi.dimensions)
 
 # dual defined 
-def grad(phi, ghost=False, op=False, numpy=False):
+def gradOld(phi, ghost=False, op=False, numpy=False):
     assert len(phi.dimensions) == 1
     logger.info('gradient of {0}'.format(phi.name))
     mesh = phi.mesh

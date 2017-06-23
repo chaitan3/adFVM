@@ -10,7 +10,7 @@ from . import config, parallel
 from .compat import norm, decompose, getCells, add_at
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
-from .tensor import Tensor
+from .tensor import Tensor, IntegerScalar
 
 try:
     import h5py
@@ -20,6 +20,7 @@ except:
 logger = config.Logger(__name__)
 
 class Mesh(object):
+    intFields = ['owner', 'neighbour']
     gradFields = ['areas', 'volumesL', 'volumesR',
                   'weights', 'deltas', 'normals',
                   'linearWeights', 'quadraticWeights',
@@ -117,7 +118,7 @@ class Mesh(object):
         self.update(currTime, 0.)
         self.symMesh.parent = self
         self.symMesh.makeTensor()
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
         pprint('nFaces:', parallel.sum(self.origMesh.nFaces))
@@ -833,6 +834,9 @@ class Mesh(object):
         for attr in Mesh.gradFields:
             value = getattr(self.parent, attr)
             setattr(self, attr, Tensor(value.shape[1:]))
+        for attr in Mesh.intFields:
+            value = getattr(self.parent, attr)
+            setattr(self, attr, Tensor((1,), scalars=[IntegerScalar()]))
 
         #for attr in Mesh.constants:
         #    setattr(self, attr, ad.placeholder(ad.int32))

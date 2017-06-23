@@ -10,12 +10,10 @@ long long current_timestamp() {
          return milliseconds;
      }
 
-#include "code.c"
-
-#define STR_HELPER(x) #x
-#define STR(x) STR_HELPER(x)
-
 Mesh *mesh;
+
+#include "code.c"
+//#include "density.cpp"
 
 template <typename dtype, integer shape1, integer shape2>
 void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shape2>& tmp) {
@@ -24,7 +22,7 @@ void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shap
     //cout << attr << " " << PyArray_DESCR(array)->elsize << endl;
     assert (array != NULL);
     getArray(array, tmp);
-    //Py_DECREF(array);
+    Py_DECREF(array);
 }
 
 
