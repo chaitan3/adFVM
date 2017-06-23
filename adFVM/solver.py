@@ -352,14 +352,11 @@ class Solver(object):
                 pprint('Time step', timeIndex)
                 pprint()
 
-            #inputs = [phi.field for phi in fields] + \
-            #         [phi[1] for phi in self.sourceTerms] + \
-            #         [dt, t]
-            self.dt = dt
-            self.t = t
-            self.t0 = t
-            outputs = self.map(fields)
-            #outputs = adFVMcpp.forward(*inputs)
+            inputs = [phi.field for phi in fields] + \
+                     [phi[1] for phi in self.sourceTerms] + \
+                     [dt, t]
+            #outputs = self.map(fields)
+            outputs = self.map(*inputs)
             #newFields, objective, dtc = outputs[:3], outputs[3], outputs[4]
             newFields = outputs
             dtc = dt

@@ -76,6 +76,7 @@ class RCF(Solver):
 
         Function.compile()
         Function._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
+        self.map = Function._module.forward
         return
 
         # only reads fields

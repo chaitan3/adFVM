@@ -10,10 +10,10 @@ long long current_timestamp() {
          return milliseconds;
      }
 
-Mesh *mesh;
+Mesh *meshp;
 
 #include "code.c"
-//#include "density.cpp"
+#include "density.cpp"
 
 template <typename dtype, integer shape1, integer shape2>
 void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shape2>& tmp) {
@@ -72,7 +72,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     PyObject *meshObject = PyTuple_GetItem(args, 0);
     Py_INCREF(meshObject);
 
-    mesh = new Mesh(meshObject);
+    meshp = new Mesh(meshObject);
     //cout << "Initialized mesh" << endl;
     //rcf = new RCF();
     //rcf->setMesh(mesh);
@@ -100,6 +100,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 #define modName "interface"
 
 static PyObject* forwardSolver(PyObject *self, PyObject *args) {
+    const Mesh& mesh = *meshp;
 
     //cout << "forward 1" << endl;
     PyObject *rhoObject, *rhoUObject, *rhoEObject;
@@ -119,23 +120,20 @@ static PyObject* forwardSolver(PyObject *self, PyObject *args) {
     getArray((PyArrayObject *)rhoSObject, rhoS);
     getArray((PyArrayObject *)rhoUSObject, rhoUS);
     getArray((PyArrayObject *)rhoESObject, rhoES);
-    //rcf -> rhoS = &rhoS;
-    //rcf -> rhoUS = &rhoUS;
-    //rcf -> rhoES = &rhoES;
 
     //cout << "forward 3" << endl;
     //const Mesh& mesh = *(rcf->mesh);
-    //vec rhoN(mesh.nInternalCells);
-    //mat rhoUN(mesh.nInternalCells);
-    //vec rhoEN(mesh.nInternalCells);
+    vec rhoN(mesh.nInternalCells);
+    mat rhoUN(mesh.nInternalCells);
+    vec rhoEN(mesh.nInternalCells);
     scalar objective, dtc;
-    //tie(objective, dtc) = timeIntegrator(rcf, rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+    tie(objective, dtc) = timeIntegrator(rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
     //cout << "forward 4" << endl;
     
     PyObject *rhoNObject, *rhoUNObject, *rhoENObject;
-    //rhoNObject = putArray(rhoN);
-    //rhoUNObject = putArray(rhoUN);
-    //rhoENObject = putArray(rhoEN);
+    rhoNObject = putArray(rhoN);
+    rhoUNObject = putArray(rhoUN);
+    rhoENObject = putArray(rhoEN);
     //cout << "forward 5" << endl;
     
     return Py_BuildValue("(NNNdd)", rhoNObject, rhoUNObject, rhoENObject, objective, dtc);
@@ -285,7 +283,9 @@ Mesh::Mesh (PyObject* meshObject) {
     //getMeshArray(this->mesh, "cellFaces", this->cellFaces);
     //getMeshArray(this->mesh, "cellNeighboursMatOp", this->cellNeighbours);
     //getMeshArray(this->mesh, "cellCentres", this->cellCentres);
-    getMeshArray(this->mesh, "volumes", this->volumes);
+    //getMeshArray(this->mesh, "volumes", this->volumes);
+    getMeshArray(this->mesh, "volumesL", this->volumesL);
+    getMeshArray(this->mesh, "volumesR", this->volumesR);
 
     getMeshArray(this->mesh, "deltas", this->deltas);
     //getMeshArray(this->mesh, "deltasUnit", this->deltasUnit);

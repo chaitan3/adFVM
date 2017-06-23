@@ -60,6 +60,9 @@ class Tensor(object):
                 self.scalars.append(Scalar())
         else:
             self.scalars = scalars
+        self.dtype = dtype
+        if isinstance(self.scalars[0], IntegerScalar):
+            self.dtype = 'integer'
 
     def tolist():
         return self.scalars
@@ -244,12 +247,12 @@ class Function(object):
 
         memString = '' 
         for inp in self._inputTensors:
-            memString += '{}* {}, '.format(dtype, inp.name)
+            memString += 'const {}* {}, '.format(inp.dtype, inp.name)
         for out in self._outputTensors:
             memString += '{}* {}, '.format(dtype, out.name)
         codeFile.write('\nvoid {}(int n, {}) {}\n'.format(self.name, memString[:-2], '{'))
         codeFile.write('\tlong long start = current_timestamp();\n')
-        codeFile.write('\tfor (int i = 0; i < n; i++) {\n')
+        codeFile.write('\tfor (integer i = 0; i < n; i++) {\n')
         names = {}
         for index, op in enumerate(sortedOps):
             names[op] = 'Intermediate_{}'.format(index)
@@ -313,7 +316,7 @@ class Function(object):
             codeFile.write('\t\t' + code + '\n')
             #print op.func, len(op.args)
         codeFile.write('\t}\n')
-        codeFile.write('\tlong long end = current_timestamp(); mil += end-start; printf("c module: %lld\\n", mil);\n')
+        codeFile.write('\tlong long end = current_timestamp(); mil += end-start; printf("c module {}: %lld\\n", mil);\n'.format(self.name))
         codeFile.write('}\n')
         codeFile.close()
 

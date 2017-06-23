@@ -35,7 +35,8 @@ class Mesh {
         arrType<integer, 6> cellFaces;
         arrType<integer, 6> cellNeighbours;
 
-        vec areas, volumes, weights, deltas;
+        vec areas, weights, deltas;
+        vec volumesL, volumesR;
         mat normals;
         arrType<scalar, 2> linearWeights;
         arrType<scalar, 2, 3> quadraticWeights;
