@@ -1,6 +1,26 @@
 #define timeIntegrator euler
 
-void equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& objective, scalar& minDtc) {
+class RCF {
+    public:
+
+    void* req;
+    integer reqIndex;
+    integer reqField;
+    Boundary boundaries[3];
+    scalar* reqBuf[3];
+    integer stage;
+
+    void equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& objective, scalar& minDtc);
+    void boundaryInit(integer startField);
+    void boundaryEnd();
+
+    template <typename dtype, integer shape1, integer shape2>
+    void boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi);
+};
+
+RCF *rcf;
+
+void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& objective, scalar& minDtc) {
     // make decision between 1 and 3 a template
     // optimal memory layout? combine everything?
     //cout << "c++: equation 1" << endl;
@@ -12,11 +32,34 @@ void equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& 
 
     Function_primitive(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &U(0), &T(0), &p(0));
 
-    //this->boundaryInit();    
-    //this->boundary(this->boundaries[0], U);
-    //this->boundary(this->boundaries[1], T);
-    //this->boundary(this->boundaries[2], p);
-    ////this->boundaryEnd();    
+    for (auto& patch: this->boundaries[2]) {
+        string patchType = patch.second.at("type");
+        string patchID = patch.first;
+        integer startFace, nFaces;
+        tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
+        integer cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
+
+        if (patchType == "CBC_UPT") {
+            mat Uval(nFaces, patch.second.at("_U0"));
+            vec Tval(nFaces, patch.second.at("_T0"));
+            vec pval(nFaces, patch.second.at("_p0"));
+            for (integer i = 0; i < nFaces; i++) {
+                integer c = cellStartFace + i;
+                for (integer j = 0; j < 3; j++) {
+                    U(c, j) = Uval(i, j);
+                }
+                T(c) = Tval(i);
+                p(c) = pval(i);
+            }
+        } else if (patchType == "CBC_TOTAL_PT") {
+            cout << "implement this" << endl;
+        }
+    }
+    this->boundaryInit(0);    
+    boundary(this->boundaries[0], U);
+    boundary(this->boundaries[1], T);
+    boundary(this->boundaries[2], p);
+    this->boundaryEnd();    
     ////U.info();
     ////T.info();
     ////p.info();
@@ -52,15 +95,14 @@ void equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& 
             gradUpdate(startFace, nFaces, Function_boundaryGrad);
         }
     }
-    ////faceUpdate(mesh.nLocalFaces, mesh.nFaces, false);
     ////cout << "gradU " << gradU.checkNAN() << endl;
     //
     ////cout << "c++: equation 3" << endl;
-    //this->boundaryInit(this->reqField);    
-    //this->boundary(mesh.defaultBoundary, gradU);
-    //this->boundary(mesh.defaultBoundary, gradT);
-    //this->boundary(mesh.defaultBoundary, gradp);
-    ////this->boundaryEnd();
+    this->boundaryInit(this->reqField);    
+    this->boundary(mesh.defaultBoundary, gradU);
+    this->boundary(mesh.defaultBoundary, gradT);
+    this->boundary(mesh.defaultBoundary, gradp);
+    this->boundaryEnd();
     //
     vec dtc(mesh.nCells);
     drho.zero();
@@ -96,69 +138,6 @@ void equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& 
             fluxUpdate(startFace, nFaces, Function_boundaryFlux);
         }
     }
-
-    //auto fluxUpdate(int startFace, int nFaces, auto func) {
-    //   func(UL.data, )
-    //}
-    //auto [start]
-   
-    //Function_flux();
-    //this->boundaryEnd();    
-    ////cout << "c++: equation 4" << endl;
-    //// characteristic boundary
-    //for (auto& patch: mesh.boundary) {
-    //    auto& patchInfo = patch.second;
-    //    integer startFace, nFaces;
-    //    tie(startFace, nFaces) = mesh.boundaryFaces.at(patch.first);
-    //    integer cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
-    //    string patchType = patchInfo.at("type");
-    //    //if (patchInfo.at("type") == "cyclic") {
-    //    if ((patchType == "cyclic") ||
-    //        (patchType == "processor") ||
-    //        (patchType == "processorCyclic")) {
-    //        faceFluxUpdate(startFace, startFace + nFaces, false, false);
-    //    } else if (patchType == "characteristic") {
-    //        faceFluxUpdate(startFace, startFace + nFaces, false, true);
-    //    } else {
-    //        for (integer i = 0; i < nFaces; i++) {
-    //            integer index = startFace + i;
-    //            integer c = cellStartFace + i;
-    //            scalar rhoFlux;
-    //            scalar rhoUFlux[3];
-    //            scalar rhoEFlux;
-
-    //            this->getFlux(&U(c), T(c), p(c), &mesh.normals(index), rhoFlux, rhoUFlux, rhoEFlux);
-    //            viscousFluxUpdate(&U(c), T(c), rhoUFlux, rhoEFlux, index);
-
-    //            this->operate->div(&rhoFlux, drho, index, false);
-    //            this->operate->div(rhoUFlux, drhoU, index, false);
-    //            this->operate->div(&rhoEFlux, drhoE, index, false);
-
-    //            scalar aF = sqrt((this->gamma-1)*this->Cp*T(c));
-    //            scalar maxaF = 0;
-    //            for (integer j = 0; j < 3; j++) {
-    //                maxaF += U(c, j)*mesh.normals(i, j);
-    //            }
-    //            maxaF = fabs(maxaF) + aF;
-    //            this->operate->absDiv(&maxaF, dtc, i, false);
-    //        }
-    //    }
-    //}
-    ////faceFluxUpdate(mesh.nLocalFaces, mesh.nFaces, false);
-    ////cout << "c++: equation 5" << endl;
-    ////
-    //
-    //// CFL computation
-    //minDtc = 1e100;
-    //for (integer i = 0; i < mesh.nInternalCells; i++) {
-    //    minDtc = min(2*this->CFL/dtc(i), minDtc);
-    //    drho(i) -= (*this->rhoS)(i);
-    //    for (integer j = 0; j < 3; j++) {
-    //        drhoU(i) -= (*this->rhoUS)(i, j);
-    //    }
-    //    drhoE(i) -= (*this->rhoES)(i);
-    //}
-    //cout << minDtc << endl;
 }
 
 tuple<scalar, scalar> euler(const vec& rho, const mat& rhoU, const vec& rhoE, vec& rhoN, mat& rhoUN, vec& rhoEN, scalar t, scalar dt) {
@@ -168,7 +147,8 @@ tuple<scalar, scalar> euler(const vec& rho, const mat& rhoU, const vec& rhoE, ve
     mat drhoU(rhoU.shape);
     vec drhoE(rhoE.shape);
     scalar objective, dtc;
-    equation(rho, rhoU, rhoE, drho, drhoU, drhoE, objective, dtc);
+    rcf->stage = 0;
+    rcf->equation(rho, rhoU, rhoE, drho, drhoU, drhoE, objective, dtc);
 
     for (integer i = 0; i < mesh.nInternalCells; i++) {
         rhoN(i) = rho(i) - dt*drho(i);
@@ -198,8 +178,8 @@ tuple<scalar, scalar> SSPRK(const vec& rho, const mat& rhoU, const vec& rhoE, ve
 
     for (integer stage = 0; stage < n; stage++) {
         //solver.t = solver.t0 + gamma[i]*solver.dt
-        //rcf->stage = stage;
-        equation(rhos[stage], rhoUs[stage], rhoEs[stage], drho, drhoU, drhoE, objective[stage], dtc[stage]);
+        rcf->stage = stage;
+        rcf->equation(rhos[stage], rhoUs[stage], rhoEs[stage], drho, drhoU, drhoE, objective[stage], dtc[stage]);
         integer curr = stage + 1;
         scalar b = beta[stage][stage];
         for (integer i = 0; i < mesh.nInternalCells; i++) {
@@ -223,5 +203,136 @@ tuple<scalar, scalar> SSPRK(const vec& rho, const mat& rhoU, const vec& rhoE, ve
     return make_tuple(objective[0], dtc[0]);
 }
 
+template <typename dtype, integer shape1, integer shape2>
+void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi) {
+    const Mesh& mesh = *meshp;
+    //MPI_Barrier(MPI_COMM_WORLD);
 
+    dtype* phiBuf = NULL;
+    integer reqPos = 0;
+    if (mesh.nRemotePatches > 0) {
+        reqPos = this->reqIndex/(2*mesh.nRemotePatches);
+        phiBuf = new dtype[(mesh.nCells-mesh.nLocalCells)*shape1*shape2];
+        this->reqBuf[reqPos] = phiBuf;
+    }
+
+    for (auto& patch: boundary) {
+        string patchType = patch.second.at("type");
+        string patchID = patch.first;
+        const map<string, string>& patchInfo = mesh.boundary.at(patchID);
+
+        integer startFace, nFaces;
+        tie(startFace, nFaces) = mesh.boundaryFaces.at(patch.first);
+        integer cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
+
+        if (patchType == "cyclic") {
+            string neighbourPatchID = patchInfo.at("neighbourPatch");
+            integer neighbourStartFace = std::get<0>(mesh.boundaryFaces.at(neighbourPatchID));
+            for (integer i = 0; i < nFaces; i++) {
+                integer p = mesh.owner(neighbourStartFace + i);
+                integer c = cellStartFace + i;
+                for (integer j = 0; j < shape1; j++) {
+                    for (integer k = 0; k < shape2; k++) {
+                        phi(c, j, k) = phi(p, j, k);
+                    }
+                }
+            }
+        } else if (patchType == "zeroGradient" || patchType == "empty" || patchType == "inletOutlet") {
+            for (integer i = 0; i < nFaces; i++) {
+                integer p = mesh.owner(startFace + i);
+                integer c = cellStartFace + i;
+                for (integer j = 0; j < shape1; j++) {
+                    for (integer k = 0; k < shape2; k++) {
+                        phi(c, j, k) = phi(p, j, k);
+                    }
+                }
+            }
+        } else if (patchType == "symmetryPlane" || patchType == "slip") {
+            cout << "implemented this elsewhere" << endl;
+            if ((shape1 == 3) && (shape2 == 1)) {
+                for (integer i = 0; i < nFaces; i++) {
+                    integer f = startFace + i;
+                    integer c = cellStartFace + i;
+                    integer p = mesh.owner(f);
+                    dtype phin = 0.;
+                    for (integer j = 0; j < 3; j++) {
+                        phin += mesh.normals(f, j)*phi(p, j);
+                    }
+                    for (integer j = 0; j < 3; j++) {
+                        phi(c, j) = phi(p, j) - mesh.normals(f, j)*phin;
+                    }
+                }
+            } else {
+                for (integer i = 0; i < nFaces; i++) {
+                    integer p = mesh.owner(startFace + i);
+                    integer c = cellStartFace + i;
+                    for (integer j = 0; j < shape1; j++) {
+                        for (integer k = 0; k < shape2; k++) {
+                            phi(c, j, k) = phi(p, j, k);
+                        }
+                    }
+                }
+            }
+        } else if (patchType == "fixedValue") {
+            arrType<scalar, shape1, shape2> phiVal(nFaces, patch.second.at("_value"));
+
+            for (integer i = 0; i < nFaces; i++) {
+                integer c = cellStartFace + i;
+                for (integer j = 0; j < shape1; j++) {
+                    for (integer k = 0; k < shape2; k++) {
+                        phi(c, j, k) = phiVal(i, j, k);
+                    }
+                }
+            }
+        } else if (patchType == "processor" || patchType == "processorCyclic") {
+            //cout << "hello " << patchID << endl;
+            integer bufStartFace = cellStartFace - mesh.nLocalCells;
+            integer size = nFaces*shape1*shape2;
+            integer dest = stoi(patchInfo.at("neighbProcNo"));
+            for (integer i = 0; i < nFaces; i++) {
+                integer p = mesh.owner(startFace + i);
+                integer b = bufStartFace + i;
+                for (integer j = 0; j < shape1; j++) {
+                    for (integer k = 0; k < shape2; k++) {
+                        phiBuf[b*shape1*shape2 + j*shape2 + k] = phi(p, j, k);
+                    }
+                }
+            }
+            MPI_Request *req = (MPI_Request*) this->req;
+            integer tag = (this->stage*1000+1) + this->reqField*100 + mesh.tags.at(patchID);
+            //cout << patchID << " " << tag << endl;
+            MPI_Isend(&phiBuf[bufStartFace*shape1*shape2], size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex]);
+            MPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex+1]);
+            this->reqIndex += 2;
+        }
+        else if (patchType == "calculated") {
+        } 
+        //else {
+        //    cout << "patch not found " << patchType << " for " << patchID << endl;
+        //}
+    }
+    this->reqField++;
+}
+
+void RCF::boundaryInit(integer startField) {
+    const Mesh& mesh = *meshp;
+    this->reqIndex = 0;
+    this->reqField = startField;
+    if (mesh.nRemotePatches > 0) {
+        //MPI_Barrier(MPI_COMM_WORLD);
+        this->req = (void *)new MPI_Request[2*3*mesh.nRemotePatches];
+    }
+}
+
+void RCF::boundaryEnd() {
+    const Mesh& mesh = *meshp;
+    if (mesh.nRemotePatches > 0) {
+        MPI_Waitall(2*3*mesh.nRemotePatches, ((MPI_Request*)this->req), MPI_STATUSES_IGNORE);
+        delete[] ((MPI_Request*)this->req);
+        //MPI_Barrier(MPI_COMM_WORLD);
+        for (integer i = 0; i < 3; i++) {
+            delete[] this->reqBuf[i];
+        }
+    }
+}
 

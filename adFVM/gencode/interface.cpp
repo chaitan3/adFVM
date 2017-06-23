@@ -73,6 +73,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     Py_INCREF(meshObject);
 
     meshp = new Mesh(meshObject);
+    rcf = new RCF();
     //cout << "Initialized mesh" << endl;
     //rcf = new RCF();
     //rcf->setMesh(mesh);
@@ -84,14 +85,14 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     for (integer i = 1; i < 4; i++) {
         PyObject *boundaryObject = PyTuple_GetItem(args, i);
         Py_INCREF(boundaryObject);
-        //rcf->boundaries[i-1] = getBoundary(boundaryObject);
+        rcf->boundaries[i-1] = getBoundary(boundaryObject);
     }
     //cout << "Initialized boundary" << endl;
-    PyObject *dict = PyTuple_GetItem(args, 4);
+    //PyObject *dict = PyTuple_GetItem(args, 4);
     // mu 
     // riemann solver, face reconstructor support?
-    PyObject *key, *value;
-    Py_ssize_t pos = 0;
+    //PyObject *key, *value;
+    //Py_ssize_t pos = 0;
     Py_INCREF(Py_None);
     return Py_None;
 }
