@@ -57,11 +57,12 @@ class RCF(Solver):
         super(RCF, self).compileInit()
         #self.faceReconstructor = self.faceReconstructor(self)
         Function.clean()
-        self._flux = self.flux()
-        self._characteristicFLux = self.flux(True, False)
-        self._coupledFlux = self.flux(False, False)
+        self._flux = self.flux("flux")
+        self._characteristicFlux = self.flux("characteristicFlux", True, False)
+        self._coupledFlux = self.flux("coupledFlux", False, False)
         self._boundaryFlux = self.boundaryFlux()
         Function.compile()
+        Function._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
         return
 
         # only reads fields
@@ -145,7 +146,7 @@ class RCF(Solver):
         return rhoFlux, rhoUFlux, rhoEFlux
 
     def viscousFlux(self, TL, TR, UF, TF, gradUF, gradTF):
-        mesh = self.mesh
+        mesh = self.mesh.symMesh
         mu = self.mu(TF)
         kappa = self.kappa(mu, TF)
 
@@ -162,8 +163,8 @@ class RCF(Solver):
         rhoEFlux = -(qF + sigmaF.dot(UF));
         return rhoUFlux, rhoEFlux
 
-    def flux(self, characteristic=False, neighbour=True):
-        mesh = self.mesh
+    def flux(self, name, characteristic=False, neighbour=True):
+        mesh = self.mesh.symMesh
         UL, UR = Tensor((3,)), Tensor((3,))
         TL, TR = Tensor((1,)), Tensor((1,))
         pL, pR = Tensor((1,)), Tensor((1,))
@@ -199,11 +200,11 @@ class RCF(Solver):
         drhoUL, drhoUR = div(rhoUFlux, mesh, neighbour)
         drhoEL, drhoER = div(rhoEFlux, mesh, neighbour)
 
-        return Function([UL, UR, TL, TR, pL, pR, gradUL, gradUR, gradTL, gradTR, gradpL, gradpR],
+        return Function(name, [UL, UR, TL, TR, pL, pR, gradUL, gradUR, gradTL, gradTR, gradpL, gradpR],
                                   [drhoL, drhoR, drhoUL, drhoUR, drhoEL, drhoER], mesh)
 
     def boundaryFlux(self):
-        mesh = self.mesh
+        mesh = self.mesh.symMesh
         UL, UR = Tensor((3,)), Tensor((3,))
         TL, TR = Tensor((1,)), Tensor((1,))
         pL, pR = Tensor((1,)), Tensor((1,))
@@ -220,7 +221,7 @@ class RCF(Solver):
         drhoUL, drhoUR = div(rhoUFlux, mesh, False)
         drhoEL, drhoER = div(rhoEFlux, mesh, False)
 
-        return Function([UL, UR, TL, TR, pL, pR, gradUL, gradUR, gradTL, gradTR, gradpL, gradpR],
+        return Function("boundaryFlux", [UL, UR, TL, TR, pL, pR, gradUL, gradUR, gradTL, gradTR, gradpL, gradpR],
                                   [drhoL, drhoR, drhoUL, drhoUR, drhoEL, drhoER], mesh)
 
     def equation(self, rho, rhoU, rhoE):
@@ -252,8 +253,8 @@ class RCF(Solver):
             nFaces = end-start
             inputs = []
             for phi in [U, T, p, gradU, gradT, gradp]:
-                inputs.append(phi.field[mesh.owner][start:end])
-                inputs.append(phi.field[mesh.neighbour][start:end])
+                inputs.append(phi.field[mesh.owner[start:end]])
+                inputs.append(phi.field[mesh.neighbour[start:end]])
             for phi in mesh.gradFields:
                 inputs.append(getattr(mesh, phi)[start:end])
             outputs = []
@@ -270,18 +271,6 @@ class RCF(Solver):
                 _fluxUpdate(startFace, endFace, self._coupledFlux)
             else:
                 _fluxUpdate(startFace, endFace, self._boundaryFlux)
-
-        drho = np.zeros((mesh.nInternalCells, 1))
-        drhoU = np.zeros((mesh.nInternalCells, 3))
-        drhoE = np.zeros((mesh.nInternalCells, 1))
-        drho[mesh.owner] += drhoL
-        drho[mesh.neighbour[:mesh.nInternalFaces]] += drhoR[:mesh.nInternalFaces]
-        drhoU[mesh.owner] += drhoUL
-        drhoU[mesh.neighbour[:mesh.nInternalFaces]] += drhoUR[:mesh.nInternalFaces]
-        drhoE[mesh.owner] += drhoEL
-        drhoE[mesh.neighbour[:mesh.nInternalFaces]] += drhoER[:mesh.nInternalFaces]
-        print time.time()-start
-
 
         return [Field('drho', drho, (1,)), Field('drho', drhoU, (1,)), Field('drho', drhoE, (1,))] 
 

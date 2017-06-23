@@ -1,21 +1,20 @@
 import numpy as np
 
 from adFVM import config
-from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('/home/talnikar/backup/voya_hyper/cylinder/test/',
+primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              timeIntegrator='SSPRK', 
              CFL=1.2, 
-             mu=2.5e-5,
+             mu=lambda T: 2.5e-5*T/T,
              faceReconstructor='SecondOrder',
-             boundaryRiemannSolver='eulerLaxFriedrichs',
+             #boundaryRiemannSolver='eulerLaxFriedrichs',
              objective = 'drag',
              objectiveDragInfo = 'cylinder',
 )

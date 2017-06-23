@@ -10,6 +10,7 @@ from . import config, parallel
 from .compat import norm, decompose, getCells, add_at
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
+from .tensor import Tensor
 
 try:
     import h5py
@@ -19,23 +20,6 @@ except:
 logger = config.Logger(__name__)
 
 class Mesh(object):
-    constants = ['nInternalFaces',
-                 'nFaces',
-                 'nBoundaryFaces',
-                 'nInternalCells',
-                 'nGhostCells',
-                 'nCells',
-                 'nLocalCells']
-                 
-    fields = ['owner', 'neighbour',
-              'areas', 'volumes',
-              'weights', 'deltas', 'normals',
-              'linearWeights', 'quadraticWeights',
-              'cellCentres', 'faceCentres', 
-              'cellNeighbours', 'cellFaces',
-              'sumOp', 'gradOp',
-              'volumesL', 'volumesR']
-
     gradFields = ['areas', 'volumesL', 'volumesR',
                   'weights', 'deltas', 'normals',
                   'linearWeights', 'quadraticWeights',
@@ -44,11 +28,14 @@ class Mesh(object):
                  ]
 
     def __init__(self):
-        for attr in Mesh.constants:
+        pass
+        #for attr in Mesh.constants:
+        #    setattr(self, attr, 0)
+        #for attr in Mesh.fields:
+        #    setattr(self, attr, np.array([[]]))
+        #self.boundary = []
+        for attr in Mesh.gradFields:
             setattr(self, attr, 0)
-        for attr in Mesh.fields:
-            setattr(self, attr, np.array([[]]))
-        self.boundary = []
 
         #self.localRemoteCells = None
         #self.localRemoteFaces = None
@@ -124,10 +111,13 @@ class Mesh(object):
         self.checkWeights()
 
         # theano shared variables
-        self.origMesh = Mesh.copy(self, fields=True)
+        self.origMesh = self
+        self.symMesh = Mesh()
         # update mesh initialization call
         self.update(currTime, 0.)
-        self.makeTensor()
+        self.symMesh.parent = self
+        self.symMesh.makeTensor()
+        import pdb;pdb.set_trace()
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
         pprint('nFaces:', parallel.sum(self.origMesh.nFaces))
@@ -583,6 +573,7 @@ class Mesh(object):
             sumCentres += volumes * centres
             sumVolumes += volumes
         cellCentres = sumCentres/sumVolumes
+        sumVolumes = np.ascontiguousarray(sumVolumes)
         return cellCentres, sumVolumes
 
     def getDeltas(self):
@@ -838,10 +829,9 @@ class Mesh(object):
         return diff
         
     def makeTensor(self):
-        from .tensor import Tensor
         logger.info('making tensor variables')
         for attr in Mesh.gradFields:
-            value = getattr(self, attr)
+            value = getattr(self.parent, attr)
             setattr(self, attr, Tensor(value.shape[1:]))
 
         #for attr in Mesh.constants:

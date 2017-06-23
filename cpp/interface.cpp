@@ -74,8 +74,6 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     Py_INCREF(meshObject);
 
     Mesh *mesh = new Mesh(meshObject);
-    rcf = new RCF();
-    rcf->setMesh(mesh);
 
     #ifdef ADIFF
     #ifdef MATOP
@@ -92,64 +90,11 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     for (integer i = 1; i < 4; i++) {
         PyObject *boundaryObject = PyTuple_GetItem(args, i);
         Py_INCREF(boundaryObject);
-        rcf->boundaries[i-1] = getBoundary(boundaryObject);
+        //rcf->boundaries[i-1] = getBoundary(boundaryObject);
     }
     PyObject *dict = PyTuple_GetItem(args, 4);
     // mu 
     // riemann solver, face reconstructor support?
-    PyObject *key, *value;
-    Py_ssize_t pos = 0;
-    while (PyDict_Next(dict, &pos, &key, &value)) {
-        string ckey = PyString_AsString(key);
-        if (ckey == "Cp") {
-            rcf->Cp = PyFloat_AsDouble(value);
-            rcf->Cv = rcf->Cp/rcf->gamma;
-        } else if (ckey == "CFL") {
-            rcf->CFL = PyFloat_AsDouble(value);
-        } else if (ckey == "timeIntegrator") {
-            string cvalue = PyString_AsString(value);
-            if (cvalue == "euler") {
-                timeIntegrator = euler;
-            } else if (cvalue == "SSPRK") {
-                timeIntegrator = SSPRK;
-            }
-        } else if (ckey == "mu") {
-            if (value == Py_None) {
-                rcf->mu = &RCF::sutherland;
-            } else {
-                rcf->muC = PyFloat_AsDouble(value);
-                rcf->mu = &RCF::constantMu;
-            }
-        } else if (ckey == "objective") {
-            if (value == Py_None) {
-                rcf->objective = objectiveNone;
-            } else {
-                string cvalue = PyString_AsString(value);
-                if (cvalue == "drag") {
-                    rcf->objective = objectiveDrag;
-                }
-                if (cvalue == "pressureLoss") {
-                    rcf->objective = objectivePressureLoss;
-                }
-                if (cvalue == "heatTransfer") {
-                    rcf->objective = objectiveHeatTransfer;
-                }
-                if (cvalue == "optim") {
-                    rcf->objective = objectiveOptim;
-                }
-            }
-        } else if (ckey == "objectiveDragInfo") {
-            if (value != Py_None) {
-                string cvalue = PyString_AsString(value);
-                rcf->objectiveDragInfo = cvalue;
-            }
-        } else if (ckey == "objectivePLInfo") {
-            if (value != Py_None) {
-                getDict(value, rcf->objectivePLInfo);
-            }
-        }
-    }
-
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -184,8 +129,8 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         //getArray((PyArrayObject *)rhoEObject, rhoE);
         //vec rhoa, rhoEa;
         //mat rhoUa;
-        uvec rhoa, rhoEa;
-        umat rhoUa;
+        vec rhoa, rhoEa;
+        mat rhoUa;
         getArray((PyArrayObject *)rhoaObject, rhoa);
         getArray((PyArrayObject *)rhoUaObject, rhoUa);
         getArray((PyArrayObject *)rhoEaObject, rhoEa);
@@ -261,9 +206,9 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 
         objective.setGradient(1.0);
         tape.evaluate();
-        uvec rhoaN(mesh.nInternalCells);
-        umat rhoUaN(mesh.nInternalCells);
-        uvec rhoEaN(mesh.nInternalCells);
+        vec rhoaN(mesh.nInternalCells);
+        mat rhoUaN(mesh.nInternalCells);
+        vec rhoEaN(mesh.nInternalCells);
         rhoaN.adGetGrad(rho);
         rhoUaN.adGetGrad(rhoU);
         rhoEaN.adGetGrad(rhoE);
@@ -289,9 +234,9 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rhoUaNObject = putArray(rhoUaN);
         rhoEaNObject = putArray(rhoEaN);
         if (source) {
-            uvec rhoSa(mesh.nInternalCells);
-            umat rhoUSa(mesh.nInternalCells);
-            uvec rhoESa(mesh.nInternalCells);
+            vec rhoSa(mesh.nInternalCells);
+            mat rhoUSa(mesh.nInternalCells);
+            vec rhoESa(mesh.nInternalCells);
             rhoSa.adGetGrad(rhoS);
             rhoUSa.adGetGrad(rhoUS);
             rhoESa.adGetGrad(rhoES);
@@ -304,8 +249,8 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
             return Py_BuildValue("(NNNNNN)", rhoaNObject, rhoUaNObject, rhoEaNObject, rhoSaObject, rhoUSaObject, rhoESaObject);
 
         } else {
-            uvec areas(mesh.nFaces), volumes(mesh.nInternalCells), weights(mesh.nFaces), deltas(mesh.nFaces);
-            umat normals(mesh.nFaces);
+            vec areas(mesh.nFaces), volumes(mesh.nInternalCells), weights(mesh.nFaces), deltas(mesh.nFaces);
+            mat normals(mesh.nFaces);
             arrType<uscalar, 2> linearWeights(mesh.nFaces);
             arrType<uscalar, 2, 3> quadraticWeights(mesh.nFaces);
             areas.adGetGrad(mesh.areas);
@@ -427,8 +372,8 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         PyObject *rhoObject, *rhoUObject, *rhoEObject;
         PyArg_ParseTuple(args, "OOO", &rhoObject, &rhoUObject, &rhoEObject);
 
-        uvec rho, rhoE;
-        umat rhoU;
+        vec rho, rhoE;
+        mat rhoU;
         getArray((PyArrayObject *)rhoObject, rho);
         getArray((PyArrayObject *)rhoUObject, rhoU);
         getArray((PyArrayObject *)rhoEObject, rhoE);
@@ -436,9 +381,9 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         //
         
         const Mesh& mesh = *(rcf->mesh);
-        uvec rhoN(mesh.nCells);
-        umat rhoUN(mesh.nCells);
-        uvec rhoEN(mesh.nCells);
+        vec rhoN(mesh.nCells);
+        mat rhoUN(mesh.nCells);
+        vec rhoEN(mesh.nCells);
 
         for (integer i = 0; i < mesh.nInternalCells; i++) {
             rhoN(i) = rho(i);
@@ -476,7 +421,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         PyArg_ParseTuple(args, "OOd", &uObject, &DTObject, &dt);
 
         arrType<uscalar, 5> u;
-        uvec DT;
+        vec DT;
         getArray((PyArrayObject *)uObject, u);
         getArray((PyArrayObject *)DTObject, DT);
         const Mesh& mesh = *(rcf->mesh);

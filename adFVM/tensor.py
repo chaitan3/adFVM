@@ -136,10 +136,11 @@ def ZeroTensor(shape):
 class Function(object):
     _index = 0
     _module = None
-    def __init__(self, inputs, outputs, mesh):
+    def __init__(self, name, inputs, outputs, mesh):
         index = Function._index
         Function._index += 1
-        self.name = 'Function_{}'.format(index)
+        #self.name = 'Function_{}'.format(index)
+        self.name = 'Function_{}'.format(name)
         inputs = inputs + [getattr(mesh, attr) for attr in mesh.gradFields]
         self._inputTensorIndices = {}
         self._inputTensors = inputs
@@ -195,6 +196,7 @@ class Function(object):
         for out in self._outputTensors:
             memString += '{}* {}, '.format(dtype, out.name)
         codeFile.write('\nvoid {}(int n, {}) {}\n'.format(self.name, memString[:-2], '{'))
+        codeFile.write('long long start = current_timestamp();')
         codeFile.write('for (int i = 0; i < n; i++) {\n')
         names = {}
         for index, op in enumerate(sortedOps):
@@ -241,7 +243,9 @@ class Function(object):
                 code += ' *({} + i*{} + {}) = {};'.format(tensorIndex[0], tensorIndex[1], tensorIndex[2], names[op])
             codeFile.write(code + '\n')
             #print op.func, len(op.args)
-        codeFile.write('}\n}')
+        codeFile.write('}\n')
+        codeFile.write('long long end = current_timestamp(); mil += end-start; printf("c module: %lld\\n", mil);')
+        codeFile.write('}')
         codeFile.close()
 
         return
@@ -310,19 +314,24 @@ class Function(object):
 
     @classmethod
     def clean(self):
-        os.remove(codeDir + 'code.c')
+        try:
+            os.remove(codeDir + 'code.c')
+        except:
+            pass
 
     @classmethod
     def compile(self):
         subprocess.check_call(['make'], cwd=codeDir)
-        Function._module = ctypes.cdll.LoadLibrary(codeDir + 'interface.so')
+        from .gencode import interface as mod
+        Function._module = mod
+        #Function._module = ctypes.cdll.LoadLibrary(codeDir + 'interface.so')
 
-    def __call__(self, inputs, outputs):
-        func = Function._module[self.name] 
-        args = [ctypes.c_int(inputs[0].shape[0])] + \
-                [np.ctypeslib.as_ctypes(x) for x in inputs] + \
-                [np.ctypeslib.as_ctypes(x) for x in outputs]
-        func(*args)
+    #def __call__(self, inputs, outputs):
+    #    func = Function._module[self.name] 
+    #    args = [ctypes.c_int(inputs[0].shape[0])] + \
+    #            [np.ctypeslib.as_ctypes(x) for x in inputs] + \
+    #            [np.ctypeslib.as_ctypes(x) for x in outputs]
+    #    func(*args)
 
 class Variable(object):
     pass
