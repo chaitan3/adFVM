@@ -96,7 +96,7 @@ class Mesh(object):
         self.normals = self.getNormals()
         self.faceCentres, self.areas = self.getFaceCentresAndAreas()
         self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 
-        self.volumesL = self.volumes[self.owner[:self.nInternalFaces]]
+        self.volumesL = self.volumes[self.owner]
         self.volumesR = self.volumes[self.neighbour[:self.nInternalFaces]]
 
         # ghost cell modification: neighbour and cellCentres

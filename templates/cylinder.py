@@ -100,8 +100,8 @@ parameters = 'source'
 #perturb = [makePerturb(1.)]
 #parameters = ('BCs', 'p', 'left', 'U0')
 
-nSteps = 10
-writeInterval = 2
+nSteps = 100
+writeInterval = 100
 reportInterval = 1
 startTime = 3.0
 dt = 1e-10

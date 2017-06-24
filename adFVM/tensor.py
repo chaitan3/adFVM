@@ -165,7 +165,9 @@ class Tensor(object):
         n = len(args)/2
         m = args[0].size
         shape = args[0].shape
-        res = [[]]*m
+        res = []
+        for j in range(0, m):
+            res.append([])
         for i in range(0, n):
             a, b = args[2*i], args[2*i+1]
             assert shape == a.shape
@@ -284,7 +286,7 @@ class Function(object):
             elif op.func == numbers.One:
                 code = 'const {} {} = {};'.format(dtype, names[op], 1)
             elif op.func == numbers.Rational:
-                code = '{} {} = {};'.format(dtype, names[op], float(op.p)/op.q)
+                code = 'const {} {} = {};'.format(dtype, names[op], float(op.p)/op.q)
             elif op.func == relational.StrictLessThan:
                 code = 'int {} = {} < {};'.format(names[op], names[op.args[0]], names[op.args[1]])
             elif op.func == Piecewise:
@@ -303,12 +305,17 @@ class Function(object):
             elif op.func == Collate:
                 tensorIndex = self._outputTensorIndices[op]
                 n = len(op.args)/2
+                #code += '// hash {}: {}\n'.format(n, hash(op))
                 for i in range(0, n):
                     a, b = op.args[2*i], op.args[2*i+1]
-                    code += '*({} + {}*{} + {}) = {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
+                    code += '*({} + {}*{} + {}) += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
             else:
                 if op.func not in [boolalg.BooleanTrue, piecewise.ExprCondPair]:
                     raise Exception("ss", op.func)
+            #if op.func not in [Collate, Scalar, boolalg.BooleanTrue, piecewise.ExprCondPair]:
+            #    code += '//{}\n'.format(op.func)
+            #    code += 'if (i == 0) cout << "{}" << " " << {} << endl;\n'.format(names[op], names[op])
+
             if op in self._outputTensorIndices:
                 tensorIndex = self._outputTensorIndices[op]
                 if not tensorIndex[3]:

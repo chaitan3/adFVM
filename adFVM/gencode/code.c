@@ -61,35 +61,23 @@ void Function_grad(int n, const scalar* Tensor_31, const scalar* Tensor_32, cons
 		scalar Intermediate_16 = *(Tensor_2 + i*1 + 0);
 		scalar Intermediate_17 = pow(Intermediate_16,Intermediate_10);
 		scalar Intermediate_18 = Intermediate_10*Intermediate_17*Intermediate_15*Intermediate_2*Intermediate_1;
-		scalar Intermediate_19 = *(Tensor_5 + i*3 + 1);
-		scalar Intermediate_20 = Intermediate_10*Intermediate_17*Intermediate_15*Intermediate_2*Intermediate_19;
-		scalar Intermediate_21 = *(Tensor_5 + i*3 + 0);
-		scalar Intermediate_22 = Intermediate_10*Intermediate_17*Intermediate_15*Intermediate_2*Intermediate_21;
-		scalar Intermediate_23 = *(Tensor_1 + i*1 + 0);
-		scalar Intermediate_24 = pow(Intermediate_23,Intermediate_10);
-		scalar Intermediate_25 = Intermediate_24*Intermediate_15*Intermediate_2*Intermediate_1;
-		scalar Intermediate_26 = Intermediate_24*Intermediate_15*Intermediate_2*Intermediate_19;
-		scalar Intermediate_27 = Intermediate_24*Intermediate_15*Intermediate_2*Intermediate_21;
-		*(Tensor_78 + Intermediate_3*3 + 2) = Intermediate_27;
-		*(Tensor_78 + Intermediate_3*3 + 2) = Intermediate_26;
-		*(Tensor_78 + Intermediate_3*3 + 2) = Intermediate_25;
-		*(Tensor_78 + Intermediate_8*3 + 2) = Intermediate_22;
-		*(Tensor_78 + Intermediate_8*3 + 2) = Intermediate_20;
-		*(Tensor_78 + Intermediate_8*3 + 2) = Intermediate_18;
+		scalar Intermediate_19 = *(Tensor_1 + i*1 + 0);
+		scalar Intermediate_20 = pow(Intermediate_19,Intermediate_10);
+		scalar Intermediate_21 = Intermediate_20*Intermediate_15*Intermediate_2*Intermediate_1;
+		*(Tensor_78 + Intermediate_3*3 + 2) += Intermediate_21;
+		*(Tensor_78 + Intermediate_8*3 + 2) += Intermediate_18;
 		
-		*(Tensor_78 + Intermediate_3*3 + 2) = Intermediate_27;
-		*(Tensor_78 + Intermediate_3*3 + 2) = Intermediate_26;
-		*(Tensor_78 + Intermediate_3*3 + 2) = Intermediate_25;
-		*(Tensor_78 + Intermediate_8*3 + 2) = Intermediate_22;
-		*(Tensor_78 + Intermediate_8*3 + 2) = Intermediate_20;
-		*(Tensor_78 + Intermediate_8*3 + 2) = Intermediate_18;
+		scalar Intermediate_23 = *(Tensor_5 + i*3 + 1);
+		scalar Intermediate_24 = Intermediate_10*Intermediate_17*Intermediate_15*Intermediate_2*Intermediate_23;
+		scalar Intermediate_25 = Intermediate_20*Intermediate_15*Intermediate_2*Intermediate_23;
+		*(Tensor_78 + Intermediate_3*3 + 1) += Intermediate_25;
+		*(Tensor_78 + Intermediate_8*3 + 1) += Intermediate_24;
 		
-		*(Tensor_78 + Intermediate_3*3 + 2) = Intermediate_27;
-		*(Tensor_78 + Intermediate_3*3 + 2) = Intermediate_26;
-		*(Tensor_78 + Intermediate_3*3 + 2) = Intermediate_25;
-		*(Tensor_78 + Intermediate_8*3 + 2) = Intermediate_22;
-		*(Tensor_78 + Intermediate_8*3 + 2) = Intermediate_20;
-		*(Tensor_78 + Intermediate_8*3 + 2) = Intermediate_18;
+		scalar Intermediate_27 = *(Tensor_5 + i*3 + 0);
+		scalar Intermediate_28 = Intermediate_10*Intermediate_17*Intermediate_15*Intermediate_2*Intermediate_27;
+		scalar Intermediate_29 = Intermediate_20*Intermediate_15*Intermediate_2*Intermediate_27;
+		*(Tensor_78 + Intermediate_3*3 + 0) += Intermediate_29;
+		*(Tensor_78 + Intermediate_8*3 + 0) += Intermediate_28;
 		
 		
 		scalar Intermediate_32 = *(Tensor_32 + Intermediate_3*1 + 0);
@@ -98,31 +86,19 @@ void Function_grad(int n, const scalar* Tensor_31, const scalar* Tensor_32, cons
 		scalar Intermediate_35 = Intermediate_13*Intermediate_34;
 		scalar Intermediate_36 = Intermediate_35+Intermediate_33;
 		scalar Intermediate_37 = Intermediate_10*Intermediate_17*Intermediate_36*Intermediate_2*Intermediate_1;
-		scalar Intermediate_38 = Intermediate_10*Intermediate_17*Intermediate_36*Intermediate_2*Intermediate_19;
-		scalar Intermediate_39 = Intermediate_10*Intermediate_17*Intermediate_36*Intermediate_2*Intermediate_21;
-		scalar Intermediate_40 = Intermediate_24*Intermediate_36*Intermediate_2*Intermediate_1;
-		scalar Intermediate_41 = Intermediate_24*Intermediate_36*Intermediate_2*Intermediate_19;
-		scalar Intermediate_42 = Intermediate_24*Intermediate_36*Intermediate_2*Intermediate_21;
-		*(Tensor_71 + Intermediate_3*3 + 2) = Intermediate_42;
-		*(Tensor_71 + Intermediate_3*3 + 2) = Intermediate_41;
-		*(Tensor_71 + Intermediate_3*3 + 2) = Intermediate_40;
-		*(Tensor_71 + Intermediate_8*3 + 2) = Intermediate_39;
-		*(Tensor_71 + Intermediate_8*3 + 2) = Intermediate_38;
-		*(Tensor_71 + Intermediate_8*3 + 2) = Intermediate_37;
+		scalar Intermediate_38 = Intermediate_20*Intermediate_36*Intermediate_2*Intermediate_1;
+		*(Tensor_71 + Intermediate_3*3 + 2) += Intermediate_38;
+		*(Tensor_71 + Intermediate_8*3 + 2) += Intermediate_37;
 		
-		*(Tensor_71 + Intermediate_3*3 + 2) = Intermediate_42;
-		*(Tensor_71 + Intermediate_3*3 + 2) = Intermediate_41;
-		*(Tensor_71 + Intermediate_3*3 + 2) = Intermediate_40;
-		*(Tensor_71 + Intermediate_8*3 + 2) = Intermediate_39;
-		*(Tensor_71 + Intermediate_8*3 + 2) = Intermediate_38;
-		*(Tensor_71 + Intermediate_8*3 + 2) = Intermediate_37;
+		scalar Intermediate_40 = Intermediate_10*Intermediate_17*Intermediate_36*Intermediate_2*Intermediate_23;
+		scalar Intermediate_41 = Intermediate_20*Intermediate_36*Intermediate_2*Intermediate_23;
+		*(Tensor_71 + Intermediate_3*3 + 1) += Intermediate_41;
+		*(Tensor_71 + Intermediate_8*3 + 1) += Intermediate_40;
 		
-		*(Tensor_71 + Intermediate_3*3 + 2) = Intermediate_42;
-		*(Tensor_71 + Intermediate_3*3 + 2) = Intermediate_41;
-		*(Tensor_71 + Intermediate_3*3 + 2) = Intermediate_40;
-		*(Tensor_71 + Intermediate_8*3 + 2) = Intermediate_39;
-		*(Tensor_71 + Intermediate_8*3 + 2) = Intermediate_38;
-		*(Tensor_71 + Intermediate_8*3 + 2) = Intermediate_37;
+		scalar Intermediate_43 = Intermediate_10*Intermediate_17*Intermediate_36*Intermediate_2*Intermediate_27;
+		scalar Intermediate_44 = Intermediate_20*Intermediate_36*Intermediate_2*Intermediate_27;
+		*(Tensor_71 + Intermediate_3*3 + 0) += Intermediate_44;
+		*(Tensor_71 + Intermediate_8*3 + 0) += Intermediate_43;
 		
 		
 		scalar Intermediate_47 = *(Tensor_31 + Intermediate_3*3 + 2);
@@ -131,205 +107,61 @@ void Function_grad(int n, const scalar* Tensor_31, const scalar* Tensor_32, cons
 		scalar Intermediate_50 = Intermediate_13*Intermediate_49;
 		scalar Intermediate_51 = Intermediate_50+Intermediate_48;
 		scalar Intermediate_52 = Intermediate_10*Intermediate_17*Intermediate_51*Intermediate_2*Intermediate_1;
-		scalar Intermediate_53 = Intermediate_10*Intermediate_17*Intermediate_51*Intermediate_2*Intermediate_19;
-		scalar Intermediate_54 = Intermediate_10*Intermediate_17*Intermediate_51*Intermediate_2*Intermediate_21;
+		scalar Intermediate_53 = Intermediate_20*Intermediate_51*Intermediate_2*Intermediate_1;
+		*(Tensor_64 + Intermediate_3*9 + 8) += Intermediate_53;
+		*(Tensor_64 + Intermediate_8*9 + 8) += Intermediate_52;
 		
-		scalar Intermediate_56 = *(Tensor_31 + Intermediate_3*3 + 1);
-		scalar Intermediate_57 = Intermediate_6*Intermediate_56;
-		scalar Intermediate_58 = *(Tensor_31 + Intermediate_8*3 + 1);
-		scalar Intermediate_59 = Intermediate_13*Intermediate_58;
-		scalar Intermediate_60 = Intermediate_59+Intermediate_57;
-		scalar Intermediate_61 = Intermediate_10*Intermediate_17*Intermediate_60*Intermediate_2*Intermediate_1;
-		scalar Intermediate_62 = Intermediate_10*Intermediate_17*Intermediate_60*Intermediate_2*Intermediate_19;
-		scalar Intermediate_63 = Intermediate_10*Intermediate_17*Intermediate_60*Intermediate_2*Intermediate_21;
+		scalar Intermediate_55 = Intermediate_10*Intermediate_17*Intermediate_51*Intermediate_2*Intermediate_23;
+		scalar Intermediate_56 = Intermediate_20*Intermediate_51*Intermediate_2*Intermediate_23;
+		*(Tensor_64 + Intermediate_3*9 + 7) += Intermediate_56;
+		*(Tensor_64 + Intermediate_8*9 + 7) += Intermediate_55;
 		
-		scalar Intermediate_65 = *(Tensor_31 + Intermediate_3*3 + 0);
-		scalar Intermediate_66 = Intermediate_6*Intermediate_65;
-		scalar Intermediate_67 = *(Tensor_31 + Intermediate_8*3 + 0);
-		scalar Intermediate_68 = Intermediate_13*Intermediate_67;
-		scalar Intermediate_69 = Intermediate_68+Intermediate_66;
-		scalar Intermediate_70 = Intermediate_10*Intermediate_17*Intermediate_69*Intermediate_2*Intermediate_1;
-		scalar Intermediate_71 = Intermediate_10*Intermediate_17*Intermediate_69*Intermediate_2*Intermediate_19;
-		scalar Intermediate_72 = Intermediate_10*Intermediate_17*Intermediate_69*Intermediate_2*Intermediate_21;
-		scalar Intermediate_73 = Intermediate_24*Intermediate_51*Intermediate_2*Intermediate_1;
-		scalar Intermediate_74 = Intermediate_24*Intermediate_51*Intermediate_2*Intermediate_19;
-		scalar Intermediate_75 = Intermediate_24*Intermediate_51*Intermediate_2*Intermediate_21;
-		scalar Intermediate_76 = Intermediate_24*Intermediate_60*Intermediate_2*Intermediate_1;
-		scalar Intermediate_77 = Intermediate_24*Intermediate_60*Intermediate_2*Intermediate_19;
-		scalar Intermediate_78 = Intermediate_24*Intermediate_60*Intermediate_2*Intermediate_21;
-		scalar Intermediate_79 = Intermediate_24*Intermediate_69*Intermediate_2*Intermediate_1;
-		scalar Intermediate_80 = Intermediate_24*Intermediate_69*Intermediate_2*Intermediate_19;
-		scalar Intermediate_81 = Intermediate_24*Intermediate_69*Intermediate_2*Intermediate_21;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_81;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_80;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_79;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_78;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_77;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_76;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_75;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_74;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_73;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_72;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_71;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_70;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_63;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_62;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_61;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_54;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_53;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_52;
+		scalar Intermediate_58 = Intermediate_10*Intermediate_17*Intermediate_51*Intermediate_2*Intermediate_27;
+		scalar Intermediate_59 = Intermediate_20*Intermediate_51*Intermediate_2*Intermediate_27;
+		*(Tensor_64 + Intermediate_3*9 + 6) += Intermediate_59;
+		*(Tensor_64 + Intermediate_8*9 + 6) += Intermediate_58;
 		
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_81;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_80;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_79;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_78;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_77;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_76;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_75;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_74;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_73;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_72;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_71;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_70;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_63;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_62;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_61;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_54;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_53;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_52;
 		
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_81;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_80;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_79;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_78;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_77;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_76;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_75;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_74;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_73;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_72;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_71;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_70;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_63;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_62;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_61;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_54;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_53;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_52;
+		scalar Intermediate_62 = *(Tensor_31 + Intermediate_3*3 + 1);
+		scalar Intermediate_63 = Intermediate_6*Intermediate_62;
+		scalar Intermediate_64 = *(Tensor_31 + Intermediate_8*3 + 1);
+		scalar Intermediate_65 = Intermediate_13*Intermediate_64;
+		scalar Intermediate_66 = Intermediate_65+Intermediate_63;
+		scalar Intermediate_67 = Intermediate_10*Intermediate_17*Intermediate_66*Intermediate_2*Intermediate_1;
+		scalar Intermediate_68 = Intermediate_20*Intermediate_66*Intermediate_2*Intermediate_1;
+		*(Tensor_64 + Intermediate_3*9 + 5) += Intermediate_68;
+		*(Tensor_64 + Intermediate_8*9 + 5) += Intermediate_67;
 		
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_81;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_80;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_79;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_78;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_77;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_76;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_75;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_74;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_73;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_72;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_71;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_70;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_63;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_62;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_61;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_54;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_53;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_52;
+		scalar Intermediate_70 = Intermediate_10*Intermediate_17*Intermediate_66*Intermediate_2*Intermediate_23;
+		scalar Intermediate_71 = Intermediate_20*Intermediate_66*Intermediate_2*Intermediate_23;
+		*(Tensor_64 + Intermediate_3*9 + 4) += Intermediate_71;
+		*(Tensor_64 + Intermediate_8*9 + 4) += Intermediate_70;
 		
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_81;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_80;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_79;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_78;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_77;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_76;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_75;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_74;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_73;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_72;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_71;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_70;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_63;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_62;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_61;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_54;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_53;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_52;
+		scalar Intermediate_73 = Intermediate_10*Intermediate_17*Intermediate_66*Intermediate_2*Intermediate_27;
+		scalar Intermediate_74 = Intermediate_20*Intermediate_66*Intermediate_2*Intermediate_27;
+		*(Tensor_64 + Intermediate_3*9 + 3) += Intermediate_74;
+		*(Tensor_64 + Intermediate_8*9 + 3) += Intermediate_73;
 		
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_81;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_80;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_79;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_78;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_77;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_76;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_75;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_74;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_73;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_72;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_71;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_70;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_63;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_62;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_61;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_54;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_53;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_52;
 		
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_81;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_80;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_79;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_78;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_77;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_76;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_75;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_74;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_73;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_72;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_71;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_70;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_63;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_62;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_61;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_54;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_53;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_52;
+		scalar Intermediate_77 = *(Tensor_31 + Intermediate_3*3 + 0);
+		scalar Intermediate_78 = Intermediate_6*Intermediate_77;
+		scalar Intermediate_79 = *(Tensor_31 + Intermediate_8*3 + 0);
+		scalar Intermediate_80 = Intermediate_13*Intermediate_79;
+		scalar Intermediate_81 = Intermediate_80+Intermediate_78;
+		scalar Intermediate_82 = Intermediate_10*Intermediate_17*Intermediate_81*Intermediate_2*Intermediate_1;
+		scalar Intermediate_83 = Intermediate_20*Intermediate_81*Intermediate_2*Intermediate_1;
+		*(Tensor_64 + Intermediate_3*9 + 2) += Intermediate_83;
+		*(Tensor_64 + Intermediate_8*9 + 2) += Intermediate_82;
 		
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_81;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_80;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_79;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_78;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_77;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_76;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_75;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_74;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_73;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_72;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_71;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_70;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_63;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_62;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_61;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_54;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_53;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_52;
+		scalar Intermediate_85 = Intermediate_10*Intermediate_17*Intermediate_81*Intermediate_2*Intermediate_23;
+		scalar Intermediate_86 = Intermediate_20*Intermediate_81*Intermediate_2*Intermediate_23;
+		*(Tensor_64 + Intermediate_3*9 + 1) += Intermediate_86;
+		*(Tensor_64 + Intermediate_8*9 + 1) += Intermediate_85;
 		
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_81;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_80;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_79;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_78;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_77;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_76;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_75;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_74;
-		*(Tensor_64 + Intermediate_3*9 + 8) = Intermediate_73;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_72;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_71;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_70;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_63;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_62;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_61;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_54;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_53;
-		*(Tensor_64 + Intermediate_8*9 + 8) = Intermediate_52;
+		scalar Intermediate_88 = Intermediate_10*Intermediate_17*Intermediate_81*Intermediate_2*Intermediate_27;
+		scalar Intermediate_89 = Intermediate_20*Intermediate_81*Intermediate_2*Intermediate_27;
+		*(Tensor_64 + Intermediate_3*9 + 0) += Intermediate_89;
+		*(Tensor_64 + Intermediate_8*9 + 0) += Intermediate_88;
 		
 	}
 	long long end = current_timestamp(); mil += end-start; printf("c module Function_grad: %lld\n", mil);
@@ -357,21 +189,15 @@ void Function_coupledGrad(int n, const scalar* Tensor_79, const scalar* Tensor_8
 		scalar Intermediate_16 = *(Tensor_1 + i*1 + 0);
 		scalar Intermediate_17 = pow(Intermediate_16,Intermediate_10);
 		scalar Intermediate_18 = Intermediate_17*Intermediate_15*Intermediate_2*Intermediate_1;
-		scalar Intermediate_19 = *(Tensor_5 + i*3 + 1);
-		scalar Intermediate_20 = Intermediate_17*Intermediate_15*Intermediate_2*Intermediate_19;
-		scalar Intermediate_21 = *(Tensor_5 + i*3 + 0);
-		scalar Intermediate_22 = Intermediate_17*Intermediate_15*Intermediate_2*Intermediate_21;
-		*(Tensor_117 + Intermediate_3*3 + 2) = Intermediate_22;
-		*(Tensor_117 + Intermediate_3*3 + 2) = Intermediate_20;
-		*(Tensor_117 + Intermediate_3*3 + 2) = Intermediate_18;
+		*(Tensor_117 + Intermediate_3*3 + 2) += Intermediate_18;
 		
-		*(Tensor_117 + Intermediate_3*3 + 2) = Intermediate_22;
-		*(Tensor_117 + Intermediate_3*3 + 2) = Intermediate_20;
-		*(Tensor_117 + Intermediate_3*3 + 2) = Intermediate_18;
+		scalar Intermediate_20 = *(Tensor_5 + i*3 + 1);
+		scalar Intermediate_21 = Intermediate_17*Intermediate_15*Intermediate_2*Intermediate_20;
+		*(Tensor_117 + Intermediate_3*3 + 1) += Intermediate_21;
 		
-		*(Tensor_117 + Intermediate_3*3 + 2) = Intermediate_22;
-		*(Tensor_117 + Intermediate_3*3 + 2) = Intermediate_20;
-		*(Tensor_117 + Intermediate_3*3 + 2) = Intermediate_18;
+		scalar Intermediate_23 = *(Tensor_5 + i*3 + 0);
+		scalar Intermediate_24 = Intermediate_17*Intermediate_15*Intermediate_2*Intermediate_23;
+		*(Tensor_117 + Intermediate_3*3 + 0) += Intermediate_24;
 		
 		
 		scalar Intermediate_27 = *(Tensor_80 + Intermediate_3*1 + 0);
@@ -380,19 +206,13 @@ void Function_coupledGrad(int n, const scalar* Tensor_79, const scalar* Tensor_8
 		scalar Intermediate_30 = Intermediate_13*Intermediate_29;
 		scalar Intermediate_31 = Intermediate_30+Intermediate_28;
 		scalar Intermediate_32 = Intermediate_17*Intermediate_31*Intermediate_2*Intermediate_1;
-		scalar Intermediate_33 = Intermediate_17*Intermediate_31*Intermediate_2*Intermediate_19;
-		scalar Intermediate_34 = Intermediate_17*Intermediate_31*Intermediate_2*Intermediate_21;
-		*(Tensor_113 + Intermediate_3*3 + 2) = Intermediate_34;
-		*(Tensor_113 + Intermediate_3*3 + 2) = Intermediate_33;
-		*(Tensor_113 + Intermediate_3*3 + 2) = Intermediate_32;
+		*(Tensor_113 + Intermediate_3*3 + 2) += Intermediate_32;
 		
-		*(Tensor_113 + Intermediate_3*3 + 2) = Intermediate_34;
-		*(Tensor_113 + Intermediate_3*3 + 2) = Intermediate_33;
-		*(Tensor_113 + Intermediate_3*3 + 2) = Intermediate_32;
+		scalar Intermediate_34 = Intermediate_17*Intermediate_31*Intermediate_2*Intermediate_20;
+		*(Tensor_113 + Intermediate_3*3 + 1) += Intermediate_34;
 		
-		*(Tensor_113 + Intermediate_3*3 + 2) = Intermediate_34;
-		*(Tensor_113 + Intermediate_3*3 + 2) = Intermediate_33;
-		*(Tensor_113 + Intermediate_3*3 + 2) = Intermediate_32;
+		scalar Intermediate_36 = Intermediate_17*Intermediate_31*Intermediate_2*Intermediate_23;
+		*(Tensor_113 + Intermediate_3*3 + 0) += Intermediate_36;
 		
 		
 		scalar Intermediate_39 = *(Tensor_79 + Intermediate_3*3 + 2);
@@ -401,115 +221,43 @@ void Function_coupledGrad(int n, const scalar* Tensor_79, const scalar* Tensor_8
 		scalar Intermediate_42 = Intermediate_13*Intermediate_41;
 		scalar Intermediate_43 = Intermediate_42+Intermediate_40;
 		scalar Intermediate_44 = Intermediate_17*Intermediate_43*Intermediate_2*Intermediate_1;
-		scalar Intermediate_45 = Intermediate_17*Intermediate_43*Intermediate_2*Intermediate_19;
-		scalar Intermediate_46 = Intermediate_17*Intermediate_43*Intermediate_2*Intermediate_21;
+		*(Tensor_109 + Intermediate_3*9 + 8) += Intermediate_44;
 		
-		scalar Intermediate_48 = *(Tensor_79 + Intermediate_3*3 + 1);
-		scalar Intermediate_49 = Intermediate_6*Intermediate_48;
-		scalar Intermediate_50 = *(Tensor_79 + Intermediate_8*3 + 1);
-		scalar Intermediate_51 = Intermediate_13*Intermediate_50;
-		scalar Intermediate_52 = Intermediate_51+Intermediate_49;
-		scalar Intermediate_53 = Intermediate_17*Intermediate_52*Intermediate_2*Intermediate_1;
-		scalar Intermediate_54 = Intermediate_17*Intermediate_52*Intermediate_2*Intermediate_19;
-		scalar Intermediate_55 = Intermediate_17*Intermediate_52*Intermediate_2*Intermediate_21;
+		scalar Intermediate_46 = Intermediate_17*Intermediate_43*Intermediate_2*Intermediate_20;
+		*(Tensor_109 + Intermediate_3*9 + 7) += Intermediate_46;
 		
-		scalar Intermediate_57 = *(Tensor_79 + Intermediate_3*3 + 0);
-		scalar Intermediate_58 = Intermediate_6*Intermediate_57;
-		scalar Intermediate_59 = *(Tensor_79 + Intermediate_8*3 + 0);
-		scalar Intermediate_60 = Intermediate_13*Intermediate_59;
-		scalar Intermediate_61 = Intermediate_60+Intermediate_58;
-		scalar Intermediate_62 = Intermediate_17*Intermediate_61*Intermediate_2*Intermediate_1;
-		scalar Intermediate_63 = Intermediate_17*Intermediate_61*Intermediate_2*Intermediate_19;
-		scalar Intermediate_64 = Intermediate_17*Intermediate_61*Intermediate_2*Intermediate_21;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_64;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_63;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_62;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_55;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_54;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_53;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_46;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_45;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_44;
+		scalar Intermediate_48 = Intermediate_17*Intermediate_43*Intermediate_2*Intermediate_23;
+		*(Tensor_109 + Intermediate_3*9 + 6) += Intermediate_48;
 		
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_64;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_63;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_62;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_55;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_54;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_53;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_46;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_45;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_44;
 		
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_64;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_63;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_62;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_55;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_54;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_53;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_46;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_45;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_44;
+		scalar Intermediate_51 = *(Tensor_79 + Intermediate_3*3 + 1);
+		scalar Intermediate_52 = Intermediate_6*Intermediate_51;
+		scalar Intermediate_53 = *(Tensor_79 + Intermediate_8*3 + 1);
+		scalar Intermediate_54 = Intermediate_13*Intermediate_53;
+		scalar Intermediate_55 = Intermediate_54+Intermediate_52;
+		scalar Intermediate_56 = Intermediate_17*Intermediate_55*Intermediate_2*Intermediate_1;
+		*(Tensor_109 + Intermediate_3*9 + 5) += Intermediate_56;
 		
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_64;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_63;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_62;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_55;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_54;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_53;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_46;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_45;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_44;
+		scalar Intermediate_58 = Intermediate_17*Intermediate_55*Intermediate_2*Intermediate_20;
+		*(Tensor_109 + Intermediate_3*9 + 4) += Intermediate_58;
 		
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_64;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_63;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_62;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_55;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_54;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_53;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_46;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_45;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_44;
+		scalar Intermediate_60 = Intermediate_17*Intermediate_55*Intermediate_2*Intermediate_23;
+		*(Tensor_109 + Intermediate_3*9 + 3) += Intermediate_60;
 		
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_64;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_63;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_62;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_55;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_54;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_53;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_46;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_45;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_44;
 		
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_64;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_63;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_62;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_55;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_54;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_53;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_46;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_45;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_44;
+		scalar Intermediate_63 = *(Tensor_79 + Intermediate_3*3 + 0);
+		scalar Intermediate_64 = Intermediate_6*Intermediate_63;
+		scalar Intermediate_65 = *(Tensor_79 + Intermediate_8*3 + 0);
+		scalar Intermediate_66 = Intermediate_13*Intermediate_65;
+		scalar Intermediate_67 = Intermediate_66+Intermediate_64;
+		scalar Intermediate_68 = Intermediate_17*Intermediate_67*Intermediate_2*Intermediate_1;
+		*(Tensor_109 + Intermediate_3*9 + 2) += Intermediate_68;
 		
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_64;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_63;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_62;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_55;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_54;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_53;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_46;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_45;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_44;
+		scalar Intermediate_70 = Intermediate_17*Intermediate_67*Intermediate_2*Intermediate_20;
+		*(Tensor_109 + Intermediate_3*9 + 1) += Intermediate_70;
 		
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_64;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_63;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_62;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_55;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_54;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_53;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_46;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_45;
-		*(Tensor_109 + Intermediate_3*9 + 8) = Intermediate_44;
+		scalar Intermediate_72 = Intermediate_17*Intermediate_67*Intermediate_2*Intermediate_23;
+		*(Tensor_109 + Intermediate_3*9 + 0) += Intermediate_72;
 		
 	}
 	long long end = current_timestamp(); mil += end-start; printf("c module Function_coupledGrad: %lld\n", mil);
@@ -528,145 +276,59 @@ void Function_boundaryGrad(int n, const scalar* Tensor_118, const scalar* Tensor
 		scalar Intermediate_7 = *(Tensor_1 + i*1 + 0);
 		scalar Intermediate_8 = pow(Intermediate_7,Intermediate_6);
 		scalar Intermediate_9 = Intermediate_8*Intermediate_5*Intermediate_4*Intermediate_3;
-		integer Intermediate_10 = *(Tensor_8 + i*1 + 0);
+		*(Tensor_135 + Intermediate_0*3 + 2) += Intermediate_9;
+		
 		scalar Intermediate_11 = *(Tensor_5 + i*3 + 1);
 		scalar Intermediate_12 = Intermediate_8*Intermediate_5*Intermediate_11*Intermediate_3;
-		integer Intermediate_13 = *(Tensor_8 + i*1 + 0);
+		*(Tensor_135 + Intermediate_0*3 + 1) += Intermediate_12;
+		
 		scalar Intermediate_14 = *(Tensor_5 + i*3 + 0);
 		scalar Intermediate_15 = Intermediate_8*Intermediate_5*Intermediate_14*Intermediate_3;
-		*(Tensor_135 + Intermediate_13*3 + 2) = Intermediate_15;
-		*(Tensor_135 + Intermediate_13*3 + 2) = Intermediate_12;
-		*(Tensor_135 + Intermediate_13*3 + 2) = Intermediate_9;
-		
-		*(Tensor_135 + Intermediate_13*3 + 2) = Intermediate_15;
-		*(Tensor_135 + Intermediate_13*3 + 2) = Intermediate_12;
-		*(Tensor_135 + Intermediate_13*3 + 2) = Intermediate_9;
-		
-		*(Tensor_135 + Intermediate_13*3 + 2) = Intermediate_15;
-		*(Tensor_135 + Intermediate_13*3 + 2) = Intermediate_12;
-		*(Tensor_135 + Intermediate_13*3 + 2) = Intermediate_9;
+		*(Tensor_135 + Intermediate_0*3 + 0) += Intermediate_15;
 		
 		
-		scalar Intermediate_20 = *(Tensor_119 + Intermediate_1*1 + 0);
-		scalar Intermediate_21 = Intermediate_8*Intermediate_5*Intermediate_4*Intermediate_20;
-		scalar Intermediate_22 = Intermediate_8*Intermediate_5*Intermediate_11*Intermediate_20;
-		scalar Intermediate_23 = Intermediate_8*Intermediate_5*Intermediate_14*Intermediate_20;
-		*(Tensor_131 + Intermediate_13*3 + 2) = Intermediate_23;
-		*(Tensor_131 + Intermediate_13*3 + 2) = Intermediate_22;
-		*(Tensor_131 + Intermediate_13*3 + 2) = Intermediate_21;
+		scalar Intermediate_18 = *(Tensor_119 + Intermediate_1*1 + 0);
+		scalar Intermediate_19 = Intermediate_8*Intermediate_5*Intermediate_4*Intermediate_18;
+		*(Tensor_131 + Intermediate_0*3 + 2) += Intermediate_19;
 		
-		*(Tensor_131 + Intermediate_13*3 + 2) = Intermediate_23;
-		*(Tensor_131 + Intermediate_13*3 + 2) = Intermediate_22;
-		*(Tensor_131 + Intermediate_13*3 + 2) = Intermediate_21;
+		scalar Intermediate_21 = Intermediate_8*Intermediate_5*Intermediate_11*Intermediate_18;
+		*(Tensor_131 + Intermediate_0*3 + 1) += Intermediate_21;
 		
-		*(Tensor_131 + Intermediate_13*3 + 2) = Intermediate_23;
-		*(Tensor_131 + Intermediate_13*3 + 2) = Intermediate_22;
-		*(Tensor_131 + Intermediate_13*3 + 2) = Intermediate_21;
+		scalar Intermediate_23 = Intermediate_8*Intermediate_5*Intermediate_14*Intermediate_18;
+		*(Tensor_131 + Intermediate_0*3 + 0) += Intermediate_23;
 		
 		
-		scalar Intermediate_28 = *(Tensor_118 + Intermediate_1*3 + 2);
-		scalar Intermediate_29 = Intermediate_8*Intermediate_5*Intermediate_4*Intermediate_28;
-		scalar Intermediate_30 = Intermediate_8*Intermediate_5*Intermediate_11*Intermediate_28;
-		scalar Intermediate_31 = Intermediate_8*Intermediate_5*Intermediate_14*Intermediate_28;
+		scalar Intermediate_26 = *(Tensor_118 + Intermediate_1*3 + 2);
+		scalar Intermediate_27 = Intermediate_8*Intermediate_5*Intermediate_4*Intermediate_26;
+		*(Tensor_127 + Intermediate_0*9 + 8) += Intermediate_27;
 		
-		scalar Intermediate_33 = *(Tensor_118 + Intermediate_1*3 + 1);
-		scalar Intermediate_34 = Intermediate_8*Intermediate_5*Intermediate_4*Intermediate_33;
-		scalar Intermediate_35 = Intermediate_8*Intermediate_5*Intermediate_11*Intermediate_33;
-		scalar Intermediate_36 = Intermediate_8*Intermediate_5*Intermediate_14*Intermediate_33;
+		scalar Intermediate_29 = Intermediate_8*Intermediate_5*Intermediate_11*Intermediate_26;
+		*(Tensor_127 + Intermediate_0*9 + 7) += Intermediate_29;
 		
-		scalar Intermediate_38 = *(Tensor_118 + Intermediate_1*3 + 0);
-		scalar Intermediate_39 = Intermediate_8*Intermediate_5*Intermediate_4*Intermediate_38;
-		scalar Intermediate_40 = Intermediate_8*Intermediate_5*Intermediate_11*Intermediate_38;
-		scalar Intermediate_41 = Intermediate_8*Intermediate_5*Intermediate_14*Intermediate_38;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_41;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_40;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_39;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_36;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_35;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_34;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_31;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_30;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_29;
+		scalar Intermediate_31 = Intermediate_8*Intermediate_5*Intermediate_14*Intermediate_26;
+		*(Tensor_127 + Intermediate_0*9 + 6) += Intermediate_31;
 		
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_41;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_40;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_39;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_36;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_35;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_34;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_31;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_30;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_29;
 		
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_41;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_40;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_39;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_36;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_35;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_34;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_31;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_30;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_29;
+		scalar Intermediate_34 = *(Tensor_118 + Intermediate_1*3 + 1);
+		scalar Intermediate_35 = Intermediate_8*Intermediate_5*Intermediate_4*Intermediate_34;
+		*(Tensor_127 + Intermediate_0*9 + 5) += Intermediate_35;
 		
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_41;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_40;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_39;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_36;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_35;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_34;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_31;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_30;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_29;
+		scalar Intermediate_37 = Intermediate_8*Intermediate_5*Intermediate_11*Intermediate_34;
+		*(Tensor_127 + Intermediate_0*9 + 4) += Intermediate_37;
 		
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_41;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_40;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_39;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_36;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_35;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_34;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_31;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_30;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_29;
+		scalar Intermediate_39 = Intermediate_8*Intermediate_5*Intermediate_14*Intermediate_34;
+		*(Tensor_127 + Intermediate_0*9 + 3) += Intermediate_39;
 		
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_41;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_40;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_39;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_36;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_35;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_34;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_31;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_30;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_29;
 		
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_41;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_40;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_39;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_36;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_35;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_34;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_31;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_30;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_29;
+		scalar Intermediate_42 = *(Tensor_118 + Intermediate_1*3 + 0);
+		scalar Intermediate_43 = Intermediate_8*Intermediate_5*Intermediate_4*Intermediate_42;
+		*(Tensor_127 + Intermediate_0*9 + 2) += Intermediate_43;
 		
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_41;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_40;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_39;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_36;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_35;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_34;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_31;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_30;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_29;
+		scalar Intermediate_45 = Intermediate_8*Intermediate_5*Intermediate_11*Intermediate_42;
+		*(Tensor_127 + Intermediate_0*9 + 1) += Intermediate_45;
 		
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_41;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_40;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_39;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_36;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_35;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_34;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_31;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_30;
-		*(Tensor_127 + Intermediate_13*9 + 8) = Intermediate_29;
+		scalar Intermediate_47 = Intermediate_8*Intermediate_5*Intermediate_14*Intermediate_42;
+		*(Tensor_127 + Intermediate_0*9 + 0) += Intermediate_47;
 		
 	}
 	long long end = current_timestamp(); mil += end-start; printf("c module Function_boundaryGrad: %lld\n", mil);
@@ -1147,7 +809,7 @@ void Function_flux(int n, const scalar* Tensor_136, const scalar* Tensor_137, co
                 
 		scalar Intermediate_434 = Intermediate_52*Intermediate_433;
 		scalar Intermediate_435 = Intermediate_55+Intermediate_434+Intermediate_420;
-		scalar Intermediate_436 = -0.5;
+		const scalar Intermediate_436 = -0.5;
 		scalar Intermediate_437 = pow(Intermediate_368,Intermediate_436);
 		scalar Intermediate_438 = Intermediate_52*Intermediate_437*Intermediate_435*Intermediate_352;
 		scalar Intermediate_439 = Intermediate_52*Intermediate_302*Intermediate_313*Intermediate_295;
@@ -1208,8 +870,8 @@ void Function_flux(int n, const scalar* Tensor_136, const scalar* Tensor_137, co
 		scalar Intermediate_482 = *(Tensor_1 + i*1 + 0);
 		scalar Intermediate_483 = pow(Intermediate_482,Intermediate_52);
 		scalar Intermediate_484 = Intermediate_483*Intermediate_478*Intermediate_1;
-		*(Tensor_541 + Intermediate_111*1 + 0) = Intermediate_484;
-		*(Tensor_541 + Intermediate_108*1 + 0) = Intermediate_481;
+		*(Tensor_541 + Intermediate_111*1 + 0) += Intermediate_484;
+		*(Tensor_541 + Intermediate_108*1 + 0) += Intermediate_481;
 		
 		scalar Intermediate_486 = Intermediate_252*Intermediate_267*Intermediate_257*Intermediate_243;
 		scalar Intermediate_487 = Intermediate_302*Intermediate_317*Intermediate_307*Intermediate_295;
@@ -1221,47 +883,35 @@ void Function_flux(int n, const scalar* Tensor_136, const scalar* Tensor_137, co
 		scalar Intermediate_493 = Intermediate_476*Intermediate_107;
 		scalar Intermediate_494 = Intermediate_493+Intermediate_492+Intermediate_490+Intermediate_489+Intermediate_488+Intermediate_487+Intermediate_486;
 		scalar Intermediate_495 = Intermediate_52*Intermediate_480*Intermediate_494*Intermediate_1;
-		scalar Intermediate_496 = Intermediate_252*Intermediate_267*Intermediate_259*Intermediate_243;
-		scalar Intermediate_497 = Intermediate_302*Intermediate_317*Intermediate_309*Intermediate_295;
-		scalar Intermediate_498 = Intermediate_52*Intermediate_57*Intermediate_173*Intermediate_51;
-		scalar Intermediate_499 = Intermediate_52*Intermediate_338*Intermediate_342*Intermediate_470;
-		scalar Intermediate_500 = Intermediate_52*Intermediate_325*Intermediate_465;
-		scalar Intermediate_501 = Intermediate_491*Intermediate_119;
-		scalar Intermediate_502 = Intermediate_476*Intermediate_119;
-		scalar Intermediate_503 = Intermediate_502+Intermediate_501+Intermediate_500+Intermediate_499+Intermediate_498+Intermediate_497+Intermediate_496;
-		scalar Intermediate_504 = Intermediate_52*Intermediate_480*Intermediate_503*Intermediate_1;
-		scalar Intermediate_505 = Intermediate_252*Intermediate_267*Intermediate_261*Intermediate_243;
-		scalar Intermediate_506 = Intermediate_302*Intermediate_317*Intermediate_311*Intermediate_295;
-		scalar Intermediate_507 = Intermediate_52*Intermediate_57*Intermediate_202*Intermediate_51;
-		scalar Intermediate_508 = Intermediate_52*Intermediate_338*Intermediate_346*Intermediate_470;
-		scalar Intermediate_509 = Intermediate_52*Intermediate_329*Intermediate_465;
-		scalar Intermediate_510 = Intermediate_491*Intermediate_126;
-		scalar Intermediate_511 = Intermediate_476*Intermediate_126;
-		scalar Intermediate_512 = Intermediate_511+Intermediate_510+Intermediate_509+Intermediate_508+Intermediate_507+Intermediate_506+Intermediate_505;
-		scalar Intermediate_513 = Intermediate_52*Intermediate_480*Intermediate_512*Intermediate_1;
-		scalar Intermediate_514 = Intermediate_483*Intermediate_494*Intermediate_1;
-		scalar Intermediate_515 = Intermediate_483*Intermediate_503*Intermediate_1;
-		scalar Intermediate_516 = Intermediate_483*Intermediate_512*Intermediate_1;
-		*(Tensor_535 + Intermediate_111*3 + 2) = Intermediate_516;
-		*(Tensor_535 + Intermediate_111*3 + 2) = Intermediate_515;
-		*(Tensor_535 + Intermediate_111*3 + 2) = Intermediate_514;
-		*(Tensor_535 + Intermediate_108*3 + 2) = Intermediate_513;
-		*(Tensor_535 + Intermediate_108*3 + 2) = Intermediate_504;
-		*(Tensor_535 + Intermediate_108*3 + 2) = Intermediate_495;
+		scalar Intermediate_496 = Intermediate_483*Intermediate_494*Intermediate_1;
+		*(Tensor_535 + Intermediate_111*3 + 2) += Intermediate_496;
+		*(Tensor_535 + Intermediate_108*3 + 2) += Intermediate_495;
 		
-		*(Tensor_535 + Intermediate_111*3 + 2) = Intermediate_516;
-		*(Tensor_535 + Intermediate_111*3 + 2) = Intermediate_515;
-		*(Tensor_535 + Intermediate_111*3 + 2) = Intermediate_514;
-		*(Tensor_535 + Intermediate_108*3 + 2) = Intermediate_513;
-		*(Tensor_535 + Intermediate_108*3 + 2) = Intermediate_504;
-		*(Tensor_535 + Intermediate_108*3 + 2) = Intermediate_495;
+		scalar Intermediate_498 = Intermediate_252*Intermediate_267*Intermediate_259*Intermediate_243;
+		scalar Intermediate_499 = Intermediate_302*Intermediate_317*Intermediate_309*Intermediate_295;
+		scalar Intermediate_500 = Intermediate_52*Intermediate_57*Intermediate_173*Intermediate_51;
+		scalar Intermediate_501 = Intermediate_52*Intermediate_338*Intermediate_342*Intermediate_470;
+		scalar Intermediate_502 = Intermediate_52*Intermediate_325*Intermediate_465;
+		scalar Intermediate_503 = Intermediate_491*Intermediate_119;
+		scalar Intermediate_504 = Intermediate_476*Intermediate_119;
+		scalar Intermediate_505 = Intermediate_504+Intermediate_503+Intermediate_502+Intermediate_501+Intermediate_500+Intermediate_499+Intermediate_498;
+		scalar Intermediate_506 = Intermediate_52*Intermediate_480*Intermediate_505*Intermediate_1;
+		scalar Intermediate_507 = Intermediate_483*Intermediate_505*Intermediate_1;
+		*(Tensor_535 + Intermediate_111*3 + 1) += Intermediate_507;
+		*(Tensor_535 + Intermediate_108*3 + 1) += Intermediate_506;
 		
-		*(Tensor_535 + Intermediate_111*3 + 2) = Intermediate_516;
-		*(Tensor_535 + Intermediate_111*3 + 2) = Intermediate_515;
-		*(Tensor_535 + Intermediate_111*3 + 2) = Intermediate_514;
-		*(Tensor_535 + Intermediate_108*3 + 2) = Intermediate_513;
-		*(Tensor_535 + Intermediate_108*3 + 2) = Intermediate_504;
-		*(Tensor_535 + Intermediate_108*3 + 2) = Intermediate_495;
+		scalar Intermediate_509 = Intermediate_252*Intermediate_267*Intermediate_261*Intermediate_243;
+		scalar Intermediate_510 = Intermediate_302*Intermediate_317*Intermediate_311*Intermediate_295;
+		scalar Intermediate_511 = Intermediate_52*Intermediate_57*Intermediate_202*Intermediate_51;
+		scalar Intermediate_512 = Intermediate_52*Intermediate_338*Intermediate_346*Intermediate_470;
+		scalar Intermediate_513 = Intermediate_52*Intermediate_329*Intermediate_465;
+		scalar Intermediate_514 = Intermediate_491*Intermediate_126;
+		scalar Intermediate_515 = Intermediate_476*Intermediate_126;
+		scalar Intermediate_516 = Intermediate_515+Intermediate_514+Intermediate_513+Intermediate_512+Intermediate_511+Intermediate_510+Intermediate_509;
+		scalar Intermediate_517 = Intermediate_52*Intermediate_480*Intermediate_516*Intermediate_1;
+		scalar Intermediate_518 = Intermediate_483*Intermediate_516*Intermediate_1;
+		*(Tensor_535 + Intermediate_111*3 + 0) += Intermediate_518;
+		*(Tensor_535 + Intermediate_108*3 + 0) += Intermediate_517;
 		
 		scalar Intermediate_520 = Intermediate_52*Intermediate_468*Intermediate_467*Intermediate_453;
 		scalar Intermediate_521 = Intermediate_252*Intermediate_267*Intermediate_243;
@@ -1271,8 +921,8 @@ void Function_flux(int n, const scalar* Tensor_136, const scalar* Tensor_137, co
 		scalar Intermediate_525 = Intermediate_524+Intermediate_523+Intermediate_522+Intermediate_521+Intermediate_520;
 		scalar Intermediate_526 = Intermediate_52*Intermediate_480*Intermediate_525*Intermediate_1;
 		scalar Intermediate_527 = Intermediate_483*Intermediate_525*Intermediate_1;
-		*(Tensor_529 + Intermediate_111*1 + 0) = Intermediate_527;
-		*(Tensor_529 + Intermediate_108*1 + 0) = Intermediate_526;
+		*(Tensor_529 + Intermediate_111*1 + 0) += Intermediate_527;
+		*(Tensor_529 + Intermediate_108*1 + 0) += Intermediate_526;
 		
 	}
 	long long end = current_timestamp(); mil += end-start; printf("c module Function_flux: %lld\n", mil);
@@ -1753,7 +1403,7 @@ void Function_characteristicFlux(int n, const scalar* Tensor_542, const scalar* 
                 
 		scalar Intermediate_434 = Intermediate_52*Intermediate_433;
 		scalar Intermediate_435 = Intermediate_55+Intermediate_434+Intermediate_420;
-		scalar Intermediate_436 = -0.5;
+		const scalar Intermediate_436 = -0.5;
 		scalar Intermediate_437 = pow(Intermediate_368,Intermediate_436);
 		scalar Intermediate_438 = Intermediate_52*Intermediate_437*Intermediate_435*Intermediate_352;
 		scalar Intermediate_439 = Intermediate_52*Intermediate_302*Intermediate_313*Intermediate_295;
@@ -1811,7 +1461,7 @@ void Function_characteristicFlux(int n, const scalar* Tensor_542, const scalar* 
 		scalar Intermediate_479 = *(Tensor_1 + i*1 + 0);
 		scalar Intermediate_480 = pow(Intermediate_479,Intermediate_52);
 		scalar Intermediate_481 = Intermediate_480*Intermediate_478*Intermediate_1;
-		*(Tensor_938 + Intermediate_111*1 + 0) = Intermediate_481;
+		*(Tensor_938 + Intermediate_111*1 + 0) += Intermediate_481;
 		
 		scalar Intermediate_483 = Intermediate_252*Intermediate_267*Intermediate_257*Intermediate_243;
 		scalar Intermediate_484 = Intermediate_302*Intermediate_317*Intermediate_307*Intermediate_295;
@@ -1823,35 +1473,29 @@ void Function_characteristicFlux(int n, const scalar* Tensor_542, const scalar* 
 		scalar Intermediate_490 = Intermediate_476*Intermediate_107;
 		scalar Intermediate_491 = Intermediate_490+Intermediate_489+Intermediate_487+Intermediate_486+Intermediate_485+Intermediate_484+Intermediate_483;
 		scalar Intermediate_492 = Intermediate_480*Intermediate_491*Intermediate_1;
-		scalar Intermediate_493 = Intermediate_252*Intermediate_267*Intermediate_259*Intermediate_243;
-		scalar Intermediate_494 = Intermediate_302*Intermediate_317*Intermediate_309*Intermediate_295;
-		scalar Intermediate_495 = Intermediate_52*Intermediate_57*Intermediate_173*Intermediate_51;
-		scalar Intermediate_496 = Intermediate_52*Intermediate_338*Intermediate_342*Intermediate_470;
-		scalar Intermediate_497 = Intermediate_52*Intermediate_325*Intermediate_465;
-		scalar Intermediate_498 = Intermediate_488*Intermediate_119;
-		scalar Intermediate_499 = Intermediate_476*Intermediate_119;
-		scalar Intermediate_500 = Intermediate_499+Intermediate_498+Intermediate_497+Intermediate_496+Intermediate_495+Intermediate_494+Intermediate_493;
-		scalar Intermediate_501 = Intermediate_480*Intermediate_500*Intermediate_1;
-		scalar Intermediate_502 = Intermediate_252*Intermediate_267*Intermediate_261*Intermediate_243;
-		scalar Intermediate_503 = Intermediate_302*Intermediate_317*Intermediate_311*Intermediate_295;
-		scalar Intermediate_504 = Intermediate_52*Intermediate_57*Intermediate_202*Intermediate_51;
-		scalar Intermediate_505 = Intermediate_52*Intermediate_338*Intermediate_346*Intermediate_470;
-		scalar Intermediate_506 = Intermediate_52*Intermediate_329*Intermediate_465;
-		scalar Intermediate_507 = Intermediate_488*Intermediate_126;
-		scalar Intermediate_508 = Intermediate_476*Intermediate_126;
-		scalar Intermediate_509 = Intermediate_508+Intermediate_507+Intermediate_506+Intermediate_505+Intermediate_504+Intermediate_503+Intermediate_502;
-		scalar Intermediate_510 = Intermediate_480*Intermediate_509*Intermediate_1;
-		*(Tensor_935 + Intermediate_111*3 + 2) = Intermediate_510;
-		*(Tensor_935 + Intermediate_111*3 + 2) = Intermediate_501;
-		*(Tensor_935 + Intermediate_111*3 + 2) = Intermediate_492;
+		*(Tensor_935 + Intermediate_111*3 + 2) += Intermediate_492;
 		
-		*(Tensor_935 + Intermediate_111*3 + 2) = Intermediate_510;
-		*(Tensor_935 + Intermediate_111*3 + 2) = Intermediate_501;
-		*(Tensor_935 + Intermediate_111*3 + 2) = Intermediate_492;
+		scalar Intermediate_494 = Intermediate_252*Intermediate_267*Intermediate_259*Intermediate_243;
+		scalar Intermediate_495 = Intermediate_302*Intermediate_317*Intermediate_309*Intermediate_295;
+		scalar Intermediate_496 = Intermediate_52*Intermediate_57*Intermediate_173*Intermediate_51;
+		scalar Intermediate_497 = Intermediate_52*Intermediate_338*Intermediate_342*Intermediate_470;
+		scalar Intermediate_498 = Intermediate_52*Intermediate_325*Intermediate_465;
+		scalar Intermediate_499 = Intermediate_488*Intermediate_119;
+		scalar Intermediate_500 = Intermediate_476*Intermediate_119;
+		scalar Intermediate_501 = Intermediate_500+Intermediate_499+Intermediate_498+Intermediate_497+Intermediate_496+Intermediate_495+Intermediate_494;
+		scalar Intermediate_502 = Intermediate_480*Intermediate_501*Intermediate_1;
+		*(Tensor_935 + Intermediate_111*3 + 1) += Intermediate_502;
 		
-		*(Tensor_935 + Intermediate_111*3 + 2) = Intermediate_510;
-		*(Tensor_935 + Intermediate_111*3 + 2) = Intermediate_501;
-		*(Tensor_935 + Intermediate_111*3 + 2) = Intermediate_492;
+		scalar Intermediate_504 = Intermediate_252*Intermediate_267*Intermediate_261*Intermediate_243;
+		scalar Intermediate_505 = Intermediate_302*Intermediate_317*Intermediate_311*Intermediate_295;
+		scalar Intermediate_506 = Intermediate_52*Intermediate_57*Intermediate_202*Intermediate_51;
+		scalar Intermediate_507 = Intermediate_52*Intermediate_338*Intermediate_346*Intermediate_470;
+		scalar Intermediate_508 = Intermediate_52*Intermediate_329*Intermediate_465;
+		scalar Intermediate_509 = Intermediate_488*Intermediate_126;
+		scalar Intermediate_510 = Intermediate_476*Intermediate_126;
+		scalar Intermediate_511 = Intermediate_510+Intermediate_509+Intermediate_508+Intermediate_507+Intermediate_506+Intermediate_505+Intermediate_504;
+		scalar Intermediate_512 = Intermediate_480*Intermediate_511*Intermediate_1;
+		*(Tensor_935 + Intermediate_111*3 + 0) += Intermediate_512;
 		
 		scalar Intermediate_514 = Intermediate_52*Intermediate_468*Intermediate_467*Intermediate_453;
 		scalar Intermediate_515 = Intermediate_252*Intermediate_267*Intermediate_243;
@@ -1860,7 +1504,7 @@ void Function_characteristicFlux(int n, const scalar* Tensor_542, const scalar* 
 		scalar Intermediate_518 = Intermediate_52*Intermediate_350*Intermediate_465;
 		scalar Intermediate_519 = Intermediate_518+Intermediate_517+Intermediate_516+Intermediate_515+Intermediate_514;
 		scalar Intermediate_520 = Intermediate_480*Intermediate_519*Intermediate_1;
-		*(Tensor_932 + Intermediate_111*1 + 0) = Intermediate_520;
+		*(Tensor_932 + Intermediate_111*1 + 0) += Intermediate_520;
 		
 	}
 	long long end = current_timestamp(); mil += end-start; printf("c module Function_characteristicFlux: %lld\n", mil);
@@ -2341,7 +1985,7 @@ void Function_coupledFlux(int n, const scalar* Tensor_939, const scalar* Tensor_
                 
 		scalar Intermediate_434 = Intermediate_52*Intermediate_433;
 		scalar Intermediate_435 = Intermediate_55+Intermediate_434+Intermediate_420;
-		scalar Intermediate_436 = -0.5;
+		const scalar Intermediate_436 = -0.5;
 		scalar Intermediate_437 = pow(Intermediate_368,Intermediate_436);
 		scalar Intermediate_438 = Intermediate_52*Intermediate_437*Intermediate_435*Intermediate_352;
 		scalar Intermediate_439 = Intermediate_52*Intermediate_302*Intermediate_313*Intermediate_295;
@@ -2399,7 +2043,7 @@ void Function_coupledFlux(int n, const scalar* Tensor_939, const scalar* Tensor_
 		scalar Intermediate_479 = *(Tensor_1 + i*1 + 0);
 		scalar Intermediate_480 = pow(Intermediate_479,Intermediate_52);
 		scalar Intermediate_481 = Intermediate_480*Intermediate_478*Intermediate_1;
-		*(Tensor_1335 + Intermediate_111*1 + 0) = Intermediate_481;
+		*(Tensor_1335 + Intermediate_111*1 + 0) += Intermediate_481;
 		
 		scalar Intermediate_483 = Intermediate_252*Intermediate_267*Intermediate_257*Intermediate_243;
 		scalar Intermediate_484 = Intermediate_302*Intermediate_317*Intermediate_307*Intermediate_295;
@@ -2411,35 +2055,29 @@ void Function_coupledFlux(int n, const scalar* Tensor_939, const scalar* Tensor_
 		scalar Intermediate_490 = Intermediate_476*Intermediate_126;
 		scalar Intermediate_491 = Intermediate_490+Intermediate_489+Intermediate_487+Intermediate_486+Intermediate_485+Intermediate_484+Intermediate_483;
 		scalar Intermediate_492 = Intermediate_480*Intermediate_491*Intermediate_1;
-		scalar Intermediate_493 = Intermediate_252*Intermediate_267*Intermediate_259*Intermediate_243;
-		scalar Intermediate_494 = Intermediate_302*Intermediate_317*Intermediate_309*Intermediate_295;
-		scalar Intermediate_495 = Intermediate_52*Intermediate_57*Intermediate_137*Intermediate_51;
-		scalar Intermediate_496 = Intermediate_52*Intermediate_338*Intermediate_342*Intermediate_470;
-		scalar Intermediate_497 = Intermediate_52*Intermediate_325*Intermediate_465;
-		scalar Intermediate_498 = Intermediate_488*Intermediate_107;
-		scalar Intermediate_499 = Intermediate_476*Intermediate_107;
-		scalar Intermediate_500 = Intermediate_499+Intermediate_498+Intermediate_497+Intermediate_496+Intermediate_495+Intermediate_494+Intermediate_493;
-		scalar Intermediate_501 = Intermediate_480*Intermediate_500*Intermediate_1;
-		scalar Intermediate_502 = Intermediate_252*Intermediate_267*Intermediate_261*Intermediate_243;
-		scalar Intermediate_503 = Intermediate_302*Intermediate_317*Intermediate_311*Intermediate_295;
-		scalar Intermediate_504 = Intermediate_52*Intermediate_57*Intermediate_173*Intermediate_51;
-		scalar Intermediate_505 = Intermediate_52*Intermediate_338*Intermediate_346*Intermediate_470;
-		scalar Intermediate_506 = Intermediate_52*Intermediate_329*Intermediate_465;
-		scalar Intermediate_507 = Intermediate_488*Intermediate_119;
-		scalar Intermediate_508 = Intermediate_476*Intermediate_119;
-		scalar Intermediate_509 = Intermediate_508+Intermediate_507+Intermediate_506+Intermediate_505+Intermediate_504+Intermediate_503+Intermediate_502;
-		scalar Intermediate_510 = Intermediate_480*Intermediate_509*Intermediate_1;
-		*(Tensor_1332 + Intermediate_111*3 + 2) = Intermediate_510;
-		*(Tensor_1332 + Intermediate_111*3 + 2) = Intermediate_501;
-		*(Tensor_1332 + Intermediate_111*3 + 2) = Intermediate_492;
+		*(Tensor_1332 + Intermediate_111*3 + 2) += Intermediate_492;
 		
-		*(Tensor_1332 + Intermediate_111*3 + 2) = Intermediate_510;
-		*(Tensor_1332 + Intermediate_111*3 + 2) = Intermediate_501;
-		*(Tensor_1332 + Intermediate_111*3 + 2) = Intermediate_492;
+		scalar Intermediate_494 = Intermediate_252*Intermediate_267*Intermediate_259*Intermediate_243;
+		scalar Intermediate_495 = Intermediate_302*Intermediate_317*Intermediate_309*Intermediate_295;
+		scalar Intermediate_496 = Intermediate_52*Intermediate_57*Intermediate_137*Intermediate_51;
+		scalar Intermediate_497 = Intermediate_52*Intermediate_338*Intermediate_342*Intermediate_470;
+		scalar Intermediate_498 = Intermediate_52*Intermediate_325*Intermediate_465;
+		scalar Intermediate_499 = Intermediate_488*Intermediate_107;
+		scalar Intermediate_500 = Intermediate_476*Intermediate_107;
+		scalar Intermediate_501 = Intermediate_500+Intermediate_499+Intermediate_498+Intermediate_497+Intermediate_496+Intermediate_495+Intermediate_494;
+		scalar Intermediate_502 = Intermediate_480*Intermediate_501*Intermediate_1;
+		*(Tensor_1332 + Intermediate_111*3 + 1) += Intermediate_502;
 		
-		*(Tensor_1332 + Intermediate_111*3 + 2) = Intermediate_510;
-		*(Tensor_1332 + Intermediate_111*3 + 2) = Intermediate_501;
-		*(Tensor_1332 + Intermediate_111*3 + 2) = Intermediate_492;
+		scalar Intermediate_504 = Intermediate_252*Intermediate_267*Intermediate_261*Intermediate_243;
+		scalar Intermediate_505 = Intermediate_302*Intermediate_317*Intermediate_311*Intermediate_295;
+		scalar Intermediate_506 = Intermediate_52*Intermediate_57*Intermediate_173*Intermediate_51;
+		scalar Intermediate_507 = Intermediate_52*Intermediate_338*Intermediate_346*Intermediate_470;
+		scalar Intermediate_508 = Intermediate_52*Intermediate_329*Intermediate_465;
+		scalar Intermediate_509 = Intermediate_488*Intermediate_119;
+		scalar Intermediate_510 = Intermediate_476*Intermediate_119;
+		scalar Intermediate_511 = Intermediate_510+Intermediate_509+Intermediate_508+Intermediate_507+Intermediate_506+Intermediate_505+Intermediate_504;
+		scalar Intermediate_512 = Intermediate_480*Intermediate_511*Intermediate_1;
+		*(Tensor_1332 + Intermediate_111*3 + 0) += Intermediate_512;
 		
 		scalar Intermediate_514 = Intermediate_52*Intermediate_468*Intermediate_467*Intermediate_453;
 		scalar Intermediate_515 = Intermediate_252*Intermediate_267*Intermediate_243;
@@ -2448,7 +2086,7 @@ void Function_coupledFlux(int n, const scalar* Tensor_939, const scalar* Tensor_
 		scalar Intermediate_518 = Intermediate_52*Intermediate_350*Intermediate_465;
 		scalar Intermediate_519 = Intermediate_518+Intermediate_517+Intermediate_516+Intermediate_515+Intermediate_514;
 		scalar Intermediate_520 = Intermediate_480*Intermediate_519*Intermediate_1;
-		*(Tensor_1329 + Intermediate_111*1 + 0) = Intermediate_520;
+		*(Tensor_1329 + Intermediate_111*1 + 0) += Intermediate_520;
 		
 	}
 	long long end = current_timestamp(); mil += end-start; printf("c module Function_coupledFlux: %lld\n", mil);
@@ -2551,37 +2189,31 @@ void Function_boundaryFlux(int n, const scalar* Tensor_1336, const scalar* Tenso
 		scalar Intermediate_91 = *(Tensor_1 + i*1 + 0);
 		scalar Intermediate_92 = pow(Intermediate_91,Intermediate_7);
 		scalar Intermediate_93 = Intermediate_92*Intermediate_90*Intermediate_1;
-		*(Tensor_1465 + Intermediate_5*1 + 0) = Intermediate_93;
+		*(Tensor_1465 + Intermediate_5*1 + 0) += Intermediate_93;
 		
 		scalar Intermediate_95 = Intermediate_86*Intermediate_72*Intermediate_19*Intermediate_76;
 		scalar Intermediate_96 = Intermediate_7*Intermediate_12*Intermediate_11*Intermediate_46;
 		scalar Intermediate_97 = Intermediate_22*Intermediate_76;
 		scalar Intermediate_98 = Intermediate_97+Intermediate_96+Intermediate_95;
 		scalar Intermediate_99 = Intermediate_92*Intermediate_98*Intermediate_1;
-		scalar Intermediate_100 = Intermediate_86*Intermediate_72*Intermediate_62*Intermediate_76;
-		scalar Intermediate_101 = Intermediate_7*Intermediate_12*Intermediate_11*Intermediate_67;
-		scalar Intermediate_102 = Intermediate_32*Intermediate_76;
-		scalar Intermediate_103 = Intermediate_102+Intermediate_101+Intermediate_100;
-		scalar Intermediate_104 = Intermediate_92*Intermediate_103*Intermediate_1;
-		scalar Intermediate_105 = Intermediate_86*Intermediate_72*Intermediate_49*Intermediate_76;
-		scalar Intermediate_106 = Intermediate_7*Intermediate_12*Intermediate_11*Intermediate_59;
-		scalar Intermediate_107 = Intermediate_39*Intermediate_76;
-		scalar Intermediate_108 = Intermediate_107+Intermediate_106+Intermediate_105;
-		scalar Intermediate_109 = Intermediate_92*Intermediate_108*Intermediate_1;
-		*(Tensor_1462 + Intermediate_5*3 + 2) = Intermediate_109;
-		*(Tensor_1462 + Intermediate_5*3 + 2) = Intermediate_104;
-		*(Tensor_1462 + Intermediate_5*3 + 2) = Intermediate_99;
+		*(Tensor_1462 + Intermediate_5*3 + 2) += Intermediate_99;
 		
-		*(Tensor_1462 + Intermediate_5*3 + 2) = Intermediate_109;
-		*(Tensor_1462 + Intermediate_5*3 + 2) = Intermediate_104;
-		*(Tensor_1462 + Intermediate_5*3 + 2) = Intermediate_99;
+		scalar Intermediate_101 = Intermediate_86*Intermediate_72*Intermediate_62*Intermediate_76;
+		scalar Intermediate_102 = Intermediate_7*Intermediate_12*Intermediate_11*Intermediate_67;
+		scalar Intermediate_103 = Intermediate_32*Intermediate_76;
+		scalar Intermediate_104 = Intermediate_103+Intermediate_102+Intermediate_101;
+		scalar Intermediate_105 = Intermediate_92*Intermediate_104*Intermediate_1;
+		*(Tensor_1462 + Intermediate_5*3 + 1) += Intermediate_105;
 		
-		*(Tensor_1462 + Intermediate_5*3 + 2) = Intermediate_109;
-		*(Tensor_1462 + Intermediate_5*3 + 2) = Intermediate_104;
-		*(Tensor_1462 + Intermediate_5*3 + 2) = Intermediate_99;
+		scalar Intermediate_107 = Intermediate_86*Intermediate_72*Intermediate_49*Intermediate_76;
+		scalar Intermediate_108 = Intermediate_7*Intermediate_12*Intermediate_11*Intermediate_59;
+		scalar Intermediate_109 = Intermediate_39*Intermediate_76;
+		scalar Intermediate_110 = Intermediate_109+Intermediate_108+Intermediate_107;
+		scalar Intermediate_111 = Intermediate_92*Intermediate_110*Intermediate_1;
+		*(Tensor_1462 + Intermediate_5*3 + 0) += Intermediate_111;
 		
 		scalar Intermediate_113 = Intermediate_86*Intermediate_92*Intermediate_72*Intermediate_1*Intermediate_76;
-		*(Tensor_1459 + Intermediate_5*1 + 0) = Intermediate_113;
+		*(Tensor_1459 + Intermediate_5*1 + 0) += Intermediate_113;
 		
 	}
 	long long end = current_timestamp(); mil += end-start; printf("c module Function_boundaryFlux: %lld\n", mil);

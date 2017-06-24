@@ -60,9 +60,9 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     boundary(this->boundaries[1], T);
     boundary(this->boundaries[2], p);
     this->boundaryEnd();    
-    ////U.info();
-    ////T.info();
-    ////p.info();
+    U.info();
+    T.info();
+    p.info();
 
     arrType<scalar, 3, 3> gradU(mesh.nCells);
     arrType<scalar, 1, 3> gradT(mesh.nCells);
@@ -103,6 +103,10 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     this->boundary(mesh.defaultBoundary, gradT);
     this->boundary(mesh.defaultBoundary, gradp);
     this->boundaryEnd();
+
+    gradU.info();
+    gradT.info();
+    gradp.info();
     //
     vec dtc(mesh.nCells);
     drho.zero();
@@ -138,6 +142,9 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
             fluxUpdate(startFace, nFaces, Function_boundaryFlux);
         }
     }
+    drho.info();
+    drhoU.info();
+    drhoE.info();
 }
 
 tuple<scalar, scalar> euler(const vec& rho, const mat& rhoU, const vec& rhoE, vec& rhoN, mat& rhoUN, vec& rhoEN, scalar t, scalar dt) {
