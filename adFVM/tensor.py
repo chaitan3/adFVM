@@ -95,7 +95,7 @@ class Tensor(object):
         return self._binaryOp(b, operator.mul)
 
     def __rmul__(self, b):
-        return self.__add__(b)
+        return self.__mul__(b)
 
     def __div__(self, b):
         return self._binaryOp(b, operator.div)
@@ -319,11 +319,11 @@ class Function(object):
             if op in self._outputTensorIndices:
                 tensorIndex = self._outputTensorIndices[op]
                 if not tensorIndex[3]:
-                    code += ' *({} + i*{} + {}) = {};'.format(tensorIndex[0], tensorIndex[1], tensorIndex[2], names[op])
+                    code += '\n\t\t*({} + i*{} + {}) = {};'.format(tensorIndex[0], tensorIndex[1], tensorIndex[2], names[op])
             codeFile.write('\t\t' + code + '\n')
             #print op.func, len(op.args)
         codeFile.write('\t}\n')
-        codeFile.write('\tlong long end = current_timestamp(); mil += end-start; printf("c module {}: %lld\\n", mil);\n'.format(self.name))
+        #codeFile.write('\tlong long end = current_timestamp(); mil += end-start; printf("c module {}: %lld\\n", mil);\n'.format(self.name))
         codeFile.write('}\n')
         codeFile.close()
 

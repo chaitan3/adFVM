@@ -120,16 +120,20 @@ class arrType {
         scalar minPhi, maxPhi;
         minPhi = 1e100;
         maxPhi = -1e100;
+        integer minLoc = -1, maxLoc = -1;
         for (integer i = 0; i < this->size; i++) {
             if (this->data[i] < minPhi) {
                 minPhi = this->data[i];
+                minLoc = i;
             }
             if (this->data[i] > maxPhi) {
                 maxPhi = this->data[i];
+                maxLoc = i;
             }
 
         }
-        cout << "phi " << minPhi << " " << maxPhi << endl;
+        cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
+        cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
     }
 
     void zero() {

@@ -1,4 +1,4 @@
-#define timeIntegrator euler
+#define timeIntegrator SSPRK
 
 class RCF {
     public:
@@ -60,9 +60,9 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     boundary(this->boundaries[1], T);
     boundary(this->boundaries[2], p);
     this->boundaryEnd();    
-    U.info();
-    T.info();
-    p.info();
+    //U.info();
+    //T.info();
+    //p.info();
 
     arrType<scalar, 3, 3> gradU(mesh.nCells);
     arrType<scalar, 1, 3> gradT(mesh.nCells);
@@ -104,9 +104,9 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     this->boundary(mesh.defaultBoundary, gradp);
     this->boundaryEnd();
 
-    gradU.info();
-    gradT.info();
-    gradp.info();
+    //gradU.info();
+    //gradT.info();
+    //gradp.info();
     //
     vec dtc(mesh.nCells);
     drho.zero();
@@ -142,9 +142,9 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
             fluxUpdate(startFace, nFaces, Function_boundaryFlux);
         }
     }
-    drho.info();
-    drhoU.info();
-    drhoE.info();
+    //drho.info();
+    //drhoU.info();
+    //drhoE.info();
 }
 
 tuple<scalar, scalar> euler(const vec& rho, const mat& rhoU, const vec& rhoE, vec& rhoN, mat& rhoUN, vec& rhoEN, scalar t, scalar dt) {
@@ -255,7 +255,7 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
                 }
             }
         } else if (patchType == "symmetryPlane" || patchType == "slip") {
-            cout << "implemented this elsewhere" << endl;
+            cout << "implement this elsewhere" << endl;
             if ((shape1 == 3) && (shape2 == 1)) {
                 for (integer i = 0; i < nFaces; i++) {
                     integer f = startFace + i;
