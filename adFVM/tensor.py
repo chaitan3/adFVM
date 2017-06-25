@@ -133,9 +133,8 @@ class Tensor(object):
         return Tensor(self.shape, res)
 
     def dot(self, b):
-        assert self.shape == (3,)
-        assert b.shape == (3,)
-        res = sum([self.scalars[i]*b.scalars[i] for i in range(0, 3)])
+        assert self.shape == b.shape
+        res = sum([self.scalars[i]*b.scalars[i] for i in range(0, self.size)])
         return Tensor((1,), [res])
 
     def abs(self):
@@ -196,7 +195,7 @@ def ZeroTensor(shape):
 class Function(object):
     _index = 0
     _module = None
-    def __init__(self, name, inputs, outputs):
+    def __init__(self, name, inputs, outputs, grad=True):
         index = Function._index
         Function._index += 1
         #self.name = 'Function_{}'.format(index)
@@ -219,11 +218,24 @@ class Function(object):
 
         self._children = self._getChildren(self._outputs)
         self._genCode(self._inputs, self._outputs, self._children.copy())
+        if grad:
+            self.grad = self._getAdjoint()
 
     def _getAdjoint(self):
-        gradInputs = [Scalar() for x in self._outputs]
-        scalarOutput = sum([x * y for x, y in zip(self._outputs, gradInputs)])
-        gradient = self._diff(scalarOutput, self._inputs)
+        gradInputs = [x.__class__(x.shape) for x in self._outputTensors]
+        scalarOutput = sum([x.dot(y) for x, y in zip(self._outputTensors, gradInputs)])
+        inputScalars = []
+        for inp in self._inputTensors:
+            inputScalars.extend(inp.scalars)
+        outputScalars = self._diff(scalarOutput.scalars[0], inputScalars)
+        outputs = []
+        i = 0
+        for inp in self._inputTensors:
+            n = inp.size
+            outputs.append(inp.__class__(inp.shape, outputScalars[i:i+n]))
+            i += n
+        inputs = self._inputTensors + gradInputs
+        return Function(self.name.split('_')[1] + '_grad', inputs, outputs)
 
     def _getChildren(self, outputs):
         children = {}
@@ -266,8 +278,6 @@ class Function(object):
         return sortedOps[1:][::-1]
 
     def _diff(self, output, inputs):
-        # optimizations: clubbing, common subexpression elimination
-        # rely on compiler to figure it out?
         gradients = {}
         gradients[output] = 1.
         children = self._children.copy()
