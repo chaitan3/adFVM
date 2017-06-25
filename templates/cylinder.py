@@ -105,6 +105,6 @@ nSteps = 100
 writeInterval = 100
 reportInterval = 1
 startTime = 3.0
-dt = 1e-10
+dt = 1e-8
 adjParams = [1e-3, 'abarbanel', None]
 runCheckpoints = 3

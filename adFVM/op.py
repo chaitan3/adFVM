@@ -45,11 +45,15 @@ def div(phi, mesh, neighbour):
         dphi = Tensor.collate(phi*wp, mesh.owner)
     return dphi
 
-def absDiv(phi, mesh):
+def absDiv(phi, mesh, neighbour):
     wp = mesh.areas/mesh.volumesL
-    wn = mesh.areas/mesh.volumesR
-    # for div, contri for owner is pos, neigh is neg
-    return phi*wp, phi*wn
+    if neighbour:
+        wn = mesh.areas/mesh.volumesR
+        dphi = Tensor.collate(phi*wp, mesh.owner, phi*wn, mesh.neighbour)
+    else:
+        dphi = Tensor.collate(phi*wp, mesh.owner)
+    return dphi
+
 
 #def div(phi, U=None, ghost=False):
 #    logger.info('divergence of {0}'.format(phi.name))

@@ -88,11 +88,28 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         rcf->boundaries[i-1] = getBoundary(boundaryObject);
     }
     //cout << "Initialized boundary" << endl;
-    //PyObject *dict = PyTuple_GetItem(args, 4);
+    PyObject *dict = PyTuple_GetItem(args, 4);
     // mu 
     // riemann solver, face reconstructor support?
-    //PyObject *key, *value;
-    //Py_ssize_t pos = 0;
+    PyObject *key, *value;
+    Py_ssize_t pos = 0;
+
+    while (PyDict_Next(dict, &pos, &key, &value)) {
+        string ckey = PyString_AsString(key);
+        if (ckey == "CFL") {
+            rcf->CFL = PyFloat_AsDouble(value);
+        } 
+        //else if (ckey == "timeIntegrator") {
+        //    string cvalue = PyString_AsString(value);
+        //    if (cvalue == "euler") {
+        //        timeIntegrator = euler;
+        //    } else if (cvalue == "SSPRK") {
+        //        timeIntegrator = SSPRK;
+        //    }
+        //} 
+    }
+    
+
     Py_INCREF(Py_None);
     return Py_None;
 }

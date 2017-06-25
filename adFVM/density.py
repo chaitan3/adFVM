@@ -1,7 +1,7 @@
 from . import config, riemann, interp
 from .tensor import Tensor, ZeroTensor, Function, CellTensor
 from .field import Field, IOField
-from .op import  div, snGrad, grad, internal_sum
+from .op import  div, absDiv, snGrad, grad, internal_sum
 from .solver import Solver
 from .interp import central, secondOrder
 from . import BCs
@@ -245,11 +245,15 @@ class RCF(Solver):
         drhoU = div(rhoUFlux, mesh, neighbour)
         drhoE = div(rhoEFlux, mesh, neighbour)
 
+        aF = (self.Cp*TF*(self.gamma-1)).sqrt()
+        maxaF = (UF.dot(mesh.normals)).abs() + aF
+        dtc = absDiv(maxaF, mesh, neighbour)
+
         inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
                  [getattr(mesh, attr) for attr in mesh.intFields]
 
         return Function(name, [U, T, p, gradU, gradT, gradp] + inputs,
-                                  [drho, drhoU, drhoE])
+                                  [drho, drhoU, drhoE, dtc])
 
     def boundaryFlux(self):
         mesh = self.mesh.symMesh
@@ -270,11 +274,15 @@ class RCF(Solver):
         drhoU = div(rhoUFlux, mesh, False)
         drhoE = div(rhoEFlux, mesh, False)
 
+        aF = (self.Cp*TR*(self.gamma-1)).sqrt()
+        maxaF = (UR.dot(mesh.normals)).abs() + aF
+        dtc = absDiv(maxaF, mesh, False)
+
         inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
                  [getattr(mesh, attr) for attr in mesh.intFields]
 
         return Function("boundaryFlux", [U, T, p, gradU, gradT, gradp] + inputs,
-                                  [drho, drhoU, drhoE])
+                                  [drho, drhoU, drhoE, dtc])
 
     def equation(self, rho, rhoU, rhoE):
         logger.info('computing RHS/LHS')

@@ -357,10 +357,7 @@ class Solver(object):
                      [dt, t]
             #outputs = self.map(fields)
             outputs = self.map(*inputs)
-            #newFields, objective, dtc = outputs[:3], outputs[3], outputs[4]
-            newFields = outputs
-            dtc = dt
-            objective = 0
+            newFields, objective, dtc = outputs[:3], outputs[3], outputs[4]
             local = remote = 0
 
             fields = self.getFields(newFields, IOField, refFields=fields)
