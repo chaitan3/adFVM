@@ -342,21 +342,23 @@ class Function(object):
             elif op.func == power.Pow:
                 _power = op.args[1]
                 if _power.func == numbers.Float:
-                    code = '{} {} = pow({},{});'.format(dtype, names[op], argNames[0], argNames[1])
+                    expr = 'pow({},{})'.format(argNames[0], argNames[1])
                 else:
                     r = (_power.p, _power.q)
                     if r == (2, 1):
-                        code = '{0} {1} = {2}*{2};'.format(dtype, names[op], argNames[0])
+                        expr = '{0}*{0}'.format(argNames[0])
                     elif r == (-2, 1):
-                        code = '{0} {1} = 1./({2}*{2});'.format(dtype, names[op], argNames[0])
+                        expr = '1./({0}*{0})'.format(argNames[0])
                     elif r == (-1, 1):
-                        code = '{0} {1} = 1./{2};'.format(dtype, names[op], argNames[0])
+                        expr = '1./{}'.format(argNames[0])
                     elif r == (1, 2):
-                        code = '{0} {1} = sqrt({2});'.format(dtype, names[op], argNames[0])
+                        expr = 'sqrt({})'.format(argNames[0])
                     elif r == (-1, 2):
-                        code = '{0} {1} = 1./sqrt({2});'.format(dtype, names[op], argNames[0])
+                        expr = '1./sqrt({})'.format(argNames[0])
                     else:
-                        raise Exception("not handled", r)
+                        raise Exception("power not handled", r)
+                code = '{} {} = {};'.format(dtype, names[op], expr)
+
             elif op.func == numbers.Float:
                 code = 'const {} {} = {};'.format(dtype, names[op], op.num)
             elif op.func == numbers.Integer:
