@@ -305,8 +305,7 @@ class Function(object):
                 grads.append(gradients[out])
                 grads.append(None)
             else:
-                if (out.func not in [Scalar]) and \
-                   (len(out.args) > 0):
+                if (len(out.args) > 0):
                     raise Exception(out.func, len(out.args))
             for grad, inp in zip(grads, out.args):
                 if grad is None:
