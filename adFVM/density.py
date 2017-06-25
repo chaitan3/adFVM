@@ -211,9 +211,16 @@ class RCF(Solver):
         U, T, p = CellTensor((3,)), CellTensor((1,)), CellTensor((1,))
         gradU, gradT, gradp = CellTensor((3,3)), CellTensor((1,3)), CellTensor((1,3))
 
-        ULF, URF = secondOrder(U, gradU, mesh)
-        TLF, TRF = secondOrder(T, gradT,  mesh)
-        pLF, pRF = secondOrder(p, gradp, mesh)
+        ULF = secondOrder(U, gradU, mesh, 0)
+        TLF = secondOrder(T, gradT,  mesh, 0)
+        pLF = secondOrder(p, gradp, mesh, 0)
+
+        if characteristic:
+            URF, TRF, pRF = U.extract(N), T.extract(N), p.extract(N)
+        else:
+            URF = secondOrder(U, gradU, mesh, 1)
+            TRF = secondOrder(T, gradT,  mesh, 1)
+            pRF = secondOrder(p, gradp, mesh, 1)
 
         rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
         rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
@@ -249,6 +256,7 @@ class RCF(Solver):
         U, T, p = Tensor((3,)), Tensor((1,)), Tensor((1,))
         gradU, gradT, gradp = Tensor((3,3)), Tensor((1,3)), Tensor((1,3))
 
+        # boundary extraction could be done using cellstartface
         UR, TR, pR = U.extract(mesh.neighbour), T.extract(mesh.neighbour), p.extract(mesh.neighbour) 
         gradUR, gradTR = gradU.extract(mesh.neighbour), gradT.extract(mesh.neighbour)
         TL = T.extract(mesh.owner)

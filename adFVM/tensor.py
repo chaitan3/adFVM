@@ -103,6 +103,8 @@ class Tensor(object):
     def __neg__(self):
         return Tensor(self.shape, [-x for x in self.scalars])
 
+    def __pow__(self, b):
+        return Tensor(self.shape, [x**b for x in self.scalars])
 
     def __getitem__(self, b):
         if isinstance(b, int):
@@ -226,6 +228,7 @@ class Function(object):
     def _getChildren(self, outputs):
         children = {}
         funcs = set()
+
         def _childrenFunc(out):
             if out.func not in funcs:
                 funcs.add(out.func)
@@ -243,109 +246,22 @@ class Function(object):
         #print funcs
         return children
 
-    def _genCode(self, inputs, outputs, children):
-        sortedOps = self._topologicalSort(outputs, children)
-        codeFile = open(codeDir + 'code.c', 'a')
-
-        memString = '' 
-        for inp in self._inputTensors:
-            memString += 'const {}* {}, '.format(inp.dtype, inp.name)
-        for out in self._outputTensors:
-            memString += '{}* {}, '.format(dtype, out.name)
-        codeFile.write('\nvoid {}(int n, {}) {}\n'.format(self.name, memString[:-2], '{'))
-        codeFile.write('\tlong long start = current_timestamp();\n')
-        codeFile.write('\tfor (integer i = 0; i < n; i++) {\n')
-        names = {}
-        for index, op in enumerate(sortedOps):
-            names[op] = 'Intermediate_{}'.format(index)
-            argNames = [names[inp] for inp in op.args]
-            code = ''
-            if op.func == Scalar:
-                tensorIndex = self._inputTensorIndices[op]
-                if not tensorIndex[3]:
-                    code = '{} {} = *({} + i*{} + {});'.format(dtype, names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
-            elif op.func == IntegerScalar:
-                tensorIndex = self._inputTensorIndices[op]
-                code = '{} {} = *({} + i*{} + {});'.format('integer', names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
-            elif op.func == mul.Mul:
-                code = '{} {} = {};'.format(dtype, names[op], '*'.join(argNames))
-            elif op.func == add.Add:
-                code = '{} {} = {};'.format(dtype, names[op], '+'.join(argNames))
-            elif op.func == power.Pow:
-                code = '{} {} = pow({},{});'.format(dtype, names[op], argNames[0], argNames[1])
-            elif op.func == numbers.NegativeOne:
-                code = 'const {} {} = {};'.format(dtype, names[op], -1)
-            elif op.func == numbers.Float:
-                code = 'const {} {} = {};'.format(dtype, names[op], op.num)
-            elif op.func == numbers.Integer:
-                code = 'const {} {} = {};'.format(dtype, names[op], op.p)
-            elif op.func == numbers.Half:
-                code = 'const {} {} = {};'.format(dtype, names[op], 0.5)
-            elif op.func == numbers.Zero:
-                code = 'const {} {} = {};'.format(dtype, names[op], 0)
-            elif op.func == numbers.One:
-                code = 'const {} {} = {};'.format(dtype, names[op], 1)
-            elif op.func == numbers.Rational:
-                code = 'const {} {} = {};'.format(dtype, names[op], float(op.p)/op.q)
-            elif op.func == relational.StrictLessThan:
-                code = 'int {} = {} < {};'.format(names[op], names[op.args[0]], names[op.args[1]])
-            elif op.func == Piecewise:
-                code = """
-                {4} {0};
-                if ({1}) 
-                    {0} = {2};
-                else 
-                    {0} = {3};
-                """.format(names[op], names[op.args[0].args[1]], names[op.args[0].args[0]], names[op.args[1].args[0]], dtype)
-                #code = '{} {} = {};'.format(dtype, names[op], 0.5)
-            elif op.func == Extract:
-                a, b = op.args
-                tensorIndex = self._inputTensorIndices[a]
-                code = '{} {} = *({} + {}*{} + {});'.format(dtype, names[op], tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2])
-            elif op.func == Collate:
-                tensorIndex = self._outputTensorIndices[op]
-                n = len(op.args)/2
-                #code += '// hash {}: {}\n'.format(n, hash(op))
-                for i in range(0, n):
-                    a, b = op.args[2*i], op.args[2*i+1]
-                    code += '*({} + {}*{} + {}) += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
-            else:
-                if op.func not in [boolalg.BooleanTrue, piecewise.ExprCondPair]:
-                    raise Exception("ss", op.func)
-            #if op.func not in [Collate, Scalar, boolalg.BooleanTrue, piecewise.ExprCondPair]:
-            #    code += '//{}\n'.format(op.func)
-            #    code += 'if (i == 0) cout << "{}" << " " << {} << endl;\n'.format(names[op], names[op])
-
-            if op in self._outputTensorIndices:
-                tensorIndex = self._outputTensorIndices[op]
-                if not tensorIndex[3]:
-                    code += '\n\t\t*({} + i*{} + {}) = {};'.format(tensorIndex[0], tensorIndex[1], tensorIndex[2], names[op])
-            codeFile.write('\t\t' + code + '\n')
-            #print op.func, len(op.args)
-        codeFile.write('\t}\n')
-        #codeFile.write('\tlong long end = current_timestamp(); mil += end-start; printf("c module {}: %lld\\n", mil);\n'.format(self.name))
-        codeFile.write('}\n')
-        codeFile.close()
-
-        return
-
     def _topologicalSort(self, outputs, children):
         output = Container()
         output.args = tuple(outputs)
         for out in outputs:
             children[out] += 1
-        children[output] = 1
+        children[output] = 0
         #print children.values()
         sortedOps = []
-        def _sort(outputs):
-            for out in outputs:
-                #children[out] -= 1
-                children[out] = max(children[out]-1, 0)
-            for out in outputs:
-                if children[out] == 0:
-                    sortedOps.append(out)
-                    _sort(out.args)
-        _sort([output])
+        def _sort(out):
+            assert children[out] == 0
+            sortedOps.append(out)
+            for inp in out.args:
+                children[inp] -= 1
+                if children[inp] == 0:
+                    _sort(inp)
+        _sort(output)
         #print children.values()
         return sortedOps[1:][::-1]
 
@@ -394,6 +310,108 @@ class Function(object):
                     _diffFunc(inp)
         _diffFunc(output)
         return [gradients.get(inp, None) for inp in inputs]
+
+    def _genCode(self, inputs, outputs, children):
+        sortedOps = self._topologicalSort(outputs, children)
+        codeFile = open(codeDir + 'code.c', 'a')
+
+        memString = '' 
+        for inp in self._inputTensors:
+            memString += 'const {}* {}, '.format(inp.dtype, inp.name)
+        for out in self._outputTensors:
+            memString += '{}* {}, '.format(dtype, out.name)
+        codeFile.write('\nvoid {}(int n, {}) {}\n'.format(self.name, memString[:-2], '{'))
+        #codeFile.write('\tlong long start = current_timestamp();\n')
+        codeFile.write('\tfor (integer i = 0; i < n; i++) {\n')
+        names = {}
+        for index, op in enumerate(sortedOps):
+            names[op] = 'Intermediate_{}'.format(index)
+            argNames = [names[inp] for inp in op.args]
+            code = ''
+            if op.func == Scalar:
+                tensorIndex = self._inputTensorIndices[op]
+                if not tensorIndex[3]:
+                    code = '{} {} = *({} + i*{} + {});'.format(dtype, names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
+            elif op.func == IntegerScalar:
+                tensorIndex = self._inputTensorIndices[op]
+                code = '{} {} = *({} + i*{} + {});'.format('integer', names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
+            elif op.func == mul.Mul:
+                code = '{} {} = {};'.format(dtype, names[op], '*'.join(argNames))
+            elif op.func == add.Add:
+                code = '{} {} = {};'.format(dtype, names[op], '+'.join(argNames))
+            elif op.func == power.Pow:
+                _power = op.args[1]
+                if _power.func == numbers.Float:
+                    code = '{} {} = pow({},{});'.format(dtype, names[op], argNames[0], argNames[1])
+                else:
+                    r = (_power.p, _power.q)
+                    if r == (2, 1):
+                        code = '{0} {1} = {2}*{2};'.format(dtype, names[op], argNames[0])
+                    elif r == (-2, 1):
+                        code = '{0} {1} = 1./({2}*{2});'.format(dtype, names[op], argNames[0])
+                    elif r == (-1, 1):
+                        code = '{0} {1} = 1./{2};'.format(dtype, names[op], argNames[0])
+                    elif r == (1, 2):
+                        code = '{0} {1} = sqrt({2});'.format(dtype, names[op], argNames[0])
+                    elif r == (-1, 2):
+                        code = '{0} {1} = 1./sqrt({2});'.format(dtype, names[op], argNames[0])
+                    else:
+                        raise Exception("not handled", r)
+            elif op.func == numbers.Float:
+                code = 'const {} {} = {};'.format(dtype, names[op], op.num)
+            elif op.func == numbers.Integer:
+                code = 'const {} {} = {};'.format(dtype, names[op], op.p)
+            elif op.func == numbers.Half:
+                code = 'const {} {} = {};'.format(dtype, names[op], 0.5)
+            elif op.func == numbers.Zero:
+                code = 'const {} {} = {};'.format(dtype, names[op], 0)
+            elif op.func == numbers.One:
+                code = 'const {} {} = {};'.format(dtype, names[op], 1)
+            elif op.func == numbers.NegativeOne:
+                code = 'const {} {} = {};'.format(dtype, names[op], -1)
+            elif op.func == numbers.Rational:
+                code = 'const {} {} = {};'.format(dtype, names[op], float(op.p)/op.q)
+            elif op.func == relational.StrictLessThan:
+                code = 'int {} = {} < {};'.format(names[op], names[op.args[0]], names[op.args[1]])
+            elif op.func == Piecewise:
+                code = """
+                {4} {0};
+                if ({1}) 
+                    {0} = {2};
+                else 
+                    {0} = {3};
+                """.format(names[op], names[op.args[0].args[1]], names[op.args[0].args[0]], names[op.args[1].args[0]], dtype)
+                #code = '{} {} = {};'.format(dtype, names[op], 0.5)
+            elif op.func == Extract:
+                a, b = op.args
+                tensorIndex = self._inputTensorIndices[a]
+                code = '{} {} = *({} + {}*{} + {});'.format(dtype, names[op], tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2])
+            elif op.func == Collate:
+                tensorIndex = self._outputTensorIndices[op]
+                n = len(op.args)/2
+                #code += '// hash {}: {}\n'.format(n, hash(op))
+                for i in range(0, n):
+                    a, b = op.args[2*i], op.args[2*i+1]
+                    code += '*({} + {}*{} + {}) += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
+            else:
+                if op.func not in [boolalg.BooleanTrue, piecewise.ExprCondPair]:
+                    raise Exception("ss", op.func)
+            #if op.func not in [Collate, Scalar, boolalg.BooleanTrue, piecewise.ExprCondPair]:
+            #    code += '//{}\n'.format(op.func)
+            #    code += 'if (i == 0) cout << "{}" << " " << {} << endl;\n'.format(names[op], names[op])
+
+            if op in self._outputTensorIndices:
+                tensorIndex = self._outputTensorIndices[op]
+                if not tensorIndex[3]:
+                    code += '\n\t\t*({} + i*{} + {}) = {};'.format(tensorIndex[0], tensorIndex[1], tensorIndex[2], names[op])
+            codeFile.write('\t\t' + code + '\n')
+            #print op.func, len(op.args)
+        codeFile.write('\t}\n')
+        #codeFile.write('\tlong long end = current_timestamp(); mil += end-start; printf("c module {}: %lld\\n", mil);\n'.format(self.name))
+        codeFile.write('}\n')
+        codeFile.close()
+
+        return
 
     @classmethod
     def clean(self):
