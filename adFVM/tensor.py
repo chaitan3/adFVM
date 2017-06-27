@@ -200,6 +200,7 @@ class Function(object):
         Function._index += 1
         #self.name = 'Function_{}'.format(index)
         self.name = 'Function_{}'.format(name)
+        print(self.name)
         self._inputTensorIndices = {}
         self._inputTensors = inputs
         self._inputs = []
@@ -216,26 +217,31 @@ class Function(object):
                 self._outputTensorIndices[i] = (out.name, len(out.scalars), index, isinstance(out, CellTensor))
         #self.func = lambdify(self._inputs, self._outputs)
 
-        self._children = self._getChildren(self._outputs)
-        self._genCode(self._inputs, self._outputs, self._children.copy())
+        _outputs = [x for x in self._outputs if x is not None]
+        self._children = self._getChildren(_outputs)
+        self._genCode(self._inputs, _outputs, self._children.copy())
+        #grad = False
         if grad:
             self.grad = self._getAdjoint()
 
     def _getAdjoint(self):
-        gradInputs = [x.__class__(x.shape) for x in self._outputTensors]
-        scalarOutput = sum([x.dot(y) for x, y in zip(self._outputTensors, gradInputs)])
-        inputScalars = []
-        for inp in self._inputTensors:
-            inputScalars.extend(inp.scalars)
-        outputScalars = self._diff(scalarOutput.scalars[0], inputScalars)
+        gradOutputs = [x.__class__(x.shape) for x in self._outputTensors]
+        #scalarOutput = sum([x.dot(y) for x, y in zip(self._outputTensors, gradInputs)])
+        gradients = {}
+        for out, grad in zip(self._outputTensors, gradOutputs):
+            for i, j in zip(out.scalars, grad.scalars):
+                gradients[i] = j
+        outputScalars = self._diff(self._outputs, self._inputs, gradOutputs=gradients)
         outputs = []
         i = 0
+        #print(self.name)
         for inp in self._inputTensors:
             n = inp.size
+            #print(inp.__class__, [(x.func, hash(x), len(x.args)) for x in outputScalars[i:i+n] if x is not None])
             outputs.append(inp.__class__(inp.shape, outputScalars[i:i+n]))
             i += n
-        inputs = self._inputTensors + gradInputs
-        return Function(self.name.split('_')[1] + '_grad', inputs, outputs)
+        inputs = self._inputTensors + gradOutputs
+        return Function(self.name.split('_')[1] + '_grad', inputs, outputs, grad=False)
 
     def _getChildren(self, outputs):
         children = {}
@@ -277,13 +283,18 @@ class Function(object):
         #print children.values()
         return sortedOps[1:][::-1]
 
-    def _diff(self, output, inputs):
-        gradients = {}
-        gradients[output] = 1.
+    def _diff(self, outputs, inputs, gradOutputs=None):
+        if gradOutputs is None:
+            gradients = {}
+            for out in outputs:
+                gradients[out] = 1.
+        else:
+            gradients = gradOutputs
+        #children = self._getChildren(outputs)
         children = self._children.copy()
-        for out in self._outputs:
-            children[out] += 1
+        print 'here'
         def _diffFunc(out):
+            assert children[out] == 0
             grads = []
             if out.func == add.Add:
                 for inp in out.args:
@@ -304,6 +315,17 @@ class Function(object):
             elif out.func == piecewise.ExprCondPair:
                 grads.append(gradients[out])
                 grads.append(None)
+            elif out.func == Extract:
+                x, b = out.args
+                print 'here', gradients[out].func, b.func
+                grads.append(Collate(gradients[out], b))
+                grads.append(None)
+            elif out.func == Collate:
+                n = len(out.args)/2
+                for i in range(0, n):
+                    a, b = out.args[2*i], out.args[2*i+1]
+                    grads.append(Extract(gradients[out], b))
+                    grads.append(None)
             else:
                 if (len(out.args) > 0):
                     raise Exception(out.func, len(out.args))
@@ -313,11 +335,18 @@ class Function(object):
                 if inp not in gradients:
                     gradients[inp] = grad
                 else:
-                    gradients[inp] += grad
+                    # combining collates
+                    if gradients[inp].func == Collate:
+                        #print gradients[inp].func, grad.func
+                        args = gradients[inp].args + grad.args
+                        gradients[inp] = Collate(*args)
+                    else:
+                        gradients[inp] += grad
                 children[inp] -= 1
                 if children[inp] == 0:
                     _diffFunc(inp)
-        _diffFunc(output)
+        for out in outputs:
+            _diffFunc(out)
         return [gradients.get(inp, None) for inp in inputs]
 
     def _genCode(self, inputs, outputs, children):
@@ -365,7 +394,7 @@ class Function(object):
                     elif r == (-1, 2):
                         expr = '1./sqrt({})'.format(argNames[0])
                     else:
-                        raise Exception("power not handled", r)
+                        expr = 'pow({},{})'.format(argNames[0], argNames[1])
                 code = '{} {} = {};'.format(dtype, names[op], expr)
 
             elif op.func == numbers.Float:
@@ -398,6 +427,7 @@ class Function(object):
                 tensorIndex = self._inputTensorIndices[a]
                 code = '{} {} = *({} + {}*{} + {});'.format(dtype, names[op], tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2])
             elif op.func == Collate:
+                #print(op.func, hash(op), len(op.args))
                 tensorIndex = self._outputTensorIndices[op]
                 n = len(op.args)/2
                 #code += '// hash {}: {}\n'.format(n, hash(op))
