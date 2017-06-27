@@ -231,7 +231,8 @@ class Function(object):
         for out, grad in zip(self._outputTensors, gradOutputs):
             for i, j in zip(out.scalars, grad.scalars):
                 gradients[i] = j
-        outputScalars = self._diff(self._outputs, self._inputs, gradOutputs=gradients)
+        outputScalars = self._diff(self._outputs, self._inputs, gradients)
+        print [out == None for out in outputScalars]
         outputs = []
         i = 0
         #print(self.name)
@@ -283,20 +284,21 @@ class Function(object):
         #print children.values()
         return sortedOps[1:][::-1]
 
-    def _diff(self, outputs, inputs, gradOutputs=None):
-        if gradOutputs is None:
+    def _diff(self, outputs, inputs, gradients=None):
+        if gradients is None:
             gradients = {}
             for out in outputs:
                 gradients[out] = 1.
-        else:
-            gradients = gradOutputs
         #children = self._getChildren(outputs)
         children = self._children.copy()
-        print 'here'
+        #print children.values()
         def _diffFunc(out):
+            #print out.func
             assert children[out] == 0
             grads = []
-            if out.func == add.Add:
+            if gradients[out] == None:
+                grads = [None]*len(out.args)
+            elif out.func == add.Add:
                 for inp in out.args:
                     grads.append(gradients[out])
             elif out.func == mul.Mul:
@@ -329,12 +331,11 @@ class Function(object):
             else:
                 if (len(out.args) > 0):
                     raise Exception(out.func, len(out.args))
+            assert len(grads) == len(out.args)
             for grad, inp in zip(grads, out.args):
-                if grad is None:
-                    continue
-                if inp not in gradients:
+                if inp not in gradients or gradients[inp] is None:
                     gradients[inp] = grad
-                else:
+                elif grad is not None:
                     # combining collates
                     if gradients[inp].func == Collate:
                         #print gradients[inp].func, grad.func
@@ -347,6 +348,7 @@ class Function(object):
                     _diffFunc(inp)
         for out in outputs:
             _diffFunc(out)
+        #print children.values()
         return [gradients.get(inp, None) for inp in inputs]
 
     def _genCode(self, inputs, outputs, children):
