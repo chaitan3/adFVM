@@ -1,5 +1,5 @@
 from . import config, riemann, interp
-from .tensor import Tensor, ZeroTensor, TensorFunction, CellTensor
+from .tensor import Tensor, TensorFunction, CellTensor
 from .field import Field, IOField
 from .op import  div, absDiv, snGrad, grad, internal_sum
 from .solver import Solver
@@ -163,14 +163,10 @@ class RCF(Solver):
         kappa = self.kappa(mu, TF)
 
         qF = kappa*snGrad(TL, TR, mesh);
-        tmp2 = ZeroTensor((3,))
-        tmp3 = ZeroTensor((1,))
-        for i in range(0, 3):
-            for j in range(0, 3):
-                tmp2[i] += (gradUF[i,j] + gradUF[j,i])*mesh.normals[j]
-            tmp3 += gradUF[i,i];
+        tmp2 = (gradUF + gradUF.transpose()).tensordot(mesh.normals)
+        tmp3 = gradUF.trace()
+
         sigmaF = mu*(tmp2-2./3*tmp3*mesh.normals)
-        sigmadotUF = ZeroTensor((1,))
         rhoUFlux = -sigmaF
         rhoEFlux = -(qF + sigmaF.dot(UF));
         return rhoUFlux, rhoEFlux
@@ -257,13 +253,14 @@ class RCF(Solver):
 
     def boundaryFlux(self):
         mesh = self.mesh.symMesh
-        U, T, p = Tensor((3,)), Tensor((1,)), Tensor((1,))
-        gradU, gradT, gradp = Tensor((3,3)), Tensor((1,3)), Tensor((1,3))
+        P, N = mesh.owner, mesh.neighbour
+        U, T, p = CellTensor((3,)), CellTensor((1,)), CellTensor((1,))
+        gradU, gradT, gradp = CellTensor((3,3)), CellTensor((1,3)), CellTensor((1,3))
 
         # boundary extraction could be done using cellstartface
-        UR, TR, pR = U.extract(mesh.neighbour), T.extract(mesh.neighbour), p.extract(mesh.neighbour) 
-        gradUR, gradTR = gradU.extract(mesh.neighbour), gradT.extract(mesh.neighbour)
-        TL = T.extract(mesh.owner)
+        UR, TR, pR = U.extract(N), T.extract(N), p.extract(N) 
+        gradUR, gradTR = gradU.extract(N), gradT.extract(N)
+        TL = T.extract(P)
 
         rhoFlux, rhoUFlux, rhoEFlux = self.getFlux(UR, TR, pR, mesh.normals)
         ret = self.viscousFlux(TL, TR, UR, TR, gradUR, gradTR)

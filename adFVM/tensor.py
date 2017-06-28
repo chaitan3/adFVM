@@ -148,6 +148,14 @@ class Tensor(object):
         res = sum([self.scalars[i]*b.scalars[i] for i in range(0, self.size)])
         return Tensor((1,), [res])
 
+    def tensordot(self, b):
+        assert self.shape == (3,3)
+        assert b.shape == (3,)
+        res = []
+        for i in range(0, 3):
+            res.append(sum([self.scalars[i*3 + j]*b.scalars[j] for j in range(0, 3)]))
+        return Tensor((3,), res)
+
     def abs(self):
         #return Tensor(self.shape, [abs(x) for x in self.scalars])
         return Tensor(self.shape, [Piecewise((-x, x<0), (x, True)) for x in self.scalars])
@@ -171,6 +179,19 @@ class Tensor(object):
             for j in range(0, 3):
                 res.append(self.scalars[i]*b.scalars[j])
         return Tensor(shape, res)
+
+    def trace(self):
+        assert self.shape == (3, 3)
+        res = [sum(self.scalars)]
+        return Tensor((1,), res)
+
+    def transpose(self):
+        assert self.shape == (3, 3)
+        res = []
+        for i in range(0, 3):
+            for j in range(0, 3):
+                res.append(j*3 + i)
+        return Tensor(self.shape, res)
 
     @classmethod
     def collate(cls, *args):
@@ -199,9 +220,6 @@ class Tensor(object):
 
 class CellTensor(Tensor):
     pass
-
-def ZeroTensor(shape):
-    return Tensor(shape, [numbers.Zero() for i in range(0, np.prod(shape))])
 
 class TensorFunction(object):
     _index = 0
@@ -243,7 +261,7 @@ class TensorFunction(object):
             for i, j in zip(out.scalars, grad.scalars):
                 gradients[i] = j
         outputScalars = self._diff(self._outputs, self._inputs, gradients)
-        print [out == None for out in outputScalars]
+        #print [out == None for out in outputScalars]
         outputs = []
         i = 0
         #print(self.name)
@@ -285,9 +303,9 @@ class TensorFunction(object):
         #print children.values()
         sortedOps = []
         def _sort(out):
-            assert children[out] == 0
             sortedOps.append(out)
             for inp in out.args:
+                #print hash(inp), children[inp]
                 children[inp] -= 1
                 if children[inp] == 0:
                     _sort(inp)
