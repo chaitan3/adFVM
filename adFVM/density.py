@@ -1,5 +1,5 @@
 from . import config, riemann, interp
-from .tensor import Tensor, ZeroTensor, Function, CellTensor
+from .tensor import Tensor, ZeroTensor, TensorFunction, CellTensor
 from .field import Field, IOField
 from .op import  div, absDiv, snGrad, grad, internal_sum
 from .solver import Solver
@@ -58,7 +58,7 @@ class RCF(Solver):
     def compileInit(self):
         super(RCF, self).compileInit()
         #self.faceReconstructor = self.faceReconstructor(self)
-        Function.clean()
+        TensorFunction.clean()
         self._primitive = self.symPrimitive()
 
         self._gradients = self.gradients("grad")
@@ -74,9 +74,9 @@ class RCF(Solver):
                 assert not hasattr(self, _CBC_TOTAL_PT)
                 self._CBC_TOTAL_PT = patch._update()
 
-        Function.compile()
-        Function._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
-        self.map = Function._module.forward
+        TensorFunction.compile()
+        TensorFunction._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
+        self.map = TensorFunction._module.forward
         return
 
         # only reads fields
@@ -197,13 +197,13 @@ class RCF(Solver):
         inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
                  [getattr(mesh, attr) for attr in mesh.intFields]
 
-        return Function(name, [U, T, p] + inputs, [gradU, gradT, gradp])
+        return TensorFunction(name, [U, T, p] + inputs, [gradU, gradT, gradp])
 
 
     def symPrimitive(self):
         rhoU, rhoE, rho = Tensor((3,)), Tensor((1,)), Tensor((1,))
         U, T, p = self.primitive(rho, rhoU, rhoE)
-        return Function('primitive', [rho, rhoU, rhoE], [U, T, p])
+        return TensorFunction('primitive', [rho, rhoU, rhoE], [U, T, p])
     
     def flux(self, name, characteristic=False, neighbour=True):
         mesh = self.mesh.symMesh
@@ -252,7 +252,7 @@ class RCF(Solver):
         inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
                  [getattr(mesh, attr) for attr in mesh.intFields]
 
-        return Function(name, [U, T, p, gradU, gradT, gradp] + inputs,
+        return TensorFunction(name, [U, T, p, gradU, gradT, gradp] + inputs,
                                   [drho, drhoU, drhoE, dtc])
 
     def boundaryFlux(self):
@@ -281,7 +281,7 @@ class RCF(Solver):
         inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
                  [getattr(mesh, attr) for attr in mesh.intFields]
 
-        return Function("boundaryFlux", [U, T, p, gradU, gradT, gradp] + inputs,
+        return TensorFunction("boundaryFlux", [U, T, p, gradU, gradT, gradp] + inputs,
                                   [drho, drhoU, drhoE, dtc])
 
     def equation(self, rho, rhoU, rhoE):

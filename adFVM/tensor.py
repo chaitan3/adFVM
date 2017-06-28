@@ -1,9 +1,10 @@
 import numpy as np
 #class Variable:
 #    pass
-from sympy import Symbol, sqrt, Piecewise, lambdify, Function
+from sympy import Function
+from sympy import Symbol, sqrt, Piecewise, lambdify
 from sympy.utilities.autowrap import ufuncify
-from sympy.core import add, mul, power, numbers, relational
+from sympy.core import add, mul, power, numbers, relational, cache
 from sympy.functions.elementary import piecewise
 from sympy.logic import boolalg
 import operator
@@ -20,8 +21,18 @@ class Container(object):
 def prod(factors):
     return reduce(operator.mul, factors, 1)
 
-Extract = Function('extract')
-Collate = Function('collate')
+
+class Extract(Function):
+    @classmethod
+    def _should_evalf(cls, arg):
+        return -1
+class Collate(Function):
+    @classmethod
+    def _should_evalf(cls, arg):
+        return -1
+
+#Extract = Function('extract')
+#Collate = Function('collate')
 
 class Scalar(Symbol):
     _index = 0
@@ -192,12 +203,12 @@ class CellTensor(Tensor):
 def ZeroTensor(shape):
     return Tensor(shape, [numbers.Zero() for i in range(0, np.prod(shape))])
 
-class Function(object):
+class TensorFunction(object):
     _index = 0
     _module = None
     def __init__(self, name, inputs, outputs, grad=True):
-        index = Function._index
-        Function._index += 1
+        index = TensorFunction._index
+        TensorFunction._index += 1
         #self.name = 'Function_{}'.format(index)
         self.name = 'Function_{}'.format(name)
         print(self.name)
@@ -242,7 +253,7 @@ class Function(object):
             outputs.append(inp.__class__(inp.shape, outputScalars[i:i+n]))
             i += n
         inputs = self._inputTensors + gradOutputs
-        return Function(self.name.split('_')[1] + '_grad', inputs, outputs, grad=False)
+        return TensorFunction(self.name.split('_')[1] + '_grad', inputs, outputs, grad=False)
 
     def _getChildren(self, outputs):
         children = {}
@@ -319,7 +330,7 @@ class Function(object):
                 grads.append(None)
             elif out.func == Extract:
                 x, b = out.args
-                print 'here', gradients[out].func, b.func
+                #print 'here', gradients[out].func, b.func
                 grads.append(Collate(gradients[out], b))
                 grads.append(None)
             elif out.func == Collate:
@@ -415,6 +426,8 @@ class Function(object):
                 code = 'const {} {} = {};'.format(dtype, names[op], float(op.p)/op.q)
             elif op.func == relational.StrictLessThan:
                 code = 'int {} = {} < {};'.format(names[op], names[op.args[0]], names[op.args[1]])
+            elif op.func == relational.GreaterThan:
+                code = 'int {} = {} >= {};'.format(names[op], names[op.args[0]], names[op.args[1]])
             elif op.func == Piecewise:
                 code = """
                 {4} {0};
@@ -467,7 +480,7 @@ class Function(object):
     def compile(self):
         subprocess.check_call(['make'], cwd=codeDir)
         from .gencode import interface as mod
-        Function._module = mod
+        TensorFunction._module = mod
         #Function._module = ctypes.cdll.LoadLibrary(codeDir + 'interface.so')
 
     #def __call__(self, inputs, outputs):

@@ -2,7 +2,7 @@ import numpy as np
 import new
 
 from . import config
-from .tensor import Tensor, Function
+from .tensor import Tensor, TensorFunction
 from .mesh import extractField, extractVector
 logger = config.Logger(__name__)
 
@@ -123,7 +123,7 @@ class zeroGradient(BoundaryCondition):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))
         phi =  Tensor(self.phi.dimensions)
         phiF = phi*1
-        return Function('zeroGradient', [phi], [phiF])
+        return TensorFunction('zeroGradient', [phi], [phiF])
         #if hasattr(self.phi, 'grad'):
         #    # second order correction
         #    grad = self.phi.grad.field[self.internalIndices]
@@ -142,7 +142,7 @@ class symmetryPlane(zeroGradient):
             phiF = phi-phi.dot(v)*v
         else:
             phiF = phi*1
-        return Function('symmetryPlane', [phi, self.normals], [phiF])
+        return TensorFunction('symmetryPlane', [phi, self.normals], [phiF])
 
 slip = symmetryPlane
 empty = zeroGradient
@@ -158,7 +158,7 @@ class fixedValue(BoundaryCondition):
     def _update(self):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
         phiF = self.fixedValue*1
-        return Function('zeroGradient', [self.fixedValue], [phiF])
+        return TensorFunction('zeroGradient', [self.fixedValue], [phiF])
 
 class CharacteristicBoundaryCondition(BoundaryCondition):
     def __init__(self, phi, patchID):
@@ -200,7 +200,7 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
         Ub = Un*self.direction
         Tb = self.Tt - 0.5*Un*Un/self.Cp
         pb = self.pt * (T/self.Tt)**(self.gamma/(self.gamma-1))
-        return Function("CBC_TOTAL_PT", [U, T, p, self.direction], [Ub, Tb, pb])
+        return TensorFunction("CBC_TOTAL_PT", [U, T, p, self.direction], [Ub, Tb, pb])
 #
 #class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
 #    def __init__(self, phi, patchID):
