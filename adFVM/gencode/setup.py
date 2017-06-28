@@ -1,6 +1,5 @@
 from distutils.core import setup, Extension
 import numpy as np
-import mpi4py
 import os
 
 from os.path import expanduser
@@ -8,7 +7,7 @@ home = expanduser("~")
 
 #os.environ['CC'] = 'ccache mpicc'
 #os.environ['CXX'] = 'mpicxx'
-os.environ['CC'] = 'mpicc'
+os.environ['CC'] = 'ccache mpicc'
 os.environ['CXX'] = 'mpicxx'
 #os.environ['CC'] = '/home/talnikar/local/bin/gcc'
 #os.environ['CXX'] = '/home/talnikar/local/bin/gcc'
@@ -16,7 +15,7 @@ os.environ['CXX'] = 'mpicxx'
 incdirs = [np.get_include()]
 libdirs = []
 libs = []
-sources = ['interface.cpp']
+sources = ['interface.cpp', 'code.cpp']
 
 #incdirs += [home + '/.local/include']
 #libdirs += [home + '/.local/lib']

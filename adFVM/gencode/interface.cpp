@@ -12,7 +12,6 @@ long long current_timestamp() {
 
 Mesh *meshp;
 
-#include "code.c"
 #include "density.cpp"
 
 template <typename dtype, integer shape1, integer shape2>

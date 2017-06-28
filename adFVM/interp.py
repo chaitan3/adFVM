@@ -17,6 +17,16 @@ def central(phi, mesh):
     phiF = phi.extract(mesh.owner)*f + phi.extract(mesh.neighbour)*(-f+1)
     return phiF
 
+def secondOrder(phi, gradPhi, mesh, swap):
+    p, n = mesh.owner, mesh.neighbour
+    if swap:
+        n, p = p, n
+    phiC, phiD = phi.extract(p), phi.extract(n)
+    phiF = phiC + (phiD-phiC)*mesh.linearWeights[swap] 
+    for i in range(0, phiC.shape[0]):
+        phiF[i] += mesh.quadraticWeights[swap].dot(gradPhi.extract(p)[i])
+    return phiF
+
 def centralOld(phi, mesh):
     logger.info('interpolating {0}'.format(phi.name))
     factor = mesh.weights
@@ -30,15 +40,7 @@ def centralOld(phi, mesh):
     #    faceField.field = ad.patternbroadcast(faceField.field, phi.field.broadcastable)
     return faceField
 
-def secondOrder(phi, gradPhi, mesh, swap):
-    p, n = mesh.owner, mesh.neighbour
-    if swap:
-        n, p = p, n
-    phiC, phiD = phi.extract(p), phi.extract(n)
-    phiF = phiC + (phiD-phiC)*mesh.linearWeights[swap] 
-    for i in range(0, phiC.shape[0]):
-        phiF[i] += mesh.quadraticWeights[swap].dot(gradPhi.extract(p)[i])
-    return phiF
+
 
 # only defined on ad
 class Reconstruct(object):

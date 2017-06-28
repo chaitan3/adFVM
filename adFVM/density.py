@@ -58,6 +58,7 @@ class RCF(Solver):
     def compileInit(self):
         super(RCF, self).compileInit()
         #self.faceReconstructor = self.faceReconstructor(self)
+        TensorFunction.createCodeDir(self.mesh.case)
         TensorFunction.clean()
         self._primitive = self.symPrimitive()
 

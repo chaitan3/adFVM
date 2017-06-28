@@ -8,6 +8,43 @@ from .tensor import Tensor
 logger = config.Logger(__name__)
 
 
+def div(phi, mesh, neighbour):
+    wp = mesh.areas/mesh.volumesL
+    if neighbour:
+        wn = -mesh.areas/mesh.volumesR
+        dphi = Tensor.collate(phi*wp, mesh.owner, phi*wn, mesh.neighbour)
+    else:
+        dphi = Tensor.collate(phi*wp, mesh.owner)
+    return dphi
+
+def absDiv(phi, mesh, neighbour):
+    wp = mesh.areas/mesh.volumesL
+    if neighbour:
+        wn = mesh.areas/mesh.volumesR
+        dphi = Tensor.collate(phi*wp, mesh.owner, phi*wn, mesh.neighbour)
+    else:
+        dphi = Tensor.collate(phi*wp, mesh.owner)
+    return dphi
+
+
+def grad(phi, mesh, neighbour):
+    wp = mesh.areas/mesh.volumesL
+    if phi.shape == (1,):
+        phiN = phi*mesh.normals
+    else:
+        phiN = phi.outer(mesh.normals)
+    if neighbour:
+        wn = -mesh.areas/mesh.volumesR
+        gphi = Tensor.collate(phiN*wp, mesh.owner, phiN*wn, mesh.neighbour)
+    else:
+        gphi = Tensor.collate(phiN*wp, mesh.owner)
+    return gphi
+   
+
+def snGrad(phiL, phiR, mesh):
+    return (phiR - phiL)/mesh.deltas
+
+
 def internal_sum(phi, mesh, absolute=False):
     if 0:#config.device == "cpu":
         if not absolute:
@@ -31,60 +68,24 @@ def internal_sum(phi, mesh, absolute=False):
     #x = ad.patternbroadcast(x, phi.field.broadcastable)
     return x
 
+def divOld(phi, U=None, ghost=False):
+    logger.info('divergence of {0}'.format(phi.name))
+    mesh = phi.mesh
+    if U is None:
+        divField = internal_sum(phi, mesh)
+    else:
+        assert phi.dimensions == (1,)
+        divField = internal_sum((phi*U).dotN(), mesh)
+    if ghost:
+        divPhi = CellField('div({0})'.format(phi.name), divField, phi.dimensions, ghost=True)
+        return divPhi
+    else:
+        return Field('div({0})'.format(phi.name), divField, phi.dimensions)
+
 
 def internal_sum_numpy(phi, mesh):
     return (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
 
-
-def div(phi, mesh, neighbour):
-    wp = mesh.areas/mesh.volumesL
-    if neighbour:
-        wn = -mesh.areas/mesh.volumesR
-        dphi = Tensor.collate(phi*wp, mesh.owner, phi*wn, mesh.neighbour)
-    else:
-        dphi = Tensor.collate(phi*wp, mesh.owner)
-    return dphi
-
-def absDiv(phi, mesh, neighbour):
-    wp = mesh.areas/mesh.volumesL
-    if neighbour:
-        wn = mesh.areas/mesh.volumesR
-        dphi = Tensor.collate(phi*wp, mesh.owner, phi*wn, mesh.neighbour)
-    else:
-        dphi = Tensor.collate(phi*wp, mesh.owner)
-    return dphi
-
-
-#def div(phi, U=None, ghost=False):
-#    logger.info('divergence of {0}'.format(phi.name))
-    #mesh = phi.mesh
-    #if U is None:
-    #    divField = internal_sum(phi, mesh)
-    #else:
-    #    assert phi.dimensions == (1,)
-    #    divField = internal_sum((phi*U).dotN(), mesh)
-    #if ghost:
-    #    divPhi = CellField('div({0})'.format(phi.name), divField, phi.dimensions, ghost=True)
-    #    return divPhi
-    #else:
-    #    return Field('div({0})'.format(phi.name), divField, phi.dimensions)
-
-def grad(phi, mesh, neighbour):
-    wp = mesh.areas/mesh.volumesL
-    if phi.shape == (1,):
-        phiN = phi*mesh.normals
-    else:
-        phiN = phi.outer(mesh.normals)
-    if neighbour:
-        wn = -mesh.areas/mesh.volumesR
-        gphi = Tensor.collate(phiN*wp, mesh.owner, phiN*wn, mesh.neighbour)
-    else:
-        gphi = Tensor.collate(phiN*wp, mesh.owner)
-    return gphi
-   
-
-def snGrad(phiL, phiR, mesh):
-    return (phiR - phiL)/mesh.deltas
 
 def laplacian(phi, DT):
     logger.info('laplacian of {0}'.format(phi.name))
