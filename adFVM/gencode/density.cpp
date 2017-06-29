@@ -18,22 +18,13 @@ class RCF {
 
     template <typename dtype, integer shape1, integer shape2>
     void boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi);
+    void boundaryUPT(mat& U, vec& T, vec& p);
 };
 
 RCF *rcf;
 
-void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& objective, scalar& minDtc) {
-    // make decision between 1 and 3 a template
-    // optimal memory layout? combine everything?
-    //cout << "c++: equation 1" << endl;
+void RCF::boundaryUPT(mat& U, vec& T, vec& p) {
     const Mesh& mesh = *meshp;
-
-    mat U(mesh.nCells);
-    vec T(mesh.nCells);
-    vec p(mesh.nCells);
-
-    Function_primitive(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &U(0), &T(0), &p(0));
-
     for (auto& patch: this->boundaries[2]) {
         string patchType = patch.second.at("type");
         string patchID = patch.first;
@@ -62,6 +53,21 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     boundary(this->boundaries[1], T);
     boundary(this->boundaries[2], p);
     this->boundaryEnd();    
+}
+
+void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& objective, scalar& minDtc) {
+    // make decision between 1 and 3 a template
+    // optimal memory layout? combine everything?
+    //cout << "c++: equation 1" << endl;
+    const Mesh& mesh = *meshp;
+
+    mat U(mesh.nCells);
+    vec T(mesh.nCells);
+    vec p(mesh.nCells);
+
+    Function_primitive(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &U(0), &T(0), &p(0));
+
+    this->boundaryUPT(U, T, p);
     //U.info();
     //T.info();
     //p.info();

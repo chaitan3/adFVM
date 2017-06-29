@@ -59,25 +59,28 @@ class RCF(Solver):
         super(RCF, self).compileInit()
         #self.faceReconstructor = self.faceReconstructor(self)
         TensorFunction.createCodeDir(self.mesh.case)
-        TensorFunction.clean()
-        self._primitive = self.symPrimitive()
+        if config.user.compile:
+            TensorFunction.clean()
+            self._primitive = self.symPrimitive()
+            self._conservative = self.symConservative()
 
-        self._gradients = self.gradients("grad")
-        self._coupledGradients = self.gradients("coupledGrad", False)
-        self._boundaryGradients = self.gradients("boundaryGrad", False, True)
+            self._gradients = self.gradients("grad")
+            self._coupledGradients = self.gradients("coupledGrad", False)
+            self._boundaryGradients = self.gradients("boundaryGrad", False, True)
 
-        self._flux = self.flux("flux")
-        self._characteristicFlux = self.flux("characteristicFlux", True, False)
-        self._coupledFlux = self.flux("coupledFlux", False, False)
-        self._boundaryFlux = self.boundaryFlux()
-        for patch in self.fields[0].phi.BC:
-            if isinstance(patch, BCs.CBC_TOTAL_PT):
-                assert not hasattr(self, _CBC_TOTAL_PT)
-                self._CBC_TOTAL_PT = patch._update()
+            self._flux = self.flux("flux")
+            self._characteristicFlux = self.flux("characteristicFlux", True, False)
+            self._coupledFlux = self.flux("coupledFlux", False, False)
+            self._boundaryFlux = self.boundaryFlux()
+            for patch in self.fields[0].phi.BC:
+                if isinstance(patch, BCs.CBC_TOTAL_PT):
+                    assert not hasattr(self, _CBC_TOTAL_PT)
+                    self._CBC_TOTAL_PT = patch._update()
 
         TensorFunction.compile()
         TensorFunction._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
         self.map = TensorFunction._module.forward
+        self.mapBoundary = TensorFunction._module.ghost
         return
 
         # only reads fields
@@ -107,7 +110,7 @@ class RCF(Solver):
 
     # reads and updates ghost cells
     def initFields(self, fields):
-        newFields = adFVMcpp.ghost(*[phi.field for phi in fields])
+        newFields = self.mapBoundary(*[phi.field for phi in fields])
         #import pdb;pdb.set_trace()
         return self.getFields(newFields, IOField, refFields=fields)
     
@@ -201,6 +204,12 @@ class RCF(Solver):
         rhoU, rhoE, rho = Tensor((3,)), Tensor((1,)), Tensor((1,))
         U, T, p = self.primitive(rho, rhoU, rhoE)
         return TensorFunction('primitive', [rho, rhoU, rhoE], [U, T, p])
+
+    def symConservative(self):
+        U, T, p = Tensor((3,)), Tensor((1,)), Tensor((1,))
+        rho, rhoU, rhoE = self.conservative(U, T, p)
+        return TensorFunction('conservative', [U, T, p], [rho, rhoU, rhoE])
+
     
     def flux(self, name, characteristic=False, neighbour=True):
         mesh = self.mesh.symMesh

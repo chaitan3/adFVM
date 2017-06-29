@@ -10,7 +10,8 @@ from sympy.logic import boolalg
 import operator
 
 dtype = 'scalar'
-import adFVM
+from . import config
+
 import os, sys, subprocess, shutil
 import ctypes
 
@@ -225,7 +226,7 @@ class CellTensor(Tensor):
 class TensorFunction(object):
     _index = 0
     _module = None
-    codeDir = os.path.dirname(adFVM.__file__) + '/gencode/'
+    codeDir = os.path.dirname(__file__) + '/gencode/'
 
     def __init__(self, name, inputs, outputs, grad=True):
         index = TensorFunction._index
@@ -493,9 +494,9 @@ class TensorFunction(object):
     @classmethod
     def createCodeDir(self, case):
         self.codeDir = case + 'gencode/'
-        print 'creating code dir'
-        assert not os.path.exists(self.codeDir)
-        shutil.copytree(scriptDir + '/gencode', self.codeDir)
+        if config.user.compile:
+            assert not os.path.exists(self.codeDir)
+            shutil.copytree(scriptDir + '/gencode', self.codeDir)
 
     @classmethod
     def clean(self):
@@ -508,11 +509,12 @@ class TensorFunction(object):
 
     @classmethod
     def compile(self):
-        subprocess.check_call(['make'], cwd=self.codeDir)
+        if config.user.compile:
+            subprocess.check_call(['make'], cwd=self.codeDir)
         sys.path.append(self.codeDir)
         import interface as mod
         TensorFunction._module = mod
-        #Function._module = ctypes.cdll.LoadLibrary(codeDir + 'interface.so')
+
 
     #def __call__(self, inputs, outputs):
     #    func = Function._module[self.name] 
