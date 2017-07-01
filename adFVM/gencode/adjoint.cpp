@@ -30,7 +30,7 @@
     //this->boundaryEnd();    
 /*}*/
 
-void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drhoa, mat& drhoUa, vec& drhoEa, const vec& rhoa, const mat& rhoUa, const vec& rhoEa, scalar& objective, scalar& minDtc) {
+void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& drhoa, const mat& drhoUa, const vec& drhoEa, vec& rhoa, mat& rhoUa, vec& rhoEa, scalar& objective, scalar& minDtc) {
     // make decision between 1 and 3 a template
     // optimal memory layout? combine everything?
     //cout << "c++: equation 1" << endl;
