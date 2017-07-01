@@ -74,6 +74,7 @@ class Tensor(object):
         else:
             self.scalars = scalars
         self.dtype = dtype
+        
         if isinstance(self.scalars[0], IntegerScalar):
             self.dtype = 'integer'
 
@@ -259,9 +260,11 @@ class TensorFunction(object):
 
     def _getAdjoint(self):
         gradOutputs = [x.__class__(x.shape) for x in self._outputTensors]
+
         #scalarOutput = sum([x.dot(y) for x, y in zip(self._outputTensors, gradInputs)])
         gradients = {}
         for out, grad in zip(self._outputTensors, gradOutputs):
+            grad.dtype = out.dtype
             for i, j in zip(out.scalars, grad.scalars):
                 gradients[i] = j
         outputScalars = self._diff(self._outputs, self._inputs, gradients)
@@ -273,6 +276,7 @@ class TensorFunction(object):
             n = inp.size
             #print(inp.__class__, [(x.func, hash(x), len(x.args)) for x in outputScalars[i:i+n] if x is not None])
             outputs.append(inp.__class__(inp.shape, outputScalars[i:i+n]))
+            outputs[-1].dtype = inp.dtype
             i += n
         inputs = self._inputTensors + gradOutputs
         return TensorFunction(self.name.split('_')[1] + '_grad', inputs, outputs, grad=False)
@@ -392,7 +396,7 @@ class TensorFunction(object):
         for inp in self._inputTensors:
             memString += 'const {}* {}, '.format(inp.dtype, inp.name)
         for out in self._outputTensors:
-            memString += '{}* {}, '.format(dtype, out.name)
+            memString += '{}* {}, '.format(out.dtype, out.name)
         codeFile.write('\nvoid {}(int n, {}) {}\n'.format(self.name, memString[:-2], '{'))
         #codeFile.write('\tlong long start = current_timestamp();\n')
         codeFile.write('\tfor (integer i = 0; i < n; i++) {\n')

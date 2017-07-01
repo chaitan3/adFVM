@@ -20,6 +20,10 @@ class RCF {
     void boundaryEnd();
 
     void equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drhoa, mat& drhoUa, vec& drhoEa, const vec& rhoa, const mat& rhoUa, const vec& rhoEa, scalar& objective, scalar& minDtc);
+    template <typename dtype, integer shape1, integer shape2>
+    void boundary_grad(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi);
+    template <typename dtype, integer shape1, integer shape2>
+    void boundaryEnd_grad(arrType<dtype, shape1, shape2>& phi, dtype* phiBuf);
 
 };
 
