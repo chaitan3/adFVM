@@ -481,7 +481,7 @@ class TensorFunction(object):
             if op in self._outputTensorIndices:
                 tensorIndex = self._outputTensorIndices[op]
                 if not tensorIndex[3]:
-                    code += '\n\t\t*({} + i*{} + {}) = {};'.format(tensorIndex[0], tensorIndex[1], tensorIndex[2], names[op])
+                    code += '\n\t\t*({} + i*{} + {}) += {};'.format(tensorIndex[0], tensorIndex[1], tensorIndex[2], names[op])
             codeFile.write('\t\t' + code + '\n')
             #print op.func, len(op.args)
         codeFile.write('\t}\n')

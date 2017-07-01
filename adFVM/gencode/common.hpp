@@ -50,9 +50,11 @@ class arrType {
         this -> ownData = false;
     }
 
-    arrType(const integer shape) {
+    arrType(const integer shape, bool zero=false) {
         this -> init(shape);
         this -> data = new dtype[this->size];
+        if (zero) 
+            this -> zero();
     }
 
     arrType(const integer shape, dtype* data) {
