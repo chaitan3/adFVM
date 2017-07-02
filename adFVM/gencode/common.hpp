@@ -95,6 +95,7 @@ class arrType {
         //this->move(that);
         this->init(that.shape);
         this->data = that.data;
+        this->ownData = that.ownData;
         that.ownData = false;
     }
     arrType& operator=(arrType&& that) {
@@ -103,6 +104,7 @@ class arrType {
         //this->move(that);
         this->init(that.shape);
         this->data = that.data;
+        this->ownData = that.ownData;
         that.ownData = false;
         return *this;
 
@@ -145,7 +147,7 @@ class arrType {
         }
         return false;
     }
-    void info() {
+    void info() const {
         scalar minPhi, maxPhi;
         minPhi = 1e100;
         maxPhi = -1e100;
@@ -163,12 +165,10 @@ class arrType {
         }
         cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
         cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
-    }
+    } 
 
     void zero() {
-        for (integer i = 0; i < this->size; i++) {
-            this->data[i] = 0;
-        }
+        memset(this->data, 0, this->size*sizeof(dtype));
     }
 
 };

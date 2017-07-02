@@ -2,13 +2,13 @@
 from __future__ import print_function
 
 from adFVM import config, parallel
-from adFVM.config import ad
 from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
 from adFVM.interp import central
 from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
 from adFVM.solver import Solver
+from adFVM.tensor import TensorFunction
 
 from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints
 
@@ -16,7 +16,6 @@ import numpy as np
 import time
 import os
 import argparse
-import adFVMcpp_ad as adFVMcpp
 
 class Adjoint(Solver):
     def __init__(self, primal):
@@ -47,7 +46,7 @@ class Adjoint(Solver):
     def compile(self):
         #self.compileInit(functionName='adjoint_init')
         primal.compile(adjoint=self)
-        adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in primal.fields] + [primal.__class__.defaultConfig]))
+        #adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in primal.fields] + [primal.__class__.defaultConfig]))
         primal.adjoint = self
         #self.map = primal.gradient
         return
@@ -133,7 +132,8 @@ class Adjoint(Solver):
                 #fields = objectiveGradient(*lastSolution)
                 #fields = [phi/(nSteps + 1) for phi in fields]
                 #fields = self.getFields(fields, IOField)
-                self.writeFields(fields, t, skipProcessor=True)
+
+                #self.writeFields(fields, t, skipProcessor=True)
 
             for step in range(0, writeInterval):
                 report = (step % reportInterval) == 0
@@ -165,7 +165,7 @@ class Adjoint(Solver):
 
                 #outputs = self.map(*inputs)
                 #print(fields[0].field.max())
-                outputs = adFVMcpp.forward(*inputs)
+                outputs = TensorFunction._module.backward(*inputs)
                 n = len(fields)
                 gradient = outputs
 

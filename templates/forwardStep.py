@@ -44,8 +44,8 @@ parameters = 'source'
 #nSteps = 4000
 #writeInterval = 100
 nSteps = 10
-writeInterval = 2
+writeInterval = 5
 startTime = 0.0
 dt = 1e-4
 
-adjParams = [1e-3, 'entropy', None]
+#adjParams = [1e-3, 'entropy', None]

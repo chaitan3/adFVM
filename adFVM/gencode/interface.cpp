@@ -147,9 +147,9 @@ static PyObject* forwardSolver(PyObject *self, PyObject *args) {
 
     //cout << "forward 3" << endl;
     //const Mesh& mesh = *(rcf->mesh);
-    vec rhoN(mesh.nInternalCells);
-    mat rhoUN(mesh.nInternalCells);
-    vec rhoEN(mesh.nInternalCells);
+    vec rhoN(mesh.nInternalCells, true);
+    mat rhoUN(mesh.nInternalCells, true);
+    vec rhoEN(mesh.nInternalCells, true);
     scalar objective, dtc;
     tie(objective, dtc) = timeIntegrator(rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
     //cout << "forward 4" << endl;
@@ -163,6 +163,119 @@ static PyObject* forwardSolver(PyObject *self, PyObject *args) {
     
     return Py_BuildValue("(NNNdd)", rhoNObject, rhoUNObject, rhoENObject, objective, dtc);
 }
+
+static PyObject* backwardSolver(PyObject *self, PyObject *args) {
+
+    //cout << "forward 1" << endl;
+    PyArrayObject *rhoObject, *rhoUObject, *rhoEObject;
+    PyArrayObject *rhoSObject, *rhoUSObject, *rhoESObject;
+    PyObject *rhoaObject, *rhoUaObject, *rhoEaObject;
+    scalar t, dt;
+    integer source;
+    PyArg_ParseTuple(args, "OOOOOOOOOddi", &rhoObject, &rhoUObject, &rhoEObject, &rhoSObject, &rhoUSObject, &rhoESObject, &rhoaObject, &rhoUaObject, &rhoEaObject, &dt, &t, &source);
+
+    const Mesh& mesh = *meshp;
+    Mesh& meshAdj = *meshp;
+    vec rho, rhoE;
+    mat rhoU;
+    getArray((PyArrayObject *)rhoObject, rho);
+    getArray((PyArrayObject *)rhoUObject, rhoU);
+    getArray((PyArrayObject *)rhoEObject, rhoE);
+    vec rhoa, rhoEa;
+    mat rhoUa;
+    getArray((PyArrayObject *)rhoaObject, rhoa);
+    getArray((PyArrayObject *)rhoUaObject, rhoUa);
+    getArray((PyArrayObject *)rhoEaObject, rhoEa);
+
+    //vec rhoS(mesh.nInternalCells), rhoES(mesh.nInternalCells);
+    //mat rhoUS(mesh.nInternalCells);
+    //rhoS.adCopy((uscalar*)PyArray_DATA(rhoSObject));
+    //rhoUS.adCopy((uscalar*)PyArray_DATA(rhoUSObject));
+    //rhoES.adCopy((uscalar*)PyArray_DATA(rhoESObject));
+    //rcf -> rhoS = &rhoS;
+    //rcf -> rhoUS = &rhoUS;
+    //rcf -> rhoES = &rhoES;
+
+    vec rhoN(mesh.nInternalCells, true);
+    mat rhoUN(mesh.nInternalCells, true);
+    vec rhoEN(mesh.nInternalCells, true);
+    scalar objective, dtc;
+    tie(objective, dtc) = timeIntegrator(rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+
+    //cout << "forward 1" << endl;
+
+    vec rhoaN(mesh.nInternalCells, true);
+    mat rhoUaN(mesh.nInternalCells, true);
+    vec rhoEaN(mesh.nInternalCells, true);
+    auto res = SSPRK_grad(rho, rhoU, rhoE, rhoa, rhoUa, rhoEa, rhoaN, rhoUaN, rhoEaN, t, dt);
+    //cout << "forward 2" << endl;
+
+    timeIntegrator_exit();
+    //cout << "forward 3" << endl;
+
+    //cout << "forward 4" << endl;
+    //
+    //scalar adjoint = 0.;
+    //for (integer i = 0; i < mesh.nInternalCells; i++) {
+        //uscalar v = mesh.volumes(i).value();
+        //adjoint += rhoN(i)*rhoa(i)*v;
+        //for (integer j = 0; j < 3; j++) {
+            //adjoint += rhoUN(i, j)*rhoUa(i, j)*v;
+        //}
+        //adjoint += rhoEN(i)*rhoEa(i)*v;
+    //}
+    //tape.registerOutput(adjoint);
+    //tape.registerOutput(objective);
+    //tape.setPassive();
+
+    //objective.setGradient(1.0);
+    //tape.evaluate();
+    //vec rhoaN(mesh.nInternalCells);
+    //mat rhoUaN(mesh.nInternalCells);
+    //vec rhoEaN(mesh.nInternalCells);
+    //rhoaN.adGetGrad(rho);
+    //rhoUaN.adGetGrad(rhoU);
+    //rhoEaN.adGetGrad(rhoE);
+    //tape.clearAdjoints();
+
+    //adjoint.setGradient(1.0);
+    //tape.evaluate();
+    //for (integer i = 0; i < mesh.nInternalCells; i++) {
+        //uscalar v = mesh.volumes(i).value();
+        //rhoaN(i) = rhoaN(i)/v + rho(i).getGradient()/v;
+        //for (integer j = 0; j < 3; j++) {
+            //rhoUaN(i, j) = rhoUaN(i, j)/v + rhoU(i, j).getGradient()/v;
+        //}
+        //rhoEaN(i) = rhoEaN(i)/v + rhoE(i).getGradient()/v;
+    //}
+    PyObject *rhoaNObject, *rhoUaNObject, *rhoEaNObject;
+    rhoaNObject = putArray(rhoaN);
+    rhoUaNObject = putArray(rhoUaN);
+    rhoEaNObject = putArray(rhoEaN);
+    if (source) {
+        vec rhoSa(mesh.nInternalCells, true);
+        mat rhoUSa(mesh.nInternalCells, true);
+        vec rhoESa(mesh.nInternalCells, true);
+        PyObject *rhoSaObject, *rhoUSaObject, *rhoESaObject;
+        rhoSaObject = putArray(rhoSa);
+        rhoUSaObject = putArray(rhoUSa);
+        rhoESaObject = putArray(rhoESa);
+        return Py_BuildValue("(NNNNNN)", rhoaNObject, rhoUaNObject, rhoEaNObject, rhoSaObject, rhoUSaObject, rhoESaObject);
+    } else {
+        PyObject *areasObject = putArray(meshAdj.areas);
+        PyObject *volumesLObject = putArray(meshAdj.volumesL);
+        PyObject *volumesRObject = putArray(meshAdj.volumesR);
+        PyObject *normalsObject = putArray(meshAdj.normals);
+        PyObject *weightsObject = putArray(meshAdj.weights);
+        PyObject *deltasObject = putArray(meshAdj.deltas);
+        PyObject *linearWeightsObject = putArray(meshAdj.linearWeights);
+        PyObject *quadraticWeightsObject = putArray(meshAdj.quadraticWeights);
+        return Py_BuildValue("(NNNNNNNNNNN)", rhoaNObject, rhoUaNObject, rhoEaNObject, areasObject, volumesLObject, volumesRObject, weightsObject, \
+                deltasObject, normalsObject, linearWeightsObject, quadraticWeightsObject);
+
+    }
+}
+
 static PyObject* ghost(PyObject *self, PyObject *args) {
     const Mesh& mesh = *meshp;
 
@@ -178,17 +291,17 @@ static PyObject* ghost(PyObject *self, PyObject *args) {
     //cout << "forward 2" << endl;
     //
     //const Mesh& mesh = *(rcf->mesh);
-    mat U(mesh.nCells);
-    vec T(mesh.nCells);
-    vec p(mesh.nCells);
+    mat U(mesh.nCells, true);
+    vec T(mesh.nCells, true);
+    vec p(mesh.nCells, true);
     Function_primitive(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &U(0), &T(0), &p(0));
 
     rcf->boundaryUPT(U, T, p);
     //cout << "forward 3" << endl;
     //
-    vec rhoN(mesh.nCells);
-    mat rhoUN(mesh.nCells);
-    vec rhoEN(mesh.nCells);
+    vec rhoN(mesh.nCells, true);
+    mat rhoUN(mesh.nCells, true);
+    vec rhoEN(mesh.nCells, true);
     Function_conservative(mesh.nCells, &U(0), &T(0), &p(0), &rhoN(0), &rhoUN(0), &rhoEN(0));
     //cout << "forward 4" << endl;
     
@@ -251,6 +364,7 @@ initFunc(void)
 
     static PyMethodDef Methods[] = {
         {"forward",  forwardSolver, METH_VARARGS, "boo"},
+        {"backward",  backwardSolver, METH_VARARGS, "boo"},
         {"init",  initSolver, METH_VARARGS, "Execute a shell command."},
         {"ghost",  ghost, METH_VARARGS, "Execute a shell command."},
         {NULL, NULL, 0, NULL}        /* Sentinel */

@@ -79,23 +79,20 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
 
     const integer index = this->stage;
 
-    mat U(mesh.nCells);
-    vec T(mesh.nCells);
-    vec p(mesh.nCells);
+    mat U(mesh.nCells, true);
+    vec T(mesh.nCells, true);
+    vec p(mesh.nCells, true);
 
     Function_primitive(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &U(0), &T(0), &p(0));
-
-    this->boundaryUPT(U, T, p);
     //U.info();
     //T.info();
     //p.info();
 
-    arrType<scalar, 3, 3> gradU(mesh.nCells);
-    arrType<scalar, 1, 3> gradT(mesh.nCells);
-    arrType<scalar, 1, 3> gradp(mesh.nCells);
-    gradU.zero();
-    gradT.zero();
-    gradp.zero();
+    this->boundaryUPT(U, T, p);
+
+    arrType<scalar, 3, 3> gradU(mesh.nCells, true);
+    arrType<scalar, 1, 3> gradT(mesh.nCells, true);
+    arrType<scalar, 1, 3> gradp(mesh.nCells, true);
     //
     #define gradUpdate(i, n, func) \
         func(n, \
@@ -207,9 +204,17 @@ void timeIntegrator_init(const vec& rho, const mat& rhoU, const vec& rhoE, vec& 
 
 void timeIntegrator_exit() {
     for (integer i = 0; i < nStages; i++) {
-        delete rhos[i];
-        delete rhoUs[i];
-        delete rhoEs[i];
+        if (i > 0) {
+            delete rhos[i];
+            delete rhoUs[i];
+            delete rhoEs[i];
+        }
+        delete Us[i];
+        delete Ts[i];
+        delete ps[i];
+        delete gradUs[i];
+        delete gradTs[i];
+        delete gradps[i];
     }
 }
 
@@ -240,7 +245,7 @@ tuple<scalar, scalar> SSPRK(const vec& rho, const mat& rhoU, const vec& rhoE, ve
     const Mesh& mesh = *meshp;
 
 
-    const integer n = 3;
+    const integer n = nStages;
     scalar alpha[n][n] = {{1,0,0},{3./4, 1./4, 0}, {1./3, 0, 2./3}};
     scalar beta[n][n] = {{1,0,0}, {0,1./4,0},{0,0,2./3}};
     //scalar gamma[n] = {0, 1, 0.5};
@@ -254,6 +259,9 @@ tuple<scalar, scalar> SSPRK(const vec& rho, const mat& rhoU, const vec& rhoE, ve
     for (integer stage = 0; stage < n; stage++) {
         //solver.t = solver.t0 + gamma[i]*solver.dt
         rcf->stage = stage;
+        //(*rhos[stage]).info();
+        //(*rhoUs[stage]).info();
+        //(*rhoEs[stage]).info();
         rcf->equation(*rhos[stage], *rhoUs[stage], *rhoEs[stage], drho, drhoU, drhoE, objective[stage], dtc[stage]);
         integer curr = stage + 1;
         scalar b = beta[stage][stage];
@@ -274,6 +282,8 @@ tuple<scalar, scalar> SSPRK(const vec& rho, const mat& rhoU, const vec& rhoE, ve
                 (*rhoEs[curr])(i) += a*(*rhoEs[prev])(i);
             }
         }
+        //(*rhos[stage]).info();
+        //(*rhos[curr]).info();
     }
     return make_tuple(objective[0], dtc[0]);
 }
@@ -323,7 +333,7 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
                 }
             }
         } else if (patchType == "symmetryPlane" || patchType == "slip") {
-            cout << "implement this elsewhere" << endl;
+            //cout << "implement this elsewhere" << endl;
             if ((shape1 == 3) && (shape2 == 1)) {
                 for (integer i = 0; i < nFaces; i++) {
                     integer f = startFace + i;

@@ -233,31 +233,31 @@ void RCF::boundary_grad(const Boundary& boundary, arrType<dtype, shape1, shape2>
                 }
             }
         } else if (patchType == "symmetryPlane" || patchType == "slip") {
-            cout << "implement this elsewhere" << endl;
-            if ((shape1 == 3) && (shape2 == 1)) {
-                for (integer i = 0; i < nFaces; i++) {
-                    integer f = startFace + i;
-                    integer c = cellStartFace + i;
-                    integer p = mesh.owner(f);
-                    dtype phin = 0.;
-                    for (integer j = 0; j < 3; j++) {
-                        phin += mesh.normals(f, j)*phi(p, j);
-                    }
-                    for (integer j = 0; j < 3; j++) {
-                        phi(c, j) = phi(p, j) - mesh.normals(f, j)*phin;
-                    }
-                }
-            } else {
-                for (integer i = 0; i < nFaces; i++) {
-                    integer p = mesh.owner(startFace + i);
-                    integer c = cellStartFace + i;
-                    for (integer j = 0; j < shape1; j++) {
-                        for (integer k = 0; k < shape2; k++) {
-                            phi(c, j, k) = phi(p, j, k);
-                        }
-                    }
-                }
-            }
+            //cout << "implement this elsewhere" << endl;
+            //if ((shape1 == 3) && (shape2 == 1)) {
+            //    for (integer i = 0; i < nFaces; i++) {
+            //        integer f = startFace + i;
+            //        integer c = cellStartFace + i;
+            //        integer p = mesh.owner(f);
+            //        dtype phin = 0.;
+            //        for (integer j = 0; j < 3; j++) {
+            //            phin += mesh.normals(f, j)*phi(p, j);
+            //        }
+            //        for (integer j = 0; j < 3; j++) {
+            //            phi(c, j) = phi(p, j) - mesh.normals(f, j)*phin;
+            //        }
+            //    }
+            //} else {
+            //    for (integer i = 0; i < nFaces; i++) {
+            //        integer p = mesh.owner(startFace + i);
+            //        integer c = cellStartFace + i;
+            //        for (integer j = 0; j < shape1; j++) {
+            //            for (integer k = 0; k < shape2; k++) {
+            //                phi(c, j, k) = phi(p, j, k);
+            //            }
+            //        }
+            //    }
+            //}
         } else if (patchType == "fixedValue") {
             //arrType<scalar, shape1, shape2> phiVal(nFaces, patch.second.at("_value"));
 
