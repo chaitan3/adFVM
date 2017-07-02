@@ -32,7 +32,7 @@ class Adjoint(Solver):
         return
 
     def initFields(self, fields):
-        newFields = primal.adFVMcpp.ghost_default(*[phi.field for phi in fields])
+        newFields = TensorFunction._module.ghost_default(*[phi.field for phi in fields])
         return self.getFields(newFields, IOField, refFields=fields)
 
     def createFields(self):
@@ -133,7 +133,7 @@ class Adjoint(Solver):
                 #fields = [phi/(nSteps + 1) for phi in fields]
                 #fields = self.getFields(fields, IOField)
 
-                #self.writeFields(fields, t, skipProcessor=True)
+                self.writeFields(fields, t, skipProcessor=True)
 
             for step in range(0, writeInterval):
                 report = (step % reportInterval) == 0

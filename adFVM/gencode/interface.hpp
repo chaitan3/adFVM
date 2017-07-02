@@ -57,7 +57,9 @@ class Mesh {
 
         //Mesh () {};
         Mesh (PyObject *);
+        Mesh (const Mesh& mesh);
         void init();
+        void reset();
         ~Mesh ();
         Mesh (string);
 };

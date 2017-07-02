@@ -35,7 +35,7 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
     // optimal memory layout? combine everything?
     //cout << "c++: equation 1" << endl;
     const Mesh& mesh = *meshp;
-    Mesh& meshAdj = *meshp;
+    Mesh& meshAdj = *meshap;
 
     integer index = this->stage;
 
