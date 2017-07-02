@@ -44,8 +44,8 @@ void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp) {
     arrType<dtype, shape1, shape2> result(dims[0], (dtype *) PyArray_DATA(array));
     //cout << rows << " " << cols << endl;
     //if ((typeid(dtype) != type(uscalar)) && (typeid(dtype) != typeid(integer))) {
-    tmp = result;
-    result.ownData = false;
+    tmp = move(result);
+    //result.ownData = false;
 }
 
 template <typename dtype, integer shape1>
@@ -108,6 +108,12 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         //    }
         //} 
     }
+
+    //for (int i = 0; i < nStages; i++) {
+    //    rhos[i] = NULL;
+    //    rhoUs[i] = NULL;
+    //    rhoEs[i] = NULL;
+    //}
     
 
     Py_INCREF(Py_None);
@@ -152,6 +158,7 @@ static PyObject* forwardSolver(PyObject *self, PyObject *args) {
     rhoNObject = putArray(rhoN);
     rhoUNObject = putArray(rhoUN);
     rhoENObject = putArray(rhoEN);
+    timeIntegrator_exit();
     //cout << "forward 5" << endl;
     
     return Py_BuildValue("(NNNdd)", rhoNObject, rhoUNObject, rhoENObject, objective, dtc);

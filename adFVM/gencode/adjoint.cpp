@@ -37,12 +37,14 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
     const Mesh& mesh = *meshp;
     Mesh& meshAdj = *meshp;
 
-    mat U(mesh.nCells, true);
-    vec T(mesh.nCells, true);
-    vec p(mesh.nCells, true);
-    arrType<scalar, 3, 3> gradU(mesh.nCells, true);
-    arrType<scalar, 1, 3> gradT(mesh.nCells, true);
-    arrType<scalar, 1, 3> gradp(mesh.nCells, true);
+    integer index = this->stage;
+
+    const mat& U = *Us[index];
+    const vec& T = *Ts[index];
+    const vec& p = *ps[index];
+    const arrType<scalar, 3, 3>& gradU = *gradUs[index];
+    const arrType<scalar, 1, 3>& gradT = *gradTs[index];
+    const arrType<scalar, 1, 3>& gradp = *gradps[index];
 
     mat Ua(mesh.nCells, true);
     vec Ta(mesh.nCells, true);
@@ -145,15 +147,11 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
 tuple<scalar, scalar> SSPRK_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& rhoa, const mat& rhoUa, const vec& rhoEa, vec& rhoaN, mat& rhoUaN, vec& rhoEaN, scalar t, scalar dt) {
     const Mesh& mesh = *meshp;
 
-    const integer n = 3;
+    integer n = nStages;
     scalar alpha[n][n] = {{1,0,0},{3./4, 1./4, 0}, {1./3, 0, 2./3}};
     scalar beta[n][n] = {{1,0,0}, {0,1./4,0},{0,0,2./3}};
-    scalar gamma[n] = {0, 1, 0.5};
+    //scalar gamma[n] = {0, 1, 0.5};
     scalar objective[n], dtc[n];
-
-    vec rhos[n+1] = {{rho.shape, rho.data}, {rho.shape}, {rho.shape}, {rho.shape, rho.data}};
-    mat rhoUs[n+1] = {{rhoU.shape, rhoU.data}, {rhoU.shape}, {rhoU.shape}, {rhoU.shape, rhoU.data}};
-    vec rhoEs[n+1] = {{rhoE.shape, rhoE.data}, {rhoE.shape}, {rhoE.shape}, {rhoE.shape, rhoE.data}};
 
     vec rhoas[n+1] = {{rho.shape, rhoaN.data}, {rho.shape}, {rho.shape}, {rho.shape, rhoa.data}};
     mat rhoUas[n+1] = {{rhoU.shape, rhoUaN.data}, {rhoU.shape}, {rhoU.shape}, {rhoU.shape, rhoUa.data}};
@@ -175,7 +173,7 @@ tuple<scalar, scalar> SSPRK_grad(const vec& rho, const mat& rhoU, const vec& rho
             }
             drhoEa(i) = -b*rhoEas[stage](i)*dt;
         }
-        rcf->equation_grad(rhos[curr], rhoUs[curr], rhoEs[curr], drhoa, drhoUa, drhoEa, rhoas[curr], rhoUas[curr], rhoEas[curr], objective[stage], dtc[stage]);
+        rcf->equation_grad(*rhos[curr], *rhoUs[curr], *rhoEs[curr], drhoa, drhoUa, drhoEa, rhoas[curr], rhoUas[curr], rhoEas[curr], objective[stage], dtc[stage]);
         for (integer prev = stage; prev <= n; prev++) {
             scalar a = alpha[prev-1][curr];
             for (integer i = 0; i < mesh.nInternalCells; i++) {
@@ -195,7 +193,7 @@ void RCF::boundary_grad(const Boundary& boundary, arrType<dtype, shape1, shape2>
     const Mesh& mesh = *meshp;
     //MPI_Barrier(MPI_COMM_WORLD);
 
-    dtype *phiBuf;
+    dtype *phiBuf = NULL; 
     integer reqPos = 0;
     if (mesh.nRemotePatches > 0) {
         reqPos = this->reqIndex/(2*mesh.nRemotePatches);

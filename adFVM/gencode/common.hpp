@@ -40,6 +40,19 @@ class arrType {
         this -> ownData = true;
     }
 
+    void destroy() {
+        if (this->ownData && this->data != NULL) {
+            delete[] this -> data; 
+            this -> data = NULL;
+        }
+    }
+
+    void move(arrType&& that) {
+        this->init(that.shape);
+        this->data = that.data;
+        that.ownData = false;
+    }
+
     arrType () {
         this->shape = 0;
         for (integer i = 0; i < NDIMS; i++)  {
@@ -75,13 +88,27 @@ class arrType {
         this->ownData = false ;
     }
 
+    // copy constructor?
 
+    // move constructor
+    arrType(arrType&& that) {
+        //this->move(that);
+        this->init(that.shape);
+        this->data = that.data;
+        that.ownData = false;
+    }
+    arrType& operator=(arrType&& that) {
+        assert(this != &that);
+        this->destroy();
+        //this->move(that);
+        this->init(that.shape);
+        this->data = that.data;
+        that.ownData = false;
+        return *this;
+
+    }
     ~arrType() {
-        //if (this->ownData) {
-        if (this->ownData && this->data != NULL) {
-            delete[] this -> data; 
-            this -> data = NULL;
-        }
+        this->destroy();
     };
     
     const dtype& operator() (const integer i1) const {
