@@ -185,7 +185,7 @@ class Tensor(object):
 
     def trace(self):
         assert self.shape == (3, 3)
-        res = [sum(self.scalars)]
+        res = [self.scalars[0] + self.scalars[4] + self.scales[8]]
         return Tensor((1,), res)
 
     def transpose(self):
