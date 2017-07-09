@@ -252,7 +252,7 @@ class RCF(Solver):
         drhoE = div(rhoEFlux, mesh, neighbour)
 
         aF = (self.Cp*TF*(self.gamma-1)).sqrt()
-        maxaF = (UF.dot(mesh.normals)).abs() + aF
+        maxaF = abs(UF.dot(mesh.normals)) + aF
         dtc = absDiv(maxaF, mesh, neighbour)
 
         inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
@@ -282,7 +282,7 @@ class RCF(Solver):
         drhoE = div(rhoEFlux, mesh, False)
 
         aF = (self.Cp*TR*(self.gamma-1)).sqrt()
-        maxaF = (UR.dot(mesh.normals)).abs() + aF
+        maxaF = abs(UR.dot(mesh.normals)) + aF
         dtc = absDiv(maxaF, mesh, False)
 
         inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
