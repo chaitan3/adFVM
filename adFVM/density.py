@@ -23,8 +23,6 @@ class RCF(Solver):
                              'CFL': 1.2,
                              'stepFactor': 1.2,
                              'timeIntegrator': 'SSPRK', 'nStages': 3,
-                             'objectiveDragInfo': None,
-                             'objectivePLInfo': None,
                              # eulerHLLC DOES NOT WORK
                              'riemannSolver': 'eulerRoe',
                              #'boundaryRiemannSolver': 'eulerLaxFriedrichs',
@@ -72,6 +70,11 @@ class RCF(Solver):
             self._characteristicFlux = self.flux("characteristicFlux", True, False)
             self._coupledFlux = self.flux("coupledFlux", False, False)
             self._boundaryFlux = self.boundaryFlux()
+
+            if self.objective is not None:
+                self._objective = self.objective(self, self.mesh.symMesh)
+                TensorFunction.extraCode += self.objectiveString
+
             for patch in self.fields[0].phi.BC:
                 if isinstance(patch, BCs.CBC_TOTAL_PT):
                     assert not hasattr(self, _CBC_TOTAL_PT)

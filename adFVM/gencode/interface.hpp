@@ -83,5 +83,7 @@ map<string, integer> getTags(PyObject *mesh, const string attr);
 
 Boundary getBoundary(PyObject*);
 Boundary getMeshBoundary(PyObject *mesh, const string attr);
+extern Mesh *meshp;
+extern Mesh *meshap;
 
 #endif

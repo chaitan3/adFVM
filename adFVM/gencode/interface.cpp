@@ -10,8 +10,8 @@ long long current_timestamp() {
          return milliseconds;
      }
 
-Mesh *meshp;
-Mesh *meshap;
+Mesh *meshp = NULL;
+Mesh *meshap = NULL;
 
 #include "density.cpp"
 #include "adjoint.cpp"
@@ -152,8 +152,8 @@ static PyObject* forwardSolver(PyObject *self, PyObject *args) {
     vec rhoN(mesh.nInternalCells, true);
     mat rhoUN(mesh.nInternalCells, true);
     vec rhoEN(mesh.nInternalCells, true);
-    scalar objective, dtc;
-    tie(objective, dtc) = timeIntegrator(rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+    scalar obj, dtc;
+    tie(obj, dtc) = timeIntegrator(rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
     //cout << "forward 4" << endl;
     
     PyObject *rhoNObject, *rhoUNObject, *rhoENObject;
@@ -163,7 +163,7 @@ static PyObject* forwardSolver(PyObject *self, PyObject *args) {
     timeIntegrator_exit();
     //cout << "forward 5" << endl;
     
-    return Py_BuildValue("(NNNdd)", rhoNObject, rhoUNObject, rhoENObject, objective, dtc);
+    return Py_BuildValue("(NNNdd)", rhoNObject, rhoUNObject, rhoENObject, obj, dtc);
 }
 
 static PyObject* backwardSolver(PyObject *self, PyObject *args) {
@@ -203,8 +203,8 @@ static PyObject* backwardSolver(PyObject *self, PyObject *args) {
     vec rhoN(mesh.nInternalCells, true);
     mat rhoUN(mesh.nInternalCells, true);
     vec rhoEN(mesh.nInternalCells, true);
-    scalar objective, dtc;
-    tie(objective, dtc) = timeIntegrator(rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
+    scalar obj, dtc;
+    tie(obj, dtc) = timeIntegrator(rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
 
     //cout << "forward 1" << endl;
 

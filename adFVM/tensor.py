@@ -18,6 +18,7 @@ class Container(object):
 class Tensor(ArithBase):
     _index = 0
     def __init__(self, shape, scalars=None):
+        assert isinstance(shape, tuple)
         index = Tensor._index
         Tensor._index += 1
         self.name = 'Tensor_{}'.format(index)
@@ -164,6 +165,7 @@ class TensorFunction(object):
     _index = 0
     _module = None
     codeDir = os.path.dirname(__file__) + '/gencode/'
+    extraCode = ""
 
     def __init__(self, name, inputs, outputs, grad=True):
         index = TensorFunction._index
@@ -352,6 +354,8 @@ class TensorFunction(object):
     @classmethod
     def compile(self):
         if config.compile:
+            with open(self.codeDir + 'code.cpp', 'a') as f:
+                f.write('\n\n' + self.extraCode)
             subprocess.check_call(['make'], cwd=self.codeDir)
         parallel.mpi.Barrier()
         sys.path.append(self.codeDir)

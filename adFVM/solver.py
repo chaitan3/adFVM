@@ -20,6 +20,7 @@ class Solver(object):
     defaultConfig = {
                         'timeIntegrator': 'euler',
                         'objective': None,
+                        'objectiveString': None,
                         'adjoint': False,
                         'dynamicMesh': False,
                         'localTimeStep': False,

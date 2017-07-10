@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <cmath>
 #include <tuple>
 #include <limits>
@@ -169,6 +170,13 @@ class arrType {
 
     void zero() {
         memset(this->data, 0, this->size*sizeof(dtype));
+    }
+    dtype sum() {
+        dtype s = 0;
+        for (integer i = 0; i < this->size; i++) {
+            s += this->data[i];
+        }
+        return s;
     }
 
 };

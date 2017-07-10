@@ -3,46 +3,23 @@ import numpy as np
 from adFVM import config
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
-
-#primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
-#primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
-#primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('/home/talnikar/adFVM/cases/cylinder/',
-#primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
-#primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
-             timeIntegrator='SSPRK', 
-             CFL=1.2, 
-             #mu=lambda T: 2.5e-5*T/T,
-             mu=lambda T: 2.5e-5,
-             faceReconstructor='SecondOrder',
-             boundaryRiemannSolver='eulerLaxFriedrichs',
-             objective = 'drag',
-             objectiveDragInfo = 'cylinder',
-)
+from adFVM import tensor
 
 def dot(a, b):
     return ad.sum(a*b, axis=1, keepdims=True)
 
 # drag over cylinder surface
-def objectiveDrag(fields, mesh):
-    rho, rhoU, rhoE = fields
-    patchID = 'cylinder'
-    patch = mesh.boundary[patchID]
-    start, end, nF = mesh.getPatchFaceRange(patchID)
-    areas = mesh.areas[start:end]
-    nx = ad.reshape(mesh.normals[start:end, 0], (-1, 1))
-    cellStartFace = mesh.nInternalCells + start - mesh.nInternalFaces 
-    cellEndFace = mesh.nInternalCells + end - mesh.nInternalFaces
-    internalIndices = mesh.owner[start:end]
-    start, end = cellStartFace, cellEndFace
-    p = rhoE.field[start:end]*(primal.gamma-1)
-    #deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1, keepdims=True)
-    dx = mesh.cellCentres[start:end]-ad.gather(mesh.cellCentres, internalIndices)
-    deltas = ad.reshape(ad.sum(dx*dx, axis=1)**0.5, (nF,1))
-    T = rhoE/(rho*primal.Cv)
-    #mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
-    mungUx = (ad.reshape(rhoU.field[start:end, 0], (nF,1))/rho.field[start:end]-ad.reshape(ad.gather(rhoU.field[:, 0], internalIndices), (nF,1))/ad.gather(rho.field, internalIndices))*primal.mu(T).field[start:end]/deltas
-    return ad.sum((p*nx-mungUx)*areas)
+def objectiveDrag(solver, mesh):
+    U, T, p = tensor.CellTensor((3,)), tensor.CellTensor((1,)), tensor.CellTensor((1,))
+    U0 = U.extract(mesh.neighbour)[0]
+    U0i = U.extract(mesh.owner)[0]
+    p0 = p.extract(mesh.neighbour)
+    T0 = T.extract(mesh.neighbour)
+    nx = mesh.normals[0]
+    mungUx = solver.mu(T0)*(U0-U0i)/mesh.deltas
+    drag = (p0*nx-mungUx)*mesh.areas
+    return tensor.TensorFunction('objective', [U, T, p, mesh.areas, mesh.deltas, mesh.normals,
+        mesh.owner, mesh.neighbour], [drag])
 
 def getPlane(solver):
     #point = np.array([0.0032,0.0,0.0], config.precision)
@@ -74,6 +51,57 @@ def objectivePressureLoss(fields, mesh):
 
 objective = objectiveDrag
 #objective = objectivePressureLoss
+
+objectiveString = """
+scalar objective(const mat& U, const vec& T, const vec& p) {{
+    const Mesh& mesh = *meshp;
+    string patchID = "{0}";
+    integer startFace, nFaces;
+    tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
+    vec drag(nFaces, true);
+    Function_objective(nFaces, &U(0), &T(0), &p(0), \
+        &mesh.areas(startFace), &mesh.deltas(startFace), &mesh.normals(startFace), &mesh.owner(startFace), &mesh.neighbour(startFace), \
+        &drag(0));
+    scalar d = drag.sum();
+    scalar gd = 0;
+    MPI_Allreduce(&d, &gd, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    return gd;
+}}
+void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, vec& pa) {{
+    const Mesh& mesh = *meshp;
+    Mesh& meshAdj = *meshap;
+    string patchID = "{0}";
+    integer startFace, nFaces;
+    tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
+    vec draga(nFaces);
+    for (integer i = 0; i < nFaces; i++) {{
+        draga(i) = 1;
+    }}
+    Function_objective_grad(nFaces, &U(0), &T(0), &p(0), \
+        &mesh.areas(startFace), &mesh.deltas(startFace), &mesh.normals(startFace), &mesh.owner(startFace), &mesh.neighbour(startFace), \
+        &draga(0), \
+        &Ua(0), &Ta(0), &pa(0),
+        &meshAdj.areas(startFace), &meshAdj.deltas(startFace), &meshAdj.normals(startFace), &meshAdj.owner(startFace), &meshAdj.neighbour(startFace)); \
+}}
+""".format('cylinder')
+
+#primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
+#primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
+#primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
+primal = RCF('/home/talnikar/adFVM/cases/cylinder/',
+#primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
+#primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
+             timeIntegrator='SSPRK', 
+             CFL=1.2, 
+             #mu=lambda T: 2.5e-5*T/T,
+             mu=lambda T: 2.5e-5,
+             faceReconstructor='SecondOrder',
+             boundaryRiemannSolver='eulerLaxFriedrichs',
+             objective = objective,
+             objectiveString = objectiveString
+)
+
+
 
 def makePerturb(scale):
     def perturb(fields, mesh, t):

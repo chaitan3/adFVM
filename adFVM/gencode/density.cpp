@@ -13,14 +13,14 @@ class RCF {
     integer stage;
     scalar CFL;
 
-    void equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& objective, scalar& minDtc);
+    void equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& obj, scalar& minDtc);
     void boundaryUPT(mat& U, vec& T, vec& p);
     void boundaryInit(integer startField);
     template <typename dtype, integer shape1, integer shape2>
     void boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi);
     void boundaryEnd();
 
-    void equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& drhoa, const mat& drhoUa, const vec& drhoEa, vec& rhoa, mat& rhoUa, vec& rhoEa, scalar& objective, scalar& minDtc);
+    void equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& drhoa, const mat& drhoUa, const vec& drhoEa, vec& rhoa, mat& rhoUa, vec& rhoEa, scalar& obj, scalar& minDtc);
     template <typename dtype, integer shape1, integer shape2>
     void boundary_grad(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi);
     template <typename dtype, integer shape1, integer shape2>
@@ -71,7 +71,7 @@ void RCF::boundaryUPT(mat& U, vec& T, vec& p) {
     this->boundaryEnd();    
 }
 
-void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& objective, scalar& minDtc) {
+void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& obj, scalar& minDtc) {
     // make decision between 1 and 3 a template
     // optimal memory layout? combine everything?
     //cout << "c++: equation 1" << endl;
@@ -137,7 +137,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     drhoU.zero();
     drhoE.zero();
     dtc.zero();
-    //objective = this->objective(this, U, T, p);
+    obj = objective(U, T, p);
 
     #define fluxUpdate(i, n, func) \
         func(n, \
@@ -226,9 +226,9 @@ tuple<scalar, scalar> euler(const vec& rho, const mat& rhoU, const vec& rhoE, ve
     vec drho(rho.shape);
     mat drhoU(rhoU.shape);
     vec drhoE(rhoE.shape);
-    scalar objective, dtc;
+    scalar obj, dtc;
     rcf->stage = 0;
-    rcf->equation(rho, rhoU, rhoE, drho, drhoU, drhoE, objective, dtc);
+    rcf->equation(rho, rhoU, rhoE, drho, drhoU, drhoE, obj, dtc);
 
     for (integer i = 0; i < mesh.nInternalCells; i++) {
         rhoN(i) = rho(i) - dt*drho(i);
@@ -237,7 +237,7 @@ tuple<scalar, scalar> euler(const vec& rho, const mat& rhoU, const vec& rhoE, ve
         }
         rhoEN(i) = rhoE(i) - dt*drhoE(i);
     }
-    return make_tuple(objective, dtc);
+    return make_tuple(obj, dtc);
 }
 
 
@@ -250,7 +250,7 @@ tuple<scalar, scalar> SSPRK(const vec& rho, const mat& rhoU, const vec& rhoE, ve
     scalar alpha[n][n] = {{1,0,0},{3./4, 1./4, 0}, {1./3, 0, 2./3}};
     scalar beta[n][n] = {{1,0,0}, {0,1./4,0},{0,0,2./3}};
     //scalar gamma[n] = {0, 1, 0.5};
-    scalar objective[n], dtc[n];
+    scalar obj[n], dtc[n];
 
     timeIntegrator_init(rho, rhoU, rhoE, rhoN, rhoUN, rhoEN);
     vec drho(rho.shape);
@@ -263,7 +263,7 @@ tuple<scalar, scalar> SSPRK(const vec& rho, const mat& rhoU, const vec& rhoE, ve
         //(*rhos[stage]).info();
         //(*rhoUs[stage]).info();
         //(*rhoEs[stage]).info();
-        rcf->equation(*rhos[stage], *rhoUs[stage], *rhoEs[stage], drho, drhoU, drhoE, objective[stage], dtc[stage]);
+        rcf->equation(*rhos[stage], *rhoUs[stage], *rhoEs[stage], drho, drhoU, drhoE, obj[stage], dtc[stage]);
         integer curr = stage + 1;
         scalar b = beta[stage][stage];
         for (integer i = 0; i < mesh.nInternalCells; i++) {
@@ -286,7 +286,7 @@ tuple<scalar, scalar> SSPRK(const vec& rho, const mat& rhoU, const vec& rhoE, ve
         //(*rhos[stage]).info();
         //(*rhos[curr]).info();
     }
-    return make_tuple(objective[0], dtc[0]);
+    return make_tuple(obj[0], dtc[0]);
 }
 
 template <typename dtype, integer shape1, integer shape2>
