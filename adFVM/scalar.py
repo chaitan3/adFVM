@@ -103,7 +103,7 @@ class BinaryOp(OpBase):
 
     def c_code(self, names):
         argNames = [names[inp] for inp in self.args]
-        op = binaryOpString.get(self.op, None)
+        op = ' ' + binaryOpString.get(self.op) + ' ' 
         typeString = 'int' if self.comparison else dtype
         return '{} {} = {};'.format(typeString, names[self], op.join(argNames))
 

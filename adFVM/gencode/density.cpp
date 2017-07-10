@@ -84,11 +84,11 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     vec p(mesh.nCells, true);
 
     Function_primitive(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &U(0), &T(0), &p(0));
+    this->boundaryUPT(U, T, p);
+
     //U.info();
     //T.info();
     //p.info();
-
-    this->boundaryUPT(U, T, p);
 
     arrType<scalar, 3, 3> gradU(mesh.nCells, true);
     arrType<scalar, 1, 3> gradT(mesh.nCells, true);
@@ -127,9 +127,10 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     this->boundary(mesh.defaultBoundary, gradp);
     this->boundaryEnd();
 
-    //gradU.info();
+    /*gradU.info();*/
     //gradT.info();
     //gradp.info();
+
     //
     vec dtc(mesh.nCells);
     drho.zero();

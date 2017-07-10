@@ -146,6 +146,7 @@ class Tensor(ArithBase):
                 res[j].extend([a.scalars[j], b.scalars[0]])
         for j in range(0, m):
             res[j] = Collate(*res[j])
+        #print len(res), len(res[0].args)
         return CellTensor(shape, res)
 
     @classmethod
@@ -238,17 +239,14 @@ class TensorFunction(object):
         for out in outputs:
             children[out] += 1
         children[output] = 0
-        #print children.values()
         sortedOps = []
         def _sort(out):
             sortedOps.append(out)
             for inp in out.args:
-                #print hash(inp), children[inp]
                 children[inp] -= 1
                 if children[inp] == 0:
                     _sort(inp)
         _sort(output)
-        #print children.values()
         return sortedOps[1:][::-1]
 
     def _diff(self, outputs, inputs, gradients=None):
@@ -256,11 +254,8 @@ class TensorFunction(object):
             gradients = {}
             for out in outputs:
                 gradients[out] = 1.
-        #children = self._getChildren(outputs)
         children = self._children.copy()
-        #print children.values()
         def _diffFunc(out):
-            #print out.func
             assert children[out] == 0
             grads = []
             if gradients[out] == None:
@@ -284,7 +279,6 @@ class TensorFunction(object):
         for out in outputs:
             if children[out] == 0:
                 _diffFunc(out)
-        #print children.values()
         return [gradients.get(inp, None) for inp in inputs]
 
     def _genCode(self, inputs, outputs, children):
@@ -316,25 +310,21 @@ class TensorFunction(object):
                 tensorIndex = self._inputTensorIndices[a]
                 code = '{} {} = {}[{}*{} + {}];'.format(dtype, names[op], tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2])
             elif isinstance(op, Collate):
-                #print(op.func, hash(op), len(op.args))
+                #print len(op.args)
                 tensorIndex = self._outputTensorIndices[op]
                 n = len(op.args)/2
-                #code += '// hash {}: {}\n'.format(n, hash(op))
                 for i in range(0, n):
                     a, b = op.args[2*i], op.args[2*i+1]
-                    code = '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
+                    code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
+                #print code
             else:
                 code = op.c_code(names)
-            #if op.func not in [Collate, Scalar, boolalg.BooleanTrue, piecewise.ExprCondPair]:
-            #    code += '//{}\n'.format(op.func)
-            #    code += 'if (i == 0) cout << "{}" << " " << {} << endl;\n'.format(names[op], names[op])
 
             if op in self._outputTensorIndices:
                 tensorIndex = self._outputTensorIndices[op]
                 if not tensorIndex[3]:
                     code += '\n\t\t{}[i*{} + {}] += {};'.format(tensorIndex[0], tensorIndex[1], tensorIndex[2], names[op])
             codeFile.write('\t\t' + code + '\n')
-            #print code
         codeFile.write('\t}\n')
         #codeFile.write('\tlong long end = current_timestamp(); mil += end-start; printf("c module {}: %lld\\n", mil);\n'.format(self.name))
         codeFile.write('}\n')

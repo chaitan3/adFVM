@@ -359,6 +359,7 @@ class Solver(object):
             outputs = self.map(*inputs)
             newFields, objective, dtc = outputs[:3], outputs[3], outputs[4]
             local = remote = 0
+            #exit(1)
 
             fields = self.getFields(newFields, IOField, refFields=fields)
 

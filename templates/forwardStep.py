@@ -43,8 +43,10 @@ parameters = 'source'
 
 #nSteps = 4000
 #writeInterval = 100
-nSteps = 10
-writeInterval = 5
+#nSteps = 10
+#writeInterval = 5
+nSteps = 10000
+writeInterval = 1000
 startTime = 0.0
 dt = 1e-4
 
