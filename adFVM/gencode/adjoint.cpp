@@ -39,9 +39,9 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
 
     integer index = this->stage;
 
-    drhoa.info();
-    drhoUa.info();
-    drhoEa.info();
+    //drhoa.info();
+    //drhoUa.info();
+    //drhoEa.info();
 
     const mat& U = *Us[index];
     const vec& T = *Ts[index];
@@ -132,7 +132,15 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
         }
     }
 
+    //Ua.info();
+    //Ta.info();
+    //pa.info();
+
     objective_grad(U, T, p, Ua, Ta, pa);
+
+    //Ua.info();
+    //Ta.info();
+    //pa.info();
     
     // UPT BC
     this->boundaryInit(this->reqField);
@@ -144,16 +152,13 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
     this->boundaryEnd_grad(Ta, this->reqBuf[4]);
     this->boundaryEnd_grad(pa, this->reqBuf[5]);
     // CBC UPT
-    Ua.info();
-    Ta.info();
-    pa.info();
     
     // Primitive
     Function_primitive_grad(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &Ua(0), &Ta(0), &pa(0), \
                                                  &rhoa(0), &rhoUa(0), &rhoEa(0));
-    rhoa.info();
-    rhoUa.info();
-    rhoEa.info();
+    //rhoa.info();
+    //rhoUa.info();
+    //rhoEa.info();
 
 }
 

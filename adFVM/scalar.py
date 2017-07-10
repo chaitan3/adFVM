@@ -123,7 +123,7 @@ class MulOp(BinaryOp):
         grads = []
         for index, inp in enumerate(self.args):
             factors = [gradient] + list(self.args[:index]) + list(self.args[index+1:])
-            grads.append(gradient*prod(self.args))
+            grads.append(prod(factors))
         return grads
 
 class DivOp(BinaryOp):
