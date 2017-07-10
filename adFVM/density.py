@@ -220,28 +220,28 @@ class RCF(Solver):
         ULF = secondOrder(U, gradU, mesh, 0)
         TLF = secondOrder(T, gradT,  mesh, 0)
         pLF = secondOrder(p, gradp, mesh, 0)
+        rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
 
         if characteristic:
             URF, TRF, pRF = U.extract(N), T.extract(N), p.extract(N)
+            rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
+            rhoFlux, rhoUFlux, rhoEFlux = self.boundaryRiemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
+            rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
+            UF = URF
+            TF = TRF
+            gradUF = gradU.extract(N)
+            gradTF = gradT.extract(N)
         else:
             URF = secondOrder(U, gradU, mesh, 1)
             TRF = secondOrder(T, gradT,  mesh, 1)
             pRF = secondOrder(p, gradp, mesh, 1)
-
-        rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
-        rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
-
-        if characteristic:
-            rhoFlux, rhoUFlux, rhoEFlux = self.boundaryRiemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
-            rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
-        else:
+            rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
             rhoFlux, rhoUFlux, rhoEFlux = self.riemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
             rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
-
-        UF = 0.5*(ULF + URF)
-        TF = 0.5*(TLF + TRF)
-        gradTF = 0.5*(gradT.extract(P) + gradT.extract(N))
-        gradUF = 0.5*(gradU.extract(P) + gradU.extract(N))
+            UF = 0.5*(ULF + URF)
+            TF = 0.5*(TLF + TRF)
+            gradTF = 0.5*(gradT.extract(P) + gradT.extract(N))
+            gradUF = 0.5*(gradU.extract(P) + gradU.extract(N))
 
         ret = self.viscousFlux(T.extract(P), T.extract(N), UF, TF, gradUF, gradTF)
         rhoUFlux += ret[0]

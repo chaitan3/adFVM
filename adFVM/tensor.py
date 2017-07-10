@@ -156,6 +156,10 @@ class Tensor(ArithBase):
         res = [ConditionalOp(cond.scalars[0], ret1.scalars[0], ret2.scalars[0])]
         return cls(ret1.shape, res)
 
+    @classmethod
+    def max(cls, x1, x2):
+        return Tensor.switch(x1 > x2, x1, x2)
+
 class CellTensor(Tensor):
     pass
 
@@ -261,7 +265,7 @@ class TensorFunction(object):
             if gradients[out] == None:
                 grads = [None]*len(out.args)
             elif isinstance(out, OpBase):
-                grads = out.grad(gradients)
+                grads = out.grad(gradients[out])
             assert len(grads) == len(out.args)
             for grad, inp in zip(grads, out.args):
                 if inp not in gradients or gradients[inp] is None:

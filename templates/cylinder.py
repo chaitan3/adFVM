@@ -7,7 +7,7 @@ from adFVM.density import RCF
 #primal = RCF('cases/cylinder_steady/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_per/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*5e-5, (1,)))
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/',
+primal = RCF('/home/talnikar/adFVM/cases/cylinder/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              timeIntegrator='SSPRK', 
@@ -15,7 +15,7 @@ primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/',
              #mu=lambda T: 2.5e-5*T/T,
              mu=lambda T: 2.5e-5,
              faceReconstructor='SecondOrder',
-             #boundaryRiemannSolver='eulerLaxFriedrichs',
+             boundaryRiemannSolver='eulerLaxFriedrichs',
              objective = 'drag',
              objectiveDragInfo = 'cylinder',
 )

@@ -80,7 +80,7 @@ class OpBase(Scalar):
     def c_code(self, *args):
         raise NotImplementedError(self)
 
-    def grad(self, gradients):
+    def grad(self, gradient):
         raise NotImplementedError(self)
 
 class ConstantOp(OpBase):
@@ -91,7 +91,7 @@ class ConstantOp(OpBase):
     def c_code(self, names):
         return '{} {} = {};'.format(dtype, names[self], self.constant)
 
-    def grad(self, gradients):
+    def grad(self, gradient):
         return []
         
 
@@ -108,28 +108,28 @@ class BinaryOp(OpBase):
         return '{} {} = {};'.format(typeString, names[self], op.join(argNames))
 
 class AddOp(BinaryOp):
-    def grad(self, gradients):
+    def grad(self, gradient):
         grads = []
         for inp in self.args:
-            grads.append(gradients[self])
+            grads.append(gradient)
         return grads
 
 class SubOp(BinaryOp):
-    def grad(self, gradients):
-        return [gradients[self], -gradients[self]]
+    def grad(self, gradient):
+        return [gradient, -gradient]
 
 class MulOp(BinaryOp):
-    def grad(self, gradients):
+    def grad(self, gradient):
         grads = []
         for index, inp in enumerate(self.args):
-            factors = [gradients[self]] + list(self.args[:index]) + list(self.args[index+1:])
-            grads.append(gradients[self]*prod(self.args))
+            factors = [gradient] + list(self.args[:index]) + list(self.args[index+1:])
+            grads.append(gradient*prod(self.args))
         return grads
 
 class DivOp(BinaryOp):
-    def grad(self, gradients):
+    def grad(self, gradient):
         x, y = self.args
-        z = gradients[self]
+        z = gradient
         return [z/y, -(z*x)/(y*y)]
 
 class LessThanOp(BinaryOp):
@@ -140,9 +140,9 @@ class PowerOp(BinaryOp):
         argNames = [names[inp] for inp in self.args]
         return '{} {} = pow({}, {});'.format(dtype, names[self], argNames[0], argNames[1]);
 
-    def grad(self, gradients):
+    def grad(self, gradient):
         x, n = self.args
-        z = gradients[self]
+        z = gradient
         return [z*n*x**(n-1), None]
 
 class UnaryOp(OpBase):
@@ -156,18 +156,18 @@ class UnaryOp(OpBase):
         return '{} {} = {}({});'.format(dtype, names[self], op, argNames[0]);
 
 class NegOp(UnaryOp):
-    def grad(self, gradients):
-        return [-gradients[self]]
+    def grad(self, gradient):
+        return [-gradient]
 
 class AbsOp(UnaryOp):
-    def grad(self, gradients):
+    def grad(self, gradient):
         x = self.args[0]
-        return [ConditionalOp(x < 0, -gradients[self], gradients[self])]
+        return [ConditionalOp(x < 0, -gradient, gradient)]
 
 class SqrtOp(UnaryOp):
-    def grad(self, gradients):
+    def grad(self, gradient):
         x = self.args[0]
-        return [gradients[self]/(2*self)]
+        return [gradient/(2*self)]
 
 class InvertOp(UnaryOp):
     pass
@@ -210,32 +210,32 @@ class ConditionalOp(OpBase):
                 """.format(names[self], names[cond], names[x1], names[x2], dtype)
 
 
-    def grad(self, gradients):
+    def grad(self, gradient):
         cond, x1, x2 = self.args
         grads = [None]
         zero = ConstantOp(0)
-        grads.append(ConditionalOp(cond, gradients[self], zero))
-        grads.append(ConditionalOp(~cond, gradients[self], zero))
+        grads.append(ConditionalOp(cond, gradient, zero))
+        grads.append(ConditionalOp(~cond, gradient, zero))
         return grads
 
 class Extract(OpBase):
     def __init__(self, *args):
         self.args = tuple(args)
                                 
-    def grad(self, gradients):
+    def grad(self, gradient):
         x, b = self.args        
-        return [Collate(gradients[self], b), None]
+        return [Collate(gradient, b), None]
         
 class Collate(OpBase):
     def __init__(self, *args):
         self.args = tuple(args)
     
-    def grad(self, gradients):
+    def grad(self, gradient):
         n = len(self.args)/2
         grads = []
         for i in range(0, n):
             a, b = self.args[2*i], self.args[2*i+1]
-            grads.append(Extract(gradients[self], b))
+            grads.append(Extract(gradient, b))
             grads.append(None)
         return grads
 

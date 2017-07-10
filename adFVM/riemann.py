@@ -8,7 +8,7 @@ def eulerLaxFriedrichs(gamma, pLF, pRF, TLF, TRF, ULF, URF, \
     UnLF, UnRF = ULF.dot(Normals), URF.dot(Normals)
     cLF = (gamma*pLF/rhoLF).sqrt()
     cRF = (gamma*pRF/rhoRF).sqrt()
-    aF = Field.max(UnLF.abs() + cLF, UnRF.abs() + cRF)
+    aF = Tensor.max(abs(UnLF) + cLF, abs(UnRF) + cRF)
     #Z = Field('Z', ad.bcalloc(config.precision(0.), (mesh.nFaces, 1)), (1,))
     #apF = Field.max(Field.max(UnLF + cLF, UnRF + cRF), Z)
     #amF = Field.min(Field.min(UnLF - cLF, UnRF - cRF), Z)
