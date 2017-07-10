@@ -53,6 +53,8 @@ else:
     device = 'gpu0'
     precision = np.float32
 
+compile = user.compile and (parallel.rank == 0)
+
 #import tensorflow as ad
 #ad.sum = ad.reduce_sum
 #import tensorflow as adsparse

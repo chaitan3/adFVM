@@ -4,7 +4,7 @@ import numpy as np
 import operator
 import numbers
 
-from . import config
+from . import config, parallel
 from .scalar import *
 
 import os, sys, subprocess, shutil
@@ -336,7 +336,7 @@ class TensorFunction(object):
     @classmethod
     def createCodeDir(self, case):
         self.codeDir = case + 'gencode/'
-        if config.user.compile:
+        if config.compile:
             assert not os.path.exists(self.codeDir)
             shutil.copytree(scriptDir + '/gencode', self.codeDir)
 
@@ -351,8 +351,9 @@ class TensorFunction(object):
 
     @classmethod
     def compile(self):
-        if config.user.compile:
+        if config.compile:
             subprocess.check_call(['make'], cwd=self.codeDir)
+        parallel.mpi.Barrier()
         sys.path.append(self.codeDir)
         import interface as mod
         TensorFunction._module = mod
