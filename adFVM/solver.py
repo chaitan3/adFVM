@@ -322,7 +322,6 @@ class Solver(object):
                     patch.inputs[index][1][:] += value
                 elif isinstance(param, ad.TensorType):
                     raise NotImplementedError
-                pprint('Time marching for', ' '.join(self.names))
 
         def iterate(t, timeIndex):
             return t < endTime and timeIndex < nSteps
@@ -340,6 +339,7 @@ class Solver(object):
             if report:
                 printMemUsage()
                 start = time.time()
+                pprint('Time marching for', ' '.join(self.names))
                 for index in range(0, len(fields)):
                     fields[index].info()
                 pprint('Time step', timeIndex)
@@ -442,6 +442,11 @@ class Solver(object):
                 timeSeries = []
                 timeSteps = []
                 self.writeStatusFile([timeIndex, t, dt, result])
+
+            if perturbation:
+                doPerturb(revert=True)
+                pprint()
+
 
         if mode == 'forward':
             return solutions

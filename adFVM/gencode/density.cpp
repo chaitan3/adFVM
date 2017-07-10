@@ -334,7 +334,7 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
                 }
             }
         } else if (patchType == "symmetryPlane" || patchType == "slip") {
-            //cout << "implement this elsewhere" << endl;
+            cout << "implement this elsewhere" << endl;
             if ((shape1 == 3) && (shape2 == 1)) {
                 for (integer i = 0; i < nFaces; i++) {
                     integer f = startFace + i;

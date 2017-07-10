@@ -101,24 +101,38 @@ primal = RCF('/home/talnikar/adFVM/cases/cylinder/',
              objectiveString = objectiveString
 )
 
+def makePerturb(param, eps=1e-3):
+    def perturbMesh(fields, mesh, t):
+        if not hasattr(perturbMesh, 'perturbation'):
+            ## do the perturbation based on param and eps
+            #perturbMesh.perturbation = mesh.getPerturbation()
+            points = np.zeros_like(mesh.points)
+            #points[param] = eps
+            points[:] = eps*mesh.points
+            perturbMesh.perturbation = mesh.getPointsPerturbation(points)
+        return perturbMesh.perturbation
+    return perturbMesh
+#perturb = [makePerturb(1), makePerturb(2)]
+perturb = [makePerturb(1)]
 
+parameters = 'mesh'
 
-def makePerturb(scale):
-    def perturb(fields, mesh, t):
-        #mid = np.array([-0.012, 0.0, 0.])
-        #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-        mid = np.array([-0.0005, 0.0, 0.])
-        #G = scale*np.exp(-2.5e9*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-        G = scale*np.exp(-2.5e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-        rho = G
-        rhoU = np.zeros((mesh.nInternalCells, 3))
-        rhoU[:, 0] += G.flatten()*100
-        rhoE = G*2e5
-        return rho, rhoU, rhoE
-    return perturb
- 
-perturb = [makePerturb(1e6)]
-parameters = 'source'
+#def makePerturb(scale):
+#    def perturb(fields, mesh, t):
+#        #mid = np.array([-0.012, 0.0, 0.])
+#        #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+#        mid = np.array([-0.0005, 0.0, 0.])
+#        #G = scale*np.exp(-2.5e9*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+#        G = scale*np.exp(-2.5e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+#        rho = G
+#        rhoU = np.zeros((mesh.nInternalCells, 3))
+#        rhoU[:, 0] += G.flatten()*100
+#        rhoE = G*2e5
+#        return rho, rhoU, rhoE
+#    return perturb
+# 
+#perturb = [makePerturb(1e6)]
+#parameters = 'source'
 
 #def makePerturb(pt_per):
 #    def perturb(fields, mesh, t):
@@ -135,4 +149,4 @@ reportInterval = 1
 startTime = 3.0
 dt = 1e-8
 #adjParams = [1e-3, 'abarbanel', None]
-runCheckpoints = 3
+#runCheckpoints = 3

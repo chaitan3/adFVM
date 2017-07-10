@@ -74,7 +74,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     Py_INCREF(meshObject);
 
     meshp = new Mesh(meshObject);
-    meshap = new Mesh(*meshp);
+    //meshap = new Mesh(*meshp);
     rcf = new RCF();
     //cout << "Initialized mesh" << endl;
     //rcf = new RCF();
@@ -177,6 +177,8 @@ static PyObject* backwardSolver(PyObject *self, PyObject *args) {
     PyArg_ParseTuple(args, "OOOOOOOOOddi", &rhoObject, &rhoUObject, &rhoEObject, &rhoSObject, &rhoUSObject, &rhoESObject, &rhoaObject, &rhoUaObject, &rhoEaObject, &dt, &t, &source);
 
     const Mesh& mesh = *meshp;
+
+    meshap = new Mesh(*meshp);
     Mesh& meshAdj = *meshap;
     meshAdj.reset();
 
@@ -283,6 +285,7 @@ static PyObject* backwardSolver(PyObject *self, PyObject *args) {
         rhoSaObject = putArray(rhoSa);
         rhoUSaObject = putArray(rhoUSa);
         rhoESaObject = putArray(rhoESa);
+        delete meshap;
         return Py_BuildValue("(NNNNNN)", rhoaNObject, rhoUaNObject, rhoEaNObject, rhoSaObject, rhoUSaObject, rhoESaObject);
     } else {
         PyObject *areasObject = putArray(meshAdj.areas);
@@ -293,6 +296,7 @@ static PyObject* backwardSolver(PyObject *self, PyObject *args) {
         PyObject *deltasObject = putArray(meshAdj.deltas);
         PyObject *linearWeightsObject = putArray(meshAdj.linearWeights);
         PyObject *quadraticWeightsObject = putArray(meshAdj.quadraticWeights);
+        delete meshap;
         return Py_BuildValue("(NNNNNNNNNNN)", rhoaNObject, rhoUaNObject, rhoEaNObject, areasObject, volumesLObject, volumesRObject, weightsObject, \
                 deltasObject, normalsObject, linearWeightsObject, quadraticWeightsObject);
 
@@ -459,7 +463,7 @@ Mesh::Mesh(const Mesh& mesh) {
     this->areas = move(vec(mesh.nFaces, true));
     this->normals = move(mat(mesh.nFaces));
     this->volumesL = move(vec(mesh.nFaces));
-    this->volumesR = move(vec(mesh.nFaces));
+    this->volumesR = move(vec(mesh.nInternalFaces));
     this->deltas = move(vec(mesh.nFaces));
     this->weights = move(vec(mesh.nFaces));
     this->linearWeights = move(arrType<scalar, 2>(mesh.nFaces));
@@ -489,11 +493,9 @@ void Mesh::init () {
 }
 
 Mesh::~Mesh () {
-    Py_DECREF(this->mesh);
-    Py_DECREF(this->meshClass);
-    Py_DECREF(this->meshModule);
-    if (Py_IsInitialized())
-        Py_Finalize();
+    //Py_DECREF(this->mesh);
+    //Py_DECREF(this->meshClass);
+    //Py_DECREF(this->meshModule);
 }
 
 
