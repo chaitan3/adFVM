@@ -39,6 +39,10 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
 
     integer index = this->stage;
 
+    drhoa.info();
+    drhoUa.info();
+    drhoEa.info();
+
     const mat& U = *Us[index];
     const vec& T = *Ts[index];
     const vec& p = *ps[index];
@@ -91,7 +95,8 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
             gradFluxUpdate(startFace, nFaces, Function_boundaryFlux_grad);
         }
     }
-    
+
+   
     // grad BC
     this->boundaryInit(0);
     this->boundary_grad(mesh.defaultBoundary, gradUa);
@@ -127,6 +132,7 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
         }
     }
 
+    
     // UPT BC
     this->boundaryInit(this->reqField);
     this->boundary_grad(this->boundaries[0], Ua);
@@ -137,11 +143,17 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
     this->boundaryEnd_grad(Ta, this->reqBuf[4]);
     this->boundaryEnd_grad(pa, this->reqBuf[5]);
     // CBC UPT
+    Ua.info();
+    Ta.info();
+    pa.info();
     
     // Primitive
     Function_primitive_grad(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &Ua(0), &Ta(0), &pa(0), \
                                                  &rhoa(0), &rhoUa(0), &rhoEa(0));
-    
+    rhoa.info();
+    rhoUa.info();
+    rhoEa.info();
+
 }
 
 tuple<scalar, scalar> SSPRK_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& rhoa, const mat& rhoUa, const vec& rhoEa, vec& rhoaN, mat& rhoUaN, vec& rhoEaN, scalar t, scalar dt) {
@@ -153,9 +165,9 @@ tuple<scalar, scalar> SSPRK_grad(const vec& rho, const mat& rhoU, const vec& rho
     //scalar gamma[n] = {0, 1, 0.5};
     scalar objective[n], dtc[n];
 
-    vec rhoas[n+1] = {{rho.shape, rhoaN.data}, {rho.shape}, {rho.shape}, {rho.shape, rhoa.data}};
-    mat rhoUas[n+1] = {{rhoU.shape, rhoUaN.data}, {rhoU.shape}, {rhoU.shape}, {rhoU.shape, rhoUa.data}};
-    vec rhoEas[n+1] = {{rhoE.shape, rhoEaN.data}, {rhoE.shape}, {rhoE.shape}, {rhoE.shape, rhoEa.data}};
+    vec rhoas[n+1] = {{rho.shape, rhoaN.data}, {rho.shape, true}, {rho.shape, true}, {rho.shape, rhoa.data}};
+    mat rhoUas[n+1] = {{rhoU.shape, rhoUaN.data}, {rhoU.shape, true}, {rhoU.shape, true}, {rhoU.shape, rhoUa.data}};
+    vec rhoEas[n+1] = {{rhoE.shape, rhoEaN.data}, {rhoE.shape, true}, {rhoE.shape, true}, {rhoE.shape, rhoEa.data}};
 
     vec drhoa(rho.shape);
     mat drhoUa(rhoU.shape);

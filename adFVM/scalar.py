@@ -142,7 +142,8 @@ class PowerOp(BinaryOp):
 
     def grad(self, gradients):
         x, n = self.args
-        return [n*x**(n-1), None]
+        z = gradients[self]
+        return [z*n*x**(n-1), None]
 
 class UnaryOp(OpBase):
     def __init__(self, op, a):
