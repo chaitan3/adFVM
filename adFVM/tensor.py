@@ -15,9 +15,6 @@ scriptDir = os.path.dirname(os.path.realpath(__file__))
 class Container(object):
     pass
 
-
-
-
 class Tensor(ArithBase):
     _index = 0
     def __init__(self, shape, scalars=None):
