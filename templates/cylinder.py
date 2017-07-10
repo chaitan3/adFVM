@@ -134,5 +134,5 @@ writeInterval = 2
 reportInterval = 1
 startTime = 3.0
 dt = 1e-8
-adjParams = [1e-3, 'abarbanel', None]
+#adjParams = [1e-3, 'abarbanel', None]
 runCheckpoints = 3

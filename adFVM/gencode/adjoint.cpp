@@ -132,6 +132,7 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
         }
     }
 
+    objective_grad(U, T, p, Ua, Ta, pa);
     
     // UPT BC
     this->boundaryInit(this->reqField);

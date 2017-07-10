@@ -85,6 +85,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
 
     Function_primitive(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &U(0), &T(0), &p(0));
     this->boundaryUPT(U, T, p);
+    obj = objective(U, T, p);
 
     //U.info();
     //T.info();
@@ -137,7 +138,6 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     drhoU.zero();
     drhoE.zero();
     dtc.zero();
-    obj = objective(U, T, p);
 
     #define fluxUpdate(i, n, func) \
         func(n, \

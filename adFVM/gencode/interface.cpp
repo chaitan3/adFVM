@@ -185,11 +185,14 @@ static PyObject* backwardSolver(PyObject *self, PyObject *args) {
     getArray((PyArrayObject *)rhoObject, rho);
     getArray((PyArrayObject *)rhoUObject, rhoU);
     getArray((PyArrayObject *)rhoEObject, rhoE);
-    vec rhoa, rhoEa;
-    mat rhoUa;
-    getArray((PyArrayObject *)rhoaObject, rhoa);
-    getArray((PyArrayObject *)rhoUaObject, rhoUa);
-    getArray((PyArrayObject *)rhoEaObject, rhoEa);
+    vec rhoa(mesh.nInternalCells);
+    vec rhoEa(mesh.nInternalCells);
+    mat rhoUa(mesh.nInternalCells);
+    vec rhoaO, rhoEaO;
+    mat rhoUaO;
+    getArray((PyArrayObject *)rhoaObject, rhoaO);
+    getArray((PyArrayObject *)rhoUaObject, rhoUaO);
+    getArray((PyArrayObject *)rhoEaObject, rhoEaO);
 
     //vec rhoS(mesh.nInternalCells), rhoES(mesh.nInternalCells);
     //mat rhoUS(mesh.nInternalCells);
@@ -207,11 +210,26 @@ static PyObject* backwardSolver(PyObject *self, PyObject *args) {
     tie(obj, dtc) = timeIntegrator(rho, rhoU, rhoE, rhoN, rhoUN, rhoEN, t, dt);
 
     //cout << "forward 1" << endl;
-
+    for (integer i = 0; i < mesh.nInternalCells; i++) {
+        scalar v = mesh.volumes(i);
+        rhoa(i) = rhoaO(i)*v;
+        for (integer j = 0; j < 3; j++) {
+            rhoUa(i, j) = rhoUaO(i, j)*v;
+        }
+        rhoEa(i) = rhoEaO(i)*v;
+    }
     vec rhoaN(mesh.nInternalCells, true);
     mat rhoUaN(mesh.nInternalCells, true);
     vec rhoEaN(mesh.nInternalCells, true);
     auto res = SSPRK_grad(rho, rhoU, rhoE, rhoa, rhoUa, rhoEa, rhoaN, rhoUaN, rhoEaN, t, dt);
+    for (integer i = 0; i < mesh.nInternalCells; i++) {
+        scalar v = mesh.volumes(i);
+        rhoaN(i) = rhoaN(i)/v;
+        for (integer j = 0; j < 3; j++) {
+            rhoUaN(i, j) = rhoUaN(i, j)/v;
+        }
+        rhoEaN(i) = rhoEaN(i)/v;
+    }
     
     //cout << "forward 2" << endl;
 
@@ -420,7 +438,7 @@ Mesh::Mesh (PyObject* meshObject) {
     //getMeshArray(this->mesh, "cellFaces", this->cellFaces);
     //getMeshArray(this->mesh, "cellNeighboursMatOp", this->cellNeighbours);
     //getMeshArray(this->mesh, "cellCentres", this->cellCentres);
-    //getMeshArray(this->mesh, "volumes", this->volumes);
+    getMeshArray(this->mesh, "volumes", this->volumes);
     getMeshArray(this->mesh, "volumesL", this->volumesL);
     getMeshArray(this->mesh, "volumesR", this->volumesR);
 

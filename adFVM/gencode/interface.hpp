@@ -34,6 +34,7 @@ class Mesh {
 
         arrType<integer, 6> cellFaces;
         arrType<integer, 6> cellNeighbours;
+        vec volumes;
 
         vec areas, weights, deltas;
         vec volumesL, volumesR;
