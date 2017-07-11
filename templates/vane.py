@@ -83,7 +83,7 @@ scalar objective(const mat& U, const vec& T, const vec& p) {{
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
         vec heat(nFaces, true);
         vec weights(nFaces, true);
-        Function_objective2(nCells, &U(0), &T(0), &p(0), \
+        Function_objective2(nFaces, &U(0), &T(0), &p(0), \
             &mesh.areas(startFace), &mesh.deltas(startFace), &mesh.owner(startFace), \
             &heat(0), &weights(0));
         ht += heat.sum();
@@ -132,7 +132,7 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
         &areasa(0), NULL);
 
     scalar ht = 0, ght = 0;
-    w = 0;
+    w = 0, gw = 0;
     vector<string> patches = {{"{0}", "{3}"}};
     for (string patchID : patches) {{
         integer startFace, nFaces;
@@ -151,10 +151,10 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
     for (string patchID : patches) {{
         integer startFace, nFaces;
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
-        vec heata(nFaces, true);
-        vec weightsa(nFaces, true);
+        vec heata(nFaces);
+        vec weightsa(nFaces);
         for (integer i = 0; i < nFaces; i++) {{
-            lossa(i) = b/gw;
+            heata(i) = b/gw;
             weightsa(i) = -b*ght/(gw*gw);
         }}
         Function_objective2_grad(nFaces, &U(0), &T(0), &p(0), \
@@ -170,21 +170,25 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
 primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=[objectivePressureLoss, objectiveHeatTransfer], objectivePLInfo={}, \
              objectiveString = objectiveString)
 primal.defaultConfig["objectivePLInfo"] = getPlane(primal)
+a = 0.4
+a = 0.
 k = primal.mu(300)*primal.Cp/primal.Pr
 b = -0.71e-3/(120*k)/2000.
-primal.objectiveString = primal.objectiveString.format('pressure', 0.4, b, 'suction')
+#b = 0.
+primal.objectiveString = primal.objectiveString.format('pressure', a, b, 'suction')
 
-def makePerturb(param, eps=1e-6):
+def makePerturb(param, eps=1e-4):
     def perturbMesh(fields, mesh, t):
         if not hasattr(perturbMesh, 'perturbation'):
             ## do the perturbation based on param and eps
             #perturbMesh.perturbation = mesh.getPerturbation()
-            points = np.zeros_like(mesh.parent.points)
-            points[param] = eps
-            perturbMesh.perturbation = mesh.parent.getPointsPerturbation(points)
+            points = np.zeros_like(mesh.points)
+            #points[param] = eps
+            points[:] = eps*mesh.points
+            perturbMesh.perturbation = mesh.getPointsPerturbation(points)
         return perturbMesh.perturbation
     return perturbMesh
-perturb = [makePerturb(1), makePerturb(2)]
+perturb = [makePerturb(1)]
 
 parameters = 'mesh'
 
