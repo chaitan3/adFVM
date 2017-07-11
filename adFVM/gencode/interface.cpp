@@ -223,7 +223,7 @@ static PyObject* backwardSolver(PyObject *self, PyObject *args) {
     vec rhoaN(mesh.nInternalCells, true);
     mat rhoUaN(mesh.nInternalCells, true);
     vec rhoEaN(mesh.nInternalCells, true);
-    auto res = SSPRK_grad(rho, rhoU, rhoE, rhoa, rhoUa, rhoEa, rhoaN, rhoUaN, rhoEaN, t, dt);
+    auto res = timeIntegrator_grad(rho, rhoU, rhoE, rhoa, rhoUa, rhoEa, rhoaN, rhoUaN, rhoEaN, t, dt);
     for (integer i = 0; i < mesh.nInternalCells; i++) {
         scalar v = mesh.volumes(i);
         rhoaN(i) = rhoaN(i)/v;

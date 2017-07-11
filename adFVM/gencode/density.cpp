@@ -1,4 +1,9 @@
+//#define timeIntegrator euler
+//#define timeIntegrator_grad euler_grad
+//#define nStages 1
+
 #define timeIntegrator SSPRK
+#define timeIntegrator_grad SSPRK_grad
 #define nStages 3
 #include "code.hpp"
 
@@ -85,7 +90,9 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
 
     Function_primitive(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &U(0), &T(0), &p(0));
     this->boundaryUPT(U, T, p);
-    obj = objective(U, T, p);
+    if (index == 0) {
+        obj = objective(U, T, p);
+    }
 
     //U.info();
     //T.info();
@@ -246,7 +253,7 @@ tuple<scalar, scalar> SSPRK(const vec& rho, const mat& rhoU, const vec& rhoE, ve
     const Mesh& mesh = *meshp;
 
 
-    const integer n = nStages;
+    const integer n = 3;
     scalar alpha[n][n] = {{1,0,0},{3./4, 1./4, 0}, {1./3, 0, 2./3}};
     scalar beta[n][n] = {{1,0,0}, {0,1./4,0},{0,0,2./3}};
     //scalar gamma[n] = {0, 1, 0.5};

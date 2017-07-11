@@ -98,10 +98,11 @@ primal = RCF('/home/talnikar/adFVM/cases/cylinder/',
              faceReconstructor='SecondOrder',
              boundaryRiemannSolver='eulerLaxFriedrichs',
              objective = objective,
-             objectiveString = objectiveString
+             objectiveString = objectiveString,
+             fixedTimeStep = True,
 )
 
-def makePerturb(param, eps=1e-3):
+def makePerturb(param, eps=1e-4):
     def perturbMesh(fields, mesh, t):
         if not hasattr(perturbMesh, 'perturbation'):
             ## do the perturbation based on param and eps
@@ -147,6 +148,6 @@ nSteps = 10
 writeInterval = 2
 reportInterval = 1
 startTime = 3.0
-dt = 1e-8
+dt = 1e-10
 #adjParams = [1e-3, 'abarbanel', None]
 #runCheckpoints = 3

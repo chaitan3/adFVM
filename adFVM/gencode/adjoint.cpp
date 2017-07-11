@@ -136,7 +136,9 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
     //Ta.info();
     //pa.info();
 
-    objective_grad(U, T, p, Ua, Ta, pa);
+    if (index == 0) {
+        objective_grad(U, T, p, Ua, Ta, pa);
+    }
 
     //Ua.info();
     //Ta.info();
@@ -162,10 +164,41 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
 
 }
 
+tuple<scalar, scalar> euler_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& rhoa, const mat& rhoUa, const vec& rhoEa, vec& rhoaN, mat& rhoUaN, vec& rhoEaN, scalar t, scalar dt) {
+    const Mesh& mesh = *meshp;
+    
+    vec drho(rho.shape);
+    mat drhoU(rhoU.shape);
+    vec drhoE(rhoE.shape);
+    scalar obj, dtc;
+    rcf->stage = 0;
+
+    vec drhoa(rho.shape);
+    mat drhoUa(rhoU.shape);
+    vec drhoEa(rhoE.shape);
+
+    for (integer i = 0; i < mesh.nInternalCells; i++) {
+        drhoa(i) = -rhoa(i)*dt;
+        for (integer j = 0; j < 3; j++) {
+            drhoUa(i, j) = -rhoUa(i, j)*dt;
+        }
+        drhoEa(i) = -rhoEa(i)*dt;
+    }
+    rcf->equation_grad(rho, rhoU, rhoE, drhoa, drhoUa, drhoEa, rhoaN, rhoUaN, rhoEaN, obj, dtc);
+    for (integer i = 0; i < mesh.nInternalCells; i++) {
+        rhoaN(i) += rhoa(i);
+        for (integer j = 0; j < 3; j++) {
+            rhoUaN(i, j) += rhoUa(i, j);
+        }
+        rhoEaN(i) += rhoEa(i);
+    }
+    return make_tuple(obj, dtc);
+}
+
 tuple<scalar, scalar> SSPRK_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& rhoa, const mat& rhoUa, const vec& rhoEa, vec& rhoaN, mat& rhoUaN, vec& rhoEaN, scalar t, scalar dt) {
     const Mesh& mesh = *meshp;
 
-    integer n = nStages;
+    integer n = 3;
     scalar alpha[n][n] = {{1,0,0},{3./4, 1./4, 0}, {1./3, 0, 2./3}};
     scalar beta[n][n] = {{1,0,0}, {0,1./4,0},{0,0,2./3}};
     //scalar gamma[n] = {0, 1, 0.5};
@@ -187,7 +220,7 @@ tuple<scalar, scalar> SSPRK_grad(const vec& rho, const mat& rhoU, const vec& rho
         for (integer i = 0; i < mesh.nInternalCells; i++) {
             drhoa(i) = -b*rhoas[stage](i)*dt;
             for (integer j = 0; j < 3; j++) {
-                drhoUa(i) = -b*rhoUas[stage](i, j)*dt;
+                drhoUa(i, j) = -b*rhoUas[stage](i, j)*dt;
             }
             drhoEa(i) = -b*rhoEas[stage](i)*dt;
         }
