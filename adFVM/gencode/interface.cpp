@@ -100,6 +100,10 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
         string ckey = PyString_AsString(key);
         if (ckey == "CFL") {
             rcf->CFL = PyFloat_AsDouble(value);
+        } else if (ckey == "objectivePLInfo") {
+            if (value != Py_None) {
+                getDict(value, rcf->objectivePLInfo);
+            }
         } 
         //else if (ckey == "timeIntegrator") {
         //    string cvalue = PyString_AsString(value);

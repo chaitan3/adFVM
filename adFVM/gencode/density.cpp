@@ -17,6 +17,7 @@ class RCF {
     scalar* reqBuf[6];
     integer stage;
     scalar CFL;
+    map<string, string> objectivePLInfo;
 
     void equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& obj, scalar& minDtc);
     void boundaryUPT(mat& U, vec& T, vec& p);

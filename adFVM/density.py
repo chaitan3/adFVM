@@ -25,6 +25,7 @@ class RCF(Solver):
                              'timeIntegrator': 'SSPRK', 'nStages': 3,
                              # eulerHLLC DOES NOT WORK
                              'riemannSolver': 'eulerRoe',
+                             'objectivePLInfo': None,
                              #'boundaryRiemannSolver': 'eulerLaxFriedrichs',
                              'boundaryRiemannSolver': 'eulerRoe',
                              'readConservative': False,
@@ -72,7 +73,11 @@ class RCF(Solver):
             self._boundaryFlux = self.boundaryFlux()
 
             if self.objective is not None:
-                self._objective = self.objective(self, self.mesh.symMesh)
+                if not isinstance(self.objective, list):
+                    self.objective = [self.objective]
+                self._objective = []
+                for objective in self.objective:
+                    self._objective.append(objective(self, self.mesh.symMesh))
                 TensorFunction.extraCode += self.objectiveString
 
             for patch in self.fields[0].phi.BC:
