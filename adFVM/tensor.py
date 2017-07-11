@@ -217,7 +217,9 @@ class TensorFunction(object):
             outputs[-1].dtype = inp.dtype
             i += n
         inputs = self._inputTensors + gradOutputs
-        return TensorFunction(self.name.split('_')[1] + '_grad', inputs, outputs, grad=False)
+        loc = self.name.find('_')
+        name = self.name[loc+1:] + '_grad'
+        return TensorFunction(name, inputs, outputs, grad=False)
 
     def _getChildren(self, outputs):
         children = {}

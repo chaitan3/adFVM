@@ -23,6 +23,9 @@ class ArithBase(object):
     def __sub__(self, b):
         return self._binaryOp(b, operator.sub)
 
+    def __rsub__(self, b):
+        return (-self)._binaryOp(b, operator.add)
+
     def __mul__(self, b):
         return self._binaryOp(b, operator.mul)
 

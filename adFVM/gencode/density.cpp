@@ -1,41 +1,8 @@
-//#define timeIntegrator euler
-//#define timeIntegrator_grad euler_grad
-//#define nStages 1
-
-#define timeIntegrator SSPRK
-#define timeIntegrator_grad SSPRK_grad
-#define nStages 3
+#include "density.hpp"
 #include "code.hpp"
 
-class RCF {
-    public:
-
-    void* req;
-    integer reqIndex;
-    integer reqField;
-    Boundary boundaries[3];
-    scalar* reqBuf[6];
-    integer stage;
-    scalar CFL;
-    map<string, string> objectivePLInfo;
-
-    void equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& obj, scalar& minDtc);
-    void boundaryUPT(mat& U, vec& T, vec& p);
-    void boundaryInit(integer startField);
-    template <typename dtype, integer shape1, integer shape2>
-    void boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi);
-    void boundaryEnd();
-
-    void equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& drhoa, const mat& drhoUa, const vec& drhoEa, vec& rhoa, mat& rhoUa, vec& rhoEa, scalar& obj, scalar& minDtc);
-    template <typename dtype, integer shape1, integer shape2>
-    void boundary_grad(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi);
-    template <typename dtype, integer shape1, integer shape2>
-    void boundaryEnd_grad(arrType<dtype, shape1, shape2>& phi, dtype* phiBuf);
-    void boundaryUPT_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, vec& pa);
-
-};
-
 RCF *rcf;
+
 vec *rhos[nStages+1];
 mat *rhoUs[nStages+1];
 vec *rhoEs[nStages+1];
@@ -68,18 +35,20 @@ void RCF::boundaryUPT(mat& U, vec& T, vec& p) {
                 p(c) = pval(i);
             }
         } else if (patchType == "CBC_TOTAL_PT") {
+            vec Tt(nFaces, patch.second.at("_Tt"));
+            vec pt(nFaces, patch.second.at("_pt"));
             mat Uval(nFaces);
             vec Tval(nFaces);
             vec pval(nFaces);
             for (integer i = 0; i < nFaces; i++) {
-                integer c = cellStartFace + i;
+                integer c = mesh.owner(startFace + i);
                 for (integer j = 0; j < 3; j++) {
                     Uval(i, j) = U(c, j);
                 }
                 Tval(i) = T(c);
                 pval(i) = p(c);
             }
-            Function_CBC_TOTAL_PT(nFaces, &Uval(0), &Tval(0), pval(0), &mesh.normals(startFace), \
+            Function_CBC_TOTAL_PT(nFaces, &Uval(0), &Tval(0), &pval(0), &Tt(0), &pt(0), &mesh.normals(startFace), \
                     &U(cellStartFace), &T(cellStartFace), &p(cellStartFace));
         }
     }
@@ -309,6 +278,7 @@ tuple<scalar, scalar> SSPRK(const vec& rho, const mat& rhoU, const vec& rhoE, ve
     }
     return make_tuple(obj[0], dtc[0]);
 }
+
 
 template <typename dtype, integer shape1, integer shape2>
 void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi) {

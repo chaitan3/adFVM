@@ -13,8 +13,8 @@ long long current_timestamp() {
 Mesh *meshp = NULL;
 Mesh *meshap = NULL;
 
-#include "density.cpp"
-#include "adjoint.cpp"
+#include "density.hpp"
+#include "code.hpp"
 
 template <typename dtype, integer shape1, integer shape2>
 void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shape2>& tmp) {

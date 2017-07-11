@@ -1,9 +1,9 @@
 import numpy as np
 
 from adFVM import config
-from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
+from adFVM import tensor
 
 #primal = RCF('/home/talnikar/adFVM/cases/vane_optim/foam/laminar/3d_baseline/par-16/', objective='drag', objectiveDragInfo='pressure')
 #primal = RCF('/master/home/talnikar/adFVM/cases/vane/les/', faceReconstructor='SecondOrder')#, timeIntegrator='euler')
@@ -21,7 +21,7 @@ def objectiveHeatTransfer(solver, mesh):
     dtdn = (Tw-Ti)/mesh.deltas
     k = solver.Cp*solver.mu(Tw)/solver.Pr
     ht = k*dtdn*mesh.areas
-    w = mesh.areas
+    w = mesh.areas*1.
     return tensor.TensorFunction('objective2', [U, T, p, mesh.areas, mesh.deltas, mesh.owner], [ht, w])
 
 # pressure loss
@@ -31,21 +31,20 @@ def getPlane(solver):
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
     return {'cells':interCells.astype(np.int32), 
             'areas': interArea, 
-            'ptin': ptin
            }
 
 def objectivePressureLoss(solver, mesh):
     ptin = 175158.
     normal = np.array([1.,0.,0.])
     U, T, p = tensor.CellTensor((3,)), tensor.CellTensor((1,)), tensor.CellTensor((1,))
-    areas = Tensor((1,))
-    cells = Tensor((1,), IntegerScalar())
+    areas = tensor.Tensor((1,))
+    cells = tensor.Tensor((1,), [tensor.IntegerScalar()])
     g = solver.gamma
     pi = p.extract(cells)
     Ti = T.extract(cells)
     Ui = U.extract(cells)
     rhoi = pi/(solver.Cv*Ti*(g- 1))
-    ci = (gpi/rhoi).sqrt()
+    ci = (g*pi/rhoi).sqrt()
 
     rhoUni = sum([rhoi*Ui[i]*normal[i] for i in range(0, 3)])
     Umagi = Ui.dot(Ui)
@@ -62,7 +61,7 @@ objectiveString = """
 scalar objective(const mat& U, const vec& T, const vec& p) {{
     integer nCells = rcf->objectivePLInfo["cells"].size()/sizeof(integer);
     integer* cells = (integer*) rcf->objectivePLInfo.at("cells").data();
-    scalar* areas = (uscalar*) rcf->objectivePLInfo.at("areas").data();
+    scalar* areas = (scalar*) rcf->objectivePLInfo.at("areas").data();
     const Mesh& mesh = *meshp;
     vec loss(nCells, true);
     vec weights(nCells, true);
@@ -76,14 +75,15 @@ scalar objective(const mat& U, const vec& T, const vec& p) {{
     MPI_Allreduce(&pl, &gpl, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     scalar obj = gpl/gw;
 
-    scalar ht = 0;
-    w = 0;
-    for (string patchID : split({0}, '|')) {{
+    scalar ht = 0, ght = 0;
+    w = 0, gw = 0;
+    vector<string> patches = {{"{0}", "{3}"}};
+    for (string patchID : patches) {{
         integer startFace, nFaces;
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
         vec heat(nFaces, true);
         vec weights(nFaces, true);
-        Function_objective(nCells, &U(0), &T(0), &p(0), \
+        Function_objective2(nCells, &U(0), &T(0), &p(0), \
             &mesh.areas(startFace), &mesh.deltas(startFace), &mesh.owner(startFace), \
             &heat(0), &weights(0));
         ht += heat.sum();
@@ -98,16 +98,18 @@ scalar objective(const mat& U, const vec& T, const vec& p) {{
     return a*obj + b*obj2;
 }}
 void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, vec& pa) {{
+    const Mesh& mesh = *meshp;
+    Mesh& meshAdj = *meshap;
+
     scalar a = {1};
     scalar b = {2};
 
     integer nCells = rcf->objectivePLInfo["cells"].size()/sizeof(integer);
     integer* cells = (integer*) rcf->objectivePLInfo.at("cells").data();
-    scalar* areas = (uscalar*) rcf->objectivePLInfo.at("areas").data();
-    const Mesh& mesh = *meshp;
+    scalar* areas = (scalar*) rcf->objectivePLInfo.at("areas").data();
     vec loss(nCells, true);
     vec weights(nCells, true);
-    Function_objective(nFaces, &U(0), &T(0), &p(0), \
+    Function_objective(nCells, &U(0), &T(0), &p(0), \
         areas, cells, \
         &loss(0), &weights(0));
     scalar pl = loss.sum();
@@ -127,11 +129,12 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
         areas, cells, \
         &lossa(0), &weightsa(0),\
         &Ua(0), &Ta(0), &pa(0), \
-        &areasa, NULL);
+        &areasa(0), NULL);
 
-    scalar ht = 0;
+    scalar ht = 0, ght = 0;
     w = 0;
-    for (string patchID : split({0}, '|')) {{
+    vector<string> patches = {{"{0}", "{3}"}};
+    for (string patchID : patches) {{
         integer startFace, nFaces;
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
         vec heat(nFaces, true);
@@ -145,7 +148,7 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
     MPI_Allreduce(&w, &gw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&ht, &ght, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    for (string patchID : split({0}, '|')) {{
+    for (string patchID : patches) {{
         integer startFace, nFaces;
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
         vec heata(nFaces, true);
@@ -167,9 +170,9 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
 primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=[objectivePressureLoss, objectiveHeatTransfer], objectivePLInfo={}, \
              objectiveString = objectiveString)
 primal.defaultConfig["objectivePLInfo"] = getPlane(primal)
-k = solver.mu(300)*solver.Cp/solver.Pr
+k = primal.mu(300)*primal.Cp/primal.Pr
 b = -0.71e-3/(120*k)/2000.
-primal.objectiveString = primal.objectiveString.format('pressure|suction', 0.4, b)
+primal.objectiveString = primal.objectiveString.format('pressure', 0.4, b, 'suction')
 
 def makePerturb(param, eps=1e-6):
     def perturbMesh(fields, mesh, t):
@@ -202,10 +205,10 @@ parameters = 'mesh'
 
 #nSteps = 10
 #writeInterval = 5
-nSteps = 20000
-writeInterval = 500
+nSteps = 10
+writeInterval = 5
 #nSteps = 100000
 #writeInterval = 5000
-startTime = 1.0
+startTime = 3.0
 dt = 1e-8
 

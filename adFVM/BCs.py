@@ -200,7 +200,7 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
         Ub = Un*self.direction
         Tb = self.Tt - 0.5*Un*Un/self.Cp
         pb = self.pt * (T/self.Tt)**(self.gamma/(self.gamma-1))
-        return TensorFunction("CBC_TOTAL_PT", [U, T, p, self.direction], [Ub, Tb, pb])
+        return TensorFunction("CBC_TOTAL_PT", [U, T, p, self.Tt, self.pt, self.direction], [Ub, Tb, pb])
 #
 #class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
 #    def __init__(self, phi, patchID):

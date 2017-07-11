@@ -1,3 +1,6 @@
+#include "density.hpp"
+#include "code.hpp"
+
 void RCF::boundaryUPT_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, vec& pa) {
     const Mesh& mesh = *meshp;
     Mesh& meshAdj = *meshap;
@@ -21,30 +24,34 @@ void RCF::boundaryUPT_grad(const mat& U, const vec& T, const vec& p, mat& Ua, ve
             //    p(c) = pval(i);
             //}
         } else if (patchType == "CBC_TOTAL_PT") {
+            vec Tt(nFaces, patch.second.at("_Tt"));
+            vec pt(nFaces, patch.second.at("_pt"));
             mat Uval(nFaces);
             vec Tval(nFaces);
             vec pval(nFaces);
             for (integer i = 0; i < nFaces; i++) {
-                integer c = cellStartFace + i;
+                integer c = mesh.owner(startFace + i);
                 for (integer j = 0; j < 3; j++) {
                     Uval(i, j) = U(c, j);
                 }
                 Tval(i) = T(c);
                 pval(i) = p(c);
             }
-            mat Uvala(nFaces);
-            vec Tvala(nFaces);
-            vec pvala(nFaces);
-            Function_CBC_TOTAL_PT_grad(nFaces, &Uval(0), &Tval(0), &pval(0), &mesh.normals(startFace), \
+            mat Uvala(nFaces, true);
+            vec Tvala(nFaces, true);
+            vec pvala(nFaces, true);
+            vec Tta(nFaces);
+            vec pta(nFaces);
+            Function_CBC_TOTAL_PT_grad(nFaces, &Uval(0), &Tval(0), &pval(0), &Tt(0), &pt(0), &mesh.normals(startFace), \
                     &Ua(cellStartFace), &Ta(cellStartFace), &pa(cellStartFace), 
-                    &Uvala(0), &Tvala(0), &pvala(0), &meshAdj.normals(startFace));
+                    &Uvala(0), &Tvala(0), &pvala(0), &Tta(0), &pta(0), &meshAdj.normals(startFace));
             for (integer i = 0; i < nFaces; i++) {
-                integer p = mesh.owner(startFace + i);
+                integer c = mesh.owner(startFace + i);
                 for (integer j = 0; j < 3; j++) {
-                    Ua(p, j) += Uvala(i, j);
+                    Ua(c, j) += Uvala(i, j);
                 }
-                Ta(p) += Tvala(i);
-                pa(p) += pvala(i);
+                Ta(c) += Tvala(i);
+                pa(c) += pvala(i);
             }
         }
     }

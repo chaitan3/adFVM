@@ -9,6 +9,7 @@
 #include <tuple>
 #include <limits>
 #include <iomanip>
+#include <vector>
 
 using namespace std;
 

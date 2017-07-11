@@ -80,10 +80,10 @@ class RCF(Solver):
                     self._objective.append(objective(self, self.mesh.symMesh))
                 TensorFunction.extraCode += self.objectiveString
 
-            for patch in self.fields[0].phi.BC:
-                if isinstance(patch, BCs.CBC_TOTAL_PT):
-                    assert not hasattr(self, _CBC_TOTAL_PT)
-                    self._CBC_TOTAL_PT = patch._update()
+            for patch, value in self.fields[2].phi.BC.iteritems():
+                if isinstance(value, BCs.CBC_TOTAL_PT):
+                    assert not hasattr(self, '_CBC_TOTAL_PT')
+                    self._CBC_TOTAL_PT = value._update()
 
         TensorFunction.compile()
         TensorFunction._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
