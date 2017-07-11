@@ -15,7 +15,7 @@ class RCF {
     integer reqIndex;
     integer reqField;
     Boundary boundaries[3];
-    scalar* reqBuf[6];
+    scalar* reqBuf[3];
     integer stage;
     scalar CFL;
     map<string, string> objectivePLInfo;

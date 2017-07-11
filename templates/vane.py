@@ -171,7 +171,7 @@ primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=[objectivePre
              objectiveString = objectiveString)
 primal.defaultConfig["objectivePLInfo"] = getPlane(primal)
 a = 0.4
-a = 0.
+#a = 0.
 k = primal.mu(300)*primal.Cp/primal.Pr
 b = -0.71e-3/(120*k)/2000.
 #b = 0.

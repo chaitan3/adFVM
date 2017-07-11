@@ -60,10 +60,18 @@ void RCF::boundaryUPT_grad(const mat& U, const vec& T, const vec& p, mat& Ua, ve
     this->boundary_grad(this->boundaries[0], Ua);
     this->boundary_grad(this->boundaries[1], Ta);
     this->boundary_grad(this->boundaries[2], pa);
-    this->boundaryEnd();                             
-    this->boundaryEnd_grad(Ua, this->reqBuf[3]);     
-    this->boundaryEnd_grad(Ta, this->reqBuf[4]);     
-    this->boundaryEnd_grad(pa, this->reqBuf[5]);     
+    if (mesh.nRemotePatches > 0) {
+        MPI_Waitall(2*3*mesh.nRemotePatches, ((MPI_Request*)this->req), MPI_STATUSES_IGNORE);
+        delete[] ((MPI_Request*)this->req);
+    }
+    this->boundaryEnd_grad(Ua, this->reqBuf[0]);     
+    this->boundaryEnd_grad(Ta, this->reqBuf[1]);     
+    this->boundaryEnd_grad(pa, this->reqBuf[2]);     
+    if (mesh.nRemotePatches > 0) {
+        for (integer i = 0; i < 3; i++) {
+            delete[] this->reqBuf[i];
+        }
+    }
 }
 
 void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& drhoa, const mat& drhoUa, const vec& drhoEa, vec& rhoa, mat& rhoUa, vec& rhoEa, scalar& objective, scalar& minDtc) {
@@ -138,10 +146,18 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
     this->boundary_grad(mesh.defaultBoundary, gradUa);
     this->boundary_grad(mesh.defaultBoundary, gradTa);
     this->boundary_grad(mesh.defaultBoundary, gradpa);
-    this->boundaryEnd();
+    if (mesh.nRemotePatches > 0) {
+        MPI_Waitall(2*3*mesh.nRemotePatches, ((MPI_Request*)this->req), MPI_STATUSES_IGNORE);
+        delete[] ((MPI_Request*)this->req);
+    }
     this->boundaryEnd_grad(gradUa, this->reqBuf[0]);
     this->boundaryEnd_grad(gradTa, this->reqBuf[1]);
     this->boundaryEnd_grad(gradpa, this->reqBuf[2]);
+    if (mesh.nRemotePatches > 0) {
+        for (integer i = 0; i < 3; i++) {
+            delete[] this->reqBuf[i];
+        }
+    }
 
     #define gradGradUpdate(i, n, func) \
                 func(n, \
@@ -349,7 +365,6 @@ void RCF::boundary_grad(const Boundary& boundary, arrType<dtype, shape1, shape2>
             //    }
             //}
         } else if (patchType == "processor" || patchType == "processorCyclic") {
-            //cout << "hello " << patchID << endl;
             integer bufStartFace = cellStartFace - mesh.nLocalCells;
             integer size = nFaces*shape1*shape2;
             integer dest = stoi(patchInfo.at("neighbProcNo"));
@@ -396,28 +411,4 @@ void RCF::boundaryEnd_grad(arrType<dtype, shape1, shape2>& phi, dtype* phiBuf) {
         }
     }
 }
-
-//void RCF::boundaryInit_grad(integer startField) {
-    //const Mesh& mesh = *meshp;
-    //this->reqIndex = 0;
-    //this->reqField = startField;
-    //if (mesh.nRemotePatches > 0) {
-        ////MPI_Barrier(MPI_COMM_WORLD);
-        //this->req = (void *)new MPI_Request[2*3*mesh.nRemotePatches];
-    //}
-//}
-//
-//
-
-//void RCF::boundaryEnd_grad() {
-    //const Mesh& mesh = *meshp;
-    //if (mesh.nRemotePatches > 0) {
-        //MPI_Waitall(2*3*mesh.nRemotePatches, ((MPI_Request*)this->req), MPI_STATUSES_IGNORE);
-        //delete[] ((MPI_Request*)this->req);
-        ////MPI_Barrier(MPI_COMM_WORLD);
-        //for (integer i = 0; i < 3; i++) {
-            //delete[] this->reqBuf[i];
-        //}
-    //}
-//}
 
