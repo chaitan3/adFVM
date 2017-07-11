@@ -31,6 +31,7 @@ class RCF {
     void boundary_grad(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi);
     template <typename dtype, integer shape1, integer shape2>
     void boundaryEnd_grad(arrType<dtype, shape1, shape2>& phi, dtype* phiBuf);
+    void boundaryUPT_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, vec& pa);
 
 };
 
@@ -67,7 +68,19 @@ void RCF::boundaryUPT(mat& U, vec& T, vec& p) {
                 p(c) = pval(i);
             }
         } else if (patchType == "CBC_TOTAL_PT") {
-            cout << "implement this" << endl;
+            mat Uval(nFaces);
+            vec Tval(nFaces);
+            vec pval(nFaces);
+            for (integer i = 0; i < nFaces; i++) {
+                integer c = cellStartFace + i;
+                for (integer j = 0; j < 3; j++) {
+                    Uval(i, j) = U(c, j);
+                }
+                Tval(i) = T(c);
+                pval(i) = p(c);
+            }
+            Function_CBC_TOTAL_PT(nFaces, &Uval(0), &Tval(0), pval(0), &mesh.normals(startFace), \
+                    &U(cellStartFace), &T(cellStartFace), &p(cellStartFace));
         }
     }
     this->boundaryInit(0);    

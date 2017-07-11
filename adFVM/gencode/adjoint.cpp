@@ -1,34 +1,63 @@
-/*void RCF::boundaryUPT_grad(mat& U, vec& T, vec& p) {*/
-    //const Mesh& mesh = *meshp;
-    //for (auto& patch: this->boundaries[2]) {
-        //string patchType = patch.second.at("type");
-        //string patchID = patch.first;
-        //integer startFace, nFaces;
-        //tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
-        //integer cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
+void RCF::boundaryUPT_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, vec& pa) {
+    const Mesh& mesh = *meshp;
+    Mesh& meshAdj = *meshap;
+    for (auto& patch: this->boundaries[2]) {
+        string patchType = patch.second.at("type");
+        string patchID = patch.first;
+        integer startFace, nFaces;
+        tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
+        integer cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
 
-        //if (patchType == "CBC_UPT") {
+        if (patchType == "CBC_UPT") {
             //mat Uval(nFaces, patch.second.at("_U0"));
             //vec Tval(nFaces, patch.second.at("_T0"));
             //vec pval(nFaces, patch.second.at("_p0"));
             //for (integer i = 0; i < nFaces; i++) {
-                //integer c = cellStartFace + i;
-                //for (integer j = 0; j < 3; j++) {
-                    //U(c, j) = Uval(i, j);
-                //}
-                //T(c) = Tval(i);
-                //p(c) = pval(i);
+            //    integer c = cellStartFace + i;
+            //    for (integer j = 0; j < 3; j++) {
+            //        U(c, j) = Uval(i, j);
+            //    }
+            //    T(c) = Tval(i);
+            //    p(c) = pval(i);
             //}
-        //} else if (patchType == "CBC_TOTAL_PT") {
-            //cout << "implement this" << endl;
-        //}
-    //}
-    //this->boundaryInit(0);    
-    //boundary(this->boundaries[0], U);
-    //boundary(this->boundaries[1], T);
-    //boundary(this->boundaries[2], p);
-    //this->boundaryEnd();    
-/*}*/
+        } else if (patchType == "CBC_TOTAL_PT") {
+            mat Uval(nFaces);
+            vec Tval(nFaces);
+            vec pval(nFaces);
+            for (integer i = 0; i < nFaces; i++) {
+                integer c = cellStartFace + i;
+                for (integer j = 0; j < 3; j++) {
+                    Uval(i, j) = U(c, j);
+                }
+                Tval(i) = T(c);
+                pval(i) = p(c);
+            }
+            mat Uvala(nFaces);
+            vec Tvala(nFaces);
+            vec pvala(nFaces);
+            Function_CBC_TOTAL_PT_grad(nFaces, &Uval(0), &Tval(0), &pval(0), &mesh.normals(startFace), \
+                    &Ua(cellStartFace), &Ta(cellStartFace), &pa(cellStartFace), 
+                    &Uvala(0), &Tvala(0), &pvala(0), &meshAdj.normals(startFace));
+            for (integer i = 0; i < nFaces; i++) {
+                integer p = mesh.owner(startFace + i);
+                for (integer j = 0; j < 3; j++) {
+                    Ua(p, j) += Uvala(i, j);
+                }
+                Ta(p) += Tvala(i);
+                pa(p) += pvala(i);
+            }
+        }
+    }
+
+    this->boundaryInit(this->reqField);
+    this->boundary_grad(this->boundaries[0], Ua);
+    this->boundary_grad(this->boundaries[1], Ta);
+    this->boundary_grad(this->boundaries[2], pa);
+    this->boundaryEnd();                             
+    this->boundaryEnd_grad(Ua, this->reqBuf[3]);     
+    this->boundaryEnd_grad(Ta, this->reqBuf[4]);     
+    this->boundaryEnd_grad(pa, this->reqBuf[5]);     
+}
 
 void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& drhoa, const mat& drhoUa, const vec& drhoEa, vec& rhoa, mat& rhoUa, vec& rhoEa, scalar& objective, scalar& minDtc) {
     // make decision between 1 and 3 a template
@@ -145,15 +174,7 @@ void RCF::equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const 
     //pa.info();
     
     // UPT BC
-    this->boundaryInit(this->reqField);
-    this->boundary_grad(this->boundaries[0], Ua);
-    this->boundary_grad(this->boundaries[1], Ta);
-    this->boundary_grad(this->boundaries[2], pa);
-    this->boundaryEnd();
-    this->boundaryEnd_grad(Ua, this->reqBuf[3]);
-    this->boundaryEnd_grad(Ta, this->reqBuf[4]);
-    this->boundaryEnd_grad(pa, this->reqBuf[5]);
-    // CBC UPT
+    this->boundaryUPT_grad(U, T, p, Ua, Ta, pa);
     
     // Primitive
     Function_primitive_grad(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &Ua(0), &Ta(0), &pa(0), \
