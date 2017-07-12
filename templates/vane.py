@@ -72,13 +72,9 @@ scalar objective(const mat& U, const vec& T, const vec& p) {{
         &loss(0), &weights(0));
     scalar pl = loss.sum();
     scalar w = weights.sum();
-    scalar gpl = 0, gw = 0;
-    MPI_Allreduce(&w, &gw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&pl, &gpl, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    scalar obj = gpl/gw;
 
-    scalar ht = 0, ght = 0;
-    w = 0, gw = 0;
+    scalar ht = 0;
+    scalar w2 = 0;
     vector<string> patches = {{"{0}", "{3}"}};
     for (string patchID : patches) {{
         integer startFace, nFaces;
@@ -89,22 +85,21 @@ scalar objective(const mat& U, const vec& T, const vec& p) {{
             &mesh.areas(startFace), &mesh.deltas(startFace), &mesh.owner(startFace), \
             &heat(0), &weights(0));
         ht += heat.sum();
-        w += weights.sum();
+        w2 += weights.sum();
     }}
-    MPI_Allreduce(&w, &gw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&ht, &ght, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    scalar obj2 = ght/gw;
 
+    scalar val[4] = {{pl, w, ht, w2}};
+    scalar gval[4];
+    MPI_Allreduce(&val, &gval, 4, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     scalar a = {1};
     scalar b = {2};
+    scalar obj = gval[0]/gval[1];
+    scalar obj2 = gval[2]/gval[3];
     return a*obj + b*obj2;
 }}
 void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, vec& pa) {{
     const Mesh& mesh = *meshp;
     Mesh& meshAdj = *meshap;
-
-    scalar a = {1};
-    scalar b = {2};
 
     integer nCells = rcf->objectivePLInfo["cells"].size()/sizeof(integer);
     integer* cells = (integer*) rcf->objectivePLInfo.at("cells").data();
@@ -116,9 +111,31 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
         &loss(0), &weights(0));
     scalar pl = loss.sum();
     scalar w = weights.sum();
-    scalar gpl = 0, gw = 0;
-    MPI_Allreduce(&w, &gw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&pl, &gpl, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    scalar ht = 0;
+    scalar w2 = 0;
+    vector<string> patches = {{"{0}", "{3}"}};
+    for (string patchID : patches) {{
+        integer startFace, nFaces;
+        tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
+        vec heat(nFaces, true);
+        vec weights(nFaces, true);
+        Function_objective2(nFaces, &U(0), &T(0), &p(0), \
+            &mesh.areas(startFace), &mesh.deltas(startFace), &mesh.owner(startFace), \
+            &heat(0), &weights(0));
+        ht += heat.sum();
+        w2 += weights.sum();
+    }}
+
+    scalar val[4] = {{pl, w, ht, w2}};
+    scalar gval[4];
+    MPI_Allreduce(&val, &gval, 4, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    scalar gpl = gval[0];
+    scalar gw = gval[1];
+    scalar ght = gval[2];
+    scalar gw2 = gval[3];
+    scalar a = {1};
+    scalar b = {2};
 
     vec lossa(nCells);
     vec weightsa(nCells);
@@ -132,23 +149,6 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
         &lossa(0), &weightsa(0),\
         &Ua(0), &Ta(0), &pa(0), \
         &areasa(0), NULL);
-
-    scalar ht = 0, ght = 0;
-    w = 0, gw = 0;
-    vector<string> patches = {{"{0}", "{3}"}};
-    for (string patchID : patches) {{
-        integer startFace, nFaces;
-        tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
-        vec heat(nFaces, true);
-        vec weights(nFaces, true);
-        Function_objective2(nFaces, &U(0), &T(0), &p(0), \
-            &mesh.areas(startFace), &mesh.deltas(startFace), &mesh.owner(startFace), \
-            &heat(0), &weights(0));
-        ht += heat.sum();
-        w += weights.sum();
-    }}
-    MPI_Allreduce(&w, &gw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&ht, &ght, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     for (string patchID : patches) {{
         integer startFace, nFaces;
