@@ -416,15 +416,19 @@ static PyObject* viscosity(PyObject *self, PyObject *args) {
     getArray((PyArrayObject *)rhoEObject, rhoE);
     const Mesh& mesh = *meshp;
 
+    vec M_2norm(mesh.nCells);
     vec DT(mesh.nFaces);
+
+    //matop->viscosity(rho, rhoU, rhoE, M_2norm, DT, scaling, report);
+    //return putArray(M_2norm);
+
     arrType<scalar, 5> un(mesh.nInternalCells);
     #ifdef MATOP
-    matop->viscosity(rho, rhoU, rhoE, DT, scaling, report);
-    matop->heat_equation(rcf, u, DT, dt, un);
+        matop->viscosity(rho, rhoU, rhoE, M_2norm, DT, scaling, report);
+        matop->heat_equation(rcf, u, DT, dt, un);
     #endif
     
-    PyObject *uNObject = putArray(un);
-    return uNObject;
+    return putArray(un);
 }
 
 static PyObject* finalSolver(PyObject *self, PyObject *args) {

@@ -339,19 +339,21 @@ def getAdjointViscosityCpp(solver):
     mesh = solver.mesh.symMesh
     def gradients(name, neighbour=True, boundary=False):
         U, T, p = CellTensor((3,)), CellTensor((1,)), CellTensor((1,))
-        
+
         if boundary:
             UF = U.extract(mesh.neighbour)
-            TF = T.extract(mesh.neighbour)
             pF = p.extract(mesh.neighbour)
+            TF = T.extract(mesh.neighbour)
+            cF = (g*TF*solver.R).sqrt()
         else:
             UF = interp.central(U, mesh)
-            TF = interp.central(T, mesh)
             pF = interp.central(p, mesh)
+            TLF, TRF = T.extract(mesh.owner), T.extract(mesh.neighbour)
+            cLF, cRF = (g*TLF*solver.R).sqrt(), (g*TRF*solver.R).sqrt()
+            cF = cRF*(1-mesh.weights) + cLF*mesh.weights
 
         gradU = op.grad(UF, mesh, neighbour)
         divU = op.div(UF.dot(mesh.normals), mesh, neighbour)
-        cF = (g*TF*solver.R).sqrt()
         gradp = op.grad(pF, mesh, neighbour)
         gradc = op.grad(cF, mesh, neighbour)
 
@@ -405,6 +407,7 @@ def getAdjointViscosityCpp(solver):
                          rho*U2/b, Z, rho, Z, Z,
                          rho*U3/b, Z, Z, rho, Z,
                          rho*(2*c2/(g1*g)+Us)/(2*b), rho*U1, rho*U2, rho*U3, c*rho/sge])
+    Ti = Ti.transpose()
 
     M = M1/2-M2
     X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref])

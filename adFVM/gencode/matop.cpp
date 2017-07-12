@@ -23,7 +23,7 @@ Matop::Matop(RCF* rcf) {
 
   
 
-void Matop::viscosity(const vec& rho, const mat& rhoU, const vec& rhoE, vec& DT, scalar scaling, bool report) {
+void Matop::viscosity(const vec& rho, const mat& rhoU, const vec& rhoE, vec& M_2norm, vec& DT, scalar scaling, bool report) {
     const Mesh& mesh = *meshp;
 
 
@@ -66,8 +66,6 @@ void Matop::viscosity(const vec& rho, const mat& rhoU, const vec& rhoE, vec& DT,
     arrType<scalar, 5, 5> MS(mesh.nInternalCells, true);
     Function_viscosity(mesh.nInternalCells, &U(0), &T(0), &p(0), &gradU(0), &divU(0), &gradp(0), &gradc(0), &MS(0));
 
-
-    vec M_2norm(mesh.nCells);
     getMaxEigenvalue(MS, M_2norm);
     
     //// compute max eigenvalue

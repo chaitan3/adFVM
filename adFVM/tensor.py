@@ -119,25 +119,25 @@ class Tensor(ArithBase):
     def _checkMatrix(self):
         assert len(self.shape) == 2
         assert self.shape[0] == self.shape[1]
+        return self.shape[0]
 
     def trace(self):
-        self._checkMatrix()
+        n = self._checkMatrix()
         res = 0.
-        for i in range(0, self.shape[0]):
-            res += self.scalars[i*self.shape[0] + i]
+        for i in range(0, n):
+            res += self.scalars[i*n + i]
         return Tensor((1,), [res])
 
     def transpose(self):
-        self._checkMatrix()
+        n = self._checkMatrix()
         res = []
-        for i in range(0, self.shape[0]):
-            for j in range(0, self.shape[0]):
-                res.append(j*self.shape[0] + i)
+        for i in range(0, n):
+            for j in range(0, n):
+                res.append(j*n + i)
         return Tensor(self.shape, res)
 
     def tensordot(self, b):
-        self._checkMatrix()
-        n = self.shape[0]
+        n = self._checkMatrix()
         assert b.shape == (n,)
         res = []
         for i in range(0, n):
@@ -145,9 +145,8 @@ class Tensor(ArithBase):
         return Tensor((n,), res)
 
     def matmul(self, b):
-        self._checkMatrix()
+        n = self._checkMatrix()
         assert self.shape == b.shape
-        n = self.shape[0]
         res = []
         if isinstance(b, Tensor):
             b = b.scalars

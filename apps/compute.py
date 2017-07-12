@@ -67,18 +67,24 @@ for index, time in enumerate(times):
         #rhoa = IOField.read('rhoa')
         #rhoUa = IOField.read('rhoUa')
         #rhoEa = IOField.read('rhoEa')
-        rhoa = IOField.read('rhoa')
-        rhoUa = IOField.read('rhoUa')
-        rhoEa = IOField.read('rhoEa')
+        #rhoa = IOField.read('rhoa')
+        #rhoUa = IOField.read('rhoUa')
+        #rhoEa = IOField.read('rhoEa')
+        rhoa = rhoUa = rhoEa = None
 
         #scale = lambda x: 1/(1+np.exp(-10*(x/parallel.max(x)-1)))
         scale = None
-        for visc in ["abarbanel", "entropy", "uniform"]:
+        #for visc in ["abarbanel", "entropy", "uniform"]:
+        for visc in ["abarbanel"]:
             adjNorm, energy, diss = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs, visc=visc, scale=scale)
             adjNorm.write()
-            energy.write()
-            diss.write()
+            #energy.write()
+            #diss.write()
             pprint()
+        from adFVM.tensor import TensorFunction
+        adjNorm = TensorFunction._module.viscosity(np.zeros((10, 5), np.float64), rho.field, rhoU.field, rhoE.field, 1e-3, 0, True)
+        adjNorm = IOField('M_2norm', adjNorm/1e-3, (1,))
+        adjNorm.write()
 
         #adjEnergy = getAdjointEnergy(solver, rhoa, rhoUa, rhoEa)
         #pprint('L2 norm adjoint', time, adjEnergy)
