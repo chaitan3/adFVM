@@ -4,7 +4,7 @@ from __future__ import print_function
 from adFVM import config, parallel
 from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
-from adFVM.interp import central
+from adFVM import interp
 from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
 from adFVM.solver import Solver
@@ -189,7 +189,7 @@ class Adjoint(Solver):
                     start2 = time.time() 
                     inputs = previousSolution + [self.scaling]
                     kwargs = {'visc': self.viscosityType, 'scale': self.viscosityScaler, 'report':report}
-                    weight = central(getAdjointViscosity(*inputs, **kwargs), mesh.origMesh)
+                    weight = interp.centralOld(getAdjointViscosity(*inputs, **kwargs), mesh.origMesh)
                     start3 = time.time()
 
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)

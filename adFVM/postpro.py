@@ -2,8 +2,7 @@ import numpy as np
 
 from . import parallel, config
 from .field import IOField
-from .op import div, grad
-from .interp import central
+from . import op, interp
 from .compat import intersectPlane
 
 def computeGradients(solver, U, T, p):
@@ -13,19 +12,19 @@ def computeGradients(solver, U, T, p):
     ghost = False
 
     #divU
-    UF = central(U, mesh)
-    gradU = grad(UF, ghost=ghost)
+    UF = interp.centralOld(U, mesh)
+    gradU = op.gradOld(UF, ghost=ghost)
     #ULF, URF = TVD_dual(U, gradU)
     #UFN = 0.5*(ULF + URF)
     #divU = div(UF.dotN(), ghost=True)
     UFN = UF.dot(mesh.Normals)
-    divU = div(UFN, ghost=ghost)
+    divU = op.divOld(UFN, ghost=ghost)
 
     #speed of sound
-    cF = central(c, mesh)
-    gradc = grad(cF, ghost=ghost)
-    pF = central(p, mesh)
-    gradp = grad(pF, ghost=ghost)
+    cF = interp.centralOld(c, mesh)
+    gradc = op.gradOld(cF, ghost=ghost)
+    pF = interp.centralOld(p, mesh)
+    gradp = op.gradOld(pF, ghost=ghost)
     c = c.getInternal()
     p = p.getInternal()
     gradrho = g*(gradp-c*p)/(c*c)

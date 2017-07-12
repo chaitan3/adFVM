@@ -125,11 +125,11 @@ def gradOld(phi, ghost=False, op=False, numpy=False):
         else:
             product = phi.outer(mesh.Normals)
             dimprod = np.prod(dimensions)
-            product.field = ad.reshape(product.field, (mesh.nFaces, dimprod))
+            product.field = np.reshape(product.field, (mesh.nFaces, dimprod))
         gradField = loc_internal_sum(product, mesh)
         # if grad of vector
         if len(dimensions) == 2:
-            gradField = ad.reshape(gradField, (mesh.nInternalCells,) + dimensions)
+            gradField = np.reshape(gradField, (mesh.nInternalCells,) + dimensions)
 
     if ghost:
         gradPhi = mod('grad({0})'.format(phi.name), gradField, dimensions, ghost=True)
