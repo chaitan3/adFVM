@@ -91,6 +91,7 @@ scalar objective(const mat& U, const vec& T, const vec& p) {{
     scalar val[4] = {{pl, w, ht, w2}};
     scalar gval[4];
     MPI_Allreduce(&val, &gval, 4, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
     scalar a = {1};
     scalar b = {2};
     scalar obj = gval[0]/gval[1];

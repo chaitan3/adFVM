@@ -56,7 +56,7 @@ void RCF::boundaryUPT(mat& U, vec& T, vec& p) {
     this->boundary(this->boundaries[0], U);
     this->boundary(this->boundaries[1], T);
     this->boundary(this->boundaries[2], p);
-    this->boundaryEnd();    
+    //this->boundaryEnd();    
 }
 
 void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& obj, scalar& minDtc) {
@@ -73,9 +73,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
 
     Function_primitive(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &U(0), &T(0), &p(0));
     this->boundaryUPT(U, T, p);
-    if (index == 0) {
-        obj = objective(U, T, p);
-    }
+    
 
     //U.info();
     //T.info();
@@ -95,7 +93,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
                 &gradU(0), &gradT(0), &gradp(0));
 
     gradUpdate(0, mesh.nInternalFaces, Function_grad);
-    //this->boundaryEnd();    
+    this->boundaryEnd();    
     for (auto& patch: mesh.boundary) {
         auto& patchInfo = patch.second;
         integer startFace, nFaces;
@@ -116,7 +114,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     this->boundary(mesh.defaultBoundary, gradU);
     this->boundary(mesh.defaultBoundary, gradT);
     this->boundary(mesh.defaultBoundary, gradp);
-    this->boundaryEnd();
+    //this->boundaryEnd();
 
     //gradU.info();
     //gradT.info();
@@ -140,7 +138,7 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
                 &drho(0), &drhoU(0), &drhoE(0), &dtc(0));
 
     fluxUpdate(0, mesh.nInternalFaces, Function_flux);
-    //this->boundaryEnd();    
+    this->boundaryEnd();    
     for (auto& patch: mesh.boundary) {
         auto& patchInfo = patch.second;
         integer startFace, nFaces;
@@ -160,6 +158,9 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     //drhoU.info();
     //drhoE.info();
     //
+    if (index == 0) {
+        obj = objective(U, T, p);
+    }
 
     minDtc = 1e100;
     for (integer i = 0; i < mesh.nInternalCells; i++) {
