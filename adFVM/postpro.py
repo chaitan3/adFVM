@@ -261,6 +261,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     Mc = np.matmul(TiX.transpose(0, 2, 1), np.matmul(M, TiX))
     MS = (Mc + Mc.transpose((0, 2, 1)))/2
     M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
+    #print MS.sum()
 
     M_2norm = scale(M_2norm)
 
@@ -406,7 +407,7 @@ def getAdjointViscosityCpp(solver):
                          rho*U1/b, rho, Z, Z, Z,
                          rho*U2/b, Z, rho, Z, Z,
                          rho*U3/b, Z, Z, rho, Z,
-                         rho*(2*c2/(g1*g)+Us)/(2*b), rho*U1, rho*U2, rho*U3, c*rho/sge])
+                         rho*(c2*2/(g1*g)+Us)/(2*b), rho*U1, rho*U2, rho*U3, c*rho/sge])
     Ti = Ti.transpose()
 
     M = M1/2-M2

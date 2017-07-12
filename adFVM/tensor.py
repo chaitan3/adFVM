@@ -133,7 +133,7 @@ class Tensor(ArithBase):
         res = []
         for i in range(0, n):
             for j in range(0, n):
-                res.append(j*n + i)
+                res.append(self.scalars[j*n + i])
         return Tensor(self.shape, res)
 
     def tensordot(self, b):

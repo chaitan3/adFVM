@@ -23,6 +23,7 @@ Matop::Matop(RCF* rcf) {
 
   
 
+//void Matop::viscosity(const vec& rho, const mat& rhoU, const vec& rhoE, vec& M_2norm, vec& DT, scalar scaling, bool report) {
 void Matop::viscosity(const vec& rho, const mat& rhoU, const vec& rhoE, vec& M_2norm, vec& DT, scalar scaling, bool report) {
     const Mesh& mesh = *meshp;
 
