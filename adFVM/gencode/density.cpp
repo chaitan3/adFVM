@@ -405,7 +405,7 @@ void RCF::boundaryInit(integer startField, integer nFields) {
 void RCF::boundaryEnd(integer nFields) {
     const Mesh& mesh = *meshp;
     if (mesh.nRemotePatches > 0) {
-        MPI_Waitall(2*3*mesh.nRemotePatches, ((MPI_Request*)this->req), MPI_STATUSES_IGNORE);
+        MPI_Waitall(2*nFields*mesh.nRemotePatches, ((MPI_Request*)this->req), MPI_STATUSES_IGNORE);
         delete[] ((MPI_Request*)this->req);
         //MPI_Barrier(MPI_COMM_WORLD);
         for (integer i = 0; i < nFields; i++) {

@@ -26,6 +26,7 @@ Matop::Matop(RCF* rcf) {
 void Matop::viscosity(const vec& rho, const mat& rhoU, const vec& rhoE, vec& DT, scalar scaling, bool report) {
     const Mesh& mesh = *meshp;
 
+
     mat U(mesh.nCells, true);
     vec T(mesh.nCells, true);
     vec p(mesh.nCells, true);
@@ -65,8 +66,9 @@ void Matop::viscosity(const vec& rho, const mat& rhoU, const vec& rhoE, vec& DT,
     arrType<scalar, 5, 5> MS(mesh.nInternalCells, true);
     Function_viscosity(mesh.nInternalCells, &U(0), &T(0), &p(0), &gradU(0), &divU(0), &gradp(0), &gradc(0), &MS(0));
 
-    vec M_2norm(mesh.nCells, true);
-    //getMaxEigenvalue(MS, M_2norm);
+
+    vec M_2norm(mesh.nCells);
+    getMaxEigenvalue(MS, M_2norm);
     
     //// compute max eigenvalue
     scalar norm = this->norm;
@@ -80,7 +82,7 @@ void Matop::viscosity(const vec& rho, const mat& rhoU, const vec& rhoE, vec& DT,
       scalar val[2] = {N, V};
       scalar gval[2];
       MPI_Allreduce(&val, &gval, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      scalar norm = sqrt(gval[0]/gval[1]);
+      norm = sqrt(gval[0]/gval[1]);
     } 
     for (integer i = 0; i < mesh.nInternalCells; i++) {
       M_2norm(i) *= scaling/norm;
@@ -100,6 +102,7 @@ void Matop::heat_equation(RCF *rcf, const arrType<scalar, nrhs>& u, const vec& D
     const Mesh& mesh = *meshp;
     Vec x, b;
     Mat A;
+
 
     integer n = mesh.nInternalCells;
     integer il, ih;
@@ -166,6 +169,7 @@ void Matop::heat_equation(RCF *rcf, const arrType<scalar, nrhs>& u, const vec& D
 
     MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
+
     
     KSP ksp;
     PC pc;

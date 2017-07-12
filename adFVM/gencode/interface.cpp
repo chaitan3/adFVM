@@ -427,6 +427,15 @@ static PyObject* viscosity(PyObject *self, PyObject *args) {
     return uNObject;
 }
 
+static PyObject* finalSolver(PyObject *self, PyObject *args) {
+    delete rcf;
+    delete meshp;
+    #ifdef MATOP
+        PetscFinalize();
+        delete matop;
+    #endif
+}
+
 PyMODINIT_FUNC
 initFunc(void)
 {
@@ -439,6 +448,7 @@ initFunc(void)
         {"ghost",  ghost, METH_VARARGS, "Execute a shell command."},
         {"ghost_default",  ghost_default, METH_VARARGS, "Execute a shell command."},
         {"viscosity",  viscosity, METH_VARARGS, "Execute a shell command."},
+        {"finalize",  finalSolver, METH_VARARGS, "Execute a shell command."},
         {NULL, NULL, 0, NULL}        /* Sentinel */
     };
 

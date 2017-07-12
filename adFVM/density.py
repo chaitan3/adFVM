@@ -90,6 +90,11 @@ class RCF(Solver):
 
         TensorFunction.compile()
         TensorFunction._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
+        #TensorFunction._module.finalize()
+        #import atexit
+        #atexit.register(TensorFunction._module.finalize)
+
+        
         self.map = TensorFunction._module.forward
         self.mapBoundary = TensorFunction._module.ghost
         return
