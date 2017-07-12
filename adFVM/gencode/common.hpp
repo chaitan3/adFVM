@@ -10,6 +10,7 @@
 #include <limits>
 #include <iomanip>
 #include <vector>
+#include <cassert>
 
 using namespace std;
 

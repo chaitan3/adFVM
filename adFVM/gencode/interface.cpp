@@ -15,6 +15,10 @@ Mesh *meshap = NULL;
 
 #include "density.hpp"
 #include "code.hpp"
+#ifdef MATOP
+    #include "matop.hpp"
+    Matop *matop;
+#endif
 
 template <typename dtype, integer shape1, integer shape2>
 void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shape2>& tmp) {
@@ -95,6 +99,12 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     // riemann solver, face reconstructor support?
     PyObject *key, *value;
     Py_ssize_t pos = 0;
+
+    #ifdef MATOP
+        integer argc = 0;
+        PetscInitialize(&argc, NULL, NULL, NULL);
+        matop = new Matop(rcf);
+    #endif
 
     while (PyDict_Next(dict, &pos, &key, &value)) {
         string ckey = PyString_AsString(key);
@@ -388,6 +398,28 @@ static PyObject* ghost_default(PyObject *self, PyObject *args) {
     return Py_BuildValue("(NNN)", rhoNObject, rhoUNObject, rhoENObject);
 }
 
+static PyObject* viscosity(PyObject *self, PyObject *args) {
+
+    //cout << "forward 1" << endl;
+    PyObject *uObject, *DTObject;
+    scalar dt;
+    PyArg_ParseTuple(args, "OOd", &uObject, &DTObject, &dt);
+
+    arrType<scalar, 5> u;
+    vec DT;
+    getArray((PyArrayObject *)uObject, u);
+    getArray((PyArrayObject *)DTObject, DT);
+    const Mesh& mesh = *meshp;
+
+    arrType<scalar, 5> un(mesh.nInternalCells);
+    #ifdef MATOP
+    matop->heat_equation(rcf, u, DT, dt, un);
+    #endif
+    
+    PyObject *uNObject = putArray(un);
+    return uNObject;
+}
+
 PyMODINIT_FUNC
 initFunc(void)
 {
@@ -399,6 +431,7 @@ initFunc(void)
         {"init",  initSolver, METH_VARARGS, "Execute a shell command."},
         {"ghost",  ghost, METH_VARARGS, "Execute a shell command."},
         {"ghost_default",  ghost_default, METH_VARARGS, "Execute a shell command."},
+        {"viscosity",  viscosity, METH_VARARGS, "Execute a shell command."},
         {NULL, NULL, 0, NULL}        /* Sentinel */
     };
 
@@ -443,8 +476,8 @@ Mesh::Mesh (PyObject* meshObject) {
     getMeshArray(this->mesh, "normals", this->normals);
     //getMeshArray(this->mesh, "faceCentres", this->faceCentres);
     getMeshArray(this->mesh, "areas", this->areas);
-    //getMeshArray(this->mesh, "cellFaces", this->cellFaces);
-    //getMeshArray(this->mesh, "cellNeighboursMatOp", this->cellNeighbours);
+    getMeshArray(this->mesh, "cellFaces", this->cellFaces);
+    getMeshArray(this->mesh, "cellNeighboursMatOp", this->cellNeighbours);
     //getMeshArray(this->mesh, "cellCentres", this->cellCentres);
     getMeshArray(this->mesh, "volumes", this->volumes);
     getMeshArray(this->mesh, "volumesL", this->volumesL);

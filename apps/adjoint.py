@@ -196,7 +196,7 @@ class Adjoint(Solver):
                     stackedFields = np.ascontiguousarray(stackedFields)
 
                     if self.matop:
-                        newStackedFields = adFVMcpp.viscosity(stackedFields, weight.field, dt)
+                        newStackedFields = TensorFunction._module.viscosity(stackedFields, weight.field, dt)
                     else:
                         stackedPhi = Field('a', stackedFields, (5,))
                         stackedPhi.old = stackedFields

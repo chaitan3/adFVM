@@ -15,7 +15,7 @@ os.environ['CXX'] = 'mpicxx'
 incdirs = [np.get_include()]
 libdirs = []
 libs = []
-sources = ['interface.cpp', 'density.cpp', 'adjoint.cpp', 'code.cpp']
+sources = ['interface.cpp', 'density.cpp', 'adjoint.cpp', 'matop.cpp', 'code.cpp']
 
 #incdirs += [home + '/.local/include']
 #libdirs += [home + '/.local/lib']
@@ -25,6 +25,14 @@ sources = ['interface.cpp', 'density.cpp', 'adjoint.cpp', 'code.cpp']
 module = 'interface'
 #compile_args = ['-std=c++11', '-O3']#, '-march=native']
 compile_args = ['-std=c++11', '-O3', '-g']#, '-march=native']
+
+matop = True
+if matop:
+    compile_args += ['-DMATOP']
+    incdirs += ['/opt/petsc/linux-c-opt/include']
+    libdirs += ['/opt/petsc/linux-c-opt/lib']
+    libs += ['petsc']
+
 mod = Extension(module,
                 sources=sources,
                 extra_compile_args=compile_args,
