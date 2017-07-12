@@ -80,9 +80,9 @@ class Matrix(object):
         #ksp.getPC().setType('jacobi')
         #ksp.getPC().setType('asm')
         #ksp.getPC().setType('mg')
-        #ksp.getPC().setType('gamg')
+        ksp.getPC().setType('gamg')
         # which one is used?
-        ksp.getPC().setType('hypre')
+        #ksp.getPC().setType('hypre')
         ksp.setOperators(self.A)
         #ksp.setComputeSingularValues(eigenvalues)
         ksp.setFromOptions()

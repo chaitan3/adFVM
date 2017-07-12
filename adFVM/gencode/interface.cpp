@@ -338,6 +338,7 @@ static PyObject* ghost(PyObject *self, PyObject *args) {
     Function_primitive(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &U(0), &T(0), &p(0));
 
     rcf->boundaryUPT(U, T, p);
+    rcf->boundaryEnd();
     //cout << "forward 3" << endl;
     //
     vec rhoN(mesh.nCells, true);
