@@ -117,8 +117,8 @@ class Field(object):
                   'indices', indices)
             print('FloatingPointException: NAN FOUND')
             parallel.mpi.Abort()
-        fieldMin = parallel.min(field)
-        fieldMax = parallel.max(field)
+        fieldMin = parallel.min(field, allreduce=False)
+        fieldMax = parallel.max(field, allreduce=False)
         pprint(' min:', fieldMin, 'max:', fieldMax)
 
     def cross(self, phi):

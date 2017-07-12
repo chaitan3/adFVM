@@ -227,7 +227,7 @@ class Adjoint(Solver):
                     
                     for derivative, delphi in zip(paramGradient, perturbation):
                         #sensitivity = np.sum(derivative * delphi)
-                        sensitivity = parallel.sum(derivative * delphi)
+                        sensitivity = parallel.sum(derivative * delphi, allreduce=False)
                         if result > avgStart:
                             result[index] += sensitivity
                         sensTimeSeries[-1][index] = sensitivity

@@ -46,18 +46,29 @@ def copyToTemp(home, coresPerNode):
     pprint()
     return temp
 
-def max(data):
-    maxData = np.max(data)
+def reduction(data, op, allreduce=True):
+    np_op, mpi_op = op
+    redData = np_op(data)
     if nProcessors > 1:
-        return mpi.allreduce(maxData, op=MPI.MAX)
+        if allreduce:
+            return mpi.allreduce(redData, op=mpi_op)
+        else:
+            return mpi.reduce(redData, op=mpi_op, root=0)
     else:
-        return maxData
-def min(data):
-    minData = np.min(data)
-    if nProcessors > 1:
-        return mpi.allreduce(minData, op=MPI.MIN)
+        return redData                           
+
+def max(data, allreduce=True):
+    return reduction(data, (np.max, MPI.MAX), allreduce)
+
+def min(data, allreduce=True):
+    return reduction(data, (np.min, MPI.MIN), allreduce)
+
+def sum(data, allreduce=True):
+    sumData = reduction(data, (np.sum, MPI.SUM), allreduce)
+    if sumData is None:
+        return 0
     else:
-        return minData
+        return sumData
 
 def argmin(data):
     minData, index = np.min(data), np.argmin(data)
@@ -69,13 +80,6 @@ def argmin(data):
             return []
     return [index]
 
-def sum(data):
-    sumData = np.sum(data)
-    if nProcessors > 1:
-        return mpi.allreduce(sumData, op=MPI.SUM)
-    else:
-        return sumData
-    
 class Exchanger(object):
     def __init__(self):
         self.requests = []

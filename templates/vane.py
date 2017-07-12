@@ -57,6 +57,8 @@ def objectivePressureLoss(solver, mesh):
 #objective = objectiveHeatTransfer
 objective = objectivePressureLoss
 
+# CONVERT TO REDUCE/BCAST ops
+
 objectiveString = """
 scalar objective(const mat& U, const vec& T, const vec& p) {{
     integer nCells = rcf->objectivePLInfo["cells"].size()/sizeof(integer);
