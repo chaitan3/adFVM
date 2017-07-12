@@ -167,7 +167,7 @@ class arrType {
 
         }
         cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
-        cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
+        //cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
     } 
 
     void zero() {
