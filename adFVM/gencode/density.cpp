@@ -53,9 +53,9 @@ void RCF::boundaryUPT(mat& U, vec& T, vec& p) {
         }
     }
     this->boundaryInit(0);    
-    boundary(this->boundaries[0], U);
-    boundary(this->boundaries[1], T);
-    boundary(this->boundaries[2], p);
+    this->boundary(this->boundaries[0], U);
+    this->boundary(this->boundaries[1], T);
+    this->boundary(this->boundaries[2], p);
     this->boundaryEnd();    
 }
 

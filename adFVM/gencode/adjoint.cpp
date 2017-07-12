@@ -371,7 +371,7 @@ void RCF::boundary_grad(const Boundary& boundary, arrType<dtype, shape1, shape2>
             
             MPI_Request *req = (MPI_Request*) this->req;
             integer tag = (this->stage*1000+1) + this->reqField*100 + mesh.tags.at(patchID);
-            //cout << patchID << " " << tag << endl;
+            //cout << "send " << patchID << " " << phi(cellStartFace) << " " << shape1 << shape2 << endl;
             MPI_Isend(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex]);
             MPI_Irecv(&phiBuf[bufStartFace*shape1*shape2], size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[this->reqIndex+1]);
             this->reqIndex += 2;
@@ -399,6 +399,7 @@ void RCF::boundaryEnd_grad(arrType<dtype, shape1, shape2>& phi, dtype* phiBuf) {
         if (patchType == "processor" || patchType == "processorCyclic") {
             //cout << "hello " << patchID << endl;
             integer bufStartFace = cellStartFace - mesh.nLocalCells;
+            //cout << "recv " << patchID << " " << phiBuf[bufStartFace*shape1*shape2] << " " << shape1 << shape2 << endl;
             for (integer i = 0; i < nFaces; i++) {
                 integer p = mesh.owner(startFace + i);
                 integer b = bufStartFace + i;

@@ -226,7 +226,8 @@ class Adjoint(Solver):
                         # complex parameter perturbation not supported
                     
                     for derivative, delphi in zip(paramGradient, perturbation):
-                        sensitivity = np.sum(derivative * delphi)
+                        #sensitivity = np.sum(derivative * delphi)
+                        sensitivity = parallel.sum(derivative * delphi)
                         if result > avgStart:
                             result[index] += sensitivity
                         sensTimeSeries[-1][index] = sensitivity
