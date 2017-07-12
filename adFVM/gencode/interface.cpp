@@ -402,18 +402,24 @@ static PyObject* ghost_default(PyObject *self, PyObject *args) {
 static PyObject* viscosity(PyObject *self, PyObject *args) {
 
     //cout << "forward 1" << endl;
-    PyObject *uObject, *DTObject;
-    scalar dt;
-    PyArg_ParseTuple(args, "OOd", &uObject, &DTObject, &dt);
+    PyObject *uObject, *rhoObject, *rhoUObject, *rhoEObject;
+    bool report;
+    scalar dt, scaling;
+    PyArg_ParseTuple(args, "OOOOddb", &uObject, &rhoObject, &rhoUObject, &rhoEObject, &scaling, &dt, &report);
 
     arrType<scalar, 5> u;
-    vec DT;
+    vec rho, rhoE;
+    mat rhoU;
     getArray((PyArrayObject *)uObject, u);
-    getArray((PyArrayObject *)DTObject, DT);
+    getArray((PyArrayObject *)rhoObject, rho);
+    getArray((PyArrayObject *)rhoUObject, rhoU);
+    getArray((PyArrayObject *)rhoEObject, rhoE);
     const Mesh& mesh = *meshp;
 
+    vec DT(mesh.nFaces);
     arrType<scalar, 5> un(mesh.nInternalCells);
     #ifdef MATOP
+    matop->viscosity(rho, rhoU, rhoE, DT, scaling, report);
     matop->heat_equation(rcf, u, DT, dt, un);
     #endif
     
@@ -636,3 +642,25 @@ Boundary getBoundary(PyObject *dict) {
     return boundary;
 }
 
+extern "C"{
+void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
+    double* w, double* work, int* lwork, int* info );
+}
+
+scalar getMaxEigenvalue(arrType<double, 5, 5>& phi, vec& eigPhi) {
+    char jobz = 'N';
+    char uplo = 'U';
+    int n = 5;
+    int lda = 5;
+    int lwork = 3*n-1;
+    double work[lwork];
+    int info;
+    double w[5];
+
+    for (int i = 0; i < phi.shape; i++) {
+        dsyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
+        assert(info == 0);
+        eigPhi(i) = w[4];
+    }
+    return 0;
+}

@@ -392,23 +392,23 @@ void RCF::boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi
     this->reqField++;
 }
 
-void RCF::boundaryInit(integer startField) {
+void RCF::boundaryInit(integer startField, integer nFields) {
     const Mesh& mesh = *meshp;
     this->reqIndex = 0;
     this->reqField = startField;
     if (mesh.nRemotePatches > 0) {
         //MPI_Barrier(MPI_COMM_WORLD);
-        this->req = (void *)new MPI_Request[2*3*mesh.nRemotePatches];
+        this->req = (void *)new MPI_Request[2*nFields*mesh.nRemotePatches];
     }
 }
 
-void RCF::boundaryEnd() {
+void RCF::boundaryEnd(integer nFields) {
     const Mesh& mesh = *meshp;
     if (mesh.nRemotePatches > 0) {
         MPI_Waitall(2*3*mesh.nRemotePatches, ((MPI_Request*)this->req), MPI_STATUSES_IGNORE);
         delete[] ((MPI_Request*)this->req);
         //MPI_Barrier(MPI_COMM_WORLD);
-        for (integer i = 0; i < 3; i++) {
+        for (integer i = 0; i < nFields; i++) {
             delete[] this->reqBuf[i];
         }
     }

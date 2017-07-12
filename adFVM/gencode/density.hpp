@@ -22,10 +22,10 @@ class RCF {
 
     void equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, mat& drhoU, vec& drhoE, scalar& obj, scalar& minDtc);
     void boundaryUPT(mat& U, vec& T, vec& p);
-    void boundaryInit(integer startField);
+    void boundaryInit(integer startField, integer nFields=3);
     template <typename dtype, integer shape1, integer shape2>
     void boundary(const Boundary& boundary, arrType<dtype, shape1, shape2>& phi);
-    void boundaryEnd();
+    void boundaryEnd(integer nFields=3);
 
     void equation_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& drhoa, const mat& drhoUa, const vec& drhoEa, vec& rhoa, mat& rhoUa, vec& rhoEa, scalar& obj, scalar& minDtc);
     template <typename dtype, integer shape1, integer shape2>

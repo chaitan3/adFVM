@@ -31,7 +31,7 @@ if matop:
     compile_args += ['-DMATOP']
     incdirs += ['/opt/petsc/linux-c-opt/include']
     libdirs += ['/opt/petsc/linux-c-opt/lib']
-    libs += ['petsc']
+    libs += ['petsc', 'lapack']
 
 mod = Extension(module,
                 sources=sources,

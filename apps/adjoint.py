@@ -185,19 +185,19 @@ class Adjoint(Solver):
                 if self.scaling:
                     if report:
                         pprint('Smoothing adjoint field')
-                    nInternalCells = mesh.origMesh.nInternalCells
-                    start2 = time.time() 
-                    inputs = previousSolution + [self.scaling]
-                    kwargs = {'visc': self.viscosityType, 'scale': self.viscosityScaler, 'report':report}
-                    weight = interp.centralOld(getAdjointViscosity(*inputs, **kwargs), mesh.origMesh)
-                    start3 = time.time()
-
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
                     stackedFields = np.ascontiguousarray(stackedFields)
 
+                    start2 = time.time() 
                     if self.matop:
-                        newStackedFields = TensorFunction._module.viscosity(stackedFields, weight.field, dt)
+                        inputs = [phi.field for phi in previousSolution] + [self.scaling, dt, report]
+                        newStackedFields = TensorFunction._module.viscosity(stackedFields, *inputs)
+                        start3 = time.time()
                     else:
+                        inputs = previousSolution + [self.scaling]
+                        kwargs = {'visc': self.viscosityType, 'scale': self.viscosityScaler, 'report':report}
+                        weight = interp.centralOld(getAdjointViscosity(*inputs, **kwargs), mesh.origMesh)
+                        start3 = time.time()
                         stackedPhi = Field('a', stackedFields, (5,))
                         stackedPhi.old = stackedFields
                         newStackedFields = (matop_petsc.ddt(stackedPhi, dt) - matop_petsc.laplacian(stackedPhi, weight, correction=False)).solve()

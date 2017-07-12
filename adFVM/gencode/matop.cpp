@@ -1,6 +1,7 @@
 #ifdef MATOP
 
 #include "matop.hpp"
+#include "code.hpp"
 #define nrhs 5
 
 Matop::Matop(RCF* rcf) {
@@ -18,6 +19,83 @@ Matop::Matop(RCF* rcf) {
         }
     }
 }
+
+
+  
+
+void Matop::viscosity(const vec& rho, const mat& rhoU, const vec& rhoE, vec& DT, scalar scaling, bool report) {
+    const Mesh& mesh = *meshp;
+
+    mat U(mesh.nCells, true);
+    vec T(mesh.nCells, true);
+    vec p(mesh.nCells, true);
+
+    Function_primitive(mesh.nInternalCells, &rho(0), &rhoU(0), &rhoE(0), &U(0), &T(0), &p(0));
+    rcf->boundaryUPT(U, T, p);
+
+    arrType<scalar, 3, 3> gradU(mesh.nInternalCells, true);
+    vec divU(mesh.nInternalCells, true);
+    arrType<scalar, 1, 3> gradp(mesh.nInternalCells, true);
+    arrType<scalar, 1, 3> gradc(mesh.nInternalCells, true);
+    //
+    #define gradUpdate(i, n, func) \
+        func(n, \
+                &U(0), &T(0), &p(0), \
+                &mesh.areas(i), &mesh.volumesL(i), &mesh.volumesR(i), \
+                &mesh.weights(i), &mesh.deltas(i), &mesh.normals(i), \
+                &mesh.linearWeights(i), &mesh.quadraticWeights(i), \
+                &mesh.owner(i), &mesh.neighbour(i), \
+                &gradU(0), &divU(0), &gradp(0), &gradc(0));
+
+    gradUpdate(0, mesh.nInternalFaces, Function_computeGradients);
+    rcf->boundaryEnd();    
+    for (auto& patch: mesh.boundary) {
+        auto& patchInfo = patch.second;
+        integer startFace, nFaces;
+        tie(startFace, nFaces) = mesh.boundaryFaces.at(patch.first);
+        //if (patchInfo.at("type") == "cyclic") {
+        if ((patchInfo.at("type") == "cyclic") ||
+            (patchInfo.at("type") == "processor") ||
+            (patchInfo.at("type") == "processorCyclic")) {
+            gradUpdate(startFace, nFaces, Function_coupledComputeGradients);
+        } else {
+            gradUpdate(startFace, nFaces, Function_boundaryComputeGradients);
+        }
+    }
+    arrType<scalar, 5, 5> MS(mesh.nInternalCells, true);
+    Function_viscosity(mesh.nInternalCells, &U(0), &T(0), &p(0), &gradU(0), &divU(0), &gradp(0), &gradc(0), &MS(0));
+
+    vec M_2norm(mesh.nCells, true);
+    //getMaxEigenvalue(MS, M_2norm);
+    
+    //// compute max eigenvalue
+    scalar norm = this->norm;
+    if (report || norm < 0) {
+      scalar V = 0;
+      scalar N = 0;
+      for (integer i = 0; i < mesh.nInternalCells; i++) {
+          N += M_2norm(i)*M_2norm(i)*mesh.volumes(i);
+          V += mesh.volumes(i);
+      }
+      scalar val[2] = {N, V};
+      scalar gval[2];
+      MPI_Allreduce(&val, &gval, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      scalar norm = sqrt(gval[0]/gval[1]);
+    } 
+    for (integer i = 0; i < mesh.nInternalCells; i++) {
+      M_2norm(i) *= scaling/norm;
+    }
+    rcf->boundaryInit(0, 1);
+    rcf->boundary(mesh.defaultBoundary, M_2norm);
+    rcf->boundaryEnd(1);
+    for (integer i = 0; i < mesh.nFaces; i++) {
+        integer p = mesh.owner(i);
+        integer n = mesh.neighbour(i);
+        scalar w = mesh.weights(i);
+        DT(i) = M_2norm(n)*(1-w) + M_2norm(p)*w;
+    }
+}
+
 void Matop::heat_equation(RCF *rcf, const arrType<scalar, nrhs>& u, const vec& DT, const scalar dt, arrType<scalar, nrhs>& un) {
     const Mesh& mesh = *meshp;
     Vec x, b;

@@ -5,6 +5,7 @@ from .op import  div, absDiv, snGrad, grad, internal_sum
 from .solver import Solver
 from .interp import central, secondOrder
 from . import BCs
+from . import postpro
 
 import numpy as np
 #import adFVMcpp
@@ -71,6 +72,8 @@ class RCF(Solver):
             self._characteristicFlux = self.flux("characteristicFlux", True, False)
             self._coupledFlux = self.flux("coupledFlux", False, False)
             self._boundaryFlux = self.boundaryFlux()
+
+            postpro.getAdjointViscosityCpp(self)
 
             if self.objective is not None:
                 if not isinstance(self.objective, list):

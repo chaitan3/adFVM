@@ -31,7 +31,15 @@ class Tensor(ArithBase):
             for i in range(0, self.size):
                 self.scalars.append(Scalar())
         else:
-            self.scalars = scalars
+            assert isinstance(scalars, list)
+            assert len(scalars) == self.size
+            if isinstance(scalars[0], Tensor):
+                self.scalars = []
+                for s in scalars:
+                    assert s.size == 1
+                    self.scalars.append(s.scalars[0])
+            else:
+                self.scalars = scalars
         self.dtype = dtype
         
         if isinstance(self.scalars[0], IntegerScalar):
@@ -94,14 +102,7 @@ class Tensor(ArithBase):
         res = sum([self.scalars[i]*b.scalars[i] for i in range(0, self.size)])
         return Tensor((1,), [res])
 
-    def tensordot(self, b):
-        assert self.shape == (3,3)
-        assert b.shape == (3,)
-        res = []
-        for i in range(0, 3):
-            res.append(sum([self.scalars[i*3 + j]*b.scalars[j] for j in range(0, 3)]))
-        return Tensor((3,), res)
-
+    
     def magSqr(self):
         return self.dot(self)
 
@@ -115,17 +116,46 @@ class Tensor(ArithBase):
                 res.append(self.scalars[i]*b.scalars[j])
         return Tensor(shape, res)
 
+    def _checkMatrix(self):
+        assert len(self.shape) == 2
+        assert self.shape[0] == self.shape[1]
+
     def trace(self):
-        assert self.shape == (3, 3)
-        res = [self.scalars[0] + self.scalars[4] + self.scalars[8]]
-        return Tensor((1,), res)
+        self._checkMatrix()
+        res = 0.
+        for i in range(0, self.shape[0]):
+            res += self.scalars[i*self.shape[0] + i]
+        return Tensor((1,), [res])
 
     def transpose(self):
-        assert self.shape == (3, 3)
+        self._checkMatrix()
         res = []
-        for i in range(0, 3):
-            for j in range(0, 3):
-                res.append(j*3 + i)
+        for i in range(0, self.shape[0]):
+            for j in range(0, self.shape[0]):
+                res.append(j*self.shape[0] + i)
+        return Tensor(self.shape, res)
+
+    def tensordot(self, b):
+        self._checkMatrix()
+        n = self.shape[0]
+        assert b.shape == (n,)
+        res = []
+        for i in range(0, n):
+            res.append(sum([self.scalars[i*n + j]*b.scalars[j] for j in range(0, n)]))
+        return Tensor((n,), res)
+
+    def matmul(self, b):
+        self._checkMatrix()
+        assert self.shape == b.shape
+        n = self.shape[0]
+        res = []
+        if isinstance(b, Tensor):
+            b = b.scalars
+        else:
+            b = b.flatten()
+        for i in range(0, n):
+            for j in range(0, n):
+                res.append(sum(self.scalars[i*n + k]*b[k*n + j] for k in range(0, n)))
         return Tensor(self.shape, res)
 
     @classmethod
