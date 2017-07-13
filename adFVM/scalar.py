@@ -80,6 +80,21 @@ class Scalar(ArithBase):
     # define unique hash function
 
 class OpBase(Scalar):
+    _cache = {}
+    def __new__(cls, *args, **kwargs):
+        assert len(kwargs) == 0
+        key = (cls,) + args
+        if key in OpBase._cache:
+            obj = OpBase._cache[key]
+        else:
+            obj = Scalar.__new__(cls, *args, **kwargs)
+            OpBase._cache[key] = obj
+        return obj
+
+    @staticmethod
+    def clear_cache():
+        OpBase._cache = {}
+
     def c_code(self, *args):
         raise NotImplementedError(self)
 

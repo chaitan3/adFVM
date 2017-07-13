@@ -221,9 +221,11 @@ class TensorFunction(object):
         _outputs = [x for x in self._outputs if x is not None]
         self._children = self._getChildren(_outputs)
         self._genCode(self._inputs, _outputs, self._children.copy())
+        OpBase.clear_cache()
         #grad = False
         if grad:
             self.grad = self._getAdjoint()
+
 
     def _getAdjoint(self):
         gradOutputs = [x.__class__(x.shape) for x in self._outputTensors]
@@ -261,10 +263,11 @@ class TensorFunction(object):
                     children[inp] = 1
                     _childrenFunc(inp)
 
+        output = Container()
+        output.args = tuple(outputs)
+        _childrenFunc(output)
         for out in outputs:
-            children[out] = 0
-        for out in outputs:
-            _childrenFunc(out)
+            children[out] -= 1
         return children
 
     def _topologicalSort(self, outputs, children):
@@ -329,6 +332,8 @@ class TensorFunction(object):
         codeFile.write('\tfor (integer i = 0; i < n; i++) {\n')
         names = {}
         for index, op in enumerate(sortedOps):
+            if op in names:
+                continue
             names[op] = 'Intermediate_{}'.format(index)
             code = ''
             #print names[op], index, op, len(op.args)
