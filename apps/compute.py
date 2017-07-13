@@ -75,7 +75,7 @@ for index, time in enumerate(times):
         #scale = lambda x: 1/(1+np.exp(-10*(x/parallel.max(x)-1)))
         scale = None
         #for visc in ["abarbanel", "entropy", "uniform"]:
-        for visc in ["abarbanel"]:
+        for visc in ["abarbanel", "entropy"]:
             adjNorm, energy, diss = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs, visc=visc, scale=scale)
             adjNorm.write()
             #energy.write()
