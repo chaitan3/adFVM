@@ -172,15 +172,21 @@ void Matop::heat_equation(RCF *rcf, const arrType<scalar, nrhs>& u, const vec& D
     
     KSP ksp;
     PC pc;
-    //KSPSetFromOptions(ksp);
     KSPCreate(PETSC_COMM_WORLD, &(ksp));
-    //KSPSetType(ksp, "mumps");
-    KSPSetType(ksp, "gmres");
-    KSPGetPC(ksp, &(pc));
-    PCSetType(pc, "hypre");
-    //PCSetType(pc, "gamg");
-
     KSPSetOperators(ksp, A, A);
+    KSPSetType(ksp, KSPGMRES);
+    //KSPSetType(ksp, KSPPREONLY);
+    KSPGetPC(ksp, &(pc));
+    //double rtol, atol, dtol;
+    //int maxit;
+    //KSPGetTolerances(ksp, &rtol, &atol, &dtol, &maxit);
+    //cout << rtol << " " << atol << " " << dtol << " " << maxit << endl;
+    //KSPSetTolerances(ksp, 1e-4, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
+    PCSetType(pc, PCHYPRE);
+    //PCSetType(pc, PCLU);
+    //PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST);
+
+
     //KSPSetFromOptions(ksp);
     KSPSetUp(ksp);
 
