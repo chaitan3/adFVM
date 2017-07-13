@@ -109,10 +109,10 @@ class GaussianProcess(object):
         self.noiseGP = None
         if noiseGP:
             kernel = gp_noder.SquaredExponentialKernel(kernel.L, kernel.sigma)
-            self.noiseGP = [gp_noder.GaussianProcess(kernel, bounds, noise=kernel.sigma**2/5)]
+            self.noiseGP = [gp_noder.GaussianProcess(kernel, bounds, noise=kernel.sigma**2/10)]
             for i in range(0, self.ndim):
                 kernel = gp_noder.SquaredExponentialKernel(kernel.L, kernel.sigma)
-                self.noiseGP.append(gp_noder.GaussianProcess(kernel, bounds, noise=kernel.sigma**2/5))
+                self.noiseGP.append(gp_noder.GaussianProcess(kernel, bounds, noise=kernel.sigma**2/10))
     
     def evaluate(self, xs):
         xs = _sanitize(xs)

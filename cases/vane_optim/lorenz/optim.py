@@ -9,12 +9,12 @@ from multiprocessing import Pool
 import client
 import gp as GP
 
-#homeDir = '/home/talnikar/adFVM/'
+homeDir = '/home/talnikar/adFVM/'
 #workDir = '/home/talnikar/adFVM/cases/vane_optim/test/'
-homeDir = '/home/talnikar/adFVM-cpp/'
 workDir = '/projects/LESOpt/talnikar/vane_optim/doe/'
 appsDir = homeDir + 'apps/'
-caseFile = homeDir + 'templates/vane_optim.py'
+initCaseFile = homeDir + 'templates/vane_optim.py'
+primCaseFile = homeDir + 'templates/vane_optim_prim.py'
 adjCaseFile = homeDir + 'templates/vane_optim_adj.py'
 primal = os.path.join(appsDir, 'problem.py')
 adjoint = os.path.join(appsDir, 'adjoint.py')
@@ -24,7 +24,7 @@ adjoint = os.path.join(appsDir, 'adjoint.py')
 eps = 1e-5
 
 stateFile = 'state.pkl'
-STATES = ['BEGIN', 'MESH', 'PRIMAL1', 'PRIMAL2', 'ADJOINT', 'DONE']
+STATES = ['BEGIN', 'MESH', 'PRIMAL1', 'PRIMADJ', 'DONE']
 def save_state(state):
     with open(stateFile, 'w') as f:
         pkl.dump(state, f)
@@ -37,22 +37,19 @@ def update_state(state, value, index=-1):
 def get_state(state, index=-1):
     return state['state'][index]
 
-def spawnJob(args, cwd='.'):
-    #nProcs = 4096
-    #nProcsPerNode = 16
-    nProcs = 16
-    with open(cwd + 'output.log', 'w') as f, open(cwd + 'error.log', 'w') as fe:
-        subprocess.check_call(['mpirun', '-np', str(nProcs)] + args, cwd=cwd, stdout=f, stderr=fe)
-        #subprocess.check_call(['runjob', 
-        #                 '-n', str(nProcs), 
-        #                 '-p', str(nProcsPerNode),
-        #                 '--block', os.environ['COBALT_PARTNAME'],
-        #                 #'--exp-env', 'BGLOCKLESSMPIO_F_TYPE', 
-        #                 #'--exp-env', 'PYTHONPATH',
-        #                 '--env_all',
-        #                 '--verbose', 'INFO',
-        #                 ':'] 
-        #                + args, cwd=cwd stdout=f, stderr=fe)
+def spawnJob(args, output, error, index, cwd='.', block='BLOCK1'):
+    nProcs = 8192
+    nProcsPerNode = 16
+    return subprocess.Popen(['runjob', 
+                         '-n', str(nProcs), 
+                         '-p', str(nProcsPerNode),
+                         '--block', block,
+                         '--exp-env', 'BGLOCKLESSMPIO_F_TYPE', 
+                         '--exp-env', 'PYTHONPATH',
+                         '--exp-env', 'LD_LIBRARY_PATH',
+                         '--verbose', 'INFO',
+                         ':'] 
+                        + args, cwd=cwd, stdout=output, stderr=error)
 
 def readObjectiveFile(objectiveFile, gradEps):
     objective = []
@@ -81,7 +78,9 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
     #return np.random.rand(),  np.random.rand(4), np.random.rand(), np.random.rand(4)
     stateIndex = STATES.index(get_state(state, currIndex))
     assert stateIndex <= 4
-    index = len(state['points'])-1
+    index = currIndex
+    if currIndex == -1: 
+        index = len(state['points'])
     param = np.array(param)
     base = 'param{}/'.format(index)
     paramDir = os.path.join(workDir, base)
@@ -117,26 +116,37 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
         update_state(state, 'MESH', currIndex)
 
     # copy caseFile
-    shutil.copy(caseFile, paramDir)
-    problemFile = paramDir + os.path.basename(caseFile)
+    shutil.copy(initCaseFile, paramDir)
+    initFile = paramDir + os.path.basename(initCaseFile)
+    shutil.copy(primCaseFile, paramDir)
+    primalFile = paramDir + os.path.basename(primCaseFile)
     shutil.copy(adjCaseFile, paramDir)
     adjointFile = paramDir + os.path.basename(adjCaseFile)
 
     if runSimulation:
         if stateIndex <= 1:
-            spawnJob([sys.executable, primal, problemFile], cwd=paramDir)
+            with open(paramDir + 'init_output.log') as f, open(paramDir + 'init_error.log') as fe:
+                p1 = spawnJob([sys.executable, primal, initFile], f, fe, cwd=paramDir)
+                p1.wait()
             update_state(state, 'PRIMAL1', currIndex)
-        #if stateIndex <= 1:
-        #    spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
-        #    update_state(state, 'PRIMAL1')
-
         if stateIndex <= 2:
-            spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
-            update_state(state, 'PRIMAL2', currIndex)
+            with open(paramDir + 'primal_output.log') as f, open(paramDir + 'primal_error.log') as fe, \
+                    open(paramDir + 'adjoint_output.log') as f2, open(paramDir + 'adjoint_error.log') as fe2:
+                p1 = spawnJob([sys.executable, primal, primalFile], f, fe, cwd=paramDir)
+                p2 = spawnJob([sys.executable, adjoint, adjointFile], f2, fe2, cwd=paramDir, block='BLOCK2')
+                p1.wait()
+                p2.wait()
+            update_state(state, 'PRIMADJ', currIndex)
+        ##if stateIndex <= 1:
+        ##    spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
+        ##    update_state(state, 'PRIMAL1')
+        #if stateIndex <= 2:
+        #    spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
+        #    update_state(state, 'PRIMAL2', currIndex)
 
-        if stateIndex <= 3:
-            spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
-            update_state(state, 'ADJOINT', currIndex)
+        #if stateIndex <= 3:
+        #    spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
+        #    update_state(state, 'ADJOINT', currIndex)
 
         return readObjectiveFile(os.path.join(paramDir, 'objective.txt'), gradEps)
     return
@@ -180,9 +190,10 @@ def optim():
     
     orig_bounds = np.array([[0.,1.], [0,1], [0,1], [0,1]])
     L = 0.25
-    sigma = 1.
+    sigma = 0.002
+    mean = 0.01
     kernel = GP.SquaredExponentialKernel([L, L, L, L], sigma)
-    gp = GP.GaussianProcess(kernel, orig_bounds, noise=[0.1, [0.5, 0.5, 0.5, 0.5]], noiseGP=True, cons=constraint)
+    gp = GP.GaussianProcess(kernel, orig_bounds, noise=[5e-9, [1e-10, 1e-10, 1e-10, 1e-10]], noiseGP=True, cons=constraint)
     ei = GP.ExpectedImprovement(gp)
     
     assert os.path.exists(stateFile)
@@ -193,11 +204,16 @@ def optim():
             res = evaluate(x, state, index)
             state['evals'].append(res)
             update_state(state, 'DONE', index)
+    print state
     x = state['points']
-    y = [res[0] for res in state['evals']]
-    yd = [res[1] for res in state['evals']]
-    yn = [res[2] for res in state['evals']]
-    ydn = [res[3] for res in state['evals']]
+    y = [res[0]-mean for res in state['evals']]
+    yd = [res[2:6] for res in state['evals']]
+    yn = [res[1] for res in state['evals']]
+    ydn = [res[6:10] for res in state['evals']]
+    #print yd
+    #print ydn
+    #exit(1)
+
     gp.train(x, y, yd, yn, ydn)
 
     for i in range(len(state['points']), 100):
@@ -206,6 +222,7 @@ def optim():
 
         x = ei.optimize()
         print 'ei choice:', i, x
+        exit(1)
         state['points'].append(x)
         state['state'].append('BEGIN')
         save_state(state)
@@ -213,8 +230,10 @@ def optim():
         print 'result:', res
         state['evals'].append(res)
         update_state(state, 'DONE')
+        resm = [x for x in res]
+        resm[0] = res[0] - mean
 
-        gp.train(x, *res)
+        gp.train(x, *resm)
 
         #eix = ei.evaluate(xs)
         #plt.plot(x1, eix.reshape(x1.shape))
@@ -244,7 +263,7 @@ def optim():
     #    pkl.dump([evals, gps, values], f)
 
 if __name__ == "__main__":
-    #optim()
-    doe()
+    optim()
+    #doe()
 
 

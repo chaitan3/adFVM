@@ -38,9 +38,9 @@ for index in range(0, nParam):
 
 parameters = 'mesh'
 reportInterval = 1
-nSteps = 200000
+nSteps = 50000
 writeInterval = 10000
-avgStart = 20000
+avgStart = 0
 sampleInterval = 100
 #nSteps = 10
 #writeInterval = 5
