@@ -190,6 +190,14 @@ class Tensor(ArithBase):
 class CellTensor(Tensor):
     pass
 
+class Variable(object):
+    _index = 0
+    def __init__(self, shape):
+        index = Variable._index
+        Variable._index += 1
+        self.name = 'Variable_{}'.format(index)
+        self.shape = shape
+
 class TensorFunction(object):
     _index = 0
     _module = None
@@ -405,8 +413,5 @@ class TensorFunction(object):
     #            [np.ctypeslib.as_ctypes(x) for x in inputs] + \
     #            [np.ctypeslib.as_ctypes(x) for x in outputs]
     #    func(*args)
-
-class Variable(object):
-    pass
 
 

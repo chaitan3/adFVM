@@ -46,7 +46,7 @@ class RCF(Solver):
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
 
-        self.initSource()
+        #self.initSource()
 
         self.Uref = 33.
         self.Tref = 300.
@@ -59,7 +59,10 @@ class RCF(Solver):
         super(RCF, self).compileInit()
         #self.faceReconstructor = self.faceReconstructor(self)
         TensorFunction.createCodeDir(self.mesh.caseDir)
+
         if config.compile:
+            mesh = self.mesh.symMesh
+            U, T, p = Variable((1,))
             TensorFunction.clean()
             self._primitive = self.symPrimitive()
             self._conservative = self.symConservative()
@@ -99,7 +102,7 @@ class RCF(Solver):
         self.mapBoundary = TensorFunction._module.ghost
         return
 
-        # only reads fields
+    # only reads fields
     @config.timeFunction('Time for reading fields')
     def readFields(self, t, suffix=''):
 
