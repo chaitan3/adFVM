@@ -81,9 +81,19 @@ scalar objective(const mat& U, const vec& T, const vec& p) {{
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
         vec heat(nFaces, true);
         vec weights(nFaces, true);
-        Function_objective2(nFaces, &U(0), &T(0), &p(0), \
-            &mesh.areas(startFace), &mesh.deltas(startFace), &mesh.owner(startFace), \
-            &heat(0), &weights(0));
+        for (integer f = startFace; f < startFace + nFaces; f++) {{
+            if (patchID == "pressure") {{
+                if ((mesh.faceCentres(f, 0) < 0.33757) || (mesh.faceCentres(f, 1) > 0.04692))
+                continue;
+            }}
+            if (patchID == "suction") {{
+                if ((mesh.faceCentres(f, 0) < 0.035241) || (mesh.faceCentres(f, 1) > 0.044337))
+                continue;
+            }}
+            Function_objective2(1, &U(0), &T(0), &p(0), \
+                &mesh.areas(f), &mesh.deltas(f), &mesh.owner(f), \
+                &heat(f-startFace), &weights(f-startFace));
+        }}
         ht += heat.sum();
         w2 += weights.sum();
     }}
@@ -96,6 +106,7 @@ scalar objective(const mat& U, const vec& T, const vec& p) {{
     scalar b = {2};
     scalar obj = gval[0]/gval[1];
     scalar obj2 = gval[2]/gval[3];
+    //cout << a*obj << " " << b*obj2 << endl;
     return a*obj + b*obj2;
 }}
 void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, vec& pa) {{
@@ -121,9 +132,19 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
         tie(startFace, nFaces) = mesh.boundaryFaces.at(patchID);
         vec heat(nFaces, true);
         vec weights(nFaces, true);
-        Function_objective2(nFaces, &U(0), &T(0), &p(0), \
-            &mesh.areas(startFace), &mesh.deltas(startFace), &mesh.owner(startFace), \
-            &heat(0), &weights(0));
+        for (integer f = startFace; f < startFace + nFaces; f++) {{
+            if (patchID == "pressure") {{
+                if ((mesh.faceCentres(f, 0) < 0.33757) || (mesh.faceCentres(f, 1) > 0.04692))
+                continue;
+            }}
+            if (patchID == "suction") {{
+                if ((mesh.faceCentres(f, 0) < 0.035241) || (mesh.faceCentres(f, 1) > 0.044337))
+                continue;
+            }}
+            Function_objective2(1, &U(0), &T(0), &p(0), \
+                &mesh.areas(f), &mesh.deltas(f), &mesh.owner(f), \
+                &heat(f-startFace), &weights(f-startFace));
+        }}
         ht += heat.sum();
         w2 += weights.sum();
     }}
@@ -160,12 +181,21 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
             heata(i) = b/gw;
             weightsa(i) = -b*ght/(gw*gw);
         }}
-        Function_objective2_grad(nFaces, &U(0), &T(0), &p(0), \
-            &mesh.areas(startFace), &mesh.deltas(startFace), &mesh.owner(startFace), \
-            &heata(0), &weightsa(0), \
-            &Ua(0), &Ta(0), &pa(0), \
-            &meshAdj.areas(startFace), &meshAdj.deltas(startFace), &meshAdj.owner(startFace) \
-        );
+        for (integer f = startFace; f < startFace + nFaces; f++) {{
+            if (patchID == "pressure") {{
+                if ((mesh.faceCentres(f, 0) < 0.33757) || (mesh.faceCentres(f, 1) > 0.04692))
+                continue;
+            }}
+            if (patchID == "suction") {{
+                if ((mesh.faceCentres(f, 0) < 0.035241) || (mesh.faceCentres(f, 1) > 0.044337))
+                continue;
+            }}
+            Function_objective2_grad(1, &U(0), &T(0), &p(0), \
+                &mesh.areas(f), &mesh.deltas(f), &mesh.owner(f), \
+                &heata(f-startFace), &weightsa(f-startFace),
+                &Ua(0), &Ta(0), &pa(0), \
+                &meshAdj.areas(f), &meshAdj.deltas(f), &meshAdj.owner(f));
+        }}
     }}
 }}
 """
@@ -212,8 +242,8 @@ parameters = 'mesh'
 
 #nSteps = 10
 #writeInterval = 5
-nSteps = 10
-writeInterval = 5
+nSteps = 100
+writeInterval = 20
 #nSteps = 100000
 #writeInterval = 5000
 startTime = 3.0

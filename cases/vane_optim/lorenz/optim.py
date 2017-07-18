@@ -11,8 +11,9 @@ import gp as GP
 
 homeDir = '/home/talnikar/adFVM/'
 #workDir = '/home/talnikar/adFVM/cases/vane_optim/test/'
-workDir = '/projects/LESOpt/talnikar/vane_optim/doe/'
+workDir = '/projects/LESOpt/talnikar/vane_optim/optim/'
 appsDir = homeDir + 'apps/'
+codeDir = workDir + 'gencode/'
 initCaseFile = homeDir + 'templates/vane_optim.py'
 primCaseFile = homeDir + 'templates/vane_optim_prim.py'
 adjCaseFile = homeDir + 'templates/vane_optim_adj.py'
@@ -37,13 +38,13 @@ def update_state(state, value, index=-1):
 def get_state(state, index=-1):
     return state['state'][index]
 
-def spawnJob(args, output, error, index, cwd='.', block='BLOCK1'):
+def spawnJob(args, output, error, cwd='.', block='BLOCK1'):
     nProcs = 8192
     nProcsPerNode = 16
     return subprocess.Popen(['runjob', 
                          '-n', str(nProcs), 
                          '-p', str(nProcsPerNode),
-                         '--block', block,
+                         '--block', os.environ[block],
                          '--exp-env', 'BGLOCKLESSMPIO_F_TYPE', 
                          '--exp-env', 'PYTHONPATH',
                          '--exp-env', 'LD_LIBRARY_PATH',
@@ -59,8 +60,8 @@ def readObjectiveFile(objectiveFile, gradEps):
     with open(objectiveFile, 'r') as f:
         for line in f.readlines(): 
             words = line.split(' ')
-            if words[0] == 'orig' and len(objective) == 0:
-                objective += [float(words[-2]), float(words[-1])]
+            if words[0] == 'orig':
+                objective = [float(words[-2]), float(words[-1])]
             elif words[0] == 'adjoint':
                 per = gradEps[index]
                 gradient.append(float(words[-2])/per)
@@ -80,7 +81,7 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
     assert stateIndex <= 4
     index = currIndex
     if currIndex == -1: 
-        index = len(state['points'])
+        index = len(state['points'])-1
     param = np.array(param)
     base = 'param{}/'.format(index)
     paramDir = os.path.join(workDir, base)
@@ -116,6 +117,9 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
         update_state(state, 'MESH', currIndex)
 
     # copy caseFile
+    paramCodeDir = paramDir + 'gencode'
+    if not os.path.exists(paramCodeDir):
+        shutil.copytree(codeDir, paramDir + 'gencode')
     shutil.copy(initCaseFile, paramDir)
     initFile = paramDir + os.path.basename(initCaseFile)
     shutil.copy(primCaseFile, paramDir)
@@ -125,17 +129,24 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
 
     if runSimulation:
         if stateIndex <= 1:
-            with open(paramDir + 'init_output.log') as f, open(paramDir + 'init_error.log') as fe:
+            with open(paramDir + 'init_output.log', 'w') as f, open(paramDir + 'init_error.log', 'w') as fe:
                 p1 = spawnJob([sys.executable, primal, initFile], f, fe, cwd=paramDir)
-                p1.wait()
+                ret = p1.wait()
+                assert ret == 0
             update_state(state, 'PRIMAL1', currIndex)
         if stateIndex <= 2:
-            with open(paramDir + 'primal_output.log') as f, open(paramDir + 'primal_error.log') as fe, \
-                    open(paramDir + 'adjoint_output.log') as f2, open(paramDir + 'adjoint_error.log') as fe2:
+            with open(paramDir + 'primal_output.log', 'w') as f, open(paramDir + 'primal_error.log', 'w') as fe, \
+                    open(paramDir + 'adjoint_output.log', 'w') as f2, open(paramDir + 'adjoint_error.log', 'w') as fe2:
                 p1 = spawnJob([sys.executable, primal, primalFile], f, fe, cwd=paramDir)
+                p2 = spawnJob([sys.executable, primal, adjointFile, '--matop'], f2, fe2, cwd=paramDir, block='BLOCK2')
+                ret = p2.wait()
+                assert ret == 0
+                #p2 = spawnJob([sys.executable, adjoint, adjointFile, '--matop'], f2, fe2, cwd=paramDir, block='BLOCK2')
                 p2 = spawnJob([sys.executable, adjoint, adjointFile], f2, fe2, cwd=paramDir, block='BLOCK2')
-                p1.wait()
-                p2.wait()
+                ret = p2.wait()
+                assert ret == 0
+                ret = p1.wait()
+                assert ret == 0
             update_state(state, 'PRIMADJ', currIndex)
         ##if stateIndex <= 1:
         ##    spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
@@ -204,6 +215,7 @@ def optim():
             res = evaluate(x, state, index)
             state['evals'].append(res)
             update_state(state, 'DONE', index)
+            exit(1)
     print state
     x = state['points']
     y = [res[0]-mean for res in state['evals']]
@@ -222,7 +234,7 @@ def optim():
 
         x = ei.optimize()
         print 'ei choice:', i, x
-        exit(1)
+        #exit(1)
         state['points'].append(x)
         state['state'].append('BEGIN')
         save_state(state)
@@ -230,6 +242,7 @@ def optim():
         print 'result:', res
         state['evals'].append(res)
         update_state(state, 'DONE')
+        exit(1)
         resm = [x for x in res]
         resm[0] = res[0] - mean
 

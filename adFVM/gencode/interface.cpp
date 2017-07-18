@@ -495,7 +495,7 @@ Mesh::Mesh (PyObject* meshObject) {
     getMeshArray(this->mesh, "neighbour", this->neighbour);
 
     getMeshArray(this->mesh, "normals", this->normals);
-    //getMeshArray(this->mesh, "faceCentres", this->faceCentres);
+    getMeshArray(this->mesh, "faceCentres", this->faceCentres);
     getMeshArray(this->mesh, "areas", this->areas);
     getMeshArray(this->mesh, "cellFaces", this->cellFaces);
     getMeshArray(this->mesh, "cellNeighboursMatOp", this->cellNeighbours);

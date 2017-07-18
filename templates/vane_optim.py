@@ -2,7 +2,6 @@ import numpy as np
 import sys, os
 
 from adFVM import config
-from adFVM.config import ad
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 
@@ -10,7 +9,7 @@ config.hdf5 = True
 caseDir = './'
 #primal = RCF(caseDir, objective='pressureLoss', objectivePLInfo={})
 #primal = RCF(caseDir, objective='heatTransfer', objectiveDragInfo="pressure|suction")
-primal = RCF(caseDir, fixedTimeStep=True, objective='optim', objectivePLInfo={}, objectiveDragInfo="pressure|suction")
+primal = RCF(caseDir, timeSeriesAppend='0', fixedTimeStep=True, objective='optim', objectivePLInfo={})
 nParam = 4
 
 # pressure loss
