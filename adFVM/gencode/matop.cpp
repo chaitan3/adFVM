@@ -208,7 +208,7 @@ void Matop::heat_equation(RCF *rcf, const arrType<scalar, nrhs>& u, const vec& D
     VecResetArray(b);
     delete[] data1;
 
-    //KSPDestroy(&ksp);
+    KSPDestroy(&ksp);
     VecDestroy(&b);
     VecDestroy(&x);
     MatDestroy(&A);
