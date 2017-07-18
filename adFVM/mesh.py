@@ -28,6 +28,9 @@ class Mesh(object):
                   #'gradOp'
                  ]
 
+    constants = ['nCells', 'nFaces', 'nInternalCells', 'nInternalFaces',
+                 'nLocalCells']
+
     def __init__(self):
         pass
         #for attr in Mesh.constants:
@@ -837,6 +840,10 @@ class Mesh(object):
         for attr in Mesh.intFields:
             value = getattr(self.parent, attr)
             setattr(self, attr, Tensor((1,), scalars=[IntegerScalar()]))
+
+        for attr in Mesh.constants:
+            value = getattr(self.parent, attr)
+            setattr(self, attr, IntegerScalar())
 
         #for attr in Mesh.constants:
         #    setattr(self, attr, ad.placeholder(ad.int32))

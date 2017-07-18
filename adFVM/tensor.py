@@ -6,11 +6,8 @@ import numbers
 
 from . import config, parallel
 from .scalar import *
+from .variable import *
 
-import os, sys, subprocess, shutil
-import ctypes
-
-scriptDir = os.path.dirname(os.path.realpath(__file__))
 
 class Container(object):
     pass
@@ -190,18 +187,9 @@ class Tensor(ArithBase):
 class CellTensor(Tensor):
     pass
 
-class Variable(object):
-    _index = 0
-    def __init__(self, shape):
-        index = Variable._index
-        Variable._index += 1
-        self.name = 'Variable_{}'.format(index)
-        self.shape = shape
-
 class TensorFunction(object):
     _index = 0
     _module = None
-    codeDir = os.path.dirname(__file__) + '/gencode/'
     extraCode = ""
 
     def __init__(self, name, inputs, outputs, grad=True):
@@ -209,7 +197,7 @@ class TensorFunction(object):
         TensorFunction._index += 1
         #self.name = 'Function_{}'.format(index)
         self.name = 'Function_{}'.format(name)
-        print(self.name)
+        #print(self.name)
         self._inputTensorIndices = {}
         self._inputTensors = inputs
         self._inputs = []
@@ -228,9 +216,9 @@ class TensorFunction(object):
 
         _outputs = [x for x in self._outputs if x is not None]
         self._children = self._getChildren(_outputs)
-        self._genCode(self._inputs, _outputs, self._children.copy())
+        #self._genCode(self._inputs, _outputs, self._children.copy())
         OpBase.clear_cache()
-        #grad = False
+        grad = False
         if grad:
             self.grad = self._getAdjoint()
 
@@ -379,39 +367,24 @@ class TensorFunction(object):
 
         return
 
-    @classmethod
-    def createCodeDir(self, case):
-        self.codeDir = case + 'gencode/'
-        if config.compile:
-            assert not os.path.exists(self.codeDir)
-            shutil.copytree(scriptDir + '/gencode', self.codeDir)
+import random, string
+def randomName(N):
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N))
 
-    @classmethod
-    def clean(self):
-        #try:
-        #    os.remove(self.codeDir + 'code.cpp')
-        #except:
-        #    pass
-        with open(self.codeDir + 'code.cpp', 'a') as f:
-            f.write('#include "code.hpp"\n')
+class Tensorize(object):
+    def __init__(self, func):
+        self.func = func
+        self.op = None
+        self.name = randomName(12)
 
-    @classmethod
-    def compile(self):
-        if config.compile:
-            with open(self.codeDir + 'code.cpp', 'a') as f:
-                f.write('\n\n' + self.extraCode)
-            subprocess.check_call(['make'], cwd=self.codeDir)
-        parallel.mpi.Barrier()
-        sys.path.append(self.codeDir)
-        import interface as mod
-        TensorFunction._module = mod
+    def __call__(self, *args):
+        if self.op is None:
+            self.op = self._createOp(args)
+        return self.op(*args).outputs
 
-
-    #def __call__(self, inputs, outputs):
-    #    func = Function._module[self.name] 
-    #    args = [ctypes.c_int(inputs[0].shape[0])] + \
-    #            [np.ctypeslib.as_ctypes(x) for x in inputs] + \
-    #            [np.ctypeslib.as_ctypes(x) for x in outputs]
-    #    func(*args)
-
-
+    def _createOp(self, args):
+        tensorArgs = [Tensor(x.shape[1:]) for x in args]
+        tensorRet = self.func(*tensorArgs)
+        tensorFunc = TensorFunction(self.name, tensorArgs, tensorRet)
+        op = TensorFunctionOp(tensorFunc)
+        return op

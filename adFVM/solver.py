@@ -104,13 +104,9 @@ class Solver(object):
         pprint()
 
     def compileInit(self, functionName='init'):
-        internalFields = []
-        fields = []
         completeFields = []
         for phi in self.fields:
-            phiI = phi.completeField()
-            fields.append(phi.phi)
-            internalFields.append(phiI)
+            phi.completeField()
             #completeFields.append(phiN)
         #for phi, phiI in zip(self.initOrder(self.fields), self.initOrder(internalFields)):
         #    phi.phi.setInternalField(phiI)

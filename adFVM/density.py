@@ -1,5 +1,6 @@
 from . import config, riemann, interp
-from .tensor import Tensor, TensorFunction, CellTensor
+from .tensor import Tensorize
+from .variable import Variable, Function
 from .field import Field, IOField
 from .op import  div, absDiv, snGrad, grad, internal_sum
 from .solver import Solver
@@ -56,50 +57,31 @@ class RCF(Solver):
         return
 
     def compileInit(self):
-        super(RCF, self).compileInit()
+        #super(RCF, self).compileInit()
+
         #self.faceReconstructor = self.faceReconstructor(self)
-        TensorFunction.createCodeDir(self.mesh.caseDir)
+        Function.createCodeDir(self.mesh.caseDir)
 
         if config.compile:
+            Function.clean()
             mesh = self.mesh.symMesh
-            U, T, p = Variable((1,))
-            TensorFunction.clean()
-            self._primitive = self.symPrimitive()
-            self._conservative = self.symConservative()
+            self._primitive = Tensorize(self.primitive)
+            self._conservative = Tensorize(self.conservative)
 
-            self._gradients = self.gradients("grad")
-            self._coupledGradients = self.gradients("coupledGrad", False)
-            self._boundaryGradients = self.gradients("boundaryGrad", False, True)
+            # init function
+            rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
+            U, T, p = self._primitive(rho, rhoU, rhoE)
+            UN, TN, pN = self.U.completeField(U), self.T.completeField(T), self.p.completeField(p)
+            rhoN, rhoUN, rhoEN = self._conservative(UN, TN, pN)
+            self.map = Function([rho, rhoU, rhoE], [rhoN, rhoUN, rhoEN])
+            #self._conservative = 
 
-            self._flux = self.flux("flux")
-            self._characteristicFlux = self.flux("characteristicFlux", True, False)
-            self._coupledFlux = self.flux("coupledFlux", False, False)
-            self._boundaryFlux = self.boundaryFlux()
-
-            postpro.getAdjointViscosityCpp(self)
-
-            if self.objective is not None:
-                if not isinstance(self.objective, list):
-                    self.objective = [self.objective]
-                self._objective = []
-                for objective in self.objective:
-                    self._objective.append(objective(self, self.mesh.symMesh))
-                TensorFunction.extraCode += self.objectiveString
-
-            for patch, value in self.fields[2].phi.BC.iteritems():
-                if isinstance(value, BCs.CBC_TOTAL_PT):
-                    assert not hasattr(self, '_CBC_TOTAL_PT')
-                    self._CBC_TOTAL_PT = value._update()
-
-        TensorFunction.compile()
-        TensorFunction._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
+        Function.compile()
+        Function._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
         #TensorFunction._module.finalize()
         #import atexit
         #atexit.register(TensorFunction._module.finalize)
 
-        
-        self.map = TensorFunction._module.forward
-        self.mapBoundary = TensorFunction._module.ghost
         return
 
     # only reads fields

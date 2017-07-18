@@ -517,12 +517,12 @@ class IOField(Field):
         self.field = parallel.getRemoteCells([field], self.mesh)[0]
         return
 
-    def completeField(self):
+    def completeField(self, internalField):
         logger.debug('completing field {0}'.format(self.name))
-        internalField = Variable()
+        mesh = self.mesh.symMesh
         # CellField for later use
         self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, init=True)
-        return internalField
+        return self.phi
 
     def partialComplete(self, value=0.):
         mesh = self.mesh.origMesh
