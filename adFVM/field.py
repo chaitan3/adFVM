@@ -522,7 +522,7 @@ class IOField(Field):
         mesh = self.mesh.symMesh
         # CellField for later use
         self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, init=True)
-        return self.phi
+        return self.phi.field
 
     def partialComplete(self, value=0.):
         mesh = self.mesh.origMesh

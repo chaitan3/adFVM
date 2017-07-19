@@ -16,8 +16,8 @@ class Variable(ArithBase):
 class _TensorFunctionOp(object):
     def __init__(self, *args):
         assert self.func is not None
-        self.args = args
-        self.outputs = []
+        n = len(self.func._inputTensors)
+        self.args, self.outputs = args[:n], args[n:]
 
 def TensorFunctionOp(func):
     return type('TensorFunctionOp_{}'.format(func.name), (_TensorFunctionOp,), {'func':func})

@@ -376,15 +376,25 @@ class Tensorize(object):
         self.func = func
         self.op = None
         self.name = randomName(12)
+        self.outputShapes = None
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
+        outputs = None
+        if 'outputs' in kwargs:
+            outputs = kwargs['outputs']
+            del kwargs['outputs']
         if self.op is None:
-            self.op = self._createOp(args)
+            self.op, self.outputShapes = self._createOp(args, kwargs)
+        if outputs is None:
+            args = args + tuple([Variable(x) for x in self.outputShapes])
+        else:
+            args = args + outputs
         return self.op(*args).outputs
 
-    def _createOp(self, args):
+    def _createOp(self, args, kwargs):
         tensorArgs = [Tensor(x.shape[1:]) for x in args]
-        tensorRet = self.func(*tensorArgs)
-        tensorFunc = TensorFunction(self.name, tensorArgs, tensorRet)
-        op = TensorFunctionOp(tensorFunc)
-        return op
+        tensorOutputs = self.func(*tensorArgs, **kwargs)
+        shape = args[0].shape[0]
+        outputShapes = [(shape,) + x.shape for x in tensorOutputs]
+        tensorFunc = TensorFunction(self.name, tensorArgs, tensorOutputs)
+        return TensorFunctionOp(tensorFunc), outputShapes
