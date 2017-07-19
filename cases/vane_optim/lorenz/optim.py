@@ -200,11 +200,11 @@ def doe():
 def optim():
     
     orig_bounds = np.array([[0.,1.], [0,1], [0,1], [0,1]])
-    L = 0.25
-    sigma = 0.002
+    L = 0.3
+    sigma = 0.003
     mean = 0.01
     kernel = GP.SquaredExponentialKernel([L, L, L, L], sigma)
-    gp = GP.GaussianProcess(kernel, orig_bounds, noise=[5e-9, [1e-10, 1e-10, 1e-10, 1e-10]], noiseGP=True, cons=constraint)
+    gp = GP.GaussianProcess(kernel, orig_bounds, noise=[5e-9, [1e-9, 1e-7, 1e-8, 1e-7]], noiseGP=True, cons=constraint)
     ei = GP.ExpectedImprovement(gp)
     
     assert os.path.exists(stateFile)
@@ -224,13 +224,17 @@ def optim():
     ydn = [res[6:10] for res in state['evals']]
     #print yd
     #print ydn
+    #print yd
+    #print ydn
     #exit(1)
 
     gp.train(x, y, yd, yn, ydn)
 
     for i in range(len(state['points']), 100):
-        print 'data min:', gp.data_min()
-        print 'posterior min:', gp.posterior_min()
+        dmin = gp.data_min()
+        pmin = gp.posterior_min()
+        print 'data min:', dmin[0], dmin[1] + mean
+        print 'posterior min:', pmin[0], pmin[1] + mean
 
         x = ei.optimize()
         print 'ei choice:', i, x
