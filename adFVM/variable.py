@@ -12,12 +12,16 @@ class Variable(ArithBase):
         Variable._index += 1
         self.name = 'Variable_{}'.format(index)
         self.shape = shape
+        self.args = ()
 
 class _TensorFunctionOp(object):
-    def __init__(self, *args):
+    def __init__(self, args, outputs):
         assert self.func is not None
         n = len(self.func._inputTensors)
-        self.args, self.outputs = args[:n], args[n:]
+        self.args = args
+        self.outputs = outputs
+        for out in self.outputs:
+            out.args = (self,)
 
 def TensorFunctionOp(func):
     return type('TensorFunctionOp_{}'.format(func.name), (_TensorFunctionOp,), {'func':func})
@@ -26,6 +30,10 @@ class Function(object):
     _index = 0
     _module = None
     codeDir = os.path.dirname(__file__) + '/gencode/'
+
+    def __init__(self, inputs, outputs):
+        self._inputs = inputs
+        self._outputs = outputs
 
     @classmethod
     def createCodeDir(self, case):

@@ -65,16 +65,17 @@ class RCF(Solver):
         if config.compile:
             Function.clean()
             mesh = self.mesh.symMesh
-            self._primitive = Tensorize(self.primitive)
-            self._conservative = Tensorize(self.conservative)
 
             # init function
             rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
-            U, T, p = self._primitive(rho, rhoU, rhoE)
+            U, T, p = Tensorize(self.primitive)(rho, rhoU, rhoE)
             UN, TN, pN = self.U.completeField(U), self.T.completeField(T), self.p.completeField(p)
-            rhoN, rhoUN, rhoEN = self._conservative(UN, TN, pN)
-            self.map = Function([rho, rhoU, rhoE], [rhoN, rhoUN, rhoEN])
-            #self._conservative = 
+            rhoN, rhoUN, rhoEN = Tensorize(self.conservative)(UN, TN, pN)
+            self.mapBoundary = Function([rho, rhoU, rhoE], [rhoN, rhoUN, rhoEN])
+
+
+            rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
+            self.map = Function([rho, rhoU, rhoE], self.equation(rho, rhoU, rhoE))
 
         Function.compile()
         Function._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
@@ -178,10 +179,8 @@ class RCF(Solver):
 
     #symbolic funcs
 
-    def gradients(self, name, neighbour=True, boundary=False):
+    def gradients(self, U, T, p, neighbour=True, boundary=False):
         mesh = self.mesh.symMesh
-        U, T, p = CellTensor((3,)), CellTensor((1,)), CellTensor((1,))
-        
         if boundary:
             UF = U.extract(mesh.neighbour)
             TF = T.extract(mesh.neighbour)
@@ -195,31 +194,20 @@ class RCF(Solver):
         gradT = grad(TF, mesh, neighbour)
         gradp = grad(pF, mesh, neighbour)
 
-        inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
-                 [getattr(mesh, attr) for attr in mesh.intFields]
+        return gradU, gradT, gradp
+        #inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
+        #         [getattr(mesh, attr) for attr in mesh.intFields]
 
-        return TensorFunction(name, [U, T, p] + inputs, [gradU, gradT, gradp])
+        #return TensorFunction(name, [U, T, p] + inputs, [gradU, gradT, gradp])
 
 
-    def symPrimitive(self):
-        rhoU, rhoE, rho = Tensor((3,)), Tensor((1,)), Tensor((1,))
-        U, T, p = self.primitive(rho, rhoU, rhoE)
-        return TensorFunction('primitive', [rho, rhoU, rhoE], [U, T, p])
-
-    def symConservative(self):
-        U, T, p = Tensor((3,)), Tensor((1,)), Tensor((1,))
-        rho, rhoU, rhoE = self.conservative(U, T, p)
-        return TensorFunction('conservative', [U, T, p], [rho, rhoU, rhoE])
-
-    
-    def flux(self, name, characteristic=False, neighbour=True):
+        
+    def flux(self, U, T, p, gradU, gradT, gradp, characteristic=False, neighbour=True):
         mesh = self.mesh.symMesh
         P, N = mesh.owner, mesh.neighbour
-        U, T, p = CellTensor((3,)), CellTensor((1,)), CellTensor((1,))
-        gradU, gradT, gradp = CellTensor((3,3)), CellTensor((1,3)), CellTensor((1,3))
 
         ULF = secondOrder(U, gradU, mesh, 0)
-        TLF = secondOrder(T, gradT,  mesh, 0)
+        TLF = secondOrder(T, gradT, mesh, 0)
         pLF = secondOrder(p, gradp, mesh, 0)
         rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
 
@@ -256,17 +244,17 @@ class RCF(Solver):
         maxaF = abs(UF.dot(mesh.normals)) + aF
         dtc = absDiv(maxaF, mesh, neighbour)
 
-        inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
-                 [getattr(mesh, attr) for attr in mesh.intFields]
+        return drho, drhoU, drhoE, dtc
 
-        return TensorFunction(name, [U, T, p, gradU, gradT, gradp] + inputs,
-                                  [drho, drhoU, drhoE, dtc])
+        #inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
+        #         [getattr(mesh, attr) for attr in mesh.intFields]
 
-    def boundaryFlux(self):
+        #return TensorFunction(name, [U, T, p, gradU, gradT, gradp] + inputs,
+        #                          [drho, drhoU, drhoE, dtc])
+
+    def boundaryFlux(self, U, T, p, gradU, gradT, gradp):
         mesh = self.mesh.symMesh
         P, N = mesh.owner, mesh.neighbour
-        U, T, p = CellTensor((3,)), CellTensor((1,)), CellTensor((1,))
-        gradU, gradT, gradp = CellTensor((3,3)), CellTensor((1,3)), CellTensor((1,3))
 
         # boundary extraction could be done using cellstartface
         UR, TR, pR = U.extract(N), T.extract(N), p.extract(N) 
@@ -286,59 +274,29 @@ class RCF(Solver):
         maxaF = abs(UR.dot(mesh.normals)) + aF
         dtc = absDiv(maxaF, mesh, False)
 
-        inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
-                 [getattr(mesh, attr) for attr in mesh.intFields]
+        return drho, drhoU, drhoE, dtc
+        #inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
+        #         [getattr(mesh, attr) for attr in mesh.intFields]
 
-        return TensorFunction("boundaryFlux", [U, T, p, gradU, gradT, gradp] + inputs,
-                                  [drho, drhoU, drhoE, dtc])
+        #return TensorFunction("boundaryFlux", [U, T, p, gradU, gradT, gradp] + inputs,
+        #                          [drho, drhoU, drhoE, dtc])
 
     def equation(self, rho, rhoU, rhoE):
         logger.info('computing RHS/LHS')
-        mesh = self.mesh.origMesh
+        mesh = self.mesh.symMesh
 
-        U, T, p = self.primitive(rho, rhoU, rhoE)
-        U.field = np.concatenate((U.field, np.zeros((mesh.nGhostCells, 3))))
-        T.field = np.concatenate((T.field, np.zeros((mesh.nGhostCells, 1))))
-        p.field = np.concatenate((p.field, np.zeros((mesh.nGhostCells, 1))))
-        # BC for 
-
-        # gradient evaluated using gauss integration rule
-        gradU = grad(central(U, mesh), ghost=True, numpy=True)
-        gradT = grad(central(T, mesh), ghost=True, numpy=True)
-        gradp = grad(central(p, mesh), ghost=True, numpy=True)
-        #gradU = grad(U, ghost=True, op=True)
-        #gradT = grad(T, ghost=True, op=True)
-        #gradp = grad(p, ghost=True, op=True)
-        #self.local = gradp.field
-        #self.remote = gradpO.field
-
-        import time
-        start = time.time()
-        drhoL, drhoR = np.zeros((mesh.nFaces, 1)), np.zeros((mesh.nFaces, 1))
-        drhoUL, drhoUR = np.zeros((mesh.nFaces, 3)), np.zeros((mesh.nFaces, 3))
-        drhoEL, drhoER = np.zeros((mesh.nFaces, 1)), np.zeros((mesh.nFaces, 1))
-        def _fluxUpdate(start, end, func):
-            nFaces = end-start
-            inputs = []
-            for phi in [U, T, p, gradU, gradT, gradp]:
-                inputs.append(phi.field[mesh.owner[start:end]])
-                inputs.append(phi.field[mesh.neighbour[start:end]])
-            for phi in mesh.gradFields:
-                inputs.append(getattr(mesh, phi)[start:end])
-            outputs = []
-            for phi in [drhoL, drhoR, drhoUL, drhoUR, drhoEL, drhoER]:
-                outputs.append(phi[start:end])
-            func(inputs, outputs)
-        _fluxUpdate(0, mesh.nInternalFaces, self._flux)
-        for patchID in mesh.boundary:
-            startFace, endFace, nFaces = mesh.getPatchFaceRange(patchID)
-            patchType = mesh.boundary[patchID]['type']
+        U, T, p = Variable((mesh.nCells, 3)), Variable((mesh.nCells, 1)), Variable((mesh.nCells, 1))
+        U, T, p = Tensorize(self.primitive)(rho, rhoU, rhoE, outputs=(U, T, p))
+        gradU, gradT, gradp = Variable((mesh.nCells, 3, 3)), Variable((mesh.nCells, 1, 3)), Variable((mesh.nCells, 1, 3))
+        for patchID in self.mesh.boundary:
+            startFace, endFace, nFaces = self.mesh.getPatchFaceRange(patchID)
+            patchType = self.mesh.boundary[patchID]['type']
             if patchType in config.coupledPatches:
-                _fluxUpdate(startFace, endFace, self._characteristicFlux)
-            elif patchType == 'characteristic':
-                _fluxUpdate(startFace, endFace, self._coupledFlux)
+                gradU, gradT, gradp = Tensorize(self.gradients)(U, T, p, neighbour=False, boundary=False, outputs=(gradU, gradT, gradp))
             else:
-                _fluxUpdate(startFace, endFace, self._boundaryFlux)
+                gradU, gradT, gradp = Tensorize(self.gradients)(U, T, p, neighbour=False, boundary=True, outputs=(gradU, gradT, gradp))
+
+        exit(1)
 
         return [Field('drho', drho, (1,)), Field('drho', drhoU, (1,)), Field('drho', drhoE, (1,))] 
 

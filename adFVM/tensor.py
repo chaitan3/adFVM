@@ -38,6 +38,7 @@ class Tensor(ArithBase):
             else:
                 self.scalars = scalars
         self.dtype = dtype
+        self.cellTensor = False
         
         if isinstance(self.scalars[0], IntegerScalar):
             self.dtype = 'integer'
@@ -91,6 +92,7 @@ class Tensor(ArithBase):
 
     def extract(self, b):
         assert b.shape == (1,)
+        self.cellTensor = True
         res = [Extract(x, b.scalars[0]) for x in self.scalars]
         return Tensor(self.shape, res)
 
@@ -171,7 +173,9 @@ class Tensor(ArithBase):
         for j in range(0, m):
             res[j] = Collate(*res[j])
         #print len(res), len(res[0].args)
-        return CellTensor(shape, res)
+        res = Tensor(shape, res)
+        res.cellTensor = True
+        return res
 
     @classmethod
     def switch(cls, cond, ret1, ret2):
@@ -204,14 +208,14 @@ class TensorFunction(object):
         for inp in inputs:
             self._inputs.extend(inp.scalars)
             for index, i in enumerate(inp.scalars):
-                self._inputTensorIndices[i] = (inp.name, len(inp.scalars), index, isinstance(inp, CellTensor))
+                self._inputTensorIndices[i] = (inp.name, len(inp.scalars), index, inp.cellTensor)
         self._outputTensorIndices = {}
         self._outputTensors = outputs
         self._outputs = []
         for out in outputs:
             self._outputs.extend(out.scalars)
             for index, i in enumerate(out.scalars):
-                self._outputTensorIndices[i] = (out.name, len(out.scalars), index, isinstance(out, CellTensor))
+                self._outputTensorIndices[i] = (out.name, len(out.scalars), index, out.cellTensor)
         #self.func = lambdify(self._inputs, self._outputs)
 
         _outputs = [x for x in self._outputs if x is not None]
@@ -371,30 +375,28 @@ import random, string
 def randomName(N):
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N))
 
-class Tensorize(object):
-    def __init__(self, func):
-        self.func = func
-        self.op = None
-        self.name = randomName(12)
-        self.outputShapes = None
 
-    def __call__(self, *args, **kwargs):
+def Tensorize(func):
+    name = randomName(12)
+    def _createOp(args, kwargs):
+        tensorArgs = [Tensor(x.shape[1:]) for x in args]
+        tensorOutputs = func(*tensorArgs, **kwargs)
+        shape = args[0].shape[0]
+        outputShapes = [(shape,) + x.shape for x in tensorOutputs]
+        tensorFunc = TensorFunction(name, tensorArgs, tensorOutputs)
+        return TensorFunctionOp(tensorFunc), outputShapes
+
+    def wrapped_func(*args, **kwargs):
         outputs = None
         if 'outputs' in kwargs:
             outputs = kwargs['outputs']
             del kwargs['outputs']
-        if self.op is None:
-            self.op, self.outputShapes = self._createOp(args, kwargs)
+        op, outputShapes = _createOp(args, kwargs)
         if outputs is None:
-            args = args + tuple([Variable(x) for x in self.outputShapes])
+            outputs = tuple([Variable(x) for x in outputShapes])
         else:
             args = args + outputs
-        return self.op(*args).outputs
+            outputs = tuple([Variable(x.shape) for x in outputs])
+        return op(args, outputs).outputs
 
-    def _createOp(self, args, kwargs):
-        tensorArgs = [Tensor(x.shape[1:]) for x in args]
-        tensorOutputs = self.func(*tensorArgs, **kwargs)
-        shape = args[0].shape[0]
-        outputShapes = [(shape,) + x.shape for x in tensorOutputs]
-        tensorFunc = TensorFunction(self.name, tensorArgs, tensorOutputs)
-        return TensorFunctionOp(tensorFunc), outputShapes
+    return wrapped_func
