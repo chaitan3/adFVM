@@ -286,16 +286,32 @@ class RCF(Solver):
         mesh = self.mesh.symMesh
 
         U, T, p = Variable((mesh.nCells, 3)), Variable((mesh.nCells, 1)), Variable((mesh.nCells, 1))
-        U, T, p = Tensorize(self.primitive)(rho, rhoU, rhoE, outputs=(U, T, p))
+        U, T, p = Tensorize(self.primitive, (0, mesh.nInternalCells), outputs=(U, T, p))(rho, rhoU, rhoE)
+        # boundary update
+
         gradU, gradT, gradp = Variable((mesh.nCells, 3, 3)), Variable((mesh.nCells, 1, 3)), Variable((mesh.nCells, 1, 3))
+        gradU, gradT, gradp = Tensorize(self.gradients, (0, mesh.nInternalCells), outputs=(gradU, gradT, gradp))(U, T, p)
+        for patchID in self.mesh.boundary:
+            startFace, endFace, nFaces = self.mesh.getPatchFaceRange(patchID)
+            #startFace, endFace, nFaces = mesh.getPatchFaceRange(patchID)
+            patchType = self.mesh.boundary[patchID]['type']
+            if patchType in config.coupledPatches:
+                gradU, gradT, gradp = Tensorize(self.gradients, (startFace, nFaces), outputs=(gradU, gradT, gradp))(U, T, p, neighbour=False, boundary=False)
+            else:
+                gradU, gradT, gradp = Tensorize(self.gradients, (startFace, nFaces), outputs=(gradU, gradT, gradp))(U, T, p, neighbour=False, boundary=True)
+        # grad boundary update
+        
+        drho, drhoU, drhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1))
+        drho, drhoU, drhoE = Tensorize(self.flux, (0, mesh.nInternalCells), outputs=(drho, drhoU, drhoE))(U, T, p, gradU, gradT, gradp)
         for patchID in self.mesh.boundary:
             startFace, endFace, nFaces = self.mesh.getPatchFaceRange(patchID)
             patchType = self.mesh.boundary[patchID]['type']
             if patchType in config.coupledPatches:
-                gradU, gradT, gradp = Tensorize(self.gradients)(U, T, p, neighbour=False, boundary=False, outputs=(gradU, gradT, gradp))
+                drho, drhoU, drhoE = Tensorize(self.flux, (startFace, nFaces), outputs=(drho, drhoU, drhoE))(U, T, p, gradU, gradT, gradp, characteristic=False, neighbour=False)
+            elif patchType == 'characteristic':
+                drho, drhoU, drhoE = Tensorize(self.flux, (startFace, nFaces), outputs=(drho, drhoU, drhoE))(U, T, p, gradU, gradT, gradp, characteristic=True, neighbour=False)
             else:
-                gradU, gradT, gradp = Tensorize(self.gradients)(U, T, p, neighbour=False, boundary=True, outputs=(gradU, gradT, gradp))
-
+                drho, drhoU, drhoE = Tensorize(self.boundaryFlux, (startFace, nFaces), outputs=(drho, drhoU, drhoE))(U, T, p, gradU, gradT, gradp)
         exit(1)
 
         return [Field('drho', drho, (1,)), Field('drho', drhoU, (1,)), Field('drho', drhoE, (1,))] 

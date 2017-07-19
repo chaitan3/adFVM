@@ -376,27 +376,22 @@ def randomName(N):
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N))
 
 
-def Tensorize(func):
+def Tensorize(func, indices=None, outputs=None):
     name = randomName(12)
-    def _createOp(args, kwargs):
+    _indices = indices
+    if _indices == None:
+        _indices = (0, )
+    def wrapped_func(*args, **kwargs):
         tensorArgs = [Tensor(x.shape[1:]) for x in args]
         tensorOutputs = func(*tensorArgs, **kwargs)
         shape = args[0].shape[0]
         outputShapes = [(shape,) + x.shape for x in tensorOutputs]
         tensorFunc = TensorFunction(name, tensorArgs, tensorOutputs)
-        return TensorFunctionOp(tensorFunc), outputShapes
-
-    def wrapped_func(*args, **kwargs):
-        outputs = None
-        if 'outputs' in kwargs:
-            outputs = kwargs['outputs']
-            del kwargs['outputs']
-        op, outputShapes = _createOp(args, kwargs)
         if outputs is None:
-            outputs = tuple([Variable(x) for x in outputShapes])
+            _outputs = tuple([Variable(x) for x in outputShapes])
         else:
             args = args + outputs
-            outputs = tuple([Variable(x.shape) for x in outputs])
-        return op(args, outputs).outputs
+            _outputs = tuple([Variable(x.shape) for x in outputs])
+        return TensorFunctionOp(tensorFunc, args, _outputs, _indices).outputs
 
     return wrapped_func

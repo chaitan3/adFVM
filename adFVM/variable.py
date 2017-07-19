@@ -14,17 +14,15 @@ class Variable(ArithBase):
         self.shape = shape
         self.args = ()
 
-class _TensorFunctionOp(object):
-    def __init__(self, args, outputs):
-        assert self.func is not None
+class TensorFunctionOp(object):
+    def __init__(self, func, args, outputs, indices):
+        self.func = func
         n = len(self.func._inputTensors)
         self.args = args
         self.outputs = outputs
+        self.indices = indices
         for out in self.outputs:
             out.args = (self,)
-
-def TensorFunctionOp(func):
-    return type('TensorFunctionOp_{}'.format(func.name), (_TensorFunctionOp,), {'func':func})
 
 class Function(object):
     _index = 0
