@@ -10,7 +10,7 @@ from . import config, parallel
 from .compat import norm, decompose, getCells, add_at
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
-from .tensor import Tensor, IntegerScalar
+from .tensor import IntegerScalar, Container, Variable
 
 try:
     import h5py
@@ -37,7 +37,7 @@ class Mesh(object):
         #    setattr(self, attr, 0)
         #for attr in Mesh.fields:
         #    setattr(self, attr, np.array([[]]))
-        #self.boundary = []
+        self.boundary = {}
         for attr in Mesh.gradFields:
             setattr(self, attr, 0)
 
@@ -45,6 +45,18 @@ class Mesh(object):
         #self.localRemoteFaces = None
         #nameself.remoteCells = None
         #self.remoteFaces = None
+
+    @classmethod
+    def container(cls, mesh):
+        self = Container()
+        index = 0
+        for attr  in Mesh.gradFields:
+            setattr(self, attr, mesh[index])
+            index += 1
+        for attr in Mesh.intFields:
+            setattr(self, attr, mesh[index])
+            index += 1
+        return self
 
     @classmethod
     def copy(cls, mesh, constants=True, fields=False, link=False):
@@ -834,16 +846,18 @@ class Mesh(object):
         
     def makeTensor(self):
         logger.info('making tensor variables')
-        for attr in Mesh.gradFields:
-            value = getattr(self.parent, attr)
-            setattr(self, attr, Tensor(value.shape[1:]))
-        for attr in Mesh.intFields:
-            value = getattr(self.parent, attr)
-            setattr(self, attr, Tensor((1,), scalars=[IntegerScalar()]))
 
         for attr in Mesh.constants:
             value = getattr(self.parent, attr)
             setattr(self, attr, IntegerScalar())
+
+        for attr in Mesh.gradFields:
+            value = getattr(self.parent, attr)
+            setattr(self, attr, Variable((self.nFaces,) + value.shape[1:]))
+
+        for attr in Mesh.intFields:
+            value = getattr(self.parent, attr)
+            setattr(self, attr, Variable((self.nFaces, 1), dtype='integer'))
 
         #for attr in Mesh.constants:
         #    setattr(self, attr, ad.placeholder(ad.int32))
@@ -862,9 +876,10 @@ class Mesh(object):
         #    else:
         #        setattr(self, attr, ad.placeholder(config.dtype))
 
-        #for patchID in self.localPatches:
-        #    for attr in self.getBoundaryTensor(patchID):
-        #        self.boundary[patchID][attr[0]] = attr[1]
+        for patchID in self.parent.localPatches:
+            self.boundary[patchID] = {}
+            for attr in self.getBoundaryTensor(patchID):
+                self.boundary[patchID][attr[0]] = attr[1]
 
     def getSparseTensor(self, attr):
         indices = ad.placeholder(ad.int64)
@@ -879,8 +894,8 @@ class Mesh(object):
 
 
     def getBoundaryTensor(self, patchID):
-        default = [('startFace', ad.placeholder(ad.int32)), ('nFaces', ad.placeholder(ad.int32))]
-        return default + self.boundaryTensor.get(patchID, [])
+        default = [('startFace', IntegerScalar()), ('nFaces', IntegerScalar())]
+        return default #+ self.boundaryTensor.get(patchID, [])
 
     @config.timeFunction('Time to update mesh')
     def update(self, t, dt):

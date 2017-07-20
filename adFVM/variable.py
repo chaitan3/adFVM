@@ -4,15 +4,26 @@ scriptDir = os.path.dirname(os.path.realpath(__file__))
 
 from . import config
 from .scalar import *
+_dtype = dtype
+
 class Variable(ArithBase):
 #class Variable(object):
     _index = 0
-    def __init__(self, shape):
+    def __init__(self, shape, dtype=_dtype):
         index = Variable._index
         Variable._index += 1
         self.name = 'Variable_{}'.format(index)
         self.shape = shape
         self.args = ()
+        self.index = 0
+        self.dtype = dtype
+        self.reference = None
+
+    def __getitem__(self, index):
+        var = Variable(self.shape)
+        var.index = index
+        var.reference = self
+        return var
 
 class TensorFunctionOp(object):
     def __init__(self, func, args, outputs, indices):

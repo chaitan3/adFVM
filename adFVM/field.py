@@ -238,7 +238,7 @@ class Field(object):
         return self.__class__('{0}/{1}'.format(self.name, phi.name), self.field / phi.field, self.dimensions)
 
 class CellField(Field):
-    def __init__(self, name, field, dimensions, boundary={}, ghost=False, init=False):
+    def __init__(self, name, field, dimensions, boundary={}):
         logger.debug('initializing CellField {0}'.format(name))
         super(self.__class__, self).__init__(name, field, dimensions)
         mesh = self.mesh
@@ -249,50 +249,19 @@ class CellField(Field):
             self.boundary = boundary
 
         # CellField does not contain processor patch data, but the size is still full = nCells in original code
-        if ghost:
-            # can be not filled
-            self.resetField()
+        self.BC = {}
+        for patchID in mesh.localPatches:
+            # skip processor patches
+            patchType = self.boundary[patchID]['type']
+            self.BC[patchID] = getattr(BCs, patchType)(self, patchID)
 
-        if ghost or init:
-            self.BC = {}
-            for patchID in mesh.localPatches:
-                # skip processor patches
-                patchType = self.boundary[patchID]['type']
-                self.BC[patchID] = getattr(BCs, patchType)(self, patchID)
-
-        if ghost:
-            self.setInternalField(field)
-
-    @classmethod
-    def copy(self, phi):
-        logger.info('copying field {0}'.format(phi.name))
-        return self(phi.name, phi.field.copy(), phi.dimensions, phi.boundary.copy())
-
-    def resetField(self):
-        return
-        mesh = self.mesh
-        size = (mesh.nCells, ) + self.dimensions
-        self.field = ad.zeros(size, config.dtype)
-        #self.field.tag.test_value = np.zeros((mesh.origMesh.nCells,) + self.dimensions, config.precision)
-
-    def setInternalField(self, internalField, processor=False):
-        self.initField()
-        self.setField((0, self.mesh.nInternalCells), internalField)
-        self.field = internalField
-        self.updateGhostCells()
-        self.gatherField('concat')
-        if processor:
-            self.updateProcessorCells([self])
-
-    def getInternalField(self):
-        return self.field[:self.mesh.nInternalCells]
-
-
-    def updateGhostCells(self):
+    def updateGhostCells(self, phi):
         logger.info('updating ghost cells for {0}'.format(self.name))
         patches = sorted(self.mesh.localPatches, key=lambda x: self.mesh.origMesh.boundary[x]['startFace'])
+        #print phi
         for patchID in patches:
-            self.BC[patchID].update()
+            phi = self.BC[patchID].update(phi)
+        return phi
 
     def updateProcessorCells(self, fields):
         return
@@ -517,12 +486,13 @@ class IOField(Field):
         self.field = parallel.getRemoteCells([field], self.mesh)[0]
         return
 
-    def completeField(self, internalField):
+    def completeField(self, phi=None):
         logger.debug('completing field {0}'.format(self.name))
-        mesh = self.mesh.symMesh
-        # CellField for later use
-        self.phi = CellField(self.name, internalField, self.dimensions, self.boundary, init=True)
-        return self.phi.field
+        #return phiI
+        if self.phi is None:
+            self.phi = CellField(self.name, phi, self.dimensions, self.boundary)
+        if phi is not None:
+            return self.phi.updateGhostCells(phi)
 
     def partialComplete(self, value=0.):
         mesh = self.mesh.origMesh

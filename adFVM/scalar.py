@@ -61,6 +61,12 @@ class IntegerScalar(ArithBase):
         self.name = 'Integer_{}'.format(index)
         self.args = tuple()
 
+    def _binaryOp(self, b, op, comparison=False):
+        assert isinstance(b, IntegerScalar)
+        return binaryOpClass[op](op, self, b, comparison)
+
+
+
 class Scalar(ArithBase):
     _index = 0
     def __init__(self):

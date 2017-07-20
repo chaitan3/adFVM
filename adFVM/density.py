@@ -7,6 +7,7 @@ from .solver import Solver
 from .interp import central, secondOrder
 from . import BCs
 from . import postpro
+from .mesh import Mesh
 
 import numpy as np
 #import adFVMcpp
@@ -65,14 +66,19 @@ class RCF(Solver):
         if config.compile:
             Function.clean()
             mesh = self.mesh.symMesh
+            self._primitive = Tensorize(self.primitive)
+            self._conservative = Tensorize(self.conservative)
 
             # init function
             rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
-            U, T, p = Tensorize(self.primitive)(rho, rhoU, rhoE)
-            UN, TN, pN = self.U.completeField(U), self.T.completeField(T), self.p.completeField(p)
-            rhoN, rhoUN, rhoEN = Tensorize(self.conservative)(UN, TN, pN)
+            U, T, p = Variable((mesh.nCells, 3)), Variable((mesh.nCells, 1)), Variable((mesh.nCells, 1))
+            U, T, p = self._primitive((0, mesh.nInternalCells), outputs=(U, T, p))(rho, rhoU, rhoE)
+            U = self.U.completeField(U)
+            T = self.T.completeField(T)
+            p = self.p.completeField(p)
+            UN, TN, pN = self.characteristicBoundary(U, T, p)
+            rhoN, rhoUN, rhoEN = self._conservative()(UN, TN, pN)
             self.mapBoundary = Function([rho, rhoU, rhoE], [rhoN, rhoUN, rhoEN])
-
 
             rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
             self.map = Function([rho, rhoU, rhoE], self.equation(rho, rhoU, rhoE))
@@ -105,6 +111,8 @@ class RCF(Solver):
         if self.firstRun:
             self.U, self.T, self.p = fields
             self.fields = fields
+            for phi in self.fields:
+                phi.completeField()
         else:
             self.updateFields(fields)
         self.firstRun = False
@@ -163,8 +171,7 @@ class RCF(Solver):
         rhoEFlux = (rhoE + p)*Un
         return rhoFlux, rhoUFlux, rhoEFlux
 
-    def viscousFlux(self, TL, TR, UF, TF, gradUF, gradTF):
-        mesh = self.mesh.symMesh
+    def viscousFlux(self, TL, TR, UF, TF, gradUF, gradTF, mesh):
         mu = self.mu(TF)
         kappa = self.kappa(mu, TF)
 
@@ -179,8 +186,10 @@ class RCF(Solver):
 
     #symbolic funcs
 
-    def gradients(self, U, T, p, neighbour=True, boundary=False):
-        mesh = self.mesh.symMesh
+    def gradients(self, U, T, p, *mesh, **options):
+        mesh = Mesh.container(mesh)
+        neighbour = options.pop('neighbour', True)
+        boundary = options.pop('boundary', False)
         if boundary:
             UF = U.extract(mesh.neighbour)
             TF = T.extract(mesh.neighbour)
@@ -202,8 +211,10 @@ class RCF(Solver):
 
 
         
-    def flux(self, U, T, p, gradU, gradT, gradp, characteristic=False, neighbour=True):
-        mesh = self.mesh.symMesh
+    def flux(self, U, T, p, gradU, gradT, gradp, *mesh, **options):
+        mesh = Mesh.container(mesh)
+        neighbour = options.pop('neighbour', True)
+        characteristic = options.pop('characteristic', False)
         P, N = mesh.owner, mesh.neighbour
 
         ULF = secondOrder(U, gradU, mesh, 0)
@@ -232,7 +243,7 @@ class RCF(Solver):
             gradTF = 0.5*(gradT.extract(P) + gradT.extract(N))
             gradUF = 0.5*(gradU.extract(P) + gradU.extract(N))
 
-        ret = self.viscousFlux(T.extract(P), T.extract(N), UF, TF, gradUF, gradTF)
+        ret = self.viscousFlux(T.extract(P), T.extract(N), UF, TF, gradUF, gradTF, mesh)
         rhoUFlux += ret[0]
         rhoEFlux += ret[1]
 
@@ -246,23 +257,18 @@ class RCF(Solver):
 
         return drho, drhoU, drhoE, dtc
 
-        #inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
-        #         [getattr(mesh, attr) for attr in mesh.intFields]
-
-        #return TensorFunction(name, [U, T, p, gradU, gradT, gradp] + inputs,
-        #                          [drho, drhoU, drhoE, dtc])
-
-    def boundaryFlux(self, U, T, p, gradU, gradT, gradp):
-        mesh = self.mesh.symMesh
+    def boundaryFlux(self, U, T, p, gradU, gradT, gradp, *mesh):
+        mesh = Mesh.container(mesh)
         P, N = mesh.owner, mesh.neighbour
 
         # boundary extraction could be done using cellstartface
         UR, TR, pR = U.extract(N), T.extract(N), p.extract(N) 
+        #UR, TR, pR = U, T, p
         gradUR, gradTR = gradU.extract(N), gradT.extract(N)
         TL = T.extract(P)
 
         rhoFlux, rhoUFlux, rhoEFlux = self.getFlux(UR, TR, pR, mesh.normals)
-        ret = self.viscousFlux(TL, TR, UR, TR, gradUR, gradTR)
+        ret = self.viscousFlux(TL, TR, UR, TR, gradUR, gradTR, mesh)
         rhoUFlux += ret[0]
         rhoEFlux += ret[1]
 
@@ -275,54 +281,64 @@ class RCF(Solver):
         dtc = absDiv(maxaF, mesh, False)
 
         return drho, drhoU, drhoE, dtc
-        #inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
-        #         [getattr(mesh, attr) for attr in mesh.intFields]
 
-        #return TensorFunction("boundaryFlux", [U, T, p, gradU, gradT, gradp] + inputs,
-        #                          [drho, drhoU, drhoE, dtc])
+    def characteristicBoundary(self, U, T, p):
+        for patchID, patch in self.p.phi.BC.iteritems():
+            if isinstance(patch, BCs.CharacteristicBoundaryCondition):
+                U, T, p = patch.update(U, T, p)
+        return U, T, p
 
     def equation(self, rho, rhoU, rhoE):
         logger.info('computing RHS/LHS')
         mesh = self.mesh.symMesh
 
+        def _meshArgs(start=0):
+            return [getattr(mesh, attr)[start] for attr in mesh.gradFields] + \
+                   [getattr(mesh, attr)[start] for attr in mesh.intFields]
+
         U, T, p = Variable((mesh.nCells, 3)), Variable((mesh.nCells, 1)), Variable((mesh.nCells, 1))
-        U, T, p = Tensorize(self.primitive, (0, mesh.nInternalCells), outputs=(U, T, p))(rho, rhoU, rhoE)
+        U, T, p = self._primitive((0, mesh.nInternalCells), outputs=(U, T, p))(rho, rhoU, rhoE)
         # boundary update
+        U = self.U.completeField(U)
+        T = self.T.completeField(T)
+        p = self.p.completeField(p)
+        U, T, p = self.characteristicBoundary(U, T, p)
 
+        meshArgs = _meshArgs()
         gradU, gradT, gradp = Variable((mesh.nCells, 3, 3)), Variable((mesh.nCells, 1, 3)), Variable((mesh.nCells, 1, 3))
-        gradU, gradT, gradp = Tensorize(self.gradients, (0, mesh.nInternalCells), outputs=(gradU, gradT, gradp))(U, T, p)
+        outputs = Tensorize(self.gradients)(mesh.nInternalFaces, outputs=(gradU, gradT, gradp))(U, T, p, *meshArgs)
+        _coupledGrad = Tensorize(self.gradients)
+        _boundaryGrad = Tensorize(self.gradients)
         for patchID in self.mesh.boundary:
-            startFace, endFace, nFaces = self.mesh.getPatchFaceRange(patchID)
-            #startFace, endFace, nFaces = mesh.getPatchFaceRange(patchID)
+            startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']
+            meshArgs = _meshArgs(startFace)
             if patchType in config.coupledPatches:
-                gradU, gradT, gradp = Tensorize(self.gradients, (startFace, nFaces), outputs=(gradU, gradT, gradp))(U, T, p, neighbour=False, boundary=False)
+                outputs = _coupledGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
             else:
-                gradU, gradT, gradp = Tensorize(self.gradients, (startFace, nFaces), outputs=(gradU, gradT, gradp))(U, T, p, neighbour=False, boundary=True)
+                outputs = _boundaryGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=True, *meshArgs)
+        gradU, gradT, gradp = outputs
         # grad boundary update
+        gradU = self.U.completeField(gradU)
+        gradT = self.T.completeField(gradT)
+        gradp = self.p.completeField(gradp)
         
+        meshArgs = _meshArgs()
         drho, drhoU, drhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1))
-        drho, drhoU, drhoE = Tensorize(self.flux, (0, mesh.nInternalCells), outputs=(drho, drhoU, drhoE))(U, T, p, gradU, gradT, gradp)
+        dtc = Variable((mesh.nInternalCells, 1))
+        outputs = Tensorize(self.flux)((0, mesh.nInternalCells), outputs=(drho, drhoU, drhoE, dtc))(U, T, p, gradU, gradT, gradp, *meshArgs)
+        _coupledFlux = Tensorize(self.flux)
+        _characteristicFlux = Tensorize(self.flux)
+        _boundaryFlux = Tensorize(self.boundaryFlux)
         for patchID in self.mesh.boundary:
-            startFace, endFace, nFaces = self.mesh.getPatchFaceRange(patchID)
+            startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']
+            meshArgs = _meshArgs(startFace)
             if patchType in config.coupledPatches:
-                drho, drhoU, drhoE = Tensorize(self.flux, (startFace, nFaces), outputs=(drho, drhoU, drhoE))(U, T, p, gradU, gradT, gradp, characteristic=False, neighbour=False)
+                outputs = _coupledFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, characteristic=False, neighbour=False, *meshArgs)
             elif patchType == 'characteristic':
-                drho, drhoU, drhoE = Tensorize(self.flux, (startFace, nFaces), outputs=(drho, drhoU, drhoE))(U, T, p, gradU, gradT, gradp, characteristic=True, neighbour=False)
+                outputs = _characteristicFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, characteristic=True, neighbour=False, *meshArgs)
             else:
-                drho, drhoU, drhoE = Tensorize(self.boundaryFlux, (startFace, nFaces), outputs=(drho, drhoU, drhoE))(U, T, p, gradU, gradT, gradp)
-        exit(1)
-
-        return [Field('drho', drho, (1,)), Field('drho', drhoU, (1,)), Field('drho', drhoE, (1,))] 
-
-        # CFL based time step
-        #self.aF = ((self.gamma-1)*self.Cp*TF).sqrt()
-        #if self.stage == 1:
-        #    maxaF = (UF.dotN()).abs() + self.aF
-        #    self.dtc = 2*self.CFL/internal_sum(maxaF, mesh, absolute=True)
-
-        #return [div(rhoFlux) - self.sourceFields[0], \
-        #        #ddt(rhoU, self.dt) + div(rhoUFlux) + grad(pF) - div(sigmaF) - source[1],
-        #        div(rhoUFlux - sigmaF) - self.sourceFields[1], \
-        #        div(rhoEFlux - qF - sigmadotUF) - self.sourceFields[2]]
+                outputs = _boundaryFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
+        drho, drhoU, drhoE, dtc = outputs
+        return [Field('drho', drho, (1,)), Field('drhoU', drhoU, (3,)), Field('drhoE', drhoE, (1,))] 

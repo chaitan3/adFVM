@@ -188,9 +188,6 @@ class Tensor(ArithBase):
     def max(cls, x1, x2):
         return Tensor.switch(x1 > x2, x1, x2)
 
-class CellTensor(Tensor):
-    pass
-
 class TensorFunction(object):
     _index = 0
     _module = None
@@ -376,22 +373,37 @@ def randomName(N):
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N))
 
 
-def Tensorize(func, indices=None, outputs=None):
-    name = randomName(12)
-    _indices = indices
-    if _indices == None:
-        _indices = (0, )
-    def wrapped_func(*args, **kwargs):
-        tensorArgs = [Tensor(x.shape[1:]) for x in args]
-        tensorOutputs = func(*tensorArgs, **kwargs)
-        shape = args[0].shape[0]
-        outputShapes = [(shape,) + x.shape for x in tensorOutputs]
-        tensorFunc = TensorFunction(name, tensorArgs, tensorOutputs)
-        if outputs is None:
-            _outputs = tuple([Variable(x) for x in outputShapes])
-        else:
-            args = args + outputs
-            _outputs = tuple([Variable(x.shape) for x in outputs])
-        return TensorFunctionOp(tensorFunc, args, _outputs, _indices).outputs
-
-    return wrapped_func
+def Tensorize(func):
+    def ParamFunc(indices=None, outputs=None):
+        def Func(*args, **kwargs):
+            if not hasattr(Func, 'tensorFunc'):
+                name = randomName(12)
+                tensorArgs = []
+                #print len(args), len(kwargs)
+                for x in args:
+                    if x.dtype == 'scalar':
+                        tensorArgs.append(Tensor(x.shape[1:]))
+                    elif x.dtype == 'integer':
+                        tensorArgs.append(Tensor(x.shape[1:], scalars=[IntegerScalar()]))
+                    else:
+                        raise Exception(x.dtype)
+                tensorOutputs = func(*tensorArgs, **kwargs)
+                shape = args[0].shape[0]
+                if not isinstance(tensorOutputs, tuple):
+                    tensorOutputs = (tensorOutputs,)
+                ParamFunc.outputShapes = [(shape,) + x.shape for x in tensorOutputs]
+                ParamFunc.tensorFunc = TensorFunction(name, tensorArgs, tensorOutputs)
+            _indices = indices
+            if _indices == None:
+                _indices = ParamFunc.outputShapes[0][0]
+            if outputs is None:
+                _outputs = tuple([Variable(x) for x in ParamFunc.outputShapes])
+            else:
+                assert len(outputs) == len(ParamFunc.outputShapes)
+                args = args + outputs
+                _outputs = tuple([Variable(x.shape) for x in outputs])
+                for out, ref in zip(_outputs, outputs):
+                    out.reference = ref
+            return TensorFunctionOp(ParamFunc.tensorFunc, args, _outputs, _indices).outputs
+        return Func
+    return ParamFunc

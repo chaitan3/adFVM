@@ -2,7 +2,7 @@ import numpy as np
 import new
 
 from . import config
-from .tensor import Tensor, TensorFunction
+from .tensor import Tensor, Tensorize, Variable
 from .mesh import extractField, extractVector
 logger = config.Logger(__name__)
 
@@ -39,34 +39,34 @@ def cross(v, w):
 class BoundaryCondition(object):
     def __init__(self, phi, patchID):
         self.patchID = patchID
-        self.phi = phi
+        self.dimensions = phi.dimensions
         self.solver = phi.solver
         self.mesh = phi.mesh
         self.patch = phi.boundary[patchID]
-        self.startFace, self.endFace, self.cellStartFace, self.cellEndFace, \
-            self.nFaces = self.mesh.getPatchFaceCellRange(patchID)
-        self.internalIndices = self.mesh.owner[self.startFace:self.endFace]
 
-        self.normals = self.mesh.symMesh.normals
+        mesh = self.mesh.symMesh
+        patch = mesh.boundary[patchID]
+        self.startFace, self.nFaces = patch['startFace'], patch['nFaces']
+        self.cellStartFace = self.startFace - mesh.nInternalFaces + mesh.nInternalCells
+        self.normals = mesh.normals[self.startFace]
+        self.owner = mesh.owner
         # used by field writer
         self.keys = []
         self.inputs = []
 
     def createInput(self, key, dimensions):
-        patch = self.mesh.origMesh.boundary[self.patchID]
+        patch = self.mesh.boundary[self.patchID]
         nFaces = patch['nFaces']
         value = extractField(self.patch[key], nFaces, dimensions)
         self.patch['_{}'.format(key)] = value
-        symbolic = Tensor(dimensions)
-        self.keys.append(key)
+        symbolic = Variable((self.nFaces,) + dimensions)
         self.inputs.append((symbolic, value))
         return symbolic
 
-    def setValue(self, value):
-        self.phi.setField((self.cellStartFace, self.cellEndFace), value)
-
-    def update(self):
-        pass
+    def update(self, phi):
+        inputs = tuple([phi] + [x[0] for x in self.inputs])
+        outputs = (phi[self.cellStartFace],)
+        return Tensorize(self._update)(self.nFaces, outputs)(*inputs)[0]
 
 class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):
@@ -77,19 +77,110 @@ class calculated(BoundaryCondition):
         #else:
         #    self.setValue(0.)
 
-class cyclic(BoundaryCondition):
-    pass
-    #def __init__(self, phi, patchID):
-    #    super(self.__class__, self).__init__(phi, patchID)
-    #    neighbourPatch = self.mesh.boundary[patchID]['neighbourPatch']
-    #    neighbourStartFace = self.mesh.boundary[neighbourPatch]['startFace']
-    #    neighbourEndFace = neighbourStartFace + self.nFaces
-    #    self.neighbourIndices = self.mesh.owner[neighbourStartFace:neighbourEndFace]
+    def update(self, phi):
+        return phi
 
-    #def _update(self):
-    #    logger.debug('cyclic BC for {0}'.format(self.patchID))
-    #    #self.value[:] = self.field[self.neighbourIndices]
-    #    self.setValue(ad.gather(self.phi.field, self.neighbourIndices))
+class cyclic(BoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        neighbourPatch = self.mesh.boundary[patchID]['neighbourPatch']
+        neighbourStartFace = self.mesh.symMesh.boundary[neighbourPatch]['startFace']
+        self.inputs.append((self.owner[neighbourStartFace], None))
+
+    def _update(self, phi, neighbourIndices):
+        logger.debug('cyclic BC for {0}'.format(self.patchID))
+        return phi.extract(neighbourIndices)
+
+class zeroGradient(BoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        self.inputs.append((self.owner[self.startFace], None))
+
+    def _update(self, phi, owner):
+        logger.debug('zeroGradient BC for {0}'.format(self.patchID))
+        return phi.extract(owner)
+        #if hasattr(self.phi, 'grad'):
+        #    # second order correction
+        #    grad = self.phi.grad.field[self.internalIndices]
+        #    R = self.mesh.faceCentres[self.startFace:self.endFace] - self.mesh.cellCentres[self.internalIndices]
+        #    boundaryValue = boundaryValue + 0.5*dot(grad, R, self.phi.dimensions[0])
+
+empty = zeroGradient
+inletOutlet = zeroGradient
+
+class fixedValue(BoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        # mesh values required outside theano
+        #self.fixedValue = extractField(self.patch['value'], self.nFaces, self.phi.dimensions == (3,))
+        self.createInput('value', self.dimensions)
+
+    def _update(self, phi, fixedValue):
+        logger.debug('fixedValue BC for {0}'.format(self.patchID))
+        return fixedValue*1
+
+    
+class CharacteristicBoundaryCondition(BoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(CharacteristicBoundaryCondition, self).__init__(phi, patchID)
+        #self.U, self.T, _ = self.solver.getBCFields()
+        #self.p = self.phi
+
+    def update(self, *args):
+        if len(args) == 1:
+            return args[0]
+        U, T, p = args
+        inputs = tuple([U, T, p] + [x[0] for x in self.inputs])
+        outputs = (U[self.cellStartFace],T[self.cellStartFace], p[self.cellStartFace])
+        return Tensorize(self._update)(self.nFaces, outputs)(*inputs)
+
+class CBC_UPT(CharacteristicBoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        self.mesh.boundary[patchID]['type'] = 'characteristic'
+        self.createInput('U0', (3,))
+        self.createInput('T0', (1,))
+        self.createInput('p0', (1,))
+
+    def _update(self, U, T, p, U0, T0, p0):
+        return U0, T0, p0
+
+# implement support for characteristic time travel
+class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
+    def __init__(self, phi, patchID):
+        super(self.__class__, self).__init__(phi, patchID)
+        self.mesh.boundary[patchID]['type'] = 'characteristic'
+        self.createInput('Tt', (1,))
+        self.createInput('pt', (1,))
+        self.Cp = self.solver.Cp
+        self.gamma = self.solver.gamma
+        if 'direction' in self.patch:
+            self.createInput('direction', (3,))
+        else:
+            self.inputs.append((self.normals, None))
+
+    def _update(self, U, T, p, Tt, pt, direction):
+        Un = U.dot(direction)
+        Ub = Un*direction
+        Tb = Tt - 0.5*Un*Un/self.Cp
+        pb = pt * (T/Tt)**(self.gamma/(self.gamma-1))
+        return Ub, Tb, pb
+
+#class symmetryPlane(zeroGradient):
+#    def _update(self):
+#        logger.debug('symmetryPlane BC for {0}'.format(self.patchID))
+#        dims = self.phi.dimensions
+#        phi = Tensor(dims)
+#        # if vector
+#        if dims == (3,):
+#            v = -self.normals
+#            #value = self.phi.field[self.cellStartFace:self.cellEndFace]
+#            phiF = phi-phi.dot(v)*v
+#        else:
+#            phiF = phi*1
+#        return TensorFunction('symmetryPlane', [phi, self.normals], [phiF])
+#
+#slip = symmetryPlane
 
 #class slidingPeriodic1D(BoundaryCondition):
 #    def __init__(self, phi, patchID):
@@ -118,89 +209,7 @@ class cyclic(BoundaryCondition):
 #            value = value + self.velocity
 #        self.setValue(value)
 
-class zeroGradient(BoundaryCondition):
-    def _update(self):
-        logger.debug('zeroGradient BC for {0}'.format(self.patchID))
-        phi =  Tensor(self.phi.dimensions)
-        phiF = phi*1
-        return TensorFunction('zeroGradient', [phi], [phiF])
-        #if hasattr(self.phi, 'grad'):
-        #    # second order correction
-        #    grad = self.phi.grad.field[self.internalIndices]
-        #    R = self.mesh.faceCentres[self.startFace:self.endFace] - self.mesh.cellCentres[self.internalIndices]
-        #    boundaryValue = boundaryValue + 0.5*dot(grad, R, self.phi.dimensions[0])
 
-class symmetryPlane(zeroGradient):
-    def _update(self):
-        logger.debug('symmetryPlane BC for {0}'.format(self.patchID))
-        dims = self.phi.dimensions
-        phi = Tensor(dims)
-        # if vector
-        if dims == (3,):
-            v = -self.normals
-            #value = self.phi.field[self.cellStartFace:self.cellEndFace]
-            phiF = phi-phi.dot(v)*v
-        else:
-            phiF = phi*1
-        return TensorFunction('symmetryPlane', [phi, self.normals], [phiF])
-
-slip = symmetryPlane
-empty = zeroGradient
-inletOutlet = zeroGradient
-
-class fixedValue(BoundaryCondition):
-    def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
-        # mesh values required outside theano
-        #self.fixedValue = extractField(self.patch['value'], self.nFaces, self.phi.dimensions == (3,))
-        self.fixedValue = self.createInput('value', self.phi.dimensions)
-
-    def _update(self):
-        logger.debug('fixedValue BC for {0}'.format(self.patchID))
-        phiF = self.fixedValue*1
-        return TensorFunction('zeroGradient', [self.fixedValue], [phiF])
-
-class CharacteristicBoundaryCondition(BoundaryCondition):
-    def __init__(self, phi, patchID):
-        super(CharacteristicBoundaryCondition, self).__init__(phi, patchID)
-        #self.U, self.T, _ = self.solver.getBCFields()
-        #self.p = self.phi
-
-class CBC_UPT(CharacteristicBoundaryCondition):
-    def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
-        self.mesh.boundary[patchID]['type'] = 'characteristic'
-        self.U0 = self.createInput('U0', (3,))
-        self.T0 = self.createInput('T0', (1,))
-        self.p0 = self.createInput('p0', (1,))
-
-    #def _update(self):
-    #    self.updateAll((self.U0, self.T0, self.p0))
-        #self.T.setField((self.cellStartFace, self.cellEndFace), self.T0)
-        #self.T.BC[self.patchID].update = new.instancemethod(lambda self_: self_.phi.setField((self_.cellStartFace, self_.cellEndFace), self.T0), self.T.BC[self.patchID], None)
-
-
-# implement support for characteristic time travel
-class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
-    def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
-        self.mesh.boundary[patchID]['type'] = 'characteristic'
-        self.Tt = self.createInput('Tt', (1,))
-        self.pt = self.createInput('pt', (1,))
-        self.Cp = self.solver.Cp
-        self.gamma = self.solver.gamma
-        if 'direction' in self.patch:
-            self.direction = self.createInput('direction', (3,))
-        else:
-            self.direction = self.normals
-
-    def _update(self):
-        U, T, p = Tensor((3,)), Tensor((1,)), Tensor((1,))
-        Un = U.dot(self.direction)
-        Ub = Un*self.direction
-        Tb = self.Tt - 0.5*Un*Un/self.Cp
-        pb = self.pt * (T/self.Tt)**(self.gamma/(self.gamma-1))
-        return TensorFunction("CBC_TOTAL_PT", [U, T, p, self.Tt, self.pt, self.direction], [Ub, Tb, pb])
 #
 #class nonReflectingOutletPressure(CharacteristicBoundaryCondition):
 #    def __init__(self, phi, patchID):
