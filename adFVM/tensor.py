@@ -365,7 +365,6 @@ class TensorFunction(object):
         #codeFile.write('\tlong long end = current_timestamp(); mil += end-start; printf("c module {}: %lld\\n", mil);\n'.format(self.name))
         codeFile.write('}\n')
         codeFile.close()
-
         return
 
 import random, string

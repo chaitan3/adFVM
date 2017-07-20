@@ -1,5 +1,5 @@
 from . import config, riemann, interp
-from .tensor import Tensorize
+from .tensor import Tensorize, Scalar
 from .variable import Variable, Function
 from .field import Field, IOField
 from .op import  div, absDiv, snGrad, grad, internal_sum
@@ -7,6 +7,7 @@ from .solver import Solver
 from .interp import central, secondOrder
 from . import BCs
 from . import postpro
+from . import timestep
 from .mesh import Mesh
 
 import numpy as np
@@ -80,8 +81,12 @@ class RCF(Solver):
             rhoN, rhoUN, rhoEN = self._conservative()(UN, TN, pN)
             self.mapBoundary = Function([rho, rhoU, rhoE], [rhoN, rhoUN, rhoEN])
 
+            self.t0 = Scalar()
+            self.dt = Scalar()
+            self.t = Scalar()
             rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
-            self.map = Function([rho, rhoU, rhoE], self.equation(rho, rhoU, rhoE))
+            rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
+            self.map = Function([rho, rhoU, rhoE], [rhoN, rhoUN, rhoEN])
 
         Function.compile()
         Function._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
@@ -341,4 +346,4 @@ class RCF(Solver):
             else:
                 outputs = _boundaryFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
         drho, drhoU, drhoE, dtc = outputs
-        return [Field('drho', drho, (1,)), Field('drhoU', drhoU, (3,)), Field('drhoE', drhoE, (1,))] 
+        return drho, drhoU, drhoE

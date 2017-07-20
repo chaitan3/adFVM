@@ -2,6 +2,7 @@ import numpy as np
 
 from . import config
 from .field import Field
+from .tensor import Tensorize
 
 createFields = lambda internalFields, solver : [Field(solver.names[index], phi, solver.dimensions[index]) for index, phi in enumerate(internalFields)]
 
@@ -33,24 +34,52 @@ def SSPRK():
     return [alpha, beta, gamma]
 
 def timeStepper(equation, initFields, solver):
+    mesh = solver.mesh.symMesh
     alpha, beta, gamma = solver.timeStepCoeff
     nStages = alpha.shape[0]
     LHS = []
     fields = [initFields]
-    nFields = len(fields[0])
+    n = len(fields[0])
+
+    def update(*args, **kwargs):
+        i = kwargs['i']
+        currFields = [0]*n
+        LHS, fields = args[:n], args[n:]
+        for j in range(0, i+1):
+            for index in range(0, n):
+                currFields[index] += alpha[i,j]*fields[j*n+index]
+        for index in range(0, n):
+            currFields[index] += -beta[i,i]*LHS[index]*solver.dt
+        return tuple(currFields)
+
     for i in range(0, nStages):
         solver.t = solver.t0 + gamma[i]*solver.dt
-        LHS.append(equation(*fields[i]))
-        internalFields = [0]*nFields
-        for j in range(0, i+1):
-            for index in range(0, nFields):
-                internalFields[index] += alpha[i,j]*fields[j][index].field-beta[i,j]*LHS[j][index].field*solver.dt
-        internalFields = createFields(internalFields, solver)
+        LHS = equation(*fields[i])
+        args = list(LHS) + sum(fields, [])
+        currFields = Tensorize(update)(mesh.nInternalCells)(*args, i=i)
         solver.stage += 1
-        if i == nStages-1:
-            return  [phi.field for phi in internalFields]
-        else:
-            fields.append(internalFields)
+        fields.append(list(currFields))
+    return fields[-1]
+
+#def timeStepper(equation, initFields, solver):
+#    alpha, beta, gamma = solver.timeStepCoeff
+#    nStages = alpha.shape[0]
+#    LHS = []
+#    fields = [initFields]
+#    nFields = len(fields[0])
+#    for i in range(0, nStages):
+#        solver.t = solver.t0 + gamma[i]*solver.dt
+#        LHS.append(equation(*fields[i]))
+#        internalFields = [0]*nFields
+#        for j in range(0, i+1):
+#            for index in range(0, nFields):
+#                internalFields[index] += alpha[i,j]*fields[j][index].field-beta[i,j]*LHS[j][index].field*solver.dt
+#        internalFields = createFields(internalFields, solver)
+#        solver.stage += 1
+#        if i == nStages-1:
+#            return  [phi.field for phi in internalFields]
+#        else:
+#            fields.append(internalFields)
 
 # DOES NOT WORK
 #def implicit(equation, boundary, fields, garbage):

@@ -143,16 +143,6 @@ class Solver(object):
     #        fields.append(mod(name, phi, dim, **kwargs))
     #    return fields
 
-    def getSymbolicFields(self, returnField=True):
-        names = self.names
-        fields = []
-        for index, dim in enumerate(self.dimensions):
-            field = Variable()
-            if returnField:
-                field = CellField(names[index], field, dim)
-            fields.append(field)
-        return fields
-
     def initSource(self):
         self.sourceFields = self.getSymbolicFields()
         symbolics = [phi.field for phi in self.sourceFields]

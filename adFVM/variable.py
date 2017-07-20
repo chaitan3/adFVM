@@ -71,6 +71,3 @@ class Function(object):
         import interface as mod
         Function._module = mod
 
-
-
- 

@@ -9,10 +9,10 @@ SQRT = 123412341234
 
 class ArithBase(object):
     def _binaryOp(self, b, op):
-        raise NotImplementedError(self)
+        raise NotImplementedError(self, b, op)
 
     def _unaryOp(self, op):
-        raise NotImplementedError(self)
+        raise NotImplementedError(self, b, op)
 
     def __add__(self, b):
         return self._binaryOp(b, operator.add)
