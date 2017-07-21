@@ -86,14 +86,14 @@ class RCF(Solver):
             p = self.p.completeField(p)
             UN, TN, pN = self.characteristicBoundary(U, T, p)
             rhoN, rhoUN, rhoEN = self._conservative()(UN, TN, pN)
-            self.mapBoundary = Function([rho, rhoU, rhoE], [rhoN, rhoUN, rhoEN])
+            self.mapBoundary = Function('init', [rho, rhoU, rhoE], [rhoN, rhoUN, rhoEN])
 
             self.t0 = ConstScalar()
             self.dt = ConstScalar()
             self.t = self.t0
             rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
             rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
-            self.map = Function([rho, rhoU, rhoE, self.t0, self.dt], [rhoN, rhoUN, rhoEN])
+            self.map = Function('primal', [rho, rhoU, rhoE, self.t0, self.dt], [rhoN, rhoUN, rhoEN])
 
         Function.compile()
         Function._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))

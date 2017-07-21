@@ -379,7 +379,7 @@ def Tensorize(func):
         def Func(*args, **kwargs):
             if not hasattr(ParamFunc, 'tensorFunc'):
                 name = randomName(12)
-                print 'here', name
+                #print 'here', name
                 tensorArgs = []
                 #print len(args), len(kwargs)
                 for x in args:
@@ -405,9 +405,7 @@ def Tensorize(func):
             else:
                 assert len(outputs) == len(ParamFunc.outputShapes)
                 args = args + outputs
-                _outputs = tuple([Variable(x.shape) for x in outputs])
-                for out, ref in zip(_outputs, outputs):
-                    out.reference = ref
+                _outputs = tuple([x.getReference() for x in outputs])
             return TensorFunctionOp(ParamFunc.tensorFunc, args, _outputs, _indices).outputs
         return Func
     return ParamFunc

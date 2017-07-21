@@ -60,6 +60,7 @@ class IntegerScalar(ArithBase):
         IntegerScalar._index += 1
         self.name = 'Integer_{}'.format(index)
         self.args = tuple()
+        self.dtype = 'integer'
 
     def _binaryOp(self, b, op, comparison=False):
         assert isinstance(b, IntegerScalar)
@@ -74,6 +75,7 @@ class Scalar(ArithBase):
         Scalar._index += 1
         self.name = 'Scalar_{}'.format(index)
         self.args = tuple()
+        self.dtype = dtype
 
     def _binaryOp(self, b, op, comparison=False):
         if isinstance(b, numbers.Number):

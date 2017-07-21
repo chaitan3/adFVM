@@ -20,9 +20,14 @@ class Variable(ArithBase):
         self.reference = None
 
     def __getitem__(self, index):
-        var = Variable(self.shape)
+        var = self.getReference()
         var.index = index
+        return var
+
+    def getReference(self):
+        var = Variable(self.shape)
         var.reference = self
+        var.name = self.name
         return var
 
 class TensorFunctionOp(object):
@@ -40,9 +45,24 @@ class Function(object):
     _module = None
     codeDir = os.path.dirname(__file__) + '/gencode/'
 
-    def __init__(self, inputs, outputs):
+    def __init__(self, name, inputs, outputs):
+        self.name = name
         self._inputs = inputs
         self._outputs = outputs
+        self._genCode()
+
+    def _genCode(self):
+        codeFile = open(self.codeDir + 'code.cpp', 'a')
+        memString = '' 
+        for inp in self._inputs:
+            memString += 'const {}* {}, '.format(inp.dtype, inp.name)
+        for out in self._outputs:
+            memString += '{}* {}, '.format(out.dtype, out.name)
+        codeFile.write('\nvoid Function_{}({}) {}\n'.format(self.name, memString[:-2], '{\n'))
+
+        codeFile.write('}')
+
+        codeFile.close()
 
     @classmethod
     def createCodeDir(self, case):
