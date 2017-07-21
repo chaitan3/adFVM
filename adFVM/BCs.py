@@ -53,6 +53,7 @@ class BoundaryCondition(object):
         # used by field writer
         self.keys = []
         self.inputs = []
+        self._tensorUpdate = Tensorize(self._update)
 
     def createInput(self, key, dimensions):
         patch = self.mesh.boundary[self.patchID]
@@ -63,10 +64,13 @@ class BoundaryCondition(object):
         self.inputs.append((symbolic, value))
         return symbolic
 
+    def _update(self):
+        pass
+
     def update(self, phi):
         inputs = tuple([phi] + [x[0] for x in self.inputs])
         outputs = (phi[self.cellStartFace],)
-        return Tensorize(self._update)(self.nFaces, outputs)(*inputs)[0]
+        return self._tensorUpdate(self.nFaces, outputs)(*inputs)[0]
 
 class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):

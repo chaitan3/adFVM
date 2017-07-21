@@ -84,6 +84,8 @@ class Scalar(ArithBase):
         return unaryOpClass[op](op, self)
 
     # define unique hash function
+class ConstScalar(Scalar):
+    pass
 
 class OpBase(Scalar):
     _cache = {}
@@ -108,8 +110,8 @@ class OpBase(Scalar):
         raise NotImplementedError(self)
 
 class ConstantOp(OpBase):
-    def __init__(self, const):
-        self.constant = const
+    def __init__(self, constant):
+        self.constant = constant
         self.args = tuple()
 
     def c_code(self, names):

@@ -44,18 +44,18 @@ def timeStepper(equation, initFields, solver):
     def update(*args, **kwargs):
         i = kwargs['i']
         currFields = [0]*n
-        LHS, fields = args[:n], args[n:]
+        LHS, fields, dt = args[:n], args[n:-1], args[-1]
         for j in range(0, i+1):
             for index in range(0, n):
                 currFields[index] += alpha[i,j]*fields[j*n+index]
         for index in range(0, n):
-            currFields[index] += -beta[i,i]*LHS[index]*solver.dt
+            currFields[index] += -beta[i,i]*LHS[index]*dt
         return tuple(currFields)
 
     for i in range(0, nStages):
         solver.t = solver.t0 + gamma[i]*solver.dt
         LHS = equation(*fields[i])
-        args = list(LHS) + sum(fields, [])
+        args = list(LHS) + sum(fields, []) + [solver.dt]
         currFields = Tensorize(update)(mesh.nInternalCells)(*args, i=i)
         solver.stage += 1
         fields.append(list(currFields))

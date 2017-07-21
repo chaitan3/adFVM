@@ -217,9 +217,8 @@ class TensorFunction(object):
 
         _outputs = [x for x in self._outputs if x is not None]
         self._children = self._getChildren(_outputs)
-        #self._genCode(self._inputs, _outputs, self._children.copy())
+        self._genCode(self._inputs, _outputs, self._children.copy())
         OpBase.clear_cache()
-        grad = False
         if grad:
             self.grad = self._getAdjoint()
 
@@ -317,7 +316,7 @@ class TensorFunction(object):
 
     def _genCode(self, inputs, outputs, children):
         sortedOps = self._topologicalSort(outputs, children)
-        codeFile = open(self.codeDir + 'code.cpp', 'a')
+        codeFile = open(Function.codeDir + 'code.cpp', 'a')
 
         memString = '' 
         for inp in self._inputTensors:
@@ -338,6 +337,9 @@ class TensorFunction(object):
                 tensorIndex = self._inputTensorIndices[op]
                 if not tensorIndex[3]:
                     code = '{} {} = {}[i*{} + {}];'.format(dtype, names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
+            elif isinstance(op, ConstScalar) and not isinstance(op, OpBase):
+                tensorIndex = self._inputTensorIndices[op]
+                code = '{} {} = {}[0];'.format(dtype, names[op], tensorIndex[0])
             elif isinstance(op, IntegerScalar) and not isinstance(op, OpBase):
                 tensorIndex = self._inputTensorIndices[op]
                 code = '{} {} = {}[i*{} + {}];'.format('integer', names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
@@ -375,12 +377,15 @@ def randomName(N):
 def Tensorize(func):
     def ParamFunc(indices=None, outputs=None):
         def Func(*args, **kwargs):
-            if not hasattr(Func, 'tensorFunc'):
+            if not hasattr(ParamFunc, 'tensorFunc'):
                 name = randomName(12)
+                print 'here', name
                 tensorArgs = []
                 #print len(args), len(kwargs)
                 for x in args:
-                    if x.dtype == 'scalar':
+                    if isinstance(x, ConstScalar):
+                        tensorArgs.append(Tensor((1,), scalars=[x]))
+                    elif x.dtype == 'scalar':
                         tensorArgs.append(Tensor(x.shape[1:]))
                     elif x.dtype == 'integer':
                         tensorArgs.append(Tensor(x.shape[1:], scalars=[IntegerScalar()]))
