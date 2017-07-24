@@ -365,7 +365,7 @@ def Tensorize(func):
             if _indices == None:
                 _indices = ParamFunc.outputShapes[0][0]
             if outputs is None:
-                _outputs = tuple([Variable(x) for x in ParamFunc.outputShapes])
+                _outputs = tuple([Zeros(x) for x in ParamFunc.outputShapes])
             else:
                 assert len(outputs) == len(ParamFunc.outputShapes)
                 #args = args + outputs

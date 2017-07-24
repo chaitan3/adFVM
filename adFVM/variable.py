@@ -66,16 +66,20 @@ class Variable(ArithBase):
         var.name = self.name
         return var
 
+class Zeros(Variable):
+    pass
+
 class TensorFunctionOp(object):
     def __init__(self, func, args, outputs, indices):
         self.func = func
         self.name = func.name
         n = len(self.func._inputTensors)
-        self.args = args
-        self.outputs = outputs
         self.indices = indices
+        args = args + outputs
+        self.args = args
+        self.outputs = [x.getReference() for x in outputs]
         for out in self.outputs:
-            out.args = (self,) + out.args
+            out.args = (self,)
 
 class Function(object):
     _index = 0
@@ -100,9 +104,15 @@ class Function(object):
 
         sortedOps = graphTopologicalSort(self._outputs, self._children.copy())
         for op in sortedOps:
-            if isinstance(op, Variable):
+            if isinstance(op, Zeros):
+                print op.name, op.args
+                assert len(op.args) == 0
+                codeFile.write('// init var {}\n'.format(op.name)) 
+            elif isinstance(op, Variable):
                 if len(op.args) == 0:
-                    codeFile.write('// init {}'.format(self.name)) 
+                    codeFile.write('// input var {}\n'.format(op.name)) 
+                #else:
+                #    codeFile.write('// dependant var {}\n'.format(op.name)) 
             elif isinstance(op, TensorFunctionOp):
                 print op
             elif isinstance(op, ConstScalar):

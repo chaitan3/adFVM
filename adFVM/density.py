@@ -1,6 +1,6 @@
 from . import config, riemann, interp
 from .tensor import Tensorize, ConstScalar
-from .variable import Variable, Function
+from .variable import Variable, Function, Zeros
 from .field import Field, IOField
 from .op import  div, absDiv, snGrad, grad, internal_sum
 from .solver import Solver
@@ -76,24 +76,27 @@ class RCF(Solver):
             self._coupledFlux = Tensorize(self.flux)
             self._characteristicFlux = Tensorize(self.flux)
             self._boundaryFlux = Tensorize(self.boundaryFlux)
+            meshArgs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
+                       [getattr(mesh, attr) for attr in mesh.intFields]
 
             # init function
             rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
-            U, T, p = Variable((mesh.nCells, 3)), Variable((mesh.nCells, 1)), Variable((mesh.nCells, 1))
-            U, T, p = self._primitive((0, mesh.nInternalCells), outputs=(U, T, p))(rho, rhoU, rhoE)
+            U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
+            outputs = tuple([x.getReference() for x in [U, T, p]])
+            U, T, p = self._primitive(mesh.nInternalCells, outputs)(rho, rhoU, rhoE)
             U = self.U.completeField(U)
             T = self.T.completeField(T)
             p = self.p.completeField(p)
             UN, TN, pN = self.characteristicBoundary(U, T, p)
             rhoN, rhoUN, rhoEN = self._conservative()(UN, TN, pN)
-            self.mapBoundary = Function('init', [rho, rhoU, rhoE], [rhoN, rhoUN, rhoEN])
+            self.mapBoundary = Function('init', [rho, rhoU, rhoE] + meshArgs, [rhoN, rhoUN, rhoEN])
 
             self.t0 = ConstScalar()
             self.dt = ConstScalar()
             self.t = self.t0
             rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
             rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
-            self.map = Function('primal', [rho, rhoU, rhoE, self.t0, self.dt], [rhoN, rhoUN, rhoEN])
+            self.map = Function('primal', [rho, rhoU, rhoE, self.t0, self.dt] + meshArgs, [rhoN, rhoUN, rhoEN])
 
         Function.compile()
         Function._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
@@ -312,10 +315,10 @@ class RCF(Solver):
             refAgs = []
             for x in args:
                 refArgs.append(x.getReference())
-            return refArgs
+            return tuple(refArgs)
                 
 
-        U, T, p = Variable((mesh.nCells, 3)), Variable((mesh.nCells, 1)), Variable((mesh.nCells, 1))
+        U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
         U, T, p = self._primitive((0, mesh.nInternalCells), _outputRefs(U, T, p))(rho, rhoU, rhoE)
         # boundary update
         # cut down repetition in code
@@ -325,7 +328,7 @@ class RCF(Solver):
         U, T, p = self.characteristicBoundary(U, T, p)
 
         meshArgs = _meshArgs()
-        gradU, gradT, gradp = Variable((mesh.nCells, 3, 3)), Variable((mesh.nCells, 1, 3)), Variable((mesh.nCells, 1, 3))
+        gradU, gradT, gradp = Zeros((mesh.nCells, 3, 3)), Zeros((mesh.nCells, 1, 3)), Zeros((mesh.nCells, 1, 3))
         outputs = _outputRefs(gradU, gradT, gradp)
         self._grad(mesh.nInternalFaces, )(U, T, p, *meshArgs)
         for patchID in self.mesh.boundary:
@@ -344,8 +347,8 @@ class RCF(Solver):
         gradp = self.p.completeField(gradp)
         
         meshArgs = _meshArgs()
-        drho, drhoU, drhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1))
-        dtc = Variable((mesh.nInternalCells, 1))
+        drho, drhoU, drhoE = Zeros((mesh.nInternalCells, 1)), Zeros((mesh.nInternalCells, 3)), Zeros((mesh.nInternalCells, 1))
+        dtc = Zeros((mesh.nInternalCells, 1))
         outputs = _outputRefs(drho, drhoU, drhoE, dtc)
         self._flux((0, mesh.nInternalCells), outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
         for patchID in self.mesh.boundary:
