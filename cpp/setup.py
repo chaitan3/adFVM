@@ -30,11 +30,11 @@ libdirs += ['/projects/LESOpt/talnikar/local/lib/']
 
 if matop:
 #petscdir = '/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real/'
-    petscdir = home + '/sources/petsc-3.7.4/gcc-opt'
+    petscdir = home + '/sources/petsc/linux-gnu-c-opt'
     incdirs += [petscdir + '/../include', petscdir + '/include']
     libdirs += [petscdir + '/lib']
-    #libs += ['petsc']
-    libs += ['super']
+    libs += ['petsc']
+    #libs += ['super']
 
 adjargs = '-DADIFF'
 if matop:

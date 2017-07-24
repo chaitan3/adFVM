@@ -242,7 +242,7 @@ tuple<scalar, scalar> euler_grad(const vec& rho, const mat& rhoU, const vec& rho
 tuple<scalar, scalar> SSPRK_grad(const vec& rho, const mat& rhoU, const vec& rhoE, const vec& rhoa, const mat& rhoUa, const vec& rhoEa, vec& rhoaN, mat& rhoUaN, vec& rhoEaN, scalar t, scalar dt) {
     const Mesh& mesh = *meshp;
 
-    integer n = 3;
+    #define n 3
     scalar alpha[n][n] = {{1,0,0},{3./4, 1./4, 0}, {1./3, 0, 2./3}};
     scalar beta[n][n] = {{1,0,0}, {0,1./4,0},{0,0,2./3}};
     //scalar gamma[n] = {0, 1, 0.5};

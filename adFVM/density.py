@@ -90,6 +90,8 @@ class RCF(Solver):
             UN, TN, pN = self.characteristicBoundary(U, T, p)
             rhoN, rhoUN, rhoEN = self._conservative()(UN, TN, pN)
             self.mapBoundary = Function('init', [rho, rhoU, rhoE] + meshArgs, [rhoN, rhoUN, rhoEN])
+            Function.compile()
+            exit(0)
 
             self.t0 = ConstScalar()
             self.dt = ConstScalar()
