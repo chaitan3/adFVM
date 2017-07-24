@@ -6,6 +6,41 @@ from . import config
 from .scalar import *
 _dtype = dtype
 
+def graphGetChildren(outputs):
+    children = {}
+
+    def _childrenFunc(out):
+        for inp in out.args:
+            if inp in children:
+                children[inp] += 1
+            else:
+                children[inp] = 1
+                _childrenFunc(inp)
+
+    output = Container()
+    output.args = tuple(outputs)
+    _childrenFunc(output)
+    for out in outputs:
+        children[out] -= 1
+    return children
+
+def graphTopologicalSort(outputs, children):
+    output = Container()
+    output.args = tuple(outputs)
+    for out in outputs:
+        children[out] += 1
+    children[output] = 0
+    sortedOps = []
+    def _sort(out):
+        sortedOps.append(out)
+        for inp in out.args:
+            children[inp] -= 1
+            if children[inp] == 0:
+                _sort(inp)
+    _sort(output)
+    return sortedOps[1:][::-1]
+
+
 class Variable(ArithBase):
 #class Variable(object):
     _index = 0
@@ -17,28 +52,30 @@ class Variable(ArithBase):
         self.args = ()
         self.index = 0
         self.dtype = dtype
-        self.reference = None
 
     def __getitem__(self, index):
+        #print self.index
+        #assert self.index == 0
         var = self.getReference()
         var.index = index
         return var
 
     def getReference(self):
         var = Variable(self.shape)
-        var.reference = self
+        var.args = (self,)
         var.name = self.name
         return var
 
 class TensorFunctionOp(object):
     def __init__(self, func, args, outputs, indices):
         self.func = func
+        self.name = func.name
         n = len(self.func._inputTensors)
         self.args = args
         self.outputs = outputs
         self.indices = indices
         for out in self.outputs:
-            out.args = (self,)
+            out.args = (self,) + out.args
 
 class Function(object):
     _index = 0
@@ -49,6 +86,7 @@ class Function(object):
         self.name = name
         self._inputs = inputs
         self._outputs = outputs
+        self._children = graphGetChildren(outputs)
         self._genCode()
 
     def _genCode(self):
@@ -60,9 +98,22 @@ class Function(object):
             memString += '{}* {}, '.format(out.dtype, out.name)
         codeFile.write('\nvoid Function_{}({}) {}\n'.format(self.name, memString[:-2], '{\n'))
 
+        sortedOps = graphTopologicalSort(self._outputs, self._children.copy())
+        for op in sortedOps:
+            if isinstance(op, Variable):
+                if len(op.args) == 0:
+                    codeFile.write('// init {}'.format(self.name)) 
+            elif isinstance(op, TensorFunctionOp):
+                print op
+            elif isinstance(op, ConstScalar):
+                print op
+            else:
+                raise Exception('op not recognised', op)
+
         codeFile.write('}')
 
         codeFile.close()
+        exit(1)
 
     @classmethod
     def createCodeDir(self, case):

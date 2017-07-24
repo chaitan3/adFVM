@@ -9,9 +9,6 @@ from .scalar import *
 from .variable import *
 
 
-class Container(object):
-    pass
-
 class Tensor(ArithBase):
     _index = 0
     def __init__(self, shape, scalars=None):
@@ -216,7 +213,7 @@ class TensorFunction(object):
         #self.func = lambdify(self._inputs, self._outputs)
 
         _outputs = [x for x in self._outputs if x is not None]
-        self._children = self._getChildren(_outputs)
+        self._children = graphGetChildren(_outputs)
         self._genCode(self._inputs, _outputs, self._children.copy())
         OpBase.clear_cache()
         if grad:
@@ -248,40 +245,7 @@ class TensorFunction(object):
         name = self.name[loc+1:] + '_grad'
         return TensorFunction(name, inputs, outputs, grad=False)
 
-    def _getChildren(self, outputs):
-        children = {}
-
-        def _childrenFunc(out):
-            for inp in out.args:
-                if inp in children:
-                    children[inp] += 1
-                else:
-                    children[inp] = 1
-                    _childrenFunc(inp)
-
-        output = Container()
-        output.args = tuple(outputs)
-        _childrenFunc(output)
-        for out in outputs:
-            children[out] -= 1
-        return children
-
-    def _topologicalSort(self, outputs, children):
-        output = Container()
-        output.args = tuple(outputs)
-        for out in outputs:
-            children[out] += 1
-        children[output] = 0
-        sortedOps = []
-        def _sort(out):
-            sortedOps.append(out)
-            for inp in out.args:
-                children[inp] -= 1
-                if children[inp] == 0:
-                    _sort(inp)
-        _sort(output)
-        return sortedOps[1:][::-1]
-
+    
     def _diff(self, outputs, inputs, gradients=None):
         if gradients is None:
             gradients = {}
@@ -315,7 +279,7 @@ class TensorFunction(object):
         return [gradients.get(inp, None) for inp in inputs]
 
     def _genCode(self, inputs, outputs, children):
-        sortedOps = self._topologicalSort(outputs, children)
+        sortedOps = graphTopologicalSort(outputs, children)
         codeFile = open(Function.codeDir + 'code.cpp', 'a')
 
         memString = '' 
@@ -404,8 +368,8 @@ def Tensorize(func):
                 _outputs = tuple([Variable(x) for x in ParamFunc.outputShapes])
             else:
                 assert len(outputs) == len(ParamFunc.outputShapes)
-                args = args + outputs
-                _outputs = tuple([x.getReference() for x in outputs])
+                #args = args + outputs
+                _outputs = outputs
             return TensorFunctionOp(ParamFunc.tensorFunc, args, _outputs, _indices).outputs
         return Func
     return ParamFunc

@@ -5,6 +5,9 @@ dtype = 'scalar'
 def prod(factors):
     return reduce(operator.mul, factors, 1)
 
+class Container(object):
+    pass
+
 SQRT = 123412341234
 
 class ArithBase(object):
