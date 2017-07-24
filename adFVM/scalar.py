@@ -65,11 +65,9 @@ class IntegerScalar(ArithBase):
         self.args = tuple()
         self.dtype = 'integer'
 
-    def _binaryOp(self, b, op, comparison=False):
-        assert isinstance(b, IntegerScalar)
-        return binaryOpClass[op](op, self, b, comparison)
-
-
+    #def _binaryOp(self, b, op, comparison=False):
+    #    assert isinstance(b, IntegerScalar)
+    #    return binaryOpClass[op](op, self, b, comparison)
 
 class Scalar(ArithBase):
     _index = 0
@@ -88,7 +86,6 @@ class Scalar(ArithBase):
     def _unaryOp(self, op):
         return unaryOpClass[op](op, self)
 
-    # define unique hash function
 class ConstScalar(Scalar):
     pass
 

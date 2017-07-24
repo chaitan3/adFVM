@@ -81,6 +81,19 @@ class TensorFunctionOp(object):
         for out in self.outputs:
             out.args = (self,)
 
+    def getCallString(self):
+        callString = ''
+        for inp in self.args:
+            if isinstance(inp.index, int):
+                offset = str(inp.index)
+            else:
+                offset = inp.index.name
+            callString += '&{}({}), '.format(inp.name, offset)
+        #for out in self.outputs:
+        #    callString += '{}, '.format(out.name)
+        return callString[:-2]
+
+
 class Function(object):
     _index = 0
     _module = None
@@ -105,16 +118,19 @@ class Function(object):
         sortedOps = graphTopologicalSort(self._outputs, self._children.copy())
         for op in sortedOps:
             if isinstance(op, Zeros):
-                print op.name, op.args
+                print op.name, op.args, op.shape
                 assert len(op.args) == 0
-                codeFile.write('// init var {}\n'.format(op.name)) 
+                #codeFile.write('\t// init var {}\n'.format(op.name)) 
+                shape = ','.join([str(x) for x in op.shape[1:]])
+                codeFile.write('\tarrType<{}, {}> {}({}, true);\n'.format(op.dtype, shape, op.name, op.shape[0].name)) 
             elif isinstance(op, Variable):
-                if len(op.args) == 0:
-                    codeFile.write('// input var {}\n'.format(op.name)) 
+                pass
+                #if len(op.args) == 0:
+                #    codeFile.write('\t// input var {}\n'.format(op.name)) 
                 #else:
-                #    codeFile.write('// dependant var {}\n'.format(op.name)) 
+                #    codeFile.write('\t// dependant var {}\n'.format(op.name)) 
             elif isinstance(op, TensorFunctionOp):
-                print op
+                codeFile.write('\t{}({}, {});\n'.format(op.name, op.indices.name, op.getCallString()))
             elif isinstance(op, ConstScalar):
                 print op
             else:

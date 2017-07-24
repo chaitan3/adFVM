@@ -894,7 +894,8 @@ class Mesh(object):
 
 
     def getBoundaryTensor(self, patchID):
-        default = [('startFace', IntegerScalar()), ('nFaces', IntegerScalar())]
+        default = [('startFace', IntegerScalar()), ('nFaces', IntegerScalar()),
+                   ('cellStartFace', IntegerScalar())]
         return default #+ self.boundaryTensor.get(patchID, [])
 
     @config.timeFunction('Time to update mesh')

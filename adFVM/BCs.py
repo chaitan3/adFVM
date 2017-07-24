@@ -47,7 +47,7 @@ class BoundaryCondition(object):
         mesh = self.mesh.symMesh
         patch = mesh.boundary[patchID]
         self.startFace, self.nFaces = patch['startFace'], patch['nFaces']
-        self.cellStartFace = self.startFace - mesh.nInternalFaces + mesh.nInternalCells
+        self.cellStartFace = patch['cellStartFace']
         self.normals = mesh.normals[self.startFace]
         self.owner = mesh.owner
         # used by field writer
