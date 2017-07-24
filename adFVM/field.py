@@ -260,6 +260,7 @@ class CellField(Field):
         patches = sorted(self.mesh.localPatches, key=lambda x: self.mesh.origMesh.boundary[x]['startFace'])
         #print phi
         for patchID in patches:
+            print patchID, self.BC[patchID]
             phi = self.BC[patchID].update(phi)
         return phi
 

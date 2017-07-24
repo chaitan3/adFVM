@@ -71,14 +71,14 @@ void getDict(PyObject* dict, map<string, string>& cDict);
 map<string, integer> getTags(PyObject *mesh, const string attr);
 scalar getMaxEigenvalue(arrType<scalar, 5, 5>& phi, vec& eigPhi);
 
-//template<typename dtype, integer shape1, integer shape2>
-// PyObject * putArray(arrType<dtype, shape1, shape2>&);
-//
-//template<typename dtype, integer shape1, integer shape2>
-// void getMeshArray(PyObject *, const string, arrType<dtype, shape1, shape2> &);
-//
-//template<typename dtype, integer shape1>
-// void getArray(PyArrayObject *, arrType<dtype, shape1> &);
+template<typename dtype, integer shape1, integer shape2>
+ PyObject * putArray(arrType<dtype, shape1, shape2>&);
+
+template<typename dtype, integer shape1, integer shape2>
+ void getMeshArray(PyObject *, const string, arrType<dtype, shape1, shape2> &);
+
+template<typename dtype, integer shape1>
+ void getArray(PyArrayObject *, arrType<dtype, shape1> &);
 //
 //template<typename Derived>
 //extern void getSpArray(PyObject *, const string, SparseMatrix<Derived> &);

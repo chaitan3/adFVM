@@ -61,7 +61,7 @@ class Variable(ArithBase):
         return var
 
     def getReference(self):
-        var = Variable(self.shape)
+        var = Variable(self.shape, self.dtype)
         var.args = (self,)
         var.name = self.name
         return var

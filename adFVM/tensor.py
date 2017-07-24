@@ -195,6 +195,7 @@ class TensorFunction(object):
         TensorFunction._index += 1
         #self.name = 'Function_{}'.format(index)
         self.name = 'Function_{}'.format(name)
+        print self.name, len(inputs), len(outputs)
         #print(self.name)
         self._inputTensorIndices = {}
         self._inputTensors = inputs
@@ -237,7 +238,8 @@ class TensorFunction(object):
         for inp in self._inputTensors:
             n = inp.size
             #print(inp.__class__, [(x.func, hash(x), len(x.args)) for x in outputScalars[i:i+n] if x is not None])
-            outputs.append(inp.__class__(inp.shape, outputScalars[i:i+n]))
+            outputs.append(Tensor(inp.shape, outputScalars[i:i+n]))
+            outputs[-1].cellTensor = inp.cellTensor
             outputs[-1].dtype = inp.dtype
             i += n
         inputs = self._inputTensors + gradOutputs
@@ -295,6 +297,7 @@ class TensorFunction(object):
             if op in names:
                 continue
             names[op] = 'Intermediate_{}'.format(index)
+            print op
             code = ''
             #print names[op], index, op, len(op.args)
             if isinstance(op, Scalar) and not isinstance(op, OpBase):
@@ -310,10 +313,12 @@ class TensorFunction(object):
             elif isinstance(op, Extract):
                 a, b = op.args
                 tensorIndex = self._inputTensorIndices[a]
+                assert tensorIndex[3]
                 code = '{} {} = {}[{}*{} + {}];'.format(dtype, names[op], tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2])
             elif isinstance(op, Collate):
                 #print len(op.args)
                 tensorIndex = self._outputTensorIndices[op]
+                assert tensorIndex[3]
                 n = len(op.args)/2
                 for i in range(0, n):
                     a, b = op.args[2*i], op.args[2*i+1]
