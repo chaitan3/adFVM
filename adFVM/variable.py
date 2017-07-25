@@ -85,8 +85,8 @@ class TensorFunctionOp(object):
             out.args = (self,)
 
     def getCallString(self):
-        callString = '\n/* ' + str(self.info) + ' */\n'
-        #callString = ''
+        #callString = '\n/* ' + str(self.info) + ' */\n'
+        callString = ''
         for inp in self.args:
             if isinstance(inp, ConstScalar):
                 offset = ''
