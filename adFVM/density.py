@@ -94,7 +94,7 @@ class RCF(Solver):
         self.t = self.t0
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
         rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
-        self.map = Function('primal', [rho, rhoU, rhoE, self.t0, self.dt] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
+        self.map = Function('primal', [rho, rhoU, rhoE, self.dt, self.t0] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
 
         Function.compile()
         Function._module.initialize(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
@@ -350,7 +350,7 @@ class RCF(Solver):
         drho, drhoU, drhoE = Zeros((mesh.nInternalCells, 1)), Zeros((mesh.nInternalCells, 3)), Zeros((mesh.nInternalCells, 1))
         dtc = Zeros((mesh.nInternalCells, 1))
         outputs = _outputRefs(drho, drhoU, drhoE, dtc)
-        outputs = self._flux(mesh.nInternalCells, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
+        outputs = self._flux(mesh.nInternalFaces, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
         for patchID in self.mesh.boundary:
             startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']
