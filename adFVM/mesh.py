@@ -27,6 +27,8 @@ class Mesh(object):
                   #'cellCentres', 'faceCentres', 
                   #'gradOp'
                  ]
+    
+    BCFields = ['startFace', 'nFaces', 'cellStartFace']
 
     constants = ['nCells', 'nFaces', 'nInternalCells', 'nInternalFaces',
                  'nLocalCells']
@@ -133,6 +135,7 @@ class Mesh(object):
         self.update(currTime, 0.)
         self.symMesh.parent = self
         self.symMesh.makeTensor()
+        self.parent = self
         #import pdb;pdb.set_trace()
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
@@ -247,6 +250,7 @@ class Mesh(object):
         patchIDs = boundary.keys()
         patchIDs = sorted(patchIDs, key=lambda x: (boundary[x]['startFace'], boundary[x]['nFaces']))
         for patchID in patchIDs:
+            boundary[patchID]['cellStartFace'] = boundary[patchID]['startFace'] - self.nInternalFaces + self.nInternalCells
             if boundary[patchID]['type'] in config.processorPatches:
                 remotePatches.append(patchID)
             else:
@@ -263,8 +267,10 @@ class Mesh(object):
 
         boundary = {}
         for patch in patches:
+            boundary[patch[0]] = {}
+            patchD = boundary[patch[0]]
             try:
-                boundary[patch[0]] = dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch[1]))
+                patchD.update(dict(re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(.*?);', patch[1])))
                 #nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform[ ]+List<([a-z]+)+[\r\s\n\t ]+([0-9]+).*?);[\r\s\n]+', patch[1], re.DOTALL)
                 # HACK
                 nonuniform = re.findall('\n[ \t]+([a-zA-Z]+)[ ]+(nonuniform.*?\))\n;\n', patch[1], re.DOTALL)
@@ -273,12 +279,12 @@ class Mesh(object):
 
             for field in nonuniform:
                 #print patch[0], field[0], len(field[1])
-                boundary[patch[0]][field[0]] = field[1]
+                patchD[field[0]] = field[1]
             # cyclicAMI HACK
-            if boundary[patch[0]]['type'] == 'cyclicAMI':
-                boundary[patch[0]]['type'] = 'cyclic'
-            boundary[patch[0]]['nFaces'] = int(boundary[patch[0]]['nFaces'])
-            boundary[patch[0]]['startFace'] = int(boundary[patch[0]]['startFace'])
+            if patchD['type'] == 'cyclicAMI':
+                patchD['type'] = 'cyclic'
+            patchD['nFaces'] = int(patchD['nFaces'])
+            patchD['startFace'] = int(patchD['startFace'])
         return boundary
 
     @config.timeFunction('Time for reading mesh')
@@ -861,8 +867,8 @@ class Mesh(object):
 
         for patchID in self.parent.localPatches:
             self.boundary[patchID] = {}
-            for attr in self.makeBoundaryTensor(patchID):
-                self.boundary[patchID][attr[0]] = attr[1]
+            for attr in Mesh.BCFields:
+                self.boundary[patchID][attr] = IntegerScalar()
 
     def getTensor(self):
         return [getattr(self, attr) for attr in Mesh.gradFields] + \
@@ -874,7 +880,7 @@ class Mesh(object):
             boundary.append(getattr(self, attr))
         for patchID in self.parent.localPatches:
             patch = self.boundary[patchID]
-            boundary.extend(patch.values())
+            boundary.extend([patch[attr] for attr in Mesh.BCFields])
         return boundary
 
     def getSparseTensor(self, attr):
@@ -888,11 +894,6 @@ class Mesh(object):
         sumOp = ad.SparseTensor(indices, values, shape)
         return sumOp
 
-
-    def makeBoundaryTensor(self, patchID):
-        default = [('startFace', IntegerScalar()), ('nFaces', IntegerScalar()),
-                   ('cellStartFace', IntegerScalar())]
-        return default #+ self.boundaryTensor.get(patchID, [])
 
     @config.timeFunction('Time to update mesh')
     def update(self, t, dt):

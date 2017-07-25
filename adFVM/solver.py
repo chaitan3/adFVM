@@ -129,6 +129,9 @@ class Solver(object):
             cellFields.append(mod(name, phi, dim))
         return cellFields
 
+    def getBoundaryTensor(self, index=0):
+        return [phi.getTensor(index) for phi in self.fields]
+
     #def stackFields(self, fields, mod): 
     #    return mod.concatenate([phi.field for phi in fields], axis=1)
 
@@ -151,6 +154,7 @@ class Solver(object):
         return
 
     def updateSource(self, source, perturb=False):
+        return
         for index, value in enumerate(source):
             #if index == 1:
             #    phi = IOField.internalField('rhoUS', value, (3,))
@@ -340,9 +344,14 @@ class Solver(object):
                 pprint()
 
             inputs = [phi.field for phi in fields] + \
-                     [phi[1] for phi in self.sourceTerms] + \
-                     [dt, t]
+                     [dt, t] + \
+                     mesh.getTensor() + mesh.getScalar() + \
+                     self.getBoundaryTensor(1)
+            #inputs = [phi.field for phi in fields] + \
+            #         [phi[1] for phi in self.sourceTerms] + \
+            #         [dt, t]
             #outputs = self.map(fields)
+
             outputs = self.map(*inputs)
             newFields, objective, dtc = outputs[:3], outputs[3], outputs[4]
             local = remote = 0

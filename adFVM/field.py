@@ -255,11 +255,11 @@ class CellField(Field):
             patchType = self.boundary[patchID]['type']
             self.BC[patchID] = getattr(BCs, patchType)(self, patchID)
 
-    def getTensor(self):
+    def getTensor(self, index=0):
         mesh = self.mesh
         inputs = []
         for patchID in mesh.localPatches:
-            inputs.extend([x[0] for x in self.BC[patchID].getInputs()])
+            inputs.extend([x[index] for x in self.BC[patchID].getInputs()])
         return inputs
 
     def updateGhostCells(self, phi):
@@ -502,8 +502,8 @@ class IOField(Field):
         if phi is not None:
             return self.phi.updateGhostCells(phi)
     
-    def getTensor(self):
-        return self.phi.getTensor()
+    def getTensor(self, *args, **kwargs):
+        return self.phi.getTensor(*args, **kwargs)
 
     def partialComplete(self, value=0.):
         mesh = self.mesh.origMesh

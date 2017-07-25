@@ -215,14 +215,17 @@ class TensorFunction(object):
 
         _outputs = [x for x in self._outputs if x is not None]
         self._children = graphGetChildren(_outputs)
-        self._genCode(self._inputs, _outputs, self._children.copy())
+        if config.compile:
+            self._genCode(self._inputs, _outputs, self._children.copy())
         OpBase.clear_cache()
         if grad:
             self.grad = self._getAdjoint()
 
-
     def _getAdjoint(self):
-        gradOutputs = [x.__class__(x.shape) for x in self._outputTensors]
+        gradOutputs = []
+        for out in self._outputTensors:
+            gradOutputs.append(Tensor(out.shape))
+            gradOutputs[-1].cellTensor = out.cellTensor
 
         #scalarOutput = sum([x.dot(y) for x, y in zip(self._outputTensors, gradInputs)])
         gradients = {}

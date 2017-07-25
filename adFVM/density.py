@@ -64,46 +64,48 @@ class RCF(Solver):
         #self.faceReconstructor = self.faceReconstructor(self)
         Function.createCodeDir(self.mesh.caseDir)
 
-        if config.compile:
-            Function.clean()
-            mesh = self.mesh.symMesh
-            self._primitive = Tensorize(self.primitive)
-            self._conservative = Tensorize(self.conservative)
-            self._grad = Tensorize(self.gradients)
-            self._coupledGrad = Tensorize(self.gradients)
-            self._boundaryGrad = Tensorize(self.gradients)
-            self._flux = Tensorize(self.flux)
-            self._coupledFlux = Tensorize(self.flux)
-            self._characteristicFlux = Tensorize(self.flux)
-            self._boundaryFlux = Tensorize(self.boundaryFlux)
-            meshArgs = mesh.getTensor() + mesh.getScalar()
-            BCArgs = self.U.getTensor() + self.T.getTensor() + self.p.getTensor()
-            # init function
-            rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
-            U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
-            outputs = tuple([x.getReference() for x in [U, T, p]])
-            U, T, p = self._primitive(mesh.nInternalCells, outputs)(rho, rhoU, rhoE)
-            U = self.U.completeField(U)
-            T = self.T.completeField(T)
-            p = self.p.completeField(p)
-            UN, TN, pN = self.characteristicBoundary(U, T, p)
-            rhoN, rhoUN, rhoEN = self._conservative()(UN, TN, pN)
-            self.mapBoundary = Function('init', [rho, rhoU, rhoE] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
+        Function.clean()
+        mesh = self.mesh.symMesh
+        self._primitive = Tensorize(self.primitive)
+        self._conservative = Tensorize(self.conservative)
+        self._grad = Tensorize(self.gradients)
+        self._coupledGrad = Tensorize(self.gradients)
+        self._boundaryGrad = Tensorize(self.gradients)
+        self._flux = Tensorize(self.flux)
+        self._coupledFlux = Tensorize(self.flux)
+        self._characteristicFlux = Tensorize(self.flux)
+        self._boundaryFlux = Tensorize(self.boundaryFlux)
+        meshArgs = mesh.getTensor() + mesh.getScalar()
+        BCArgs = self.getBoundaryTensor(0)
+        # init function
+        rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
+        U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
+        outputs = tuple([x.getReference() for x in [U, T, p]])
+        U, T, p = self._primitive(mesh.nInternalCells, outputs)(rho, rhoU, rhoE)
+        U = self.U.completeField(U)
+        T = self.T.completeField(T)
+        p = self.p.completeField(p)
+        UN, TN, pN = self.characteristicBoundary(U, T, p)
+        rhoN, rhoUN, rhoEN = self._conservative()(UN, TN, pN)
+        self.mapBoundary = Function('init', [rho, rhoU, rhoE] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
 
-            self.t0 = ConstScalar()
-            self.dt = ConstScalar()
-            self.t = self.t0
-            rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
-            rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
-            self.map = Function('primal', [rho, rhoU, rhoE, self.t0, self.dt] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
+        self.t0 = ConstScalar()
+        self.dt = ConstScalar()
+        self.t = self.t0
+        rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
+        rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
+        self.map = Function('primal', [rho, rhoU, rhoE, self.t0, self.dt] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
 
         Function.compile()
-        Function._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
+        Function._module.initialize(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
         #TensorFunction._module.finalize()
         #import atexit
         #atexit.register(TensorFunction._module.finalize)
 
         return
+
+    def getBoundaryTensor(self, index=0):
+        return self.U.getTensor(index) + self.T.getTensor(index) + self.p.getTensor(index)
 
     # only reads fields
     @config.timeFunction('Time for reading fields')

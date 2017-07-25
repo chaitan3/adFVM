@@ -84,11 +84,13 @@ class TensorFunctionOp(object):
     def getCallString(self):
         callString = ''
         for inp in self.args:
-            if isinstance(inp.index, int):
-                offset = str(inp.index)
+            if isinstance(inp, ConstScalar):
+                offset = ''
+            elif isinstance(inp.index, int):
+                offset = '({})'.format(inp.index)
             else:
-                offset = inp.index.name
-            callString += '&{}({}), '.format(inp.name, offset)
+                offset = '({})'.format(inp.index.name)
+            callString += '&{}{}, '.format(inp.name, offset)
         #for out in self.outputs:
         #    callString += '{}, '.format(out.name)
         return callString[:-2]
@@ -105,7 +107,8 @@ class Function(object):
         self._inputs = inputs
         self._outputs = outputs
         self._children = graphGetChildren(outputs)
-        self._genCode()
+        if config.compile:
+            self._genCode()
         Function.funcs.append(self.name)
 
     def _genCode(self):
@@ -116,6 +119,9 @@ class Function(object):
         for index, inp in enumerate(self._inputs):
             if isinstance(inp, IntegerScalar):
                 codeFile.write('\tinteger {} = (integer) PyInt_AsLong(PyTuple_GetItem(args, {}));\n'.format(inp.name, index))
+                continue
+            elif isinstance(inp, ConstScalar):
+                codeFile.write('\tscalar {} = (scalar) PyFloat_AsDouble(PyTuple_GetItem(args, {}));\n'.format(inp.name, index))
                 continue
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
@@ -132,17 +138,9 @@ class Function(object):
                 #codeFile.write('\t// init var {}\n'.format(op.name)) 
                 shape = ','.join([str(x) for x in op.shape[1:]])
                 codeFile.write('\tarrType<{}, {}> {}({}, true);\n'.format(op.dtype, shape, op.name, op.shape[0].name)) 
-            elif isinstance(op, Variable):
-                pass
-                #if len(op.args) == 0:
-                #    codeFile.write('\t// input var {}\n'.format(op.name)) 
-                #else:
-                #    codeFile.write('\t// dependant var {}\n'.format(op.name)) 
             elif isinstance(op, TensorFunctionOp):
                 codeFile.write('\t{}({}, {});\n'.format(op.name, op.indices.name, op.getCallString()))
-            elif isinstance(op, ConstScalar):
-                print op
-            else:
+            elif not isinstance(op, ConstScalar) and not isinstance(op, Variable):
                 raise Exception('op not recognised', op)
 
         codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(self._outputs)))
@@ -150,9 +148,13 @@ class Function(object):
             codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}));\n'.format(index, out.name))
         codeFile.write('\treturn outputs;')
         codeFile.write('\n')
-        codeFile.write('}')
+        codeFile.write('}\n\n')
 
         codeFile.close()
+
+    def __call__(self, *args):
+        func = getattr(Function._module, self.name)
+        return func(*args)
 
     @classmethod
     def createCodeDir(self, case):
@@ -163,6 +165,8 @@ class Function(object):
 
     @classmethod
     def clean(self):
+        if not config.compile:
+            return
         #try:
         #    os.remove(self.codeDir + 'code.cpp')
         #except:
@@ -181,7 +185,7 @@ class Function(object):
 """)
 
                 for name in Function.funcs:
-                    f.write('\t{{"{0}", Function_{0}, METH_VARARGS, "boo"}},'.format(name))
+                    f.write('\t{{"{0}", Function_{0}, METH_VARARGS, "boo"}},\n'.format(name))
                 #f.write('\n\n' + self.extraCode)
                 f.write("""
                 {NULL, NULL, 0, NULL}        /* Sentinel */
