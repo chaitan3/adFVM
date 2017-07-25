@@ -195,7 +195,7 @@ class TensorFunction(object):
         TensorFunction._index += 1
         #self.name = 'Function_{}'.format(index)
         self.name = 'Function_{}'.format(name)
-        print self.name, len(inputs), len(outputs)
+        #print self.name, len(inputs), len(outputs)
         #print(self.name)
         self._inputTensorIndices = {}
         self._inputTensors = inputs
@@ -297,7 +297,6 @@ class TensorFunction(object):
             if op in names:
                 continue
             names[op] = 'Intermediate_{}'.format(index)
-            print op
             code = ''
             #print names[op], index, op, len(op.args)
             if isinstance(op, Scalar) and not isinstance(op, OpBase):

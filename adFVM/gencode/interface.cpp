@@ -20,6 +20,10 @@ Mesh *meshap = NULL;
     Matop *matop;
 #endif
 
+
+#define initFunc initinterface
+#define modName "interface"
+
 template <typename dtype, integer shape1, integer shape2>
 void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shape2>& tmp) {
     PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
@@ -31,55 +35,15 @@ void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shap
 }
 
 
-template <typename dtype, integer shape1, integer shape2>
-void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp) {
-    assert(array);
-    int nDims = PyArray_NDIM(array);
-    npy_intp* dims = PyArray_DIMS(array);
-    if (nDims > 1) {
-        assert(dims[1] == shape1);
-        //cout << dims[1] << " " << shape1 << endl;
-    }
-    if (nDims > 2) {
-        assert(dims[2] == shape2);
-        //cout << dims[2] << " " << shape2 << endl;
-    }
-    assert(PyArray_IS_C_CONTIGUOUS(array));
 
-    arrType<dtype, shape1, shape2> result(dims[0], (dtype *) PyArray_DATA(array));
-    //cout << rows << " " << cols << endl;
-    //if ((typeid(dtype) != type(uscalar)) && (typeid(dtype) != typeid(integer))) {
-    tmp = move(result);
-    //result.ownData = false;
-}
-
-template <typename dtype, integer shape1>
-PyObject* putArray(arrType<dtype, shape1> &tmp) {
-    npy_intp shape[2] = {tmp.shape, shape1};
-    scalar* data = tmp.data;
-    tmp.ownData = false;
-    PyObject* array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
-    PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
-    return array;
-}
-template <typename dtype, integer shape1, integer shape2>
-PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
-    npy_intp shape[3] = {tmp.shape, shape1, shape2};
-    scalar* data = tmp.data;
-    tmp.ownData = false;
-    PyObject* array = PyArray_SimpleNewFromData(3, shape, NPY_DOUBLE, data);
-    PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
-    return array;
-}
-
-static PyObject* initSolver(PyObject *self, PyObject *args) {
+PyObject* initSolver(PyObject *self, PyObject *args) {
 
     PyObject *meshObject = PyTuple_GetItem(args, 0);
     Py_INCREF(meshObject);
 
     meshp = new Mesh(meshObject);
     //meshap = new Mesh(*meshp);
-    rcf = new RCF();
+    //rcf = new RCF();
     //cout << "Initialized mesh" << endl;
     //rcf = new RCF();
     //rcf->setMesh(mesh);
@@ -91,7 +55,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     for (integer i = 1; i < 4; i++) {
         PyObject *boundaryObject = PyTuple_GetItem(args, i);
         Py_INCREF(boundaryObject);
-        rcf->boundaries[i-1] = getBoundary(boundaryObject);
+        //rcf->boundaries[i-1] = getBoundary(boundaryObject);
     }
     //cout << "Initialized boundary" << endl;
     PyObject *dict = PyTuple_GetItem(args, 4);
@@ -109,10 +73,10 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     while (PyDict_Next(dict, &pos, &key, &value)) {
         string ckey = PyString_AsString(key);
         if (ckey == "CFL") {
-            rcf->CFL = PyFloat_AsDouble(value);
+            //rcf->CFL = PyFloat_AsDouble(value);
         } else if (ckey == "objectivePLInfo") {
             if (value != Py_None) {
-                getDict(value, rcf->objectivePLInfo);
+                //getDict(value, rcf->objectivePLInfo);
             }
         } 
         //else if (ckey == "timeIntegrator") {
@@ -135,9 +99,6 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
     Py_INCREF(Py_None);
     return Py_None;
 }
-
-#define initFunc initinterface
-#define modName "interface"
 
 //static PyObject* forwardSolver(PyObject *self, PyObject *args) {
 //    const Mesh& mesh = *meshp;
@@ -399,7 +360,7 @@ static PyObject* initSolver(PyObject *self, PyObject *args) {
 //    return Py_BuildValue("(NNN)", rhoNObject, rhoUNObject, rhoENObject);
 //}
 
-static PyObject* viscosity(PyObject *self, PyObject *args) {
+PyObject* viscosity(PyObject *self, PyObject *args) {
 
     //cout << "forward 1" << endl;
     PyObject *uObject, *rhoObject, *rhoUObject, *rhoEObject;
@@ -431,8 +392,8 @@ static PyObject* viscosity(PyObject *self, PyObject *args) {
     return putArray(un);
 }
 
-static PyObject* finalSolver(PyObject *self, PyObject *args) {
-    delete rcf;
+PyObject* finalSolver(PyObject *self, PyObject *args) {
+    //delete rcf;
     delete meshp;
     #ifdef MATOP
         PetscFinalize();
@@ -440,7 +401,7 @@ static PyObject* finalSolver(PyObject *self, PyObject *args) {
     #endif
 }
 
-extern PyMethodDef* Methods;
+extern PyMethodDef Methods[];
 PyMODINIT_FUNC
 initFunc(void)
 {
@@ -646,25 +607,27 @@ Boundary getBoundary(PyObject *dict) {
     return boundary;
 }
 
-extern "C"{
-void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
-    double* w, double* work, int* lwork, int* info );
-}
-
-scalar getMaxEigenvalue(arrType<double, 5, 5>& phi, vec& eigPhi) {
-    char jobz = 'N';
-    char uplo = 'U';
-    int n = 5;
-    int lda = 5;
-    int lwork = 3*n-1;
-    double work[lwork];
-    int info;
-    double w[5];
-
-    for (int i = 0; i < phi.shape; i++) {
-        dsyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
-        assert(info == 0);
-        eigPhi(i) = w[4];
+#ifdef MATOP
+    extern "C"{
+    void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
+        double* w, double* work, int* lwork, int* info );
     }
-    return 0;
-}
+
+    scalar getMaxEigenvalue(arrType<double, 5, 5>& phi, vec& eigPhi) {
+        char jobz = 'N';
+        char uplo = 'U';
+        int n = 5;
+        int lda = 5;
+        int lwork = 3*n-1;
+        double work[lwork];
+        int info;
+        double w[5];
+
+        for (int i = 0; i < phi.shape; i++) {
+            dsyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
+            assert(info == 0);
+            eigPhi(i) = w[4];
+        }
+        return 0;
+    }
+#endif

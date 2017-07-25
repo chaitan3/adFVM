@@ -64,6 +64,9 @@ class BoundaryCondition(object):
         self.inputs.append((symbolic, value))
         return symbolic
 
+    def getInputs(self):
+        return [x for x in self.inputs if x[1] is not None]
+
     def _update(self):
         pass
 

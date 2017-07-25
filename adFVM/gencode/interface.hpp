@@ -71,21 +71,71 @@ void getDict(PyObject* dict, map<string, string>& cDict);
 map<string, integer> getTags(PyObject *mesh, const string attr);
 scalar getMaxEigenvalue(arrType<scalar, 5, 5>& phi, vec& eigPhi);
 
-template<typename dtype, integer shape1, integer shape2>
- PyObject * putArray(arrType<dtype, shape1, shape2>&);
+template <typename dtype, integer shape1, integer shape2>
+void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp) {
+    assert(array);
+    int nDims = PyArray_NDIM(array);
+    npy_intp* dims = PyArray_DIMS(array);
+    if (nDims > 1) {
+        assert(dims[1] == shape1);
+        //cout << dims[1] << " " << shape1 << endl;
+    }
+    if (nDims > 2) {
+        assert(dims[2] == shape2);
+        //cout << dims[2] << " " << shape2 << endl;
+    }
+    assert(PyArray_IS_C_CONTIGUOUS(array));
+
+    arrType<dtype, shape1, shape2> result(dims[0], (dtype *) PyArray_DATA(array));
+    //cout << rows << " " << cols << endl;
+    //if ((typeid(dtype) != type(uscalar)) && (typeid(dtype) != typeid(integer))) {
+    tmp = move(result);
+    //result.ownData = false;
+}
+
+template <typename dtype, integer shape1>
+PyObject* putArray(arrType<dtype, shape1> &tmp) {
+    npy_intp shape[2] = {tmp.shape, shape1};
+    scalar* data = tmp.data;
+    tmp.ownData = false;
+    PyObject* array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
+    PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
+    return array;
+}
+template <typename dtype, integer shape1, integer shape2>
+PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
+    npy_intp shape[3] = {tmp.shape, shape1, shape2};
+    scalar* data = tmp.data;
+    tmp.ownData = false;
+    PyObject* array = PyArray_SimpleNewFromData(3, shape, NPY_DOUBLE, data);
+    PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
+    return array;
+}
+
+
+//template<typename dtype, integer shape1, integer shape2>
+// PyObject * putArray(arrType<dtype, shape1, shape2>&);
+//
+//template <typename dtype, integer shape1>
+// PyObject* putArray(arrType<dtype, shape1> &tmp);
+//
+//template<typename dtype, integer shape1, integer shape2>
+// void getArray(PyArrayObject *, arrType<dtype, shape1, shape2> &);
 
 template<typename dtype, integer shape1, integer shape2>
  void getMeshArray(PyObject *, const string, arrType<dtype, shape1, shape2> &);
 
-template<typename dtype, integer shape1>
- void getArray(PyArrayObject *, arrType<dtype, shape1> &);
 //
 //template<typename Derived>
 //extern void getSpArray(PyObject *, const string, SparseMatrix<Derived> &);
+//
+
+PyObject* finalSolver(PyObject *self, PyObject *args);
+PyObject* initSolver(PyObject *self, PyObject *args);
+PyObject* viscosity(PyObject *self, PyObject *args);
 
 Boundary getBoundary(PyObject*);
 Boundary getMeshBoundary(PyObject *mesh, const string attr);
-extern Mesh *meshp;
-extern Mesh *meshap;
+extern Mesh* meshp;
 
 #endif

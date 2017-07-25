@@ -76,9 +76,8 @@ class RCF(Solver):
             self._coupledFlux = Tensorize(self.flux)
             self._characteristicFlux = Tensorize(self.flux)
             self._boundaryFlux = Tensorize(self.boundaryFlux)
-            meshArgs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
-                       [getattr(mesh, attr) for attr in mesh.intFields]
-
+            meshArgs = mesh.getTensor() + mesh.getScalar()
+            BCArgs = self.U.getTensor() + self.T.getTensor() + self.p.getTensor()
             # init function
             rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
             U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
@@ -89,16 +88,14 @@ class RCF(Solver):
             p = self.p.completeField(p)
             UN, TN, pN = self.characteristicBoundary(U, T, p)
             rhoN, rhoUN, rhoEN = self._conservative()(UN, TN, pN)
-            self.mapBoundary = Function('init', [rho, rhoU, rhoE] + meshArgs, [rhoN, rhoUN, rhoEN])
-            Function.compile()
-            exit(0)
+            self.mapBoundary = Function('init', [rho, rhoU, rhoE] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
 
             self.t0 = ConstScalar()
             self.dt = ConstScalar()
             self.t = self.t0
             rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
             rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
-            self.map = Function('primal', [rho, rhoU, rhoE, self.t0, self.dt] + meshArgs, [rhoN, rhoUN, rhoEN])
+            self.map = Function('primal', [rho, rhoU, rhoE, self.t0, self.dt] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
 
         Function.compile()
         Function._module.init(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
@@ -310,11 +307,10 @@ class RCF(Solver):
         mesh = self.mesh.symMesh
 
         def _meshArgs(start=0):
-            return [getattr(mesh, attr)[start] for attr in mesh.gradFields] + \
-                   [getattr(mesh, attr)[start] for attr in mesh.intFields]
+            return [x[start] for x in mesh.getTensor()]
 
         def _outputRefs(*args):
-            refAgs = []
+            refArgs = []
             for x in args:
                 refArgs.append(x.getReference())
             return tuple(refArgs)
@@ -332,7 +328,7 @@ class RCF(Solver):
         meshArgs = _meshArgs()
         gradU, gradT, gradp = Zeros((mesh.nCells, 3, 3)), Zeros((mesh.nCells, 1, 3)), Zeros((mesh.nCells, 1, 3))
         outputs = _outputRefs(gradU, gradT, gradp)
-        self._grad(mesh.nInternalFaces, )(U, T, p, *meshArgs)
+        self._grad(mesh.nInternalFaces)(U, T, p, *meshArgs)
         for patchID in self.mesh.boundary:
             startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']

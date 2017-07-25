@@ -2,7 +2,7 @@
 import os, sys, subprocess, shutil
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 
-from . import config
+from . import config, parallel
 from .scalar import *
 _dtype = dtype
 
@@ -114,6 +114,9 @@ class Function(object):
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
         for index, inp in enumerate(self._inputs):
+            if isinstance(inp, IntegerScalar):
+                codeFile.write('\tinteger {} = (integer) PyInt_AsLong(PyTuple_GetItem(args, {}));\n'.format(inp.name, index))
+                continue
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
             codeFile.write('\tarrType<{}, {}> {};\n'.format(inp.dtype, shape, inp.name))
@@ -142,6 +145,11 @@ class Function(object):
             else:
                 raise Exception('op not recognised', op)
 
+        codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(self._outputs)))
+        for index, out in enumerate(self._outputs):
+            codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}));\n'.format(index, out.name))
+        codeFile.write('\treturn outputs;')
+        codeFile.write('\n')
         codeFile.write('}')
 
         codeFile.close()
@@ -165,21 +173,20 @@ class Function(object):
     @classmethod
     def compile(self):
         if config.compile:
-            with open(self.codeDir + 'module.hpp', 'a') as f:
+            with open(self.codeDir + 'code.cpp', 'a') as f:
                 f.write("""PyMethodDef Methods[] = {
         {"initialize",  initSolver, METH_VARARGS, "Execute a shell command."},
         {"viscosity",  viscosity, METH_VARARGS, "Execute a shell command."},
         {"finalize",  finalSolver, METH_VARARGS, "Execute a shell command."},
 """)
 
-                f.write('\nstatic PyMethodDef DynamicMethods[] = {')
                 for name in Function.funcs:
-                    f.write('{{"{0}", Function_{0}, METH_VARARGS, "boo"}}')
+                    f.write('\t{{"{0}", Function_{0}, METH_VARARGS, "boo"}},'.format(name))
                 #f.write('\n\n' + self.extraCode)
                 f.write("""
-                {NULL, NULL 0, NULL}        /* Sentinel */
+                {NULL, NULL, 0, NULL}        /* Sentinel */
         };
-                """)
+""")
             subprocess.check_call(['make'], cwd=self.codeDir)
         parallel.mpi.Barrier()
         sys.path.append(self.codeDir)

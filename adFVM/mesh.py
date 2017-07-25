@@ -859,27 +859,23 @@ class Mesh(object):
             value = getattr(self.parent, attr)
             setattr(self, attr, Variable((self.nFaces, 1), dtype='integer'))
 
-        #for attr in Mesh.constants:
-        #    setattr(self, attr, ad.placeholder(ad.int32))
-        #for attr in Mesh.fields:
-        #    value = getattr(self, attr) 
-        #    if attr in ['owner', 'neighbour']:
-        #        setattr(self, attr, ad.placeholder(ad.int32))
-        #    elif attr in ['cellNeighbours', 'cellFaces']:
-        #        setattr(self, attr, ad.placeholder(ad.int32))
-        #    elif attr == 'sumOp' or attr == 'gradOp':
-        #        setattr(self, attr, self.getSparseTensor(attr))
-        #    elif value.shape[1] == 1:
-        #        setattr(self, attr, ad.placeholder(config.dtype))
-        #    elif len(value.shape) > 2:
-        #        setattr(self, attr, ad.placeholder(config.dtype))
-        #    else:
-        #        setattr(self, attr, ad.placeholder(config.dtype))
-
         for patchID in self.parent.localPatches:
             self.boundary[patchID] = {}
-            for attr in self.getBoundaryTensor(patchID):
+            for attr in self.makeBoundaryTensor(patchID):
                 self.boundary[patchID][attr[0]] = attr[1]
+
+    def getTensor(self):
+        return [getattr(self, attr) for attr in Mesh.gradFields] + \
+               [getattr(self, attr) for attr in Mesh.intFields]
+
+    def getScalar(self):
+        boundary = []
+        for attr in Mesh.constants:
+            boundary.append(getattr(self, attr))
+        for patchID in self.parent.localPatches:
+            patch = self.boundary[patchID]
+            boundary.extend(patch.values())
+        return boundary
 
     def getSparseTensor(self, attr):
         indices = ad.placeholder(ad.int64)
@@ -893,7 +889,7 @@ class Mesh(object):
         return sumOp
 
 
-    def getBoundaryTensor(self, patchID):
+    def makeBoundaryTensor(self, patchID):
         default = [('startFace', IntegerScalar()), ('nFaces', IntegerScalar()),
                    ('cellStartFace', IntegerScalar())]
         return default #+ self.boundaryTensor.get(patchID, [])
