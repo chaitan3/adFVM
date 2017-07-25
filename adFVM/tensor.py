@@ -302,13 +302,13 @@ class TensorFunction(object):
             names[op] = 'Intermediate_{}'.format(index)
             code = ''
             #print names[op], index, op, len(op.args)
-            if isinstance(op, Scalar) and not isinstance(op, OpBase):
+            if isinstance(op, ConstScalar) and not isinstance(op, OpBase):
+                tensorIndex = self._inputTensorIndices[op]
+                code = '{} {} = {}[0];'.format(dtype, names[op], tensorIndex[0])
+            elif isinstance(op, Scalar) and not isinstance(op, OpBase):
                 tensorIndex = self._inputTensorIndices[op]
                 if not tensorIndex[3]:
                     code = '{} {} = {}[i*{} + {}];'.format(dtype, names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
-            elif isinstance(op, ConstScalar) and not isinstance(op, OpBase):
-                tensorIndex = self._inputTensorIndices[op]
-                code = '{} {} = {}[0];'.format(dtype, names[op], tensorIndex[0])
             elif isinstance(op, IntegerScalar) and not isinstance(op, OpBase):
                 tensorIndex = self._inputTensorIndices[op]
                 code = '{} {} = {}[i*{} + {}];'.format('integer', names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
@@ -369,6 +369,7 @@ def Tensorize(func):
                     tensorOutputs = (tensorOutputs,)
                 ParamFunc.outputShapes = [(shape,) + x.shape for x in tensorOutputs]
                 ParamFunc.tensorFunc = TensorFunction(name, tensorArgs, tensorOutputs)
+
             _indices = indices
             if _indices == None:
                 _indices = ParamFunc.outputShapes[0][0]

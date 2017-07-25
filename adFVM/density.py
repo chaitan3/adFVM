@@ -319,7 +319,7 @@ class RCF(Solver):
                 
 
         U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
-        U, T, p = self._primitive((0, mesh.nInternalCells), _outputRefs(U, T, p))(rho, rhoU, rhoE)
+        U, T, p = self._primitive(mesh.nInternalCells, _outputRefs(U, T, p))(rho, rhoU, rhoE)
         # boundary update
         # cut down repetition in code
         U = self.U.completeField(U)
@@ -330,16 +330,16 @@ class RCF(Solver):
         meshArgs = _meshArgs()
         gradU, gradT, gradp = Zeros((mesh.nCells, 3, 3)), Zeros((mesh.nCells, 1, 3)), Zeros((mesh.nCells, 1, 3))
         outputs = _outputRefs(gradU, gradT, gradp)
-        self._grad(mesh.nInternalFaces)(U, T, p, *meshArgs)
+        outputs = self._grad(mesh.nInternalFaces, outputs)(U, T, p, *meshArgs)
         for patchID in self.mesh.boundary:
             startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']
             meshArgs = _meshArgs(startFace)
             outputs = _outputRefs(*outputs)
             if patchType in config.coupledPatches:
-                self._coupledGrad(nFaces, _outputRefs(*outputs))(U, T, p, neighbour=False, boundary=False, *meshArgs)
+                outputs = self._coupledGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
             else:
-                self._boundaryGrad(nFaces, _outputRefs(*outputs))(U, T, p, neighbour=False, boundary=True, *meshArgs)
+                outputs = self._boundaryGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=True, *meshArgs)
         gradU, gradT, gradp = outputs
         # grad boundary update
         gradU = self.U.completeField(gradU)
@@ -350,17 +350,17 @@ class RCF(Solver):
         drho, drhoU, drhoE = Zeros((mesh.nInternalCells, 1)), Zeros((mesh.nInternalCells, 3)), Zeros((mesh.nInternalCells, 1))
         dtc = Zeros((mesh.nInternalCells, 1))
         outputs = _outputRefs(drho, drhoU, drhoE, dtc)
-        self._flux((0, mesh.nInternalCells), outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
+        outputs = self._flux(mesh.nInternalCells, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
         for patchID in self.mesh.boundary:
             startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']
             meshArgs = _meshArgs(startFace)
             outputs = _outputRefs(*outputs)
             if patchType in config.coupledPatches:
-                self._coupledFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, characteristic=False, neighbour=False, *meshArgs)
+                outputs = self._coupledFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, characteristic=False, neighbour=False, *meshArgs)
             elif patchType == 'characteristic':
-                self._characteristicFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, characteristic=True, neighbour=False, *meshArgs)
+                outputs = self._characteristicFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, characteristic=True, neighbour=False, *meshArgs)
             else:
-                self._boundaryFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
+                outputs = self._boundaryFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
         drho, drhoU, drhoE, dtc = outputs
         return drho, drhoU, drhoE

@@ -1,6 +1,7 @@
 #ifndef INTERFACE_HPP
 #define INTERFACE_HPP
 
+#define PY_ARRAY_UNIQUE_SYMBOL cool_ARRAY_API
 #include <Python.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>

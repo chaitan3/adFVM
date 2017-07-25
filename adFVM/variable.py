@@ -69,12 +69,15 @@ class Variable(ArithBase):
 class Zeros(Variable):
     pass
 
+import inspect
 class TensorFunctionOp(object):
     def __init__(self, func, args, outputs, indices):
+        assert isinstance(indices, IntegerScalar) or isinstance(indices, int)
         self.func = func
         self.name = func.name
         n = len(self.func._inputTensors)
         self.indices = indices
+        self.info = inspect.stack()[2:]
         args = args + outputs
         self.args = args
         self.outputs = [x.getReference() for x in outputs]
@@ -82,6 +85,7 @@ class TensorFunctionOp(object):
             out.args = (self,)
 
     def getCallString(self):
+        #callString = '\n/* ' + str(self.info) + ' */\n'
         callString = ''
         for inp in self.args:
             if isinstance(inp, ConstScalar):

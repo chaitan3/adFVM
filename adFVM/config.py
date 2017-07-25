@@ -45,6 +45,9 @@ def exceptInfo(e, info=''):
     e.args += (info, rank)
     raise 
 
+def stop():
+    import pdb; pdb.set_trace()
+
 # compute type
 if not user.use_gpu:
     device = 'cpu'
