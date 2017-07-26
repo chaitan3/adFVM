@@ -6,7 +6,7 @@ import copy
 
 #import adFVMcpp
 from . import config, parallel, timestep
-from .tensor import Variable
+from .tensor import Variable, ExternalFunctionOp
 from .parallel import pprint
 from .memory import printMemUsage
 
@@ -130,21 +130,23 @@ class Solver(object):
         return cellFields
 
     def getBoundaryTensor(self, index=0):
-        return [phi.getTensor(index) for phi in self.fields]
+        return sum([phi.getTensor(index) for phi in self.fields], [])
 
-    #def stackFields(self, fields, mod): 
-    #    return mod.concatenate([phi.field for phi in fields], axis=1)
+    def boundaryInit(self, *fields):
+        #mesh = self.mesh.symMesh
+        #fields = [phi[mesh.nLocalCells] for phi in fields]
+        return ExternalFunctionOp('mpi_init', (), fields, empty=True).outputs
 
-    #def unstackFields(self, stackedFields, mod, names=None, **kwargs):
-    #    if names is None:
-    #        names = self.names
-    #    fields = []
-    #    nDimensions = np.concatenate(([0], np.cumsum(np.array(self.dimensions))))
-    #    nDimensions = zip(nDimensions[:-1], nDimensions[1:])
-    #    for name, dim, dimRange in zip(names, self.dimensions, nDimensions):
-    #        phi = stackedFields[:, range(*dimRange)]
-    #        fields.append(mod(name, phi, dim, **kwargs))
-    #    return fields
+    def boundaryEnd(self, *fields):
+        return ExternalFunctionOp('mpi_end', (), fields, empty=True).outputs
+
+    def boundary(self, *fields):
+        fields = list(fields)
+        for index, phi in enumerate(fields):
+            phi = self.fields[index].completeField(phi)
+            phi = ExternalFunctionOp('mpi', (), (phi,)).outputs[0]
+            fields[index] = phi
+        return tuple(fields)
 
     def initSource(self):
         self.sourceFields = self.getSymbolicFields()
@@ -240,13 +242,6 @@ class Solver(object):
 
     def equation(self, *fields):
         pass
-
-    def boundary(self, *newFields):
-        boundaryFields = self.getBCFields()
-        for phiB, phiN in zip(boundaryFields, newFields):
-            phiB.resetField()
-            phiB.setInternalField(phiN.field)
-        return boundaryFields
 
     def run(self, endTime=np.inf, writeInterval=config.LARGE, reportInterval=1, startTime=0.0, dt=1e-3, nSteps=config.LARGE, \
             startIndex=0, result=0., mode='simulation', source=lambda *args: [0.]*len(args[0]), perturbation=None, avgStart=0):

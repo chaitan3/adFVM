@@ -82,10 +82,9 @@ class RCF(Solver):
         U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
         outputs = tuple([x.getReference() for x in [U, T, p]])
         U, T, p = self._primitive(mesh.nInternalCells, outputs)(rho, rhoU, rhoE)
-        U = self.U.completeField(U)
-        T = self.T.completeField(T)
-        p = self.p.completeField(p)
-        UN, TN, pN = self.characteristicBoundary(U, T, p)
+        U, T, p = self.boundaryInit(U, T, p)
+        U, T, p = self.boundary(U, T, p)
+        UN, TN, pN = self.boundaryEnd(U, T, p)
         rhoN, rhoUN, rhoEN = self._conservative()(UN, TN, pN)
         self.mapBoundary = Function('init', [rho, rhoU, rhoE] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
 
@@ -103,9 +102,6 @@ class RCF(Solver):
         #atexit.register(TensorFunction._module.finalize)
 
         return
-
-    def getBoundaryTensor(self, index=0):
-        return self.U.getTensor(index) + self.T.getTensor(index) + self.p.getTensor(index)
 
     # only reads fields
     @config.timeFunction('Time for reading fields')
@@ -137,7 +133,6 @@ class RCF(Solver):
     # reads and updates ghost cells
     def initFields(self, fields):
         newFields = self.mapBoundary(*[phi.field for phi in fields])
-        #import pdb;pdb.set_trace()
         return self.getFields(newFields, IOField, refFields=fields)
     
     @config.timeFunction('Time for writing fields')
@@ -364,3 +359,7 @@ class RCF(Solver):
                 outputs = self._boundaryFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
         drho, drhoU, drhoE, dtc = outputs
         return drho, drhoU, drhoE
+
+    def boundary(self, U, T, p):
+        outputs = super(RCF, self).boundary(U, T, p)
+        return self.characteristicBoundary(*outputs)

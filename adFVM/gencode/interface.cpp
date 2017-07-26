@@ -631,3 +631,80 @@ Boundary getBoundary(PyObject *dict) {
         return 0;
     }
 #endif
+
+static MPI_Request* mpi_req;
+static integer mpi_reqIndex;
+static integer mpi_reqField = 0;
+static scalar* mpi_reqBuf[3];
+
+template <typename dtype, integer shape1, integer shape2>
+void Function_mpi(arrType<dtype, shape1, shape2>& phi) {
+    const Mesh& mesh = *meshp;
+    //MPI_Barrier(MPI_COMM_WORLD);
+
+    dtype* phiBuf = NULL;
+    integer reqPos = 0;
+    if (mesh.nRemotePatches > 0) {
+        reqPos = mpi_reqIndex/(2*mesh.nRemotePatches);
+        phiBuf = new dtype[(mesh.nCells-mesh.nLocalCells)*shape1*shape2];
+        mpi_reqBuf[reqPos] = phiBuf;
+    }
+
+    for (auto& patch: mesh.boundary) {
+        string patchType = patch.second.at("type");
+        if (patchType == "processor" || patchType == "processorCyclic") {
+            string patchID = patch.first;
+            const map<string, string>& patchInfo = mesh.boundary.at(patchID);
+
+            integer startFace, nFaces;
+            tie(startFace, nFaces) = mesh.boundaryFaces.at(patch.first);
+            integer cellStartFace = mesh.nInternalCells + startFace - mesh.nInternalFaces;
+                //cout << "hello " << patchID << endl;
+                integer bufStartFace = cellStartFace - mesh.nLocalCells;
+                integer size = nFaces*shape1*shape2;
+                integer dest = stoi(patchInfo.at("neighbProcNo"));
+                for (integer i = 0; i < nFaces; i++) {
+                    integer p = mesh.owner(startFace + i);
+                    integer b = bufStartFace + i;
+                    for (integer j = 0; j < shape1; j++) {
+                        for (integer k = 0; k < shape2; k++) {
+                            phiBuf[b*shape1*shape2 + j*shape2 + k] = phi(p, j, k);
+                        }
+                    }
+                }
+                MPI_Request *req = mpi_req;
+                integer tag = mpi_reqField*100 + mesh.tags.at(patchID);
+                //cout << patchID << " " << tag << endl;
+                MPI_Isend(&phiBuf[bufStartFace*shape1*shape2], size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex]);
+                MPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex+1]);
+                mpi_reqIndex += 2;
+        }
+    }
+    mpi_reqField = (mpi_reqField + 1) % 100;
+}
+template void Function_mpi<>(arrType<scalar, 1, 1>& phi);
+template void Function_mpi<>(arrType<scalar, 1, 3>& phi);
+template void Function_mpi<>(arrType<scalar, 3, 1>& phi);
+template void Function_mpi<>(arrType<scalar, 3, 3>& phi);
+
+void Function_mpi_init() {
+    const Mesh& mesh = *meshp;
+    mpi_reqIndex = 0;
+    if (mesh.nRemotePatches > 0) {
+        //MPI_Barrier(MPI_COMM_WORLD);
+        mpi_req = new MPI_Request[2*3*mesh.nRemotePatches];
+    }
+}
+
+void Function_mpi_end() {
+    const Mesh& mesh = *meshp;
+    if (mesh.nRemotePatches > 0) {
+        MPI_Waitall(mpi_reqIndex, (mpi_req), MPI_STATUSES_IGNORE);
+        delete[] mpi_req;
+        //MPI_Barrier(MPI_COMM_WORLD);
+        for (integer i = 0; i < mpi_reqIndex/(2*mesh.nRemotePatches); i++) {
+            delete[] mpi_reqBuf[i];
+        }
+    }
+}
+

@@ -99,6 +99,20 @@ class TensorFunctionOp(object):
         #    callString += '{}, '.format(out.name)
         return callString[:-2]
 
+class ExternalFunctionOp(object):
+    def __init__(self, name, args, outputs, empty=False):
+        self.name = 'Function_' + name
+        args = args + outputs
+        self.args = args
+        self.empty = empty
+        self.outputs = [x.getReference() for x in outputs]
+        for out in self.outputs:
+            out.args = (self,)
+
+    def getCallString(self):
+        if self.empty:
+            return ''
+        return ', '.join([str(inp.name) for inp in self.args])
 
 class Function(object):
     _index = 0
@@ -144,6 +158,8 @@ class Function(object):
                 codeFile.write('\tarrType<{}, {}> {}({}, true);\n'.format(op.dtype, shape, op.name, op.shape[0].name)) 
             elif isinstance(op, TensorFunctionOp):
                 codeFile.write('\t{}({}, {});\n'.format(op.name, op.indices.name, op.getCallString()))
+            elif isinstance(op, ExternalFunctionOp):
+                codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
             elif not isinstance(op, ConstScalar) and not isinstance(op, Variable):
                 raise Exception('op not recognised', op)
 

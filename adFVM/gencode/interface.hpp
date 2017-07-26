@@ -135,6 +135,11 @@ PyObject* finalSolver(PyObject *self, PyObject *args);
 PyObject* initSolver(PyObject *self, PyObject *args);
 PyObject* viscosity(PyObject *self, PyObject *args);
 
+void Function_mpi_init();
+template <typename dtype, integer shape1, integer shape2>
+void Function_mpi(arrType<dtype, shape1, shape2>& phi);
+void Function_mpi_end();
+
 Boundary getBoundary(PyObject*);
 Boundary getMeshBoundary(PyObject *mesh, const string attr);
 extern Mesh* meshp;

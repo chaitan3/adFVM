@@ -11,11 +11,7 @@
 class RCF {
     public:
 
-    void* req;
-    integer reqIndex;
-    integer reqField;
-    Boundary boundaries[3];
-    scalar* reqBuf[3];
+        Boundary boundaries[3];
     integer stage;
     scalar CFL;
     map<string, string> objectivePLInfo;
