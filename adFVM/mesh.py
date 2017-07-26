@@ -31,7 +31,7 @@ class Mesh(object):
     BCFields = ['startFace', 'nFaces', 'cellStartFace']
 
     constants = ['nCells', 'nFaces', 'nInternalCells', 'nInternalFaces',
-                 'nLocalCells']
+                 'nLocalCells', 'nRemoteCells', 'nLocalFaces']
 
     def __init__(self):
         pass
@@ -118,6 +118,8 @@ class Mesh(object):
 
         # ghost cell modification: neighbour and cellCentres
         self.nLocalCells = self.createGhostCells()
+        self.nRemoteCells = self.nCells - self.nLocalCells
+        self.nLocalFaces = self.nLocalCells - self.nInternalCells + self.nInternalFaces
         self.deltas, self.deltasUnit = self.getDeltas()           # nFaces 
         self.weights, self.linearWeights, self.quadraticWeights = self.getWeights()   # nFaces
 

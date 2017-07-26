@@ -314,9 +314,12 @@ class RCF(Solver):
                 
 
         U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
-        U, T, p = self._primitive(mesh.nInternalCells, _outputRefs(U, T, p))(rho, rhoU, rhoE)
+        outputs = self._primitive(mesh.nInternalCells, _outputRefs(U, T, p))(rho, rhoU, rhoE)
         # boundary update
         # cut down repetition in code
+        outputs = self.boundaryInit(
+        U, T, p = self.boundary(U, T, p)
+        UN, TN, pN = self.boundaryEnd(U, T, p)
         U = self.U.completeField(U)
         T = self.T.completeField(T)
         p = self.p.completeField(p)
@@ -326,7 +329,7 @@ class RCF(Solver):
         gradU, gradT, gradp = Zeros((mesh.nCells, 3, 3)), Zeros((mesh.nCells, 1, 3)), Zeros((mesh.nCells, 1, 3))
         outputs = _outputRefs(gradU, gradT, gradp)
         outputs = self._grad(mesh.nInternalFaces, outputs)(U, T, p, *meshArgs)
-        for patchID in self.mesh.boundary:
+        for patchID in self.mesh.localPatches:
             startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']
             meshArgs = _meshArgs(startFace)
@@ -335,6 +338,9 @@ class RCF(Solver):
                 outputs = self._coupledGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
             else:
                 outputs = self._boundaryGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=True, *meshArgs)
+        meshArgs = _meshArgs(mesh.nLocalFaces)
+        outputs = _outputRefs(*outputs)
+        outputs = self._coupledGrad(mesh.nRemoteCells, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
         gradU, gradT, gradp = outputs
         # grad boundary update
         gradU = self.U.completeField(gradU)
@@ -346,7 +352,7 @@ class RCF(Solver):
         dtc = Zeros((mesh.nInternalCells, 1))
         outputs = _outputRefs(drho, drhoU, drhoE, dtc)
         outputs = self._flux(mesh.nInternalFaces, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
-        for patchID in self.mesh.boundary:
+        for patchID in self.mesh.localPatches:
             startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']
             meshArgs = _meshArgs(startFace)
@@ -357,6 +363,9 @@ class RCF(Solver):
                 outputs = self._characteristicFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, characteristic=True, neighbour=False, *meshArgs)
             else:
                 outputs = self._boundaryFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
+        meshArgs = _meshArgs(mesh.nLocalFaces)
+        outputs = _outputRefs(*outputs)
+        outputs = self._coupledFlux(mesh.nRemoteCells, outputs)(U, T, p, gradU, gradT, gradp, neighbour=False, boundary=False, *meshArgs)
         drho, drhoU, drhoE, dtc = outputs
         return drho, drhoU, drhoE
 
