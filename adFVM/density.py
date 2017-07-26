@@ -104,7 +104,8 @@ class RCF(Solver):
         return
 
     def getBoundaryTensor(self, index=0):
-        return super(RCF, self).getBoundaryTensor(index) + self.defaultBoundary.getTensor(index)
+        return super(RCF, self).getBoundaryTensor(index) + \
+               sum([phi.getTensor(index) for phi in self.gradFields], [])
 
     # only reads fields
     @config.timeFunction('Time for reading fields')
@@ -128,7 +129,7 @@ class RCF(Solver):
             self.fields = fields
             for phi in self.fields:
                 phi.completeField()
-            self.defaultBoundary = CellField('def', None, (None,))
+            self.gradFields = [CellField(phi.name, None, phi.dimensions + (3,)) for phi in self.fields]
         else:
             self.updateFields(fields)
         self.firstRun = False
@@ -337,7 +338,7 @@ class RCF(Solver):
         # grad boundary update
         outputs = list(self.boundaryInit(*outputs))
         for index, phi in enumerate(outputs):
-            phi = self.defaultBoundary.updateGhostCells(phi)
+            phi = self.gradFields[index].updateGhostCells(phi)
             phi = ExternalFunctionOp('mpi', (), (phi,)).outputs[0]
             outputs[index] = phi
         outputs = self.boundaryEnd(*outputs)
