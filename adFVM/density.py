@@ -1,7 +1,7 @@
 from . import config, riemann, interp
-from .tensor import Tensorize, ConstScalar
+from .tensor import Tensorize, ConstScalar, ExternalFunctionOp
 from .variable import Variable, Function, Zeros
-from .field import Field, IOField
+from .field import Field, IOField, CellField
 from .op import  div, absDiv, snGrad, grad, internal_sum
 from .solver import Solver
 from .interp import central, secondOrder
@@ -103,6 +103,9 @@ class RCF(Solver):
 
         return
 
+    def getBoundaryTensor(self, index=0):
+        return super(RCF, self).getBoundaryTensor(index) + self.defaultBoundary.getTensor(index)
+
     # only reads fields
     @config.timeFunction('Time for reading fields')
     def readFields(self, t, suffix=''):
@@ -125,6 +128,7 @@ class RCF(Solver):
             self.fields = fields
             for phi in self.fields:
                 phi.completeField()
+            self.defaultBoundary = CellField('def', None, (None,))
         else:
             self.updateFields(fields)
         self.firstRun = False
@@ -330,12 +334,14 @@ class RCF(Solver):
                 outputs = self._boundaryGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=True, *meshArgs)
         meshArgs = _meshArgs(mesh.nLocalFaces)
         outputs = self._coupledGrad(mesh.nRemoteCells, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
-        gradU, gradT, gradp = outputs
         # grad boundary update
-
-        #gradU = self.U.completeField(gradU)
-        #gradT = self.T.completeField(gradT)
-        #gradp = self.p.completeField(gradp)
+        outputs = list(self.boundaryInit(*outputs))
+        for index, phi in enumerate(outputs):
+            phi = self.defaultBoundary.updateGhostCells(phi)
+            phi = ExternalFunctionOp('mpi', (), (phi,)).outputs[0]
+            outputs[index] = phi
+        outputs = self.boundaryEnd(*outputs)
+        gradU, gradT, gradp = outputs
         
         meshArgs = _meshArgs()
         drho, drhoU, drhoE = Zeros((mesh.nInternalCells, 1)), Zeros((mesh.nInternalCells, 3)), Zeros((mesh.nInternalCells, 1))
