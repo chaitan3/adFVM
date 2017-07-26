@@ -638,7 +638,8 @@ static integer mpi_reqField = 0;
 static scalar* mpi_reqBuf[3];
 
 template <typename dtype, integer shape1, integer shape2>
-void Function_mpi(arrType<dtype, shape1, shape2>& phi) {
+void Function_mpi(std::vector<arrType<dtype, shape1, shape2>*> phiP) {
+    arrType<dtype, shape1, shape2>& phi = *(phiP[0]);
     const Mesh& mesh = *meshp;
     //MPI_Barrier(MPI_COMM_WORLD);
 
@@ -682,10 +683,23 @@ void Function_mpi(arrType<dtype, shape1, shape2>& phi) {
     }
     mpi_reqField = (mpi_reqField + 1) % 100;
 }
-template void Function_mpi<>(arrType<scalar, 1, 1>& phi);
-template void Function_mpi<>(arrType<scalar, 1, 3>& phi);
-template void Function_mpi<>(arrType<scalar, 3, 1>& phi);
-template void Function_mpi<>(arrType<scalar, 3, 3>& phi);
+template void Function_mpi<>(std::vector<arrType<scalar, 1, 1>*> phiP);
+template void Function_mpi<>(std::vector<arrType<scalar, 1, 3>*> phiP);
+template void Function_mpi<>(std::vector<arrType<scalar, 3, 1>*> phiP);
+template void Function_mpi<>(std::vector<arrType<scalar, 3, 3>*> phiP);
+
+void Function_mpi_allreduce(std::vector<vec*> vals) {
+    integer n = vals.size()/2;
+    vec in(n, true);
+    vec out(n, true);
+    for (integer i = 0; i < n; i++) {
+        in(i) = (*vals[i])(0);
+    }
+    MPI_Allreduce(&in(0), &out(0), n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    for (integer i = 0; i < n; i++) {
+        (*vals[i + n])(0) = out(i);
+    }
+}
 
 void Function_mpi_init() {
     const Mesh& mesh = *meshp;

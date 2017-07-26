@@ -112,7 +112,13 @@ class ExternalFunctionOp(object):
     def getCallString(self):
         if self.empty:
             return ''
-        return ', '.join([str(inp.name) for inp in self.args])
+        inp = self.args[0]
+        shape = ','.join([str(x) for x in inp.shape[1:]])
+        callString = 'std::vector<arrType<{}, {}>*>{{'.format(inp.dtype, shape)
+        for inp in self.args:
+            callString += '&{},'.format(inp.name)
+        callString = callString[:-1] + '}'
+        return callString
 
 class Function(object):
     _index = 0

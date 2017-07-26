@@ -137,8 +137,9 @@ PyObject* viscosity(PyObject *self, PyObject *args);
 
 void Function_mpi_init();
 template <typename dtype, integer shape1, integer shape2>
-void Function_mpi(arrType<dtype, shape1, shape2>& phi);
+void Function_mpi(std::vector<arrType<dtype, shape1, shape2>*> phiP);
 void Function_mpi_end();
+void Function_mpi_allreduce(std::vector<vec*> vals);
 
 Boundary getBoundary(PyObject*);
 Boundary getMeshBoundary(PyObject *mesh, const string attr);

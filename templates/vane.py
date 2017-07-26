@@ -98,9 +98,9 @@ def objective(fields, solver):
     b = -0.71e-3/(120*k)/2000.
 
     # MPI ALLREDUCE
-    #val[4] = {{pl, w, ht, w2}}
-    #gval[4];
-    #MPI_Allreduce(&val, &gval, 4, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    inputs = (pl, w, ht, w2)
+    outputs = tuple([tensor.Zeros(x.shape) for x in inputs])
+    pl, w, ht, w2 = tensor.ExternalFunctionOp('mpi_allreduce', inputs, outputs).outputs
 
     # then elemwise
     def _combine(pl, w, ht, w2):
