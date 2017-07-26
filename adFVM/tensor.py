@@ -153,6 +153,11 @@ class Tensor(ArithBase):
                 res.append(sum(self.scalars[i*n + k]*b[k*n + j] for k in range(0, n)))
         return Tensor(self.shape, res)
 
+    # reduction operations
+    def sum(self):
+        assert self.shape == (1,)
+        return Tensor.collate(self, Tensor((1,), [ConstantOp(0)]))
+
     @classmethod
     def collate(cls, *args):
         n = len(args)/2
@@ -184,6 +189,7 @@ class Tensor(ArithBase):
     @classmethod
     def max(cls, x1, x2):
         return Tensor.switch(x1 > x2, x1, x2)
+
 
 class TensorFunction(object):
     _index = 0

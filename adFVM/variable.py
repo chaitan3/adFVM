@@ -150,14 +150,20 @@ class Function(object):
         #codeFile.write('\nvoid Function_{}({}) {}\n'.format(self.name, memString[:-2], '{\n'))
 
         sortedOps = graphTopologicalSort(self._outputs, self._children.copy())
+        def _getName(op):
+            if isinstance(op, int):
+                name = op
+            else:
+                name = op.name
+            return name
         for op in sortedOps:
             if isinstance(op, Zeros):
                 assert len(op.args) == 0
                 #codeFile.write('\t// init var {}\n'.format(op.name)) 
                 shape = ','.join([str(x) for x in op.shape[1:]])
-                codeFile.write('\tarrType<{}, {}> {}({}, true);\n'.format(op.dtype, shape, op.name, op.shape[0].name)) 
+                codeFile.write('\tarrType<{}, {}> {}({}, true);\n'.format(op.dtype, shape, op.name, _getName(op.shape[0]))) 
             elif isinstance(op, TensorFunctionOp):
-                codeFile.write('\t{}({}, {});\n'.format(op.name, op.indices.name, op.getCallString()))
+                codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):
                 codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
             elif not isinstance(op, ConstScalar) and not isinstance(op, Variable):

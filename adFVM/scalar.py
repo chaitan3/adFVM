@@ -115,9 +115,12 @@ class ConstantOp(OpBase):
     def __init__(self, constant):
         self.constant = constant
         self.args = tuple()
+        self.dtype = dtype
+        if isinstance(constant, int):
+            self.dtype = 'integer'
 
     def c_code(self, names):
-        return '{} {} = {};'.format(dtype, names[self], self.constant)
+        return '{} {} = {};'.format(self.dtype, names[self], self.constant)
 
     def grad(self, gradient):
         return []
@@ -240,7 +243,7 @@ class ConditionalOp(OpBase):
     def grad(self, gradient):
         cond, x1, x2 = self.args
         grads = [None]
-        zero = ConstantOp(0)
+        zero = ConstantOp(0.)
         grads.append(ConditionalOp(cond, gradient, zero))
         grads.append(ConditionalOp(~cond, gradient, zero))
         return grads

@@ -54,6 +54,7 @@ class Solver(object):
         self.stage = 0
         self.init = None
         self.firstRun = True
+        self.extraArgs = []
         return
 
     def compile(self, adjoint=None):
@@ -339,17 +340,16 @@ class Solver(object):
             inputs = [phi.field for phi in fields] + \
                      [dt, t] + \
                      mesh.getTensor() + mesh.getScalar() + \
-                     self.getBoundaryTensor(1)
+                     self.getBoundaryTensor(1) + \
+                     [x[1] for x in self.extraArgs]
             #inputs = [phi.field for phi in fields] + \
             #         [phi[1] for phi in self.sourceTerms] + \
             #         [dt, t]
             #outputs = self.map(fields)
 
             outputs = self.map(*inputs)
-            #newFields, objective, dtc = outputs[:3], outputs[3], outputs[4]
-            newFields = outputs[:3]
-            objective = 0.
-            dtc = dt
+            newFields, dtc, objective = outputs[:3], outputs[3], outputs[4]
+            objective = objective[0,0]
             local = remote = 0
             #exit(1)
 
@@ -393,8 +393,7 @@ class Solver(object):
                 dt = dts[timeIndex]
             #elif not self.fixedTimeStep:
             elif (not self.fixedTimeStep) and report:
-                dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
-
+                dt = min(parallel.min(2*self.CFL/dtc), dt*self.stepFactor, endTime-t)
             if self.dynamicMesh:
                 mesh.update(t, dt)
 

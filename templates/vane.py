@@ -4,6 +4,7 @@ from adFVM import config
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
 from adFVM import tensor
+from adFVM.mesh import Mesh
 
 #primal = RCF('/home/talnikar/adFVM/cases/vane_optim/foam/laminar/3d_baseline/par-16/', objective='drag', objectiveDragInfo='pressure')
 #primal = RCF('/master/home/talnikar/adFVM/cases/vane/les/', faceReconstructor='SecondOrder')#, timeIntegrator='euler')
@@ -14,31 +15,37 @@ def dot(a, b):
     return ad.reshape(ad.sum(a*b, axis=1), (-1,1))
 
 # heat transfer
-def objectiveHeatTransfer(solver, mesh):
-    U, T, p = tensor.CellTensor((3,)), tensor.CellTensor((1,)), tensor.CellTensor((1,))
+def objectiveHeatTransfer(U, T, p, *mesh, **options):
+    solver = options['solver']
+    mesh = Mesh.container(mesh)
     Ti = T.extract(mesh.owner)
     Tw = 300.
     dtdn = (Tw-Ti)/mesh.deltas
     k = solver.Cp*solver.mu(Tw)/solver.Pr
     ht = k*dtdn*mesh.areas
     w = mesh.areas*1.
-    return tensor.TensorFunction('objective2', [U, T, p, mesh.areas, mesh.deltas, mesh.owner], [ht, w])
+    return ht.sum(), w.sum()
 
 # pressure loss
 def getPlane(solver):
     point = np.array([0.052641,-0.1,0.005])
     normal = np.array([1.,0.,0.])
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
-    return {'cells':interCells.astype(np.int32), 
+    interCells = interCells.astype(np.int32)
+    assert interCells.shape[0] == interArea.shape[0]
+    nPlaneCells = interCells.shape[0]
+    solver.extraArgs.append((tensor.IntegerScalar(), nPlaneCells))
+    nPlaneCells = solver.extraArgs[-1][0]
+    solver.extraArgs.append((tensor.Variable((nPlaneCells, 1), 'integer'), interCells))
+    solver.extraArgs.append((tensor.Variable((nPlaneCells, 1), 'scalar'), interArea))
+    return {'cells':interCells,
             'areas': interArea, 
            }
 
-def objectivePressureLoss(solver, mesh):
+def objectivePressureLoss(U, T, p, cells, areas, **options):
+    solver = options['solver']
     ptin = 175158.
     normal = np.array([1.,0.,0.])
-    U, T, p = tensor.CellTensor((3,)), tensor.CellTensor((1,)), tensor.CellTensor((1,))
-    areas = tensor.Tensor((1,))
-    cells = tensor.Tensor((1,), [tensor.IntegerScalar()])
     g = solver.gamma
     pi = p.extract(cells)
     Ti = T.extract(cells)
@@ -52,12 +59,41 @@ def objectivePressureLoss(solver, mesh):
     pti = pi*pow(1 + 0.5*(g-1)*Mi*Mi, g/(g-1))
     pl = (ptin-pti)*rhoUni*areas/ptin
     w = rhoUni*areas
-    return tensor.TensorFunction('objective', [U, T, p, areas, cells], [pl, w])
+    return pl.sum(), w.sum()
     
-#objective = objectiveHeatTransfer
-objective = objectivePressureLoss
+def objective(fields, solver):
+    U, T, p = fields
+    mesh = solver.mesh.symMesh
+    def _meshArgs(start=0):
+        return [x[start] for x in mesh.getTensor()]
 
-# CONVERT TO REDUCE/BCAST ops
+    nPlaneCells, cells, areas = [x[0] for x in solver.extraArgs]
+    pl, w = tensor.Zeros((1, 1)), tensor.Zeros((1, 1))
+    pl, w = tensor.Tensorize(objectivePressureLoss)(nPlaneCells, (pl, w))(U, T, p, cells, areas, solver=solver)
+
+    _heatTransfer = tensor.Tensorize(objectiveHeatTransfer)
+    ht, w2 = tensor.Zeros((1, 1)), tensor.Zeros((1, 1))
+    for patchID in ['pressure', 'suction']:
+        patch = mesh.boundary[patchID]
+        startFace, nFaces = patch['startFace'], patch['nFaces']
+        meshArgs = _meshArgs(startFace)
+        ht, w2 = _heatTransfer(nFaces, (ht, w2))(U, T, p, *meshArgs, solver=solver)
+
+    k = solver.mu(300)*solver.Cp/solver.Pr
+    a = 0.4
+    b = -0.71e-3/(120*k)/2000.
+
+    # mpi call
+    #val[4] = {{pl, w, ht, w2}}
+    #gval[4];
+    #MPI_Allreduce(&val, &gval, 4, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    # then elemwise
+    def _combine(pl, w, ht, w2):
+        obj = pl/w
+        obj2 = ht/w2
+        return a*obj + b*obj2
+    return tensor.Tensorize(_combine)(1)(pl, w, ht, w2)[0]
 
 objectiveString = """
 scalar objective(const mat& U, const vec& T, const vec& p) {{
@@ -200,15 +236,8 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
 }}
 """
 
-primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=[objectivePressureLoss, objectiveHeatTransfer], objectivePLInfo={}, \
-             objectiveString = objectiveString)
+primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective, objectivePLInfo={})
 primal.defaultConfig["objectivePLInfo"] = getPlane(primal)
-a = 0.4
-#a = 0.
-k = primal.mu(300)*primal.Cp/primal.Pr
-b = -0.71e-3/(120*k)/2000.
-#b = 0.
-primal.objectiveString = primal.objectiveString.format('pressure', a, b, 'suction')
 
 def makePerturb(param, eps=1e-4):
     def perturbMesh(fields, mesh, t):

@@ -77,6 +77,7 @@ class RCF(Solver):
         self._boundaryFlux = Tensorize(self.boundaryFlux)
         meshArgs = mesh.getTensor() + mesh.getScalar()
         BCArgs = self.getBoundaryTensor(0)
+        extraArgs = [x[0] for x in self.extraArgs]
         # init function
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
         U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
@@ -93,7 +94,7 @@ class RCF(Solver):
         self.t = self.t0
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
         rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
-        self.map = Function('primal', [rho, rhoU, rhoE, self.dt, self.t0] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
+        self.map = Function('primal', [rho, rhoU, rhoE, self.dt, self.t0] + meshArgs + BCArgs + extraArgs, [rhoN, rhoUN, rhoEN, self.dtc, self.obj])
 
         Function.compile()
         Function._module.initialize(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
@@ -311,8 +312,6 @@ class RCF(Solver):
         def _meshArgs(start=0):
             return [x[start] for x in mesh.getTensor()]
 
-               
-
         U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
         outputs = self._primitive(mesh.nInternalCells, (U, T, p))(rho, rhoU, rhoE)
         # boundary update
@@ -321,6 +320,7 @@ class RCF(Solver):
         outputs = self.boundary(*outputs)
         outputs = self.boundaryEnd(*outputs)
         U, T, p = outputs
+        obj = self.objective([U, T, p], self)
 
         meshArgs = _meshArgs()
         gradU, gradT, gradp = Zeros((mesh.nCells, 3, 3)), Zeros((mesh.nCells, 1, 3)), Zeros((mesh.nCells, 1, 3))
@@ -361,6 +361,8 @@ class RCF(Solver):
         meshArgs = _meshArgs(mesh.nLocalFaces)
         outputs = self._coupledFlux(mesh.nRemoteCells, outputs)(U, T, p, gradU, gradT, gradp, neighbour=False, boundary=False, *meshArgs)
         drho, drhoU, drhoE, dtc = outputs
+        if self.stage == 1:
+            self.dtc, self.obj = dtc, obj
         return drho, drhoU, drhoE
 
     def boundary(self, U, T, p):
