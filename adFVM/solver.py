@@ -133,8 +133,6 @@ class Solver(object):
         return sum([phi.getTensor(index) for phi in self.fields], [])
 
     def boundaryInit(self, *fields):
-        #mesh = self.mesh.symMesh
-        #fields = [phi[mesh.nLocalCells] for phi in fields]
         return ExternalFunctionOp('mpi_init', (), fields, empty=True).outputs
 
     def boundaryEnd(self, *fields):

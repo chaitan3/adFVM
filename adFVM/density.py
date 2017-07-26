@@ -306,57 +306,45 @@ class RCF(Solver):
         def _meshArgs(start=0):
             return [x[start] for x in mesh.getTensor()]
 
-        def _outputRefs(*args):
-            refArgs = []
-            for x in args:
-                refArgs.append(x.getReference())
-            return tuple(refArgs)
-                
+               
 
         U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
-        outputs = self._primitive(mesh.nInternalCells, _outputRefs(U, T, p))(rho, rhoU, rhoE)
+        outputs = self._primitive(mesh.nInternalCells, (U, T, p))(rho, rhoU, rhoE)
         # boundary update
         # cut down repetition in code
-        outputs = self.boundaryInit(
-        U, T, p = self.boundary(U, T, p)
-        UN, TN, pN = self.boundaryEnd(U, T, p)
-        U = self.U.completeField(U)
-        T = self.T.completeField(T)
-        p = self.p.completeField(p)
-        U, T, p = self.characteristicBoundary(U, T, p)
+        outputs = self.boundaryInit(*outputs)
+        outputs = self.boundary(*outputs)
+        outputs = self.boundaryEnd(*outputs)
+        U, T, p = outputs
 
         meshArgs = _meshArgs()
         gradU, gradT, gradp = Zeros((mesh.nCells, 3, 3)), Zeros((mesh.nCells, 1, 3)), Zeros((mesh.nCells, 1, 3))
-        outputs = _outputRefs(gradU, gradT, gradp)
-        outputs = self._grad(mesh.nInternalFaces, outputs)(U, T, p, *meshArgs)
+        outputs = self._grad(mesh.nInternalFaces, (gradU, gradT, gradp))(U, T, p, *meshArgs)
         for patchID in self.mesh.localPatches:
             startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']
             meshArgs = _meshArgs(startFace)
-            outputs = _outputRefs(*outputs)
             if patchType in config.coupledPatches:
                 outputs = self._coupledGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
             else:
                 outputs = self._boundaryGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=True, *meshArgs)
         meshArgs = _meshArgs(mesh.nLocalFaces)
-        outputs = _outputRefs(*outputs)
         outputs = self._coupledGrad(mesh.nRemoteCells, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
         gradU, gradT, gradp = outputs
         # grad boundary update
-        gradU = self.U.completeField(gradU)
-        gradT = self.T.completeField(gradT)
-        gradp = self.p.completeField(gradp)
+
+        #gradU = self.U.completeField(gradU)
+        #gradT = self.T.completeField(gradT)
+        #gradp = self.p.completeField(gradp)
         
         meshArgs = _meshArgs()
         drho, drhoU, drhoE = Zeros((mesh.nInternalCells, 1)), Zeros((mesh.nInternalCells, 3)), Zeros((mesh.nInternalCells, 1))
         dtc = Zeros((mesh.nInternalCells, 1))
-        outputs = _outputRefs(drho, drhoU, drhoE, dtc)
-        outputs = self._flux(mesh.nInternalFaces, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
+        outputs = self._flux(mesh.nInternalFaces, (drho, drhoU, drhoE, dtc))(U, T, p, gradU, gradT, gradp, *meshArgs)
         for patchID in self.mesh.localPatches:
             startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']
             meshArgs = _meshArgs(startFace)
-            outputs = _outputRefs(*outputs)
             if patchType in config.coupledPatches:
                 outputs = self._coupledFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, characteristic=False, neighbour=False, *meshArgs)
             elif patchType == 'characteristic':
@@ -364,7 +352,6 @@ class RCF(Solver):
             else:
                 outputs = self._boundaryFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
         meshArgs = _meshArgs(mesh.nLocalFaces)
-        outputs = _outputRefs(*outputs)
         outputs = self._coupledFlux(mesh.nRemoteCells, outputs)(U, T, p, gradU, gradT, gradp, neighbour=False, boundary=False, *meshArgs)
         drho, drhoU, drhoE, dtc = outputs
         return drho, drhoU, drhoE

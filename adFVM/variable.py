@@ -80,7 +80,7 @@ class TensorFunctionOp(object):
         self.info = inspect.stack()[2:]
         args = args + outputs
         self.args = args
-        self.outputs = [x.getReference() for x in outputs]
+        self.outputs = tuple([x.getReference() for x in outputs])
         for out in self.outputs:
             out.args = (self,)
 
@@ -105,7 +105,7 @@ class ExternalFunctionOp(object):
         args = args + outputs
         self.args = args
         self.empty = empty
-        self.outputs = [x.getReference() for x in outputs]
+        self.outputs = tuple([x.getReference() for x in outputs])
         for out in self.outputs:
             out.args = (self,)
 
