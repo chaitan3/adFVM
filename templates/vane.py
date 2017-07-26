@@ -15,15 +15,15 @@ def dot(a, b):
     return ad.reshape(ad.sum(a*b, axis=1), (-1,1))
 
 # heat transfer
-def objectiveHeatTransfer(U, T, p, *mesh, **options):
+def objectiveHeatTransfer(U, T, p, weight, *mesh, **options):
     solver = options['solver']
     mesh = Mesh.container(mesh)
     Ti = T.extract(mesh.owner)
     Tw = 300.
     dtdn = (Tw-Ti)/mesh.deltas
     k = solver.Cp*solver.mu(Tw)/solver.Pr
-    ht = k*dtdn*mesh.areas
-    w = mesh.areas*1.
+    ht = k*dtdn*mesh.areas*weight
+    w = mesh.areas*weight
     return ht.sum(), w.sum()
 
 # pressure loss
@@ -37,10 +37,8 @@ def getPlane(solver):
     solver.extraArgs.append((tensor.IntegerScalar(), nPlaneCells))
     nPlaneCells = solver.extraArgs[-1][0]
     solver.extraArgs.append((tensor.Variable((nPlaneCells, 1), 'integer'), interCells))
-    solver.extraArgs.append((tensor.Variable((nPlaneCells, 1), 'scalar'), interArea))
-    return {'cells':interCells,
-            'areas': interArea, 
-           }
+    solver.extraArgs.append((tensor.Variable((nPlaneCells, 1)), interArea))
+    return 
 
 def objectivePressureLoss(U, T, p, cells, areas, **options):
     solver = options['solver']
@@ -60,6 +58,20 @@ def objectivePressureLoss(U, T, p, cells, areas, **options):
     pl = (ptin-pti)*rhoUni*areas/ptin
     w = rhoUni*areas
     return pl.sum(), w.sum()
+
+patches = ['pressure', 'suction']
+def getWeights(solver):
+    mesh = solver.mesh.symMesh
+    for patchID in patches:
+        patch = solver.mesh.boundary[patchID]
+        #weights = np.zeros((patch['nFaces'], 1))
+        centres = solver.mesh.faceCentres[patch['startFace']:patch['startFace'] + patch['nFaces']]
+        if patchID == "pressure":
+            weights = np.logical_and(centres[:,0] >= 0.033757, centres[:, 1] <= 0.04692)
+        else:
+            weights = np.logical_and(centres[:,0] >= 0.035241, centres[:, 1] <= 0.044337)
+        nFaces = mesh.boundary[patchID]['nFaces']
+        solver.extraArgs.append((tensor.Variable((nFaces, 1)), weights*1.))
     
 def objective(fields, solver):
     U, T, p = fields
@@ -67,23 +79,25 @@ def objective(fields, solver):
     def _meshArgs(start=0):
         return [x[start] for x in mesh.getTensor()]
 
-    nPlaneCells, cells, areas = [x[0] for x in solver.extraArgs]
+    nPlaneCells, cells, areas = [x[0] for x in solver.extraArgs[:3]]
     pl, w = tensor.Zeros((1, 1)), tensor.Zeros((1, 1))
     pl, w = tensor.Tensorize(objectivePressureLoss)(nPlaneCells, (pl, w))(U, T, p, cells, areas, solver=solver)
 
     _heatTransfer = tensor.Tensorize(objectiveHeatTransfer)
+    weights = [x[0] for x in solver.extraArgs[3:]]
     ht, w2 = tensor.Zeros((1, 1)), tensor.Zeros((1, 1))
-    for patchID in ['pressure', 'suction']:
+    for index, patchID in enumerate(patches):
         patch = mesh.boundary[patchID]
         startFace, nFaces = patch['startFace'], patch['nFaces']
         meshArgs = _meshArgs(startFace)
-        ht, w2 = _heatTransfer(nFaces, (ht, w2))(U, T, p, *meshArgs, solver=solver)
+        weight = weights[index]
+        ht, w2 = _heatTransfer(nFaces, (ht, w2))(U, T, p, weight, *meshArgs, solver=solver)
 
     k = solver.mu(300)*solver.Cp/solver.Pr
     a = 0.4
     b = -0.71e-3/(120*k)/2000.
 
-    # mpi call
+    # MPI ALLREDUCE
     #val[4] = {{pl, w, ht, w2}}
     #gval[4];
     #MPI_Allreduce(&val, &gval, 4, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -236,8 +250,9 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
 }}
 """
 
-primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective, objectivePLInfo={})
-primal.defaultConfig["objectivePLInfo"] = getPlane(primal)
+primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective)
+getPlane(primal)
+getWeights(primal)
 
 def makePerturb(param, eps=1e-4):
     def perturbMesh(fields, mesh, t):
