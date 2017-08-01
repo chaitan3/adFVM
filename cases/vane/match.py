@@ -83,7 +83,7 @@ if __name__ == '__main__':
     from adFVM import config
     from adFVM.mesh import Mesh
     from adFVM.field import Field, IOField
-    config.hdf5 = True
+    #config.hdf5 = True
 
     case, time = sys.argv[1:3]
     time = float(time)
@@ -102,8 +102,8 @@ if __name__ == '__main__':
             data = load(f)
             wakeCells, pl = data['arr_0'], data['arr_1']
 
-    #nLayers = 1
-    nLayers = 200
+    nLayers = 1
+    #nLayers = 200
     patches = ['pressure', 'suction']
    
     htc_args = []
