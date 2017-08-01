@@ -8,7 +8,7 @@ from adFVM.parallel import pprint
 from adFVM.postpro import getHTC, getIsentropicMa, getPressureLoss, getYPlus
 from adFVM.density import RCF
 
-#config.hdf5 = True
+config.hdf5 = True
 
 def postprocess(solver, time, suffix=''):
     mesh = solver.mesh.origMesh
