@@ -37,7 +37,7 @@ for field in fields:
     #nLayers = 1
     def average(start, end):
         nCellsPerLayer = (end-start)/nLayers
-        spanAvg = avg[start:end].reshape((nLayers, nCellsPerLayer, nDims)).sum(axis=0)/nLayers
+        spanAvg = avg[start:end].reshape((nCellsPerLayer, nLayers, nDims)).sum(axis=1)/nLayers
         spanAvg = np.tile(spanAvg, (nLayers,1))
         avg[start:end] = spanAvg
 

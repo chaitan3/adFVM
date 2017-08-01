@@ -26,12 +26,14 @@ module = 'interface'
 #compile_args = ['-std=c++11', '-O3']#, '-march=native']
 compile_args = ['-std=c++11', '-O3', '-g']#, '-march=native']
 
-matop = True
+#matop = True
+matop = False
 if matop:
     compile_args += ['-DMATOP']
     incdirs += ['/opt/petsc/linux-c-opt/include']
     libdirs += ['/opt/petsc/linux-c-opt/lib']
-    libs += ['petsc', 'lapack']
+    libs += ['petsc']
+libs += ['lapack']
 
 mod = Extension(module,
                 sources=sources,

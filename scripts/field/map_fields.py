@@ -6,7 +6,12 @@ from adFVM import config
 from adFVM.field import Field, IOField
 from adFVM.mesh import Mesh
 
-case1, case2, time1, time2 = sys.argv[1:]
+config.hdf5 = True
+case1, case2, time1, time2 = sys.argv[1:5]
+if len(sys.argv) > 5:
+    skipZ = True
+else:
+    skipZ = False
 time1 = float(time1)
 time2 = float(time2)
 
@@ -17,6 +22,9 @@ meshO2 = mesh2.origMesh
 
 from scipy.spatial import cKDTree as KDTree
 def mapNearest(centres1, centres2):
+    if skipZ:
+        centres1 = centres1[:,:2]
+        centres2 = centres2[:,:2]
     tree = KDTree(centres1)
     indices = tree.query(centres2)[1]
     #print centres1.shape, centres2.shape, indices.shape

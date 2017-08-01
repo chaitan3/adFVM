@@ -8,17 +8,20 @@ from numpy import *
 import csv
 import scipy.interpolate as inter
 currdir = os.path.dirname(os.path.realpath(__file__))
+import pickle as pkl
 
 
 def read_data(name):
-    with open(currdir + '/' + name) as f:
-        expe = array(list(csv.reader(f)))[:,:-1].astype(float)
+    with open(currdir + '/' + name) as f: expe = array(list(csv.reader(f)))[:,:-1].astype(float)
     return expe
 
 def match_htc(hp, coordsp, hs, coordss, saveFile):
+    print hp, hs
 
     sp = -get_length(pressure, coordsp)*1000
+    print sp
     ss = get_length(suction, coordss)*1000
+    print ss
 
     expe = read_data('data/htc_1.csv')
 
@@ -79,63 +82,70 @@ def match_wakes(pl, coords, p0, saveFile):
     plt.clf()
 
 
+pklFile = 'match_args.pkl'
 if __name__ == '__main__':
-    from adFVM import config
-    from adFVM.mesh import Mesh
-    from adFVM.field import Field, IOField
-    config.hdf5 = True
+    if os.path.exists(pklFile):
+        htc_args, Ma_args = pkl.load(open(pklFile))
+    else:
+        from adFVM import config
+        from adFVM.mesh import Mesh
+        from adFVM.field import Field, IOField
+        config.hdf5 = True
+        case, time = sys.argv[1:3]
+        time = float(time)
+        mesh = Mesh.create(case)
+        Field.setMesh(mesh)
 
-    case, time = sys.argv[1:3]
-    time = float(time)
-    mesh = Mesh.create(case)
-    Field.setMesh(mesh)
+        with IOField.handle(time):
+            htc = IOField.read('htc_avg')
+            htc.partialComplete()
+            Ma = IOField.read('Ma_avg')
+            Ma.partialComplete()
+            #join = '/'
+            #if config.hdf5:
+            #    join = '_'
+            #with open(mesh.getTimeDir(time) + join + 'wake_avg', 'r') as f:
+            #    data = load(f)
+            #    wakeCells, pl = data['arr_0'], data['arr_1']
 
-    with IOField.handle(time):
-        htc = IOField.read('htc_avg')
-        htc.partialComplete()
-        Ma = IOField.read('Ma_avg')
-        Ma.partialComplete()
-        join = '/'
-        if config.hdf5:
-            join = '_'
-        with open(mesh.getTimeDir(time) + join + 'wake_avg', 'r') as f:
-            data = load(f)
-            wakeCells, pl = data['arr_0'], data['arr_1']
+        patches = ['pressure', 'suction']
+       
+        htc_args = []
+        Ma_args = []
 
-    #nLayers = 1
-    nLayers = 200
-    patches = ['pressure', 'suction']
-   
-    htc_args = []
-    Ma_args = []
+        nLayers = 200
+        #nLayers = 1
 
-    mesh = mesh.origMesh
-    for patchID in patches:
-        delta = -mesh.nInternalFaces + mesh.nInternalCells
-        startFace = mesh.boundary[patchID]['startFace']
-        nFaces = mesh.boundary[patchID]['nFaces']
-        endFace = startFace + nFaces
-        cellStartFace = startFace + delta
-        cellEndFace = endFace + delta
-        nFacesPerLayer = nFaces/nLayers
+        mesh = mesh.origMesh
+        for patchID in patches:
+            delta = -mesh.nInternalFaces + mesh.nInternalCells
+            startFace = mesh.boundary[patchID]['startFace']
+            nFaces = mesh.boundary[patchID]['nFaces']
+            endFace = startFace + nFaces
+            cellStartFace = startFace + delta
+            cellEndFace = endFace + delta
+            nFacesPerLayer = nFaces/nLayers
 
-        x = mesh.faceCentres[startFace:endFace, 0]
-        x = x[:nFacesPerLayer]
+            #spanwise_average = lambda x: x.reshape((nLayers, nFacesPerLayer)).sum(axis=0)/nLayers
+            spanwise_average = lambda x: x.reshape((nFacesPerLayer, nLayers))[:,0]
+            x = spanwise_average(mesh.faceCentres[startFace:endFace, 0])
 
-        spanwise_average = lambda x: x.reshape((nLayers, nFacesPerLayer)).sum(axis=0)/nLayers
-        y = spanwise_average(htc.field[cellStartFace:cellEndFace])
-        htc_args.extend([y, x])
-        y = spanwise_average(Ma.field[cellStartFace:cellEndFace])
-        Ma_args.extend([y, x])
-    htc_args += [case + 'htc.png']
-    Ma_args += [case + 'Ma.png']
-    match_velocity(*Ma_args)
+            y = spanwise_average(htc.field[cellStartFace:cellEndFace])
+            htc_args.extend([y, x])
+            y = spanwise_average(Ma.field[cellStartFace:cellEndFace])
+            Ma_args.extend([y, x])
+        htc_args += [case + 'htc.png']
+        Ma_args += [case + 'Ma.png']
+        with open(pklFile, 'w') as f:
+            pkl.dump([htc_args, Ma_args], f)
+
+    #match_velocity(*Ma_args)
     match_htc(*htc_args)
 
-    p0 = 175158.
-    nCellsPerLayer = len(wakeCells)/nLayers
-    y = pl[:nCellsPerLayer]/p0
-    x = 1000*mesh.cellCentres[wakeCells[:nCellsPerLayer], 1]
-    wake_args = [y, x, p0, case + 'wake.png']
-    match_wakes(*wake_args)
+    #p0 = 175158.
+    #nCellsPerLayer = len(wakeCells)/nLayers
+    #y = pl[:nCellsPerLayer]/p0
+    #x = 1000*mesh.cellCentres[wakeCells[:nCellsPerLayer], 1]
+    #wake_args = [y, x, p0, case + 'wake.png']
+    #match_wakes(*wake_args)
 

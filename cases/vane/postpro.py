@@ -2,7 +2,7 @@ import numpy as np
 import sys
 #from match import *
 
-from adFVM import config
+from adFVM import config, parallel
 from adFVM.field import IOField
 from adFVM.parallel import pprint
 from adFVM.postpro import getHTC, getIsentropicMa, getPressureLoss, getYPlus
@@ -49,12 +49,14 @@ def postprocess(solver, time, suffix=''):
         Ma.write()
         uplus.write()
         yplus.write()
-        join = '/'
-        if config.hdf5:
-            join = '_'
-        with open(solver.mesh.getTimeDir(time) + join +  'wake' + suffix, 'w') as f:
-            np.savez(f, wakeCells, pl)
+        #join = '/'
+        #if config.hdf5:
+        #    join = '_'
+        #with open(solver.mesh.getTimeDir(time) + join +  'wake' + suffix, 'w') as f:
+        #    np.savez(f, wakeCells, pl)
 
+
+ 
 if __name__ == '__main__':
     case = sys.argv[1]
     times = [float(x) for x in sys.argv[2:]]

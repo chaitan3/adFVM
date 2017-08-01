@@ -199,7 +199,9 @@ for time in times:
         for proc in range(0, nProcs):
             for patchID, addressing in boundaryAddressing[proc].items():
                 patch = boundaryProc[proc][patchID]
-                cellStartFace = parallelInfo[proc,4] + parallelInfo[proc,2] - parallelInfo[proc,3] + patch['startFace']
+                cellStartFace = parallelStart[proc,0] + parallelInfo[proc,4] - parallelInfo[proc,3] + patch['startFace']
+                #if patchID == 'pressure' and patch['nFaces'] > 0:
+                #    import pdb;pdb.set_trace()
                 cellEndFace = cellStartFace + patch['nFaces']
                 dataSerial[addressing-nInternalFaces+data.shape[0]] = fieldData[cellStartFace:cellEndFace]
 
