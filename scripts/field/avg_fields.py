@@ -6,6 +6,7 @@ import numpy as np
 from adFVM import config, BCs
 from adFVM.field import Field, IOField
 from adFVM.mesh import Mesh
+from adFVM.parallel import pprint
 
 case = sys.argv[1]
 fields = sys.argv[2:]
@@ -15,8 +16,9 @@ meshO = mesh.origMesh
 
 times = mesh.getTimes()
 #times = filter(lambda x: x > 1.002, times)
-print times
+pprint(times)
 
+config.hdf5 = True
 nLayers = 200
 #nLayers = 1
 

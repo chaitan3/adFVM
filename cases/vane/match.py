@@ -102,8 +102,8 @@ if __name__ == '__main__':
             data = load(f)
             wakeCells, pl = data['arr_0'], data['arr_1']
 
-    nLayers = 1
-    #nLayers = 200
+    #nLayers = 1
+    nLayers = 200
     patches = ['pressure', 'suction']
    
     htc_args = []
