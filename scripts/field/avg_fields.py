@@ -37,8 +37,8 @@ for field in fields:
     #nLayers = 1
     def average(start, end):
         nCellsPerLayer = (end-start)/nLayers
-        spanAvg = avg[start:end].reshape((nCellsPerLayer, nLayers, nDims)).sum(axis=1)/nLayers
-        spanAvg = np.tile(spanAvg, (nLayers,1))
+        spanAvg = avg[start:end].reshape((nCellsPerLayer, nLayers, nDims)).sum(axis=1,keepdims=1)/nLayers
+        spanAvg = np.tile(spanAvg, (1,nLayers,1))
         avg[start:end] = spanAvg
 
     average(0, meshO.nInternalCells)
