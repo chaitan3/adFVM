@@ -22,9 +22,10 @@ def _optimize(fun, bounds, cons=None):
         if grads.size > 0:
             raise Exception("!")
         else:
-            #return fun(x)
             if cons:
                 return fun(x) + 100*max(0, cons(x))
+            else:
+                return fun(x)
 
     def nlopt_constraint(x, grads):
         if grads.size > 0:

@@ -18,18 +18,22 @@ def read_data(name):
 def match_htc(hp, coordsp, hs, coordss, saveFile):
     print hp, hs
 
-    sp = -get_length(pressure, coordsp)*1000
-    print sp
-    ss = get_length(suction, coordss)*1000
-    print ss
+    sp = -get_length(pressure, coordsp)/c
+    indices = sp > -0.9
+    sp, hp = sp[indices], hp[indices]
+
+    ss = get_length(suction, coordss)/c
+    indices = ss < 1.2
+    ss, hs = ss[indices], hs[indices]
+    
 
     expe = read_data('data/htc_1.csv')
 
     fill = 1
 
-    plt.scatter(expe[:,0], expe[:,1], c='k', alpha=fill,marker='o', label='Experiment')
+    plt.scatter(expe[:,0]/(c*1000), expe[:,1], c='k', alpha=fill,marker='o', label='Experiment')
     plt.scatter(sp, hp, c='r', s=10, alpha=fill,marker='+', label='Simulation')
-    plt.scatter(ss, hs, c='r', s=10, alpha=fill, marker='+')
+    plt.scatter(ss, hs, c='b', s=10, alpha=fill, marker='+')
     plt.xlabel('s/c (mm)')
     plt.ylabel('HTC (W/m2K)')
 
@@ -41,21 +45,24 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
 
     sp = get_length(pressure, coordsp)/c
     ss = get_length(suction, coordss)/c
+    indices = ss < 1.1
+    ss = ss[indices]
+    Mas = Mas[indices]
 
     expp = read_data('data/Ma_pressure_0.875.csv')
     exps = read_data('data/Ma_suction_0.875.csv')
 
     fill=1
 
-    plt.scatter(expp[:,0], expp[:,1], c='r', marker='+', label='Exp. pressure')
-    plt.scatter(exps[:,0], exps[:,1], c='b', marker='+', label='Exp. suction')
-    plt.scatter(sp, Map, c='r', s=10, alpha=fill, marker='o', label='Sim. pressure')
-    plt.scatter(ss, Mas, c='b', s=10, alpha=fill, marker='o', label='Sim. suction')
+    plt.scatter(expp[:,0], expp[:,1], marker='o', label='Exp. pressure')
+    plt.scatter(exps[:,0], exps[:,1], marker='o', label='Exp. suction')
+    plt.scatter(sp, Map, c='r', s=10, alpha=fill, marker='+', label='Sim. pressure')
+    plt.scatter(ss, Mas, c='b', s=10, alpha=fill, marker='+', label='Sim. suction')
     plt.xlim([0, ss.max()])
     plt.ylim([0, Mas.max()])
     plt.xlabel('s/c (mm)')
     plt.ylabel('Ma')
-    plt.legend(loc='lower right')
+    #plt.legend(loc='lower right')
 
     plt.savefig(saveFile)
     plt.clf()
@@ -134,12 +141,12 @@ if __name__ == '__main__':
             htc_args.extend([y, x])
             y = spanwise_average(Ma.field[cellStartFace:cellEndFace])
             Ma_args.extend([y, x])
-        htc_args += [case + 'htc.png']
-        Ma_args += [case + 'Ma.png']
+        htc_args += [case + 'htc.pdf']
+        Ma_args += [case + 'Ma.pdf']
         with open(pklFile, 'w') as f:
             pkl.dump([htc_args, Ma_args], f)
 
-    #match_velocity(*Ma_args)
+    match_velocity(*Ma_args)
     match_htc(*htc_args)
 
     #p0 = 175158.

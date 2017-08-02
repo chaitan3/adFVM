@@ -8,74 +8,18 @@ from scipy.optimize import rosen, rosen_der
 #from clorenz import lorenz
 import lorenz
 import gp as GP
-optime = 'optim_nd2_lorenz'
+#optime = 'optim_nd2_lorenz'
 #optime = 'optim_nd1_lorenz'
-#optime = 'optim_nd2_rosenbrock'
+optime = 'optim_nd2_rosenbrock'
 #import gp_noder as GP
 #optim = 'optim_noder'
 
-orig_bounds = lorenz.orig_bounds
+orig_bounds = np.array([[-3., 3], [-3, 3.]])
+#orig_bounds = lorenz.orig_bounds
 #orig_bounds = lorenz.orig_bounds[:1]
 # if threshold is negative constraint passes all points
-param_names = ['rho', 'beta']
-
-min_T = 50
-#min_T = 300
-burnin = 2.
-#reps = 10
-reps = 8
-parallel = True
-
-def objective(args):
-    data = []
-    for arg in args:
-        data.append(objective_single(arg))
-    y = [x[0] for x in data]
-    yd = [x[1] for x in data]
-    yn = [x[2] for x in data]
-    ydn = [x[3] for x in data]
-    return y, yd, yn, ydn
-pool = Pool(reps)
-def objective_single(params):
-    p1 = params[0]
-    p2 = 10.
-    p3 = params[1]
-    #p3 = 2.55
-
-    print 'lorenz: rho = {0}, sigma = {1}, beta = {2}'.format(p1, p2, p3)
-    dt = 0.01
-    T = min_T
-    if parallel:
-        lss_lorenz = partial(lorenz.lss_lorenz, p1, p2, p3, dt, T)
-        rng = [np.random.rand(3) for i in range(0, reps)]
-        data = pool.map(lss_lorenz, rng)
-        ys = [x[0] for x in data]
-        yds = [x[1] for x in data]
-        #yds = [x[1][:1] for x in data]
-    else:
-        ys = []
-        yds = []
-        for i in range(0, reps):
-            y, yd = lorenz.lss_lorenz(p1, p2, p3, dt, T)
-            ys.append(y)
-            yds.append(yd)
-    ys = np.array(ys)
-    yds = np.array(yds)
-    y = np.mean(ys)
-    yd = np.mean(yds, axis=0)
-    yn = np.var(ys)
-    ydn = np.var(yds, axis=0)
-    print 'value:', y, yd, yn, ydn
-    return y, yd, yn, ydn
-    #mean, scale = 5e3, 5e3
-    #scaled = (obj - mean)/scale
-
-    #mu = obj.mean()
-    #var = arsel(obj).mu_sigma[0]**2
-    #return mu, var, T/min_T
-
 sig = 10.
-def test_func(x):
+def objective_single(x):
     x = GP._sanitize(x)
     y = []
     yd = []
@@ -123,15 +67,14 @@ def optim():
     #gp = GP.GaussianProcess(kernel, orig_bounds, noise=[1e-4, [1e-5]], noiseGP=True)
     #gp.explore(2, objective)
 
-    kernel = GP.SquaredExponentialKernel([2., 0.1], 1.)#, [1e-2, 1e-2])
-    def constraint(x):
-        return sum(x) - 30.6
-    gp = GP.GaussianProcess(kernel, orig_bounds, noise=[1e-4, [1e-5, 1e-3]], noiseGP=True, cons=constraint)
-    gp.explore(4, objective)
-    #orig_bounds = np.array([[-3., 3], [-3, 3.]])
-    #kernel = GP.SquaredExponentialKernel([1., 1], 100.)#, [1e-2, 1e-2])
-    #gp = GP.GaussianProcess(kernel, orig_bounds, noise=[sig**2, sig**2])
-    #gp.explore(4, test_func)
+    #kernel = GP.SquaredExponentialKernel([2., 0.1], 1.)#, [1e-2, 1e-2])
+    #def constraint(x):
+    #    return sum(x) - 30.6
+    #gp = GP.GaussianProcess(kernel, orig_bounds, noise=[1e-4, [1e-5, 1e-3]], noiseGP=True, cons=constraint)
+    #gp.explore(4, objective)
+    kernel = GP.SquaredExponentialKernel([1., 1.], sig)#, [1e-2, 1e-2])
+    gp = GP.GaussianProcess(kernel, orig_bounds, noise=[sig**2, [sig**2, sig**2]], noiseGP=True)
+    gp.explore(4, objective_single)
 
     x1 = np.linspace(gp.bounds[0,0], gp.bounds[0,1], 40)
     xs = x1.reshape(-1,1)
@@ -150,11 +93,11 @@ def optim():
     values = []
     evals = []
     gps = []
-    nj = 1
+    nj = 100
     for j in range(0, nj):
         evals.append([])
         gps.append([])
-        print optime, j
+        print j
         fail = False
         for i in range(0, 100):
             x = ei.optimize()
@@ -199,8 +142,8 @@ def optim():
         else:
             evals = evals[:-1]
             gps = gps[:-1]
-        #with open('{}.pkl'.format(optime), 'w') as f:
-        #    pkl.dump([evals, gps, values], f)
+        with open('{}.pkl'.format(optime), 'w') as f:
+            pkl.dump([evals, gps, values], f)
 
 if __name__ == "__main__":
     optim()
