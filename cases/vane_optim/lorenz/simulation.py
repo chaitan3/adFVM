@@ -100,7 +100,7 @@ def optim():
         print j
         fail = False
         for i in range(0, 100):
-            x = ei.optimize()
+            #x = ei.optimize()
             try:
                 x = ei.optimize()
             except:
