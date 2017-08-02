@@ -184,6 +184,38 @@ class Function(object):
 
         codeFile.close()
 
+    def _diff(self, outputs, inputs, gradients=None):
+        if gradients is None:
+            gradients = {}
+            for out in outputs:
+                gradients[out] = 1.
+        children = self._children.copy()
+        def _diffFunc(out):
+            assert children[out] == 0
+            grads = []
+            if gradients[out] == None:
+                grads = [None]*len(out.args)
+            elif isinstance(out, OpBase):
+                grads = out.grad(gradients[out])
+            assert len(grads) == len(out.args)
+            for grad, inp in zip(grads, out.args):
+                if inp not in gradients or gradients[inp] is None:
+                    gradients[inp] = grad
+                elif grad is not None:
+                    # combining collates
+                    if isinstance(gradients[inp], Collate):
+                        args = gradients[inp].args + grad.args
+                        gradients[inp] = Collate(*args)
+                    else:
+                        gradients[inp] += grad
+                children[inp] -= 1
+                if children[inp] == 0:
+                    _diffFunc(inp)
+        for out in outputs:
+            if children[out] == 0:
+                _diffFunc(out)
+        return [gradients.get(inp, None) for inp in inputs]
+
     def __call__(self, *args):
         func = getattr(Function._module, self.name)
         return func(*args)

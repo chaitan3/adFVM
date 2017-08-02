@@ -138,7 +138,8 @@ class RCF(Solver):
 
     # reads and updates ghost cells
     def initFields(self, fields):
-        newFields = self.mapBoundary(*[phi.field for phi in fields])
+        mesh = self.mesh
+        newFields = self.mapBoundary(*[phi.field for phi in fields] + mesh.getTensor() + mesh.getScalar() + self.getBoundaryTensor(1))
         return self.getFields(newFields, IOField, refFields=fields)
     
     @config.timeFunction('Time for writing fields')

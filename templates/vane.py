@@ -284,10 +284,10 @@ parameters = 'mesh'
 
 #parameters = 'source'
 
-#nSteps = 10
-#writeInterval = 5
-nSteps = 100
-writeInterval = 20
+nSteps = 10
+writeInterval = 5
+#nSteps = 100
+#writeInterval = 20
 #nSteps = 100000
 #writeInterval = 5000
 startTime = 3.0
