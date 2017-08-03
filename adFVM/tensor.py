@@ -361,8 +361,8 @@ def Tensorize(func):
                 tensorArgs = []
                 #print len(args), len(kwargs)
                 for x in args:
-                    if isinstance(x, ConstScalar):
-                        tensorArgs.append(Tensor((1,), scalars=[x]))
+                    if x.shape[0] == 1:
+                        tensorArgs.append(Tensor((1,), scalars=[ConstScalar()]))
                     elif x.dtype == 'scalar':
                         tensorArgs.append(Tensor(x.shape[1:]))
                     elif x.dtype == 'integer':

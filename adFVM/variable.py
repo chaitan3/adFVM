@@ -52,7 +52,7 @@ class Variable(ArithBase):
         self.args = ()
         self.index = 0
         self.dtype = dtype
-        self._count = 0
+        self.outputIndex = None
 
     def __getitem__(self, index):
         #print self.index
@@ -65,8 +65,6 @@ class Variable(ArithBase):
         var = Variable(self.shape, self.dtype)
         var.args = (self,)
         var.name = self.name
-        self._count += 1
-        #assert self._count == 1
         return var
 
     def grad(self, grad):
@@ -76,7 +74,11 @@ class Variable(ArithBase):
             return tuple()
         elif isinstance(self.args[0], Variable):
             index = self.args[0].index
-        return (grad[0][index],)
+        gradArgs = (grad[0][index],)
+        gradArgs[0].args = grad
+        if isinstance(self.args[0], TensorFunctionOp):
+            gradArgs[0].outputIndex = self.outputIndex
+        return gradArgs
 
 class Zeros(Variable):
     pass
@@ -93,21 +95,24 @@ class TensorFunctionOp(object):
         self.info = inspect.stack()[2:]
         args = args + outputs
         self.args = args
-        self.outputs = tuple([x.getReference() for x in outputs])
-        for out in self.outputs:
-            out.args = (self,)
+        self.outputs = []
+        for index, out in enumerate(outputs):
+            self.outputs.append(out.getReference())
+            self.outputs[-1].args = (self,)
+            self.outputs[-1].outputIndex = index
+        self.outputs = tuple(self.outputs)
 
     def getCallString(self):
         #callString = '\n/* ' + str(self.info) + ' */\n'
         callString = ''
         for inp in self.args:
-            if isinstance(inp, ConstScalar):
-                offset = ''
-            elif isinstance(inp.index, int):
+            if isinstance(inp.index, int):
                 offset = '({})'.format(inp.index)
             else:
                 offset = '({})'.format(inp.index.name)
             callString += '&{}{}, '.format(inp.name, offset)
+            #if hasattr(inp, 'dtype'):
+            #    callString += '/* {} */  '.format(inp.dtype)
         #for out in self.outputs:
         #    callString += '{}, '.format(out.name)
         return callString[:-2]
@@ -116,17 +121,20 @@ class TensorFunctionOp(object):
         inputs = self.args[:-len(self.outputs)]
         args = inputs
         outputs = list(grad)
+        for index in (set(range(0, len(self.outputs)))-set([x.outputIndex for x in grad])):
+            out = self.outputs[index]
+            outputs.append(Zeros(out.shape, out.dtype))
+            outputs[-1].outputIndex = index
+        outputs = list(sorted(outputs, key=lambda x: x.outputIndex))
+        assert len(outputs) == len(self.outputs)
         cache = TensorFunctionOp._gradCache
         for inp in inputs:
-            if isinstance(inp, ConstScalar):
-                continue
+            if inp.name in cache:
+                out = cache[inp.name]
             else:
-                if inp.name in cache:
-                    out = cache[inp.name]
-                else:
-                    out = Zeros(inp.shape, inp.dtype)
-                    cache[inp.name] = out
-                outputs.append(out[inp.index])
+                out = Zeros(inp.shape, inp.dtype)
+                cache[inp.name] = out
+            outputs.append(out[inp.index])
         outputs = tuple(outputs)
         return TensorFunctionOp(self.func.grad, args, outputs, self.indices).outputs
 
@@ -161,13 +169,13 @@ class ExternalFunctionOp(object):
         inputs = self.args[:-len(self.outputs)]
         args = inputs
         outputs = list(grad)
+        assert len(outputs) == len(self.outputs)
         cache = TensorFunctionOp._gradCache
         for inp in inputs:
             if inp.name in cache:
                 out = cache[inp.name]
             else:
-                out = Variable(inp.shape, inp.dtype)
-                out.name = inp.name
+                out = Zeros(inp.shape, inp.dtype)
                 cache[inp.name] = out
             outputs.append(out)
         outputs = tuple(outputs)
@@ -220,9 +228,6 @@ class Function(object):
             if isinstance(inp, IntegerScalar):
                 codeFile.write('\tinteger {} = (integer) PyInt_AsLong(PyTuple_GetItem(args, {}));\n'.format(inp.name, index))
                 continue
-            elif isinstance(inp, ConstScalar):
-                codeFile.write('\tscalar {} = (scalar) PyFloat_AsDouble(PyTuple_GetItem(args, {}));\n'.format(inp.name, index))
-                continue
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
             codeFile.write('\tarrType<{}, {}> {};\n'.format(inp.dtype, shape, inp.name))
@@ -248,7 +253,7 @@ class Function(object):
                 codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):
                 codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
-            elif not isinstance(op, ConstScalar) and not isinstance(op, Variable):
+            elif not isinstance(op, Variable):
                 raise Exception('op not recognised', op)
 
         codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(outputs)))
@@ -275,11 +280,13 @@ class Function(object):
             else:
                 grads = out.grad(gradients[out])
             #elif hasattr(out, 'grad'):
-            #assert len(grads) == len(out.args)
+            assert len(grads) == len(out.args)
             for grad, inp in zip(grads, out.args):
-                if inp not in gradients or gradients[inp] is None:
+                if grad is None and inp not in gradients:
+                    gradients[inp] = None
+                elif inp not in gradients:
                     gradients[inp] = (grad,)
-                elif grad is not None:
+                else:
                     gradients[inp] += (grad,)
                 children[inp] -= 1
                 if children[inp] == 0:

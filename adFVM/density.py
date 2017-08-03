@@ -89,8 +89,8 @@ class RCF(Solver):
         rhoN, rhoUN, rhoEN = self._conservative()(UN, TN, pN)
         self.mapBoundary = Function('init', [rho, rhoU, rhoE] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
 
-        self.t0 = ConstScalar()
-        self.dt = ConstScalar()
+        self.t0 = Zeros((1,1))
+        self.dt = Zeros((1,1))
         self.t = self.t0
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
         rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)

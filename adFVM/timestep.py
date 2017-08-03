@@ -53,7 +53,7 @@ def timeStepper(equation, initFields, solver):
         return tuple(currFields)
 
     for i in range(0, nStages):
-        solver.t = solver.t0 + gamma[i]*solver.dt
+        #solver.t = solver.t0 + gamma[i]*solver.dt
         LHS = equation(*fields[i])
         args = list(LHS) + sum(fields, []) + [solver.dt]
         currFields = Tensorize(update)(mesh.nInternalCells)(*args, i=i)
