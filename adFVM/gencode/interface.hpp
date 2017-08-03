@@ -97,7 +97,7 @@ void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp) {
 template <typename dtype, integer shape1>
 PyObject* putArray(arrType<dtype, shape1> &tmp) {
     npy_intp shape[2] = {tmp.shape, shape1};
-    scalar* data = tmp.data;
+    dtype* data = tmp.data;
     tmp.ownData = false;
     PyObject* array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
     PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
@@ -106,9 +106,14 @@ PyObject* putArray(arrType<dtype, shape1> &tmp) {
 template <typename dtype, integer shape1, integer shape2>
 PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
     npy_intp shape[3] = {tmp.shape, shape1, shape2};
-    scalar* data = tmp.data;
+    dtype* data = tmp.data;
     tmp.ownData = false;
-    PyObject* array = PyArray_SimpleNewFromData(3, shape, NPY_DOUBLE, data);
+    PyObject *array;
+    if (typeid(dtype) == typeid(double)) {
+        array = PyArray_SimpleNewFromData(3, shape, NPY_DOUBLE, data);
+    } else {
+        array = PyArray_SimpleNewFromData(3, shape, NPY_INT32, data);
+    }
     PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
     return array;
 }
@@ -140,6 +145,11 @@ template <typename dtype, integer shape1, integer shape2>
 void Function_mpi(std::vector<arrType<dtype, shape1, shape2>*> phiP);
 void Function_mpi_end();
 void Function_mpi_allreduce(std::vector<vec*> vals);
+#define Function_mpi_end_grad Function_mpi_init
+void Function_mpi_init_grad();
+template <typename dtype, integer shape1, integer shape2>
+void Function_mpi_grad(std::vector<arrType<dtype, shape1, shape2>*> phiP);
+void Function_mpi_allreduce_grad(std::vector<vec*> vals);
 
 Boundary getBoundary(PyObject*);
 Boundary getMeshBoundary(PyObject *mesh, const string attr);

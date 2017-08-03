@@ -85,12 +85,12 @@ class RCF(Solver):
         U, T, p = self._primitive(mesh.nInternalCells, outputs)(rho, rhoU, rhoE)
         U, T, p = self.boundaryInit(U, T, p)
         U, T, p = self.boundary(U, T, p)
-        UN, TN, pN = self.boundaryEnd(U, T, p)
-        rhoN, rhoUN, rhoEN = self._conservative()(UN, TN, pN)
+        U, T, p = self.boundaryEnd(U, T, p)
+        rhoN, rhoUN, rhoEN = self._conservative()(U, T, p)
         self.mapBoundary = Function('init', [rho, rhoU, rhoE] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
 
-        self.t0 = Zeros((1,1))
-        self.dt = Zeros((1,1))
+        self.t0 = Variable((1,1))
+        self.dt = Variable((1,1))
         self.t = self.t0
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
         rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
@@ -316,9 +316,9 @@ class RCF(Solver):
         U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
         outputs = self._primitive(mesh.nInternalCells, (U, T, p))(rho, rhoU, rhoE)
         # boundary update
-        #outputs = self.boundaryInit(*outputs)
-        #outputs = self.boundary(*outputs)
-        #outputs = self.boundaryEnd(*outputs)
+        outputs = self.boundaryInit(*outputs)
+        outputs = self.boundary(*outputs)
+        outputs = self.boundaryEnd(*outputs)
         U, T, p = outputs
         obj = self.objective([U, T, p], self)
 
@@ -336,12 +336,12 @@ class RCF(Solver):
         meshArgs = _meshArgs(mesh.nLocalFaces)
         outputs = self._coupledGrad(mesh.nRemoteCells, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
         # grad boundary update
-        #outputs = list(self.boundaryInit(*outputs))
-        #for index, phi in enumerate(outputs):
-        #    phi = self.gradFields[index].updateGhostCells(phi)
-        #    phi = ExternalFunctionOp('mpi', (), (phi,)).outputs[0]
-        #    outputs[index] = phi
-        #outputs = self.boundaryEnd(*outputs)
+        outputs = list(self.boundaryInit(*outputs))
+        for index, phi in enumerate(outputs):
+            phi = self.gradFields[index].updateGhostCells(phi)
+            phi = ExternalFunctionOp('mpi', (), (phi,)).outputs[0]
+            outputs[index] = phi
+        outputs = self.boundaryEnd(*outputs)
         gradU, gradT, gradp = outputs
         
         meshArgs = _meshArgs()

@@ -79,7 +79,7 @@ class Variable(ArithBase):
             index = self.args[0].index
         gradArgs = (grad[0][index],)
         gradArgs[0].args = grad
-        if isinstance(self.args[0], TensorFunctionOp):
+        if isinstance(self.args[0], FunctionOp):
             gradArgs[0].outputIndex = self.outputIndex
         return gradArgs
 
@@ -87,15 +87,9 @@ class Zeros(Variable):
     pass
 
 import inspect
-class TensorFunctionOp(object):
-    _gradCache = {}
-    def __init__(self, func, args, outputs, indices):
-        assert isinstance(indices, IntegerScalar) or isinstance(indices, int)
-        self.func = func
-        self.name = func.name
-        n = len(self.func._inputTensors)
-        self.indices = indices
-        self.info = inspect.stack()[2:]
+class FunctionOp(object):
+    def _init(self, name, args, outputs):
+        self.name = name
         args = args + outputs
         self.args = args
         self.outputs = []
@@ -105,6 +99,47 @@ class TensorFunctionOp(object):
             self.outputs[-1].outputIndex = index
         self.outputs = tuple(self.outputs)
 
+    def _grad(self, grad):
+        n = len(self.outputs)
+        inputs = self.args[:-n]
+        args = inputs
+        outputs = list(grad)
+        extraIndices = set(range(0, len(self.outputs)))-set([x.outputIndex for x in grad])
+        for index in extraIndices:
+            out = self.outputs[index]
+            outputs.append(Zeros(out.shape, out.dtype))
+            outputs[-1].outputIndex = index
+        outputs = list(sorted(outputs, key=lambda x: x.outputIndex))
+        assert len(outputs) == n
+        for out1, out2 in zip(outputs, self.outputs):
+            assert out1.shape == out2.shape
+            assert out1.dtype == out2.dtype
+        cache = FunctionOp._gradCache
+        for inp in inputs:
+            if inp.name in cache:
+                out = cache[inp.name]
+            else:
+                out = Zeros(inp.shape, inp.dtype)
+                cache[inp.name] = out
+            outputs.append(out[inp.index])
+        outputs = tuple(outputs)
+        #print self.name, len(self.outputs), [(x.name, x.dtype) for x in self.outputs], [(x.name, x.dtype) for x in grad], [(x.name, x.dtype) for x in outputs[:len(self.outputs)]]
+        return args, outputs
+
+    @classmethod
+    def clear_cache(self):
+        FunctionOp._gradCache = {}
+
+class TensorFunctionOp(FunctionOp):
+    _gradCache = {}
+    
+    def __init__(self, func, args, outputs, indices):
+        assert isinstance(indices, IntegerScalar) or isinstance(indices, int)
+        self.func = func
+        self._init(func.name, args, outputs)
+        self.indices = indices
+        self.info = inspect.stack()[2:]
+        
     def getCallString(self):
         #callString = '\n/* ' + str(self.info) + ' */\n'
         callString = ''
@@ -120,45 +155,18 @@ class TensorFunctionOp(object):
         #    callString += '{}, '.format(out.name)
         return callString[:-2]
 
+    
     def grad(self, grad):
-        inputs = self.args[:-len(self.outputs)]
-        args = inputs
-        outputs = list(grad)
-        for index in (set(range(0, len(self.outputs)))-set([x.outputIndex for x in grad])):
-            out = self.outputs[index]
-            outputs.append(Zeros(out.shape, out.dtype))
-            outputs[-1].outputIndex = index
-        outputs = list(sorted(outputs, key=lambda x: x.outputIndex))
-        assert len(outputs) == len(self.outputs)
-        for out1, out2 in zip(outputs, self.outputs):
-            assert out1.shape == out2.shape
-            assert out1.dtype == out2.dtype
-        cache = TensorFunctionOp._gradCache
-        for inp in inputs:
-            if inp.name in cache:
-                out = cache[inp.name]
-            else:
-                out = Zeros(inp.shape, inp.dtype)
-                cache[inp.name] = out
-            outputs.append(out[inp.index])
-        outputs = tuple(outputs)
-        #print self.name, len(self.outputs), [(x.name, x.dtype) for x in self.outputs], [(x.name, x.dtype) for x in grad], [(x.name, x.dtype) for x in outputs[:len(self.outputs)]]
-        return TensorFunctionOp(self.func.grad, args, outputs, self.indices).outputs
+        n = len(self.outputs)
+        args, outputs = self._grad(grad)
+        gradInputs = TensorFunctionOp(self.func.grad, args, outputs, self.indices).outputs
+        return gradInputs[n:] + gradInputs[:n]
 
-    @classmethod
-    def clear_cache(self):
-        TensorFunctionOp._gradCache = {}
 
-class ExternalFunctionOp(object):
+class ExternalFunctionOp(FunctionOp):
     def __init__(self, name, args, outputs, empty=False):
-        self.name = 'Function_' + name
-        print self.name
-        args = args + outputs
-        self.args = args
+        self._init('Function_' + name, args, outputs)
         self.empty = empty
-        self.outputs = tuple([x.getReference() for x in outputs])
-        for out in self.outputs:
-            out.args = (self,)
 
     def getCallString(self):
         if self.empty:
@@ -172,21 +180,11 @@ class ExternalFunctionOp(object):
         return callString
 
     def grad(self, grad):
+        n = len(self.outputs)
+        args, outputs = self._grad(grad)
         name = self.name[len('Function_'):] + '_grad'
-        inputs = self.args[:-len(self.outputs)]
-        args = inputs
-        outputs = list(grad)
-        assert len(outputs) == len(self.outputs)
-        cache = TensorFunctionOp._gradCache
-        for inp in inputs:
-            if inp.name in cache:
-                out = cache[inp.name]
-            else:
-                out = Zeros(inp.shape, inp.dtype)
-                cache[inp.name] = out
-            outputs.append(out)
-        outputs = tuple(outputs)
-        return ExternalFunctionOp(name, args, outputs, self.empty).outputs
+        gradInputs = ExternalFunctionOp(name, args, outputs, self.empty).outputs
+        return gradInputs[n:] + gradInputs[:n]
 
 class Function(object):
     _index = 0
@@ -202,7 +200,7 @@ class Function(object):
         self._children = graphGetChildren(_outputs)
         if config.compile:
             self._genCode(_outputs)
-            TensorFunctionOp.clear_cache()
+            FunctionOp.clear_cache()
             if grad:
                 self.grad = self._getAdjoint()
 
@@ -217,7 +215,7 @@ class Function(object):
         #scalarOutput = sum([x.dot(y) for x, y in zip(self._outputTensors, gradInputs)])
         gradients = {}
         gradOutputs = []
-        cache = TensorFunctionOp._gradCache
+        cache = FunctionOp._gradCache
         for out in self._outputs:
             grad = Variable(out.shape, out.dtype)
             cache[out.name] = grad
@@ -289,8 +287,8 @@ class Function(object):
             #elif hasattr(out, 'grad'):
             assert len(grads) == len(out.args)
             for grad, inp in zip(grads, out.args):
-                if isinstance(inp, TensorFunctionOp):
-                    assert grad.dtype == 'scalar'
+                #if isinstance(inp, TensorFunctionOp):
+                #    assert grad.dtype == 'scalar'
                 if grad is None and inp not in gradients:
                     gradients[inp] = None
                 elif inp not in gradients:
