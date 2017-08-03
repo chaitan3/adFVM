@@ -134,7 +134,11 @@ class Solver(object):
         return sum([phi.getTensor(index) for phi in self.fields], [])
 
     def boundaryInit(self, *fields):
-        return ExternalFunctionOp('mpi_init', (), fields, empty=True).outputs
+        fields = list(ExternalFunctionOp('mpi_init1', (), fields, empty=True).outputs)
+        for index, phi in enumerate(fields):
+            phi = ExternalFunctionOp('mpi_init2', (), (phi,)).outputs[0]
+            fields[index] = phi
+        return ExternalFunctionOp('mpi_init3', (), tuple(fields), empty=True).outputs
 
     def boundaryEnd(self, *fields):
         return ExternalFunctionOp('mpi_end', (), fields, empty=True).outputs

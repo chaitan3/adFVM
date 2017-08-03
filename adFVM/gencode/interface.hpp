@@ -140,15 +140,22 @@ PyObject* finalSolver(PyObject *self, PyObject *args);
 PyObject* initSolver(PyObject *self, PyObject *args);
 PyObject* viscosity(PyObject *self, PyObject *args);
 
-void Function_mpi_init();
+void Function_mpi_init1();
+template <typename dtype, integer shape1, integer shape2>
+void Function_mpi_init2(std::vector<arrType<dtype, shape1, shape2>*> phiP);
+void Function_mpi_init3();
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi(std::vector<arrType<dtype, shape1, shape2>*> phiP);
 void Function_mpi_end();
 void Function_mpi_allreduce(std::vector<vec*> vals);
-#define Function_mpi_end_grad Function_mpi_init
-void Function_mpi_init_grad();
+
+void Function_mpi_init1_grad();
+template <typename dtype, integer shape1, integer shape2>
+void Function_mpi_init2_grad(std::vector<arrType<dtype, shape1, shape2>*> phiP);
+void Function_mpi_init3_grad();
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi_grad(std::vector<arrType<dtype, shape1, shape2>*> phiP);
+#define Function_mpi_end_grad Function_mpi_init1
 void Function_mpi_allreduce_grad(std::vector<vec*> vals);
 
 Boundary getBoundary(PyObject*);
