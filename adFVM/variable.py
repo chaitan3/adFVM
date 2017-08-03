@@ -52,6 +52,7 @@ class Variable(ArithBase):
         self.args = ()
         self.index = 0
         self.dtype = dtype
+        self._count = 0
 
     def __getitem__(self, index):
         #print self.index
@@ -64,13 +65,25 @@ class Variable(ArithBase):
         var = Variable(self.shape, self.dtype)
         var.args = (self,)
         var.name = self.name
+        self._count += 1
+        #assert self._count == 1
         return var
+
+    def grad(self, grad):
+        assert isinstance(grad, tuple)
+        index = 0
+        if len(self.args) == 0:
+            return tuple()
+        elif isinstance(self.args[0], Variable):
+            index = self.args[0].index
+        return (grad[0][index],)
 
 class Zeros(Variable):
     pass
 
 import inspect
 class TensorFunctionOp(object):
+    _gradCache = {}
     def __init__(self, func, args, outputs, indices):
         assert isinstance(indices, IntegerScalar) or isinstance(indices, int)
         self.func = func
@@ -99,9 +112,32 @@ class TensorFunctionOp(object):
         #    callString += '{}, '.format(out.name)
         return callString[:-2]
 
+    def grad(self, grad):
+        inputs = self.args[:-len(self.outputs)]
+        args = inputs
+        outputs = list(grad)
+        cache = TensorFunctionOp._gradCache
+        for inp in inputs:
+            if isinstance(inp, ConstScalar):
+                continue
+            else:
+                if inp.name in cache:
+                    out = cache[inp.name]
+                else:
+                    out = Zeros(inp.shape, inp.dtype)
+                    cache[inp.name] = out
+                outputs.append(out[inp.index])
+        outputs = tuple(outputs)
+        return TensorFunctionOp(self.func.grad, args, outputs, self.indices).outputs
+
+    @classmethod
+    def clear_cache(self):
+        TensorFunctionOp._gradCache = {}
+
 class ExternalFunctionOp(object):
     def __init__(self, name, args, outputs, empty=False):
         self.name = 'Function_' + name
+        print self.name
         args = args + outputs
         self.args = args
         self.empty = empty
@@ -120,22 +156,62 @@ class ExternalFunctionOp(object):
         callString = callString[:-1] + '}'
         return callString
 
+    def grad(self, grad):
+        name = self.name[len('Function_'):] + '_grad'
+        inputs = self.args[:-len(self.outputs)]
+        args = inputs
+        outputs = list(grad)
+        cache = TensorFunctionOp._gradCache
+        for inp in inputs:
+            if inp.name in cache:
+                out = cache[inp.name]
+            else:
+                out = Variable(inp.shape, inp.dtype)
+                out.name = inp.name
+                cache[inp.name] = out
+            outputs.append(out)
+        outputs = tuple(outputs)
+        return ExternalFunctionOp(name, args, outputs, self.empty).outputs
+
 class Function(object):
     _index = 0
     _module = None
     codeDir = os.path.dirname(__file__) + '/gencode/'
     funcs = []
 
-    def __init__(self, name, inputs, outputs):
+    def __init__(self, name, inputs, outputs, grad=True):
         self.name = name
         self._inputs = inputs
         self._outputs = outputs
-        self._children = graphGetChildren(outputs)
+        _outputs = [x for x in self._outputs if x is not None]
+        self._children = graphGetChildren(_outputs)
         if config.compile:
-            self._genCode()
+            self._genCode(_outputs)
+            TensorFunctionOp.clear_cache()
+            if grad:
+                self.grad = self._getAdjoint()
+
         Function.funcs.append(self.name)
 
-    def _genCode(self):
+    def _getAdjoint(self):
+        #gradOutputs = []
+        #for out in self._outputTensors:
+        #    gradOutputs.append(Tensor(out.shape))
+        #    gradOutputs[-1].cellTensor = out.cellTensor
+
+        #scalarOutput = sum([x.dot(y) for x, y in zip(self._outputTensors, gradInputs)])
+        gradients = {}
+        gradOutputs = []
+        cache = TensorFunctionOp._gradCache
+        for out in self._outputs:
+            grad = Variable(out.shape, out.dtype)
+            cache[out.name] = grad
+            gradients[out] = (grad,)
+            gradOutputs.append(grad)
+        gradInputs = self._diff(self._outputs, self._inputs, gradients)
+        return Function(self.name + '_grad', self._inputs + gradOutputs, gradInputs, grad=False)
+        
+    def _genCode(self, outputs):
         codeFile = open(self.codeDir + 'code.cpp', 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args) {{\n'.format(self.name))
         #for out in self._outputs:
@@ -155,7 +231,7 @@ class Function(object):
 
         #codeFile.write('\nvoid Function_{}({}) {}\n'.format(self.name, memString[:-2], '{\n'))
 
-        sortedOps = graphTopologicalSort(self._outputs, self._children.copy())
+        sortedOps = graphTopologicalSort(outputs, self._children.copy())
         def _getName(op):
             if isinstance(op, int):
                 name = op
@@ -175,8 +251,8 @@ class Function(object):
             elif not isinstance(op, ConstScalar) and not isinstance(op, Variable):
                 raise Exception('op not recognised', op)
 
-        codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(self._outputs)))
-        for index, out in enumerate(self._outputs):
+        codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(outputs)))
+        for index, out in enumerate(outputs):
             codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}));\n'.format(index, out.name))
         codeFile.write('\treturn outputs;')
         codeFile.write('\n')
@@ -190,31 +266,29 @@ class Function(object):
             for out in outputs:
                 gradients[out] = 1.
         children = self._children.copy()
+        #print children.values()
         def _diffFunc(out):
             assert children[out] == 0
             grads = []
             if gradients[out] == None:
-                grads = [None]*len(out.args)
-            elif isinstance(out, OpBase):
+                grads = tuple([None]*len(out.args))
+            else:
                 grads = out.grad(gradients[out])
-            assert len(grads) == len(out.args)
+            #elif hasattr(out, 'grad'):
+            #assert len(grads) == len(out.args)
             for grad, inp in zip(grads, out.args):
                 if inp not in gradients or gradients[inp] is None:
-                    gradients[inp] = grad
+                    gradients[inp] = (grad,)
                 elif grad is not None:
-                    # combining collates
-                    if isinstance(gradients[inp], Collate):
-                        args = gradients[inp].args + grad.args
-                        gradients[inp] = Collate(*args)
-                    else:
-                        gradients[inp] += grad
+                    gradients[inp] += (grad,)
                 children[inp] -= 1
                 if children[inp] == 0:
                     _diffFunc(inp)
         for out in outputs:
             if children[out] == 0:
                 _diffFunc(out)
-        return [gradients.get(inp, None) for inp in inputs]
+        #print children.values()
+        return [gradients.get(inp, (None,))[0] for inp in inputs]
 
     def __call__(self, *args):
         func = getattr(Function._module, self.name)
