@@ -69,6 +69,9 @@ class Variable(ArithBase):
 
     def grad(self, grad):
         assert isinstance(grad, tuple)
+        for out in grad:
+            assert self.shape == out.shape
+            assert self.dtype == out.dtype
         index = 0
         if len(self.args) == 0:
             return tuple()
@@ -127,6 +130,9 @@ class TensorFunctionOp(object):
             outputs[-1].outputIndex = index
         outputs = list(sorted(outputs, key=lambda x: x.outputIndex))
         assert len(outputs) == len(self.outputs)
+        for out1, out2 in zip(outputs, self.outputs):
+            assert out1.shape == out2.shape
+            assert out1.dtype == out2.dtype
         cache = TensorFunctionOp._gradCache
         for inp in inputs:
             if inp.name in cache:
@@ -136,6 +142,7 @@ class TensorFunctionOp(object):
                 cache[inp.name] = out
             outputs.append(out[inp.index])
         outputs = tuple(outputs)
+        #print self.name, len(self.outputs), [(x.name, x.dtype) for x in self.outputs], [(x.name, x.dtype) for x in grad], [(x.name, x.dtype) for x in outputs[:len(self.outputs)]]
         return TensorFunctionOp(self.func.grad, args, outputs, self.indices).outputs
 
     @classmethod
@@ -282,6 +289,8 @@ class Function(object):
             #elif hasattr(out, 'grad'):
             assert len(grads) == len(out.args)
             for grad, inp in zip(grads, out.args):
+                if isinstance(inp, TensorFunctionOp):
+                    assert grad.dtype == 'scalar'
                 if grad is None and inp not in gradients:
                     gradients[inp] = None
                 elif inp not in gradients:

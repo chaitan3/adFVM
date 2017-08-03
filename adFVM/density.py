@@ -316,10 +316,9 @@ class RCF(Solver):
         U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
         outputs = self._primitive(mesh.nInternalCells, (U, T, p))(rho, rhoU, rhoE)
         # boundary update
-        # cut down repetition in code
-        outputs = self.boundaryInit(*outputs)
-        outputs = self.boundary(*outputs)
-        outputs = self.boundaryEnd(*outputs)
+        #outputs = self.boundaryInit(*outputs)
+        #outputs = self.boundary(*outputs)
+        #outputs = self.boundaryEnd(*outputs)
         U, T, p = outputs
         obj = self.objective([U, T, p], self)
 
@@ -337,12 +336,12 @@ class RCF(Solver):
         meshArgs = _meshArgs(mesh.nLocalFaces)
         outputs = self._coupledGrad(mesh.nRemoteCells, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
         # grad boundary update
-        outputs = list(self.boundaryInit(*outputs))
-        for index, phi in enumerate(outputs):
-            phi = self.gradFields[index].updateGhostCells(phi)
-            phi = ExternalFunctionOp('mpi', (), (phi,)).outputs[0]
-            outputs[index] = phi
-        outputs = self.boundaryEnd(*outputs)
+        #outputs = list(self.boundaryInit(*outputs))
+        #for index, phi in enumerate(outputs):
+        #    phi = self.gradFields[index].updateGhostCells(phi)
+        #    phi = ExternalFunctionOp('mpi', (), (phi,)).outputs[0]
+        #    outputs[index] = phi
+        #outputs = self.boundaryEnd(*outputs)
         gradU, gradT, gradp = outputs
         
         meshArgs = _meshArgs()
