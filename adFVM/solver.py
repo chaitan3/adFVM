@@ -1,6 +1,6 @@
 import numpy as np
 import time
-import cPickle as pkl
+import pickle as pkl
 import os
 import copy
 

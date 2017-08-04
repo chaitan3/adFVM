@@ -100,31 +100,38 @@ class FunctionOp(object):
         self.outputs = tuple(self.outputs)
 
     def _grad(self, grad):
-        n = len(self.outputs)
-        inputs = self.args[:-n]
-        args = inputs
-        outputs = list(grad)
-        extraIndices = set(range(0, len(self.outputs)))-set([x.outputIndex for x in grad])
+        outputRefs = self.outputs
+        n = len(outputRefs)
+        inputs, _outputs = self.args[:-n], self.args[-n:]
+        outputs = []
+        indices = set([x.outputIndex for x in grad])
+        for out1, out2 in zip(grad, [_outputs[i] for i in indices]):
+            outputs.append(out1[out2.index])
+            outputs[-1].outputIndex = out1.outputIndex
+        extraIndices = set(range(0, len(self.outputs)))-indices
         for index in extraIndices:
-            out = self.outputs[index]
+            out = _outputs[index]
             outputs.append(Zeros(out.shape, out.dtype))
+            outputs[-1].index = out.index
             outputs[-1].outputIndex = index
         outputs = list(sorted(outputs, key=lambda x: x.outputIndex))
         assert len(outputs) == n
-        for out1, out2 in zip(outputs, self.outputs):
+        for out1, out2 in zip(outputs, self.args[-n:]):
             assert out1.shape == out2.shape
             assert out1.dtype == out2.dtype
+            assert out1.index == out2.index
         cache = FunctionOp._gradCache
         for inp in inputs:
             if inp.name in cache:
                 out = cache[inp.name]
             else:
                 out = Zeros(inp.shape, inp.dtype)
-                cache[inp.name] = out
+                #cache[inp.name] = out
             outputs.append(out[inp.index])
+            cache[inp.name] = outputs[-1]
         outputs = tuple(outputs)
         #print self.name, len(self.outputs), [(x.name, x.dtype) for x in self.outputs], [(x.name, x.dtype) for x in grad], [(x.name, x.dtype) for x in outputs[:len(self.outputs)]]
-        return args, outputs
+        return inputs, outputs
 
     @classmethod
     def clear_cache(self):
@@ -255,6 +262,10 @@ class Function(object):
                 shape = ','.join([str(x) for x in op.shape[1:]])
                 codeFile.write('\tarrType<{}, {}> {}({}, true);\n'.format(op.dtype, shape, op.name, _getName(op.shape[0]))) 
             elif isinstance(op, TensorFunctionOp):
+                #codeFile.write('\t/* {} */\n'.format(op.info))
+                #for inp in op.args:
+                #    if not isinstance(inp.shape[0], int):
+                #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
                 codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):
                 codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))

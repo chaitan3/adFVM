@@ -106,6 +106,9 @@ class Adjoint(Solver):
         return
     
     def run(self, readFields=False):
+
+        
+
         mesh = self.mesh
         result, firstCheckpoint = self.result, self.firstCheckpoint
         timeSteps = self.timeSteps
@@ -174,6 +177,16 @@ class Adjoint(Solver):
                     pprint('Time step', adjointIndex)
                 else:
                     pprint('Time step', adjointIndex)
+
+                #inputs = [phi.field for phi in previousSolution] + \
+                #         mesh.getTensor() + mesh.getScalar() + \
+                #         primal.getBoundaryTensor(1)
+                #inputs = list(primal.mapBoundary(*inputs)) + \
+                #         mesh.getTensor() + mesh.getScalar() + \
+                #         primal.getBoundaryTensor(1) + \
+                #         [np.zeros((mesh.nCells,) + dims) for dims in self.dimensions]
+                #print(primal.mapBoundary.grad(*inputs))
+                #exit(1)
 
                 dtca = np.zeros((mesh.nInternalCells, 1)).astype(config.precision)
                 obja = np.ones((1, 1)).astype(config.precision)

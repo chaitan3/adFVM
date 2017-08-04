@@ -1,5 +1,4 @@
 import numpy as np
-import new
 
 from . import config
 from .tensor import Tensor, Tensorize, Variable

@@ -218,7 +218,8 @@ class Mesh(object):
     def readFoamFile(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
         try: 
-            content = open(foamFile).read()
+            #content = str(open(foamFile, 'rb').read())
+            content = open(foamFile, 'r').read()
             foamFileDict = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
             assert re.search('format[\s\t]+(.*?);', foamFileDict).group(1) == config.fileFormat
             start = content.find('(') + 1

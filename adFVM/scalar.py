@@ -36,7 +36,7 @@ class ArithBase(object):
         return self.__mul__(b)
 
     def __div__(self, b):
-        return self._binaryOp(b, operator.div)
+        return self._binaryOp(b, operator.truediv)
 
     def __neg__(self):
         return self._unaryOp(operator.neg)
@@ -212,13 +212,13 @@ unaryOpString = {operator.abs: 'abs',
                 operator.invert: '!',
                 SQRT: 'sqrt'}
 
-binaryOpString = {operator.div: '/',
+binaryOpString = {operator.truediv: '/',
                   operator.sub: '-',
                   operator.mul: '*',
                   operator.add: '+',
                   operator.lt: '<'}
 
-binaryOpClass = {operator.div: DivOp,
+binaryOpClass = {operator.truediv: DivOp,
                   operator.sub: SubOp,
                   operator.mul: MulOp,
                   operator.add: AddOp,

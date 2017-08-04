@@ -64,7 +64,6 @@ class RCF(Solver):
         self._conservative = Tensorize(self.conservative)
         meshArgs = mesh.getTensor() + mesh.getScalar()
         BCArgs = self.getBoundaryTensor(0)
-        extraArgs = [x[0] for x in self.extraArgs]
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
         U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
         outputs = tuple([x.getReference() for x in [U, T, p]])
@@ -323,6 +322,7 @@ class RCF(Solver):
             meshArgs = _meshArgs(startFace)
             if patchType in config.coupledPatches:
                 outputs = self._coupledGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
+                outputs[0].args[0].info += [[x.shape for x in self.mesh.getTensor()], patchID, self.mesh.boundary[patchID]['startFace'], self.mesh.boundary[patchID]['nFaces']]
             else:
                 outputs = self._boundaryGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=True, *meshArgs)
         meshArgs = _meshArgs(mesh.nLocalFaces)
