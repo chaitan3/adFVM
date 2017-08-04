@@ -59,26 +59,12 @@ class RCF(Solver):
         return
 
     def compileInit(self):
-        #super(RCF, self).compileInit()
-
-        #self.faceReconstructor = self.faceReconstructor(self)
-        Function.createCodeDir(self.mesh.caseDir)
-
-        Function.clean()
         mesh = self.mesh.symMesh
         self._primitive = Tensorize(self.primitive)
         self._conservative = Tensorize(self.conservative)
-        self._grad = Tensorize(self.gradients)
-        self._coupledGrad = Tensorize(self.gradients)
-        self._boundaryGrad = Tensorize(self.gradients)
-        self._flux = Tensorize(self.flux)
-        self._coupledFlux = Tensorize(self.flux)
-        self._characteristicFlux = Tensorize(self.flux)
-        self._boundaryFlux = Tensorize(self.boundaryFlux)
         meshArgs = mesh.getTensor() + mesh.getScalar()
         BCArgs = self.getBoundaryTensor(0)
         extraArgs = [x[0] for x in self.extraArgs]
-        # init function
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
         U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
         outputs = tuple([x.getReference() for x in [U, T, p]])
@@ -89,20 +75,26 @@ class RCF(Solver):
         rhoN, rhoUN, rhoEN = self._conservative()(U, T, p)
         self.mapBoundary = Function('init', [rho, rhoU, rhoE] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
 
+    def compileSolver(self):
+        self._grad = Tensorize(self.gradients)
+        self._coupledGrad = Tensorize(self.gradients)
+        self._boundaryGrad = Tensorize(self.gradients)
+        self._flux = Tensorize(self.flux)
+        self._coupledFlux = Tensorize(self.flux)
+        self._characteristicFlux = Tensorize(self.flux)
+        self._boundaryFlux = Tensorize(self.boundaryFlux)
+        mesh = self.mesh.symMesh
+        meshArgs = mesh.getTensor() + mesh.getScalar()
+        BCArgs = self.getBoundaryTensor(0)
+        extraArgs = [x[0] for x in self.extraArgs]
+        # init function
+        
         self.t0 = Variable((1,1))
         self.dt = Variable((1,1))
         self.t = self.t0
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
         rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
         self.map = Function('primal', [rho, rhoU, rhoE, self.dt, self.t0] + meshArgs + BCArgs + extraArgs, [rhoN, rhoUN, rhoEN, self.dtc, self.obj])
-
-        Function.compile()
-        Function._module.initialize(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
-        #TensorFunction._module.finalize()
-        #import atexit
-        #atexit.register(TensorFunction._module.finalize)
-
-        return
 
     def getBoundaryTensor(self, index=0):
         return super(RCF, self).getBoundaryTensor(index) + \

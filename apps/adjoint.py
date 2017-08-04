@@ -9,6 +9,7 @@ from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
 from adFVM.solver import Solver
 from adFVM.tensor import TensorFunction
+from adFVM.variable import Variable, Function
 
 from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints
 
@@ -29,10 +30,12 @@ class Adjoint(Solver):
         self.sensTimeSeriesFile = self.mesh.case + 'sensTimeSeries.txt'
         self.energyTimeSeriesFile = self.mesh.case + 'energyTimeSeries.txt'
         self.firstRun = True
+        self.extraArgs = []
         return
 
     def initFields(self, fields):
-        newFields = TensorFunction._module.ghost_default(*[phi.field for phi in fields])
+        mesh = self.mesh
+        newFields = self.mapBoundary(*[phi.field for phi in fields] + mesh.getTensor() + mesh.getScalar() + self.getBoundaryTensor(1))
         return self.getFields(newFields, IOField, refFields=fields)
 
     def createFields(self):
@@ -41,16 +44,30 @@ class Adjoint(Solver):
             phi = np.zeros((self.mesh.origMesh.nInternalCells, dims[0]), config.precision)
             fields.append(IOField(name, phi, dims, self.mesh.defaultBoundary))
         self.fields = fields
+        for phi in self.fields:
+            phi.completeField()
         return fields
 
-    def compile(self):
-        #self.compileInit(functionName='adjoint_init')
-        primal.compile(adjoint=self)
-        #adFVMcpp.init(*([self.mesh] + [phi.boundary for phi in primal.fields] + [primal.__class__.defaultConfig]))
-        primal.adjoint = self
-        #self.map = primal.gradient
+    def compileInit(self):
+        primal.compileInit()
+        mesh = self.mesh.symMesh
+        meshArgs = mesh.getTensor() + mesh.getScalar()
+        BCArgs = self.getBoundaryTensor(0)
+        extraArgs = [x[0] for x in self.extraArgs]
+        # init function
+        rhoa, rhoUa, rhoEa = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
+        outputs = rhoa, rhoUa, rhoEa
+        outputs = self.boundaryInit(*outputs)
+        outputs = self.boundary(*outputs)
+        outputs = self.boundaryEnd(*outputs)
+        rhoaN, rhoUaN, rhoEaN = outputs
+        self.mapBoundary = Function('adjoint_init', [rhoa, rhoUa, rhoEa] + meshArgs + BCArgs, [rhoaN, rhoUaN, rhoEaN])
         return
 
+    def compileSolver(self):
+        primal.compileSolver()
+        self.map = primal.map.grad
+    
     def getGradFields(self):
         variables = []
         for param in parameters:
@@ -99,7 +116,7 @@ class Adjoint(Solver):
         if (firstCheckpoint > 0) or readFields:
             fields = self.readFields(startTime)
         else:
-            fields = self.createFields()
+            fields = self.fields
 
         pprint('STARTING ADJOINT')
         pprint('Number of steps:', nSteps)
@@ -158,14 +175,26 @@ class Adjoint(Solver):
                 else:
                     pprint('Time step', adjointIndex)
 
+                dtca = np.zeros((mesh.nInternalCells, 1)).astype(config.precision)
+                obja = np.ones((1, 1)).astype(config.precision)
                 inputs = [phi.field for phi in previousSolution] + \
-                         [phi[1] for phi in primal.sourceTerms] + \
-                         [phi.field for phi in fields] + [dt, t] + \
-                         [(parameters[0] == 'source')*1]
+                     [np.array([[dt]]), np.array([[t]])] + \
+                     mesh.getTensor() + mesh.getScalar() + \
+                     primal.getBoundaryTensor(1) + \
+                     [x[1] for x in primal.extraArgs] + \
+                     [phi.field for phi in fields] + \
+                     [dtca, obja]
+
+                #print(len(inputs), len(mesh.getTensor()), len(mesh.getScalar()), len(primal.extraArgs), len(primal.getBoundaryTensor(1)))
+
+                #inputs = [phi.field for phi in previousSolution] + \
+                #         [phi[1] for phi in primal.sourceTerms] + \
+                #         [phi.field for phi in fields] + [dt, t] + \
+                #         [(parameters[0] == 'source')*1]
 
                 #outputs = self.map(*inputs)
                 #print(fields[0].field.max())
-                outputs = TensorFunction._module.backward(*inputs)
+                outputs = self.map(*inputs)
                 n = len(fields)
                 gradient = outputs
 
@@ -275,6 +304,7 @@ def main():
         from adFVM import matop_petsc
 
     primal.readFields(adjoint.timeSteps[nSteps-writeInterval][0])
+    adjoint.createFields()
     adjoint.compile()
 
     adjoint.run(user.readFields)

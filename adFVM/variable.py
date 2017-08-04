@@ -200,9 +200,9 @@ class Function(object):
         self._children = graphGetChildren(_outputs)
         if config.compile:
             self._genCode(_outputs)
-            FunctionOp.clear_cache()
-            if grad:
-                self.grad = self._getAdjoint()
+        FunctionOp.clear_cache()
+        if grad:
+            self.grad = self._getAdjoint()
 
         Function.funcs.append(self.name)
 

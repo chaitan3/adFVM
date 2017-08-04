@@ -6,7 +6,7 @@ import copy
 
 #import adFVMcpp
 from . import config, parallel, timestep
-from .tensor import Variable, ExternalFunctionOp
+from .tensor import Variable, ExternalFunctionOp, Function
 from .parallel import pprint
 from .memory import printMemUsage
 
@@ -59,33 +59,13 @@ class Solver(object):
 
     def compile(self, adjoint=None):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
+        Function.createCodeDir(self.mesh.caseDir)
+        Function.clean()
         self.compileInit()
-        #self.adFVMcpp =adFVMcpp
-        #self.map = adFVMcpp.forward
+        self.compileSolver()
+        Function.compile()
+        Function._module.initialize(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
         return
-        mesh = self.mesh
-
-        self.dt = Variable()
-        self.t0 = Variable()
-        fields = self.getSymbolicFields(False)
-        #self.t = self.t0*1.
-        #self.dtc = self.dt
-
-        # default values
-        def func(fields):
-            self.stage = 1
-            newFields = timestep.timeStepper(self.equation, fields, self)
-            return newFields
-
-        self.map = func
-        return
-
-        if self.objective:
-            objective = self.objective(initFields, mesh)
-        else:
-            objective = ad.constant(0.)
-        self.map = self.function(fields + [self.dt, self.t0], \
-                                 newFields + [objective, self.dtc, self.local, self.remote], 'forward')
 
         if adjoint:
             objGrad = [phi/mesh.volumes for phi in ad.gradients(objective, fields)]
@@ -103,18 +83,6 @@ class Solver(object):
         #if config.compile:
         #    exit()
         pprint()
-
-    def compileInit(self, functionName='init'):
-        completeFields = []
-        for phi in self.fields:
-            phi.completeField()
-            #completeFields.append(phiN)
-        #for phi, phiI in zip(self.initOrder(self.fields), self.initOrder(internalFields)):
-        #    phi.phi.setInternalField(phiI)
-        #fields[0].updateProcessorCells(fields)
-        #completeFields = [phi.field for phi in fields]
-        #self.init = self.function(internalFields, completeFields, functionName, source=False, postpro=False)
-        return
 
     def function(self, inputs, outputs, name, **kwargs):
         return SolverFunction(inputs, outputs, self, name, **kwargs)
@@ -178,6 +146,8 @@ class Solver(object):
                 fields.append(IOField.read(name))
         if self.firstRun:
             self.fields = fields
+            for phi in self.fields:
+                phi.completeField()
         else:
             self.updateFields(fields)
         self.firstRun = False
@@ -342,10 +312,12 @@ class Solver(object):
                 pprint()
 
             inputs = [phi.field for phi in fields] + \
-                     [dt, t] + \
+                     [np.array([[dt]]), np.array([[t]])] + \
                      mesh.getTensor() + mesh.getScalar() + \
                      self.getBoundaryTensor(1) + \
                      [x[1] for x in self.extraArgs]
+
+            #print(len(inputs), len(mesh.getTensor()), len(mesh.getScalar()), len(self.extraArgs), len(self.getBoundaryTensor(1)))
             #inputs = [phi.field for phi in fields] + \
             #         [phi[1] for phi in self.sourceTerms] + \
             #         [dt, t]
