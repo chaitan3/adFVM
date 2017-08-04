@@ -1,3 +1,4 @@
+from __future__ import division
 from __future__ import print_function
 # mira hack
 #import tensorflow as tf
@@ -8,6 +9,7 @@ runtime = time.time()
 import os
 import sys
 sys.setrecursionlimit(100000)
+py3 = not (sys.version_info[0] < 3)
 
 import argparse
 parser = argparse.ArgumentParser()

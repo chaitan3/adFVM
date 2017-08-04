@@ -18,7 +18,7 @@ class Tensor(ArithBase):
         self.name = 'Tensor_{}'.format(index)
         self.shape = shape
         self.size = np.prod(shape)
-        self.strides = [x/8 for x in np.zeros(shape, np.float64).strides]
+        self.strides = [x//8 for x in np.zeros(shape, np.float64).strides]
         #print('tensor', shape, scalars)
         if scalars is None:
             self.scalars = []
@@ -160,7 +160,7 @@ class Tensor(ArithBase):
 
     @classmethod
     def collate(cls, *args):
-        n = len(args)/2
+        n = len(args)//2
         m = args[0].size
         shape = args[0].shape
         res = []
@@ -327,7 +327,7 @@ class TensorFunction(object):
                 #print len(op.args)
                 tensorIndex = self._outputTensorIndices[op]
                 assert tensorIndex[3]
-                n = len(op.args)/2
+                n = len(op.args)//2
                 for i in range(0, n):
                     a, b = op.args[2*i], op.args[2*i+1]
                     code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])

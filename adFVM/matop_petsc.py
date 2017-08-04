@@ -102,7 +102,7 @@ class Matrix(object):
         E.solve()
         n = E.getConverged()
         for i in range(0, n):
-            print E.getEigenvalue(0)
+            print(E.getEigenvalue(0))
         return 
 
     def solve(self):

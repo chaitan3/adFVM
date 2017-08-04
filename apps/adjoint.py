@@ -316,6 +316,7 @@ def main():
         global matop_petsc
         from adFVM import matop_petsc
 
+    print(type(adjoint.timeSteps[nSteps-writeInterval][0]))
     primal.readFields(adjoint.timeSteps[nSteps-writeInterval][0])
     adjoint.createFields()
     adjoint.compile()

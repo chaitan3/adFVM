@@ -237,6 +237,9 @@ class Field(object):
     def __div__(self, phi):
         return self.__class__('{0}/{1}'.format(self.name, phi.name), self.field / phi.field, self.dimensions)
 
+    def __truediv__(self, phi):
+        return self.__div__(phi)
+
 class CellField(Field):
     def __init__(self, name, field, dimensions, boundary={}):
         logger.debug('initializing CellField {0}'.format(name))
@@ -413,6 +416,8 @@ class IOField(Field):
         boundaryData = fieldGroup['boundary']
         with boundaryData.collective:
             boundaryList = boundaryData[parallelStart[1]:parallelEnd[1]]
+        if config.py3:
+            boundaryList = boundaryList.astype('U100')
         boundary = {}
         for patchID, key, value in boundaryList:
             if patchID not in boundary:
@@ -590,7 +595,7 @@ class IOField(Field):
         for patchID in self.boundary.keys():
             #print rank, self.name, patchID
             patch = self.boundary[patchID]
-            for key, value in patch.iteritems():
+            for key, value in patch.items():
                 if key.startswith('_'):
                     continue
                 if not (key == 'value' and patch['type'] in BCs.valuePatches):

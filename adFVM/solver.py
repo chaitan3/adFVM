@@ -364,6 +364,7 @@ class Solver(object):
                 t += 1
             else:
                 t = round(t+dt, 12)
+            #print(t)
             if self.localTimeStep:
                 dt = dtc
             elif isinstance(dts, np.ndarray):

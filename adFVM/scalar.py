@@ -2,8 +2,9 @@ import operator
 import numbers
 dtype = 'scalar'
 
+import functools
 def prod(factors):
-    return reduce(operator.mul, factors, 1)
+    return functools.reduce(operator.mul, factors, 1)
 
 class Container(object):
     pass
@@ -36,6 +37,9 @@ class ArithBase(object):
         return self.__mul__(b)
 
     def __div__(self, b):
+        return self.__truediv__(b)
+
+    def __truediv__(self, b):
         return self._binaryOp(b, operator.truediv)
 
     def __neg__(self):
@@ -71,6 +75,9 @@ class IntegerScalar(ArithBase):
 
 class Scalar(ArithBase):
     _index = 0
+    def __new__(cls, *args, **kwargs):
+        return object.__new__(cls)
+
     def __init__(self):
         index = Scalar._index
         Scalar._index += 1
@@ -261,7 +268,7 @@ class Collate(OpBase):
         self.args = tuple(args)
     
     def grad(self, gradient):
-        n = len(self.args)/2
+        n = len(self.args)//2
         grads = []
         for i in range(0, n):
             a, b = self.args[2*i], self.args[2*i+1]

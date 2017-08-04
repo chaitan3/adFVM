@@ -151,7 +151,8 @@ class Mesh(object):
             case = self.case
         if time.is_integer():
             time = int(time)
-        return '{0}/{1}'.format(case, time)
+        timeDir = '{0}/{1:.11f}'.format(case, time)
+        return timeDir
 
     def getTimes(self):
         if config.hdf5:
@@ -322,6 +323,8 @@ class Mesh(object):
         parallelStart = boundaryGroup['parallel/start'][rank]
         parallelEnd = boundaryGroup['parallel/end'][rank]
         boundaryData = boundaryGroup['values'][parallelStart[0]:parallelEnd[0]]
+        if config.py3:
+            boundaryData = boundaryData.astype('U100')
 
         for patchID, key, value in boundaryData:
             if patchID not in boundary:
@@ -492,7 +495,7 @@ class Mesh(object):
         boundary = []
         boundaryField = []
         for patchID in self.patches:
-            for key, value in self.origMesh.boundary[patchID].iteritems():
+            for key, value in self.origMesh.boundary[patchID].items():
                 if key.startswith('loc_'):
                     continue
                 elif isinstance(value, np.ndarray):
@@ -542,7 +545,7 @@ class Mesh(object):
         combined = np.concatenate((enum(self.owner), enum(self.neighbour)))
         cellFaces = combined[combined[:,1].argsort(), 0]
         # todo: make it a list ( investigate np.diff )
-        cellFaces = cellFaces.reshape(self.nInternalCells, len(cellFaces)/self.nInternalCells)
+        cellFaces = cellFaces.reshape(self.nInternalCells, len(cellFaces)//self.nInternalCells)
         return cellFaces
 
     def getCellNeighbours(self, boundary=True):
@@ -915,7 +918,7 @@ class Mesh(object):
             return
 
         patch['nLayers'] = int(patch['nLayers'])
-        patch['nFacesPerLayer'] = nFaces/patch['nLayers']
+        patch['nFacesPerLayer'] = nFaces//patch['nLayers']
         neighbourPatch = mesh.boundary[patch['neighbourPatch']]   
         neighbourStartFace = neighbourPatch['startFace']
         neighbourEndFace = neighbourStartFace + patch['nFacesPerLayer']

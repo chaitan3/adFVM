@@ -292,7 +292,7 @@ class RCF(Solver):
         return drho, drhoU, drhoE, dtc
 
     def characteristicBoundary(self, U, T, p):
-        for patchID, patch in self.p.phi.BC.iteritems():
+        for patchID, patch in self.p.phi.BC.items():
             if isinstance(patch, BCs.CharacteristicBoundaryCondition):
                 U, T, p = patch.update(U, T, p)
         return U, T, p
