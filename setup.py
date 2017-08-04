@@ -27,6 +27,12 @@ setup(name='adFVM',
       author='Chaitanya Talnikar',
       author_email='talnikar@mit.edu',
       packages=['adFVM', 'adFVM.compat'],
+      package_data={
+      'adFVM': ['gencode/*.cpp'],
+      'adFVM': ['gencode/*.hpp'],
+      'adFVM': ['gencode/Makefile'],
+      },
+      include_package_data=True,
       ext_modules = cfuncs,
       include_dirs=[np.get_include()],
       install_requires=[ 

@@ -151,7 +151,9 @@ class Mesh(object):
             case = self.case
         if time.is_integer():
             time = int(time)
-        timeDir = '{0}/{1:.11f}'.format(case, time)
+            timeDir = '{0}/{1}'.format(case, time)
+        else:
+            timeDir = '{0}/{1:.11f}'.format(case, time)
         return timeDir
 
     def getTimes(self):

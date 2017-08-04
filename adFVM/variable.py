@@ -354,7 +354,10 @@ class Function(object):
                 {NULL, NULL, 0, NULL}        /* Sentinel */
         };
 """)
-            subprocess.check_call(['make'], cwd=self.codeDir)
+            if config.py3:
+                subprocess.check_call(['make', 'python3'], cwd=self.codeDir)
+            else:
+                subprocess.check_call(['make'], cwd=self.codeDir)
         parallel.mpi.Barrier()
         sys.path.append(self.codeDir)
         import interface as mod
