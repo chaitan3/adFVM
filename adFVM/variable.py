@@ -167,6 +167,7 @@ class TensorFunctionOp(FunctionOp):
         n = len(self.outputs)
         args, outputs = self._grad(grad)
         gradInputs = TensorFunctionOp(self.func.grad, args, outputs, self.indices).outputs
+        gradInputs[0].args[0].info = ['grad'] + self.info
         return gradInputs[n:] + gradInputs[:n]
 
 
@@ -262,10 +263,10 @@ class Function(object):
                 shape = ','.join([str(x) for x in op.shape[1:]])
                 codeFile.write('\tarrType<{}, {}> {}({}, true);\n'.format(op.dtype, shape, op.name, _getName(op.shape[0]))) 
             elif isinstance(op, TensorFunctionOp):
-                #codeFile.write('\t/* {} */\n'.format(op.info))
-                #for inp in op.args:
-                #    if not isinstance(inp.shape[0], int):
-                #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
+                codeFile.write('\t/* {} */\n'.format(op.info))
+                for index, inp in enumerate(op.args[:-len(op.outputs)]):
+                    if not isinstance(inp.shape[0], int) and op.func._inputsUsed[index]:
+                        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
                 codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):
                 codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))

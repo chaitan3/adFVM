@@ -9,7 +9,7 @@ from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
 from adFVM.solver import Solver
 from adFVM.tensor import TensorFunction
-from adFVM.variable import Variable, Function
+from adFVM.variable import Variable, Function, Zeros
 
 from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints
 
@@ -53,10 +53,9 @@ class Adjoint(Solver):
         mesh = self.mesh.symMesh
         meshArgs = mesh.getTensor() + mesh.getScalar()
         BCArgs = self.getBoundaryTensor(0)
-        extraArgs = [x[0] for x in self.extraArgs]
         # init function
         rhoa, rhoUa, rhoEa = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
-        outputs = rhoa, rhoUa, rhoEa
+        outputs = Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1))
         outputs = self.boundaryInit(*outputs)
         outputs = self.boundary(*outputs)
         outputs = self.boundaryEnd(*outputs)
@@ -270,7 +269,7 @@ class Adjoint(Solver):
                     for derivative, delphi in zip(paramGradient, perturbation):
                         #sensitivity = np.sum(derivative * delphi)
                         sensitivity = parallel.sum(derivative * delphi, allreduce=False)
-                        if result > avgStart:
+                        if (nSteps - (primalIndex + adjointIndex)) > avgStart:
                             result[index] += sensitivity
                         sensTimeSeries[-1][index] = sensitivity
 

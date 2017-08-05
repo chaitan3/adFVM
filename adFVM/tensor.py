@@ -221,6 +221,7 @@ class TensorFunction(object):
 
         _outputs = [x for x in self._outputs if x is not None]
         self._children = graphGetChildren(_outputs)
+        self._inputsUsed = [inp.scalars[0] in self._children for inp in self._inputTensors]
         if config.compile:
             self._genCode(self._inputs, _outputs, self._children.copy())
         OpBase.clear_cache()

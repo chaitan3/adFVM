@@ -265,7 +265,8 @@ def makePerturb(param, eps=1e-4):
             perturbMesh.perturbation = mesh.getPointsPerturbation(points)
         return perturbMesh.perturbation
     return perturbMesh
-perturb = [makePerturb(1)]
+#perturb = [makePerturb(1)]
+perturb = []
 
 parameters = 'mesh'
 
@@ -293,4 +294,4 @@ writeInterval = 5
 startTime = 3.0
 dt = 1e-8
 
-adjParams = [1e-3, 'abarbanel', None]
+#adjParams = [1e-3, 'abarbanel', None]
