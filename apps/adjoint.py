@@ -287,9 +287,9 @@ class Adjoint(Solver):
             self.writeStatusFile([checkpoint + 1, result])
             #energyTimeSeries = mpi.gather(timeSeries, root=0)
             if parallel.rank == 0:
-                with open(self.sensTimeSeriesFile, 'a') as f:
+                with open(self.sensTimeSeriesFile, 'ab') as f:
                     np.savetxt(f, sensTimeSeries)
-                with open(self.energyTimeSeriesFile, 'a') as f:
+                with open(self.energyTimeSeriesFile, 'ab') as f:
                     np.savetxt(f, energyTimeSeries)
             sensTimeSeries = []
             energyTimeSeries = []

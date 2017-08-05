@@ -402,10 +402,10 @@ class Solver(object):
                 # write timeSeries if in orig mode (problem.py)
                 if parallel.rank == 0:
                     if mode == 'orig':
-                        with open(self.timeStepFile, 'a') as f:
+                        with open(self.timeStepFile, 'ab') as f:
                             np.savetxt(f, timeSteps)
                     if mode == 'orig' or mode == 'perturb':
-                        with open(self.timeSeriesFile, 'a') as f:
+                        with open(self.timeSeriesFile, 'ab') as f:
                             np.savetxt(f, timeSeries)
                 timeSeries = []
                 timeSteps = []
