@@ -126,7 +126,7 @@ class Adjoint(Solver):
         pprint('Write interval:', writeInterval)
         pprint()
 
-        totalCheckpoints = nSteps/writeInterval
+        totalCheckpoints = nSteps//writeInterval
         nCheckpoints = min(firstCheckpoint + runCheckpoints, totalCheckpoints)
         for checkpoint in range(firstCheckpoint, nCheckpoints):
             pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))

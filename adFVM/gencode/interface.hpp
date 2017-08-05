@@ -9,6 +9,17 @@
 #include <map>
 #include "mpi.h"
 
+#if PY_MAJOR_VERSION >= 3
+#define PY3 1
+#define PyInt_AsLong PyLong_AsLong
+#define PyInt_Check PyLong_Check
+char* PyString_AsString(PyObject* result);
+
+
+
+#define PyString_Check PyUnicode_Check
+#endif
+
 #include "common.hpp"
 
 typedef map<string, map<string, string> > Boundary;
@@ -67,8 +78,7 @@ class Mesh {
 };
 
 int getInteger(PyObject*, const string);
-string getString(PyObject*, const string);
-void getDict(PyObject* dict, map<string, string>& cDict);
+//void getDict(PyObject* dict, map<string, string>& cDict);
 map<string, integer> getTags(PyObject *mesh, const string attr);
 scalar getMaxEigenvalue(arrType<scalar, 5, 5>& phi, vec& eigPhi);
 

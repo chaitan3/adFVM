@@ -21,7 +21,11 @@ Mesh *meshap = NULL;
 #endif
 
 
-#define initFunc initinterface
+#ifdef PY3
+    #define initFunc PyInit_interface
+#else
+    #define initFunc initinterface
+#endif
 #define modName "interface"
 
 template <typename dtype, integer shape1, integer shape2>
@@ -70,24 +74,24 @@ PyObject* initSolver(PyObject *self, PyObject *args) {
         matop = new Matop(rcf);
     #endif
 
-    while (PyDict_Next(dict, &pos, &key, &value)) {
-        string ckey = PyString_AsString(key);
-        if (ckey == "CFL") {
-            //rcf->CFL = PyFloat_AsDouble(value);
-        } else if (ckey == "objectivePLInfo") {
-            if (value != Py_None) {
-                //getDict(value, rcf->objectivePLInfo);
-            }
-        } 
-        //else if (ckey == "timeIntegrator") {
-        //    string cvalue = PyString_AsString(value);
-        //    if (cvalue == "euler") {
-        //        timeIntegrator = euler;
-        //    } else if (cvalue == "SSPRK") {
-        //        timeIntegrator = SSPRK;
-        //    }
-        //} 
-    }
+    //while (PyDict_Next(dict, &pos, &key, &value)) {
+    //    string ckey = PyString_AsString(key);
+    //    if (ckey == "CFL") {
+    //        //rcf->CFL = PyFloat_AsDouble(value);
+    //    } else if (ckey == "objectivePLInfo") {
+    //        if (value != Py_None) {
+    //            //getDict(value, rcf->objectivePLInfo);
+    //        }
+    //    } 
+    //    else if (ckey == "timeIntegrator") {
+    //        string cvalue = PyString_AsString(value);
+    //        if (cvalue == "euler") {
+    //            timeIntegrator = euler;
+    //        } else if (cvalue == "SSPRK") {
+    //            timeIntegrator = SSPRK;
+    //        }
+    //    } 
+    //}
 
     //for (int i = 0; i < nStages; i++) {
     //    rhos[i] = NULL;
@@ -399,22 +403,41 @@ PyObject* finalSolver(PyObject *self, PyObject *args) {
         PetscFinalize();
         delete matop;
     #endif
+    return NULL;
 }
 
 extern PyMethodDef Methods[];
+
+#ifdef PY3
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,  /* m_base */
+    modName,                 /* m_name */
+    NULL,                   /* m_doc */
+    -1,                     /* m_size */
+    Methods            /* m_methods */
+};
+#endif
+
 PyMODINIT_FUNC
 initFunc(void)
 {
     PyObject *m;
 
-    m = Py_InitModule(modName, Methods);
-    if (m == NULL)
-        return;
+    #ifdef PY3
+        m = PyModule_Create(&moduledef);
+    #else
+        m = Py_InitModule(modName, Methods);
+        if (m == NULL)
+            return;
+    #endif
     import_array();
 
     //SpamError = PyErr_NewException("spam.error", NULL, NULL);
     //Py_INCREF(SpamError);
     //PyModule_AddObject(m, "error", SpamError);
+    #ifdef PY3
+        return m;
+    #endif
 }
 
 
@@ -507,6 +530,20 @@ Mesh::~Mesh () {
     //Py_DECREF(this->meshModule);
 }
 
+#ifdef PY3
+char* PyString_AsString(PyObject* result) {
+    char *my_result;
+    PyObject * temp_bytes = PyUnicode_AsEncodedString(result, "ASCII", "strict"); // Owned reference
+    if (temp_bytes != NULL) {
+        my_result = PyBytes_AS_STRING(temp_bytes); // Borrowed pointer
+        my_result = strdup(my_result);
+        Py_DECREF(temp_bytes);
+        return my_result;
+    } else {
+        return NULL;
+    }
+}
+#endif
 
 int getInteger(PyObject *mesh, const string attr) {
     PyObject *in = PyObject_GetAttrString(mesh, attr.c_str());
@@ -514,14 +551,6 @@ int getInteger(PyObject *mesh, const string attr) {
     int result = (int)PyInt_AsLong(in);
     //cout << attr << " " << result << endl;
     Py_DECREF(in);
-    return result;
-}
-
-string getString(PyObject *mesh, const string attr) {
-    PyObject *cstring = PyObject_GetAttrString(mesh, attr.c_str());
-    assert (cstring);
-    string result(PyString_AsString(cstring));
-    Py_DECREF(cstring);
     return result;
 }
 
@@ -545,33 +574,33 @@ Boundary getMeshBoundary(PyObject *mesh, const string attr) {
     return getBoundary(dict);
 }
 
-void getDict(PyObject* dict, map<string, string>& cDict) {
-    PyObject *key2, *value2;
-    Py_ssize_t pos2 = 0;
-    while (PyDict_Next(dict, &pos2, &key2, &value2)) {
-        string ckey2 = PyString_AsString(key2);
-        string cvalue;
-        if (PyInt_Check(value2)) {
-            int ivalue = (int)PyInt_AsLong(value2);
-            cvalue = to_string(ivalue);
-        }
-        if (PyFloat_Check(value2)) {
-            scalar ivalue = PyFloat_AsDouble(value2);
-            cvalue = to_string(ivalue);
-        }
-        else if (PyString_Check(value2)) {
-            cvalue = PyString_AsString(value2);
-        }
-        else if (PyArray_Check(value2)) {
-            Py_INCREF(value2);
-            PyArrayObject* val = (PyArrayObject*) value2;
-            char* data = (char *) PyArray_DATA(val);
-            int size = PyArray_NBYTES(val);
-            cvalue = string(data, size);
-        }
-        cDict[ckey2] = cvalue;
-    }
-}
+//void getDict(PyObject* dict, map<string, string>& cDict) {
+//    PyObject *key2, *value2;
+//    Py_ssize_t pos2 = 0;
+//    while (PyDict_Next(dict, &pos2, &key2, &value2)) {
+//        string ckey2 = PyString_AsString(key2);
+//        string cvalue;
+//        if (PyInt_Check(value2)) {
+//            int ivalue = (int)PyInt_AsLong(value2);
+//            cvalue = to_string(ivalue);
+//        }
+//        if (PyFloat_Check(value2)) {
+//            scalar ivalue = PyFloat_AsDouble(value2);
+//            cvalue = to_string(ivalue);
+//        }
+//        else if (PyString_Check(value2)) {
+//            cvalue = PyString_AsString(value2);
+//        }
+//        else if (PyArray_Check(value2)) {
+//            Py_INCREF(value2);
+//            PyArrayObject* val = (PyArrayObject*) value2;
+//            char* data = (char *) PyArray_DATA(val);
+//            int size = PyArray_NBYTES(val);
+//            cvalue = string(data, size);
+//        }
+//        cDict[ckey2] = cvalue;
+//    }
+//}
 
 Boundary getBoundary(PyObject *dict) {
     assert(dict);
