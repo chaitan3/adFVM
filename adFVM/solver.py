@@ -66,24 +66,7 @@ class Solver(object):
         Function.compile()
         Function._module.initialize(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
         return
-
-        if adjoint:
-            objGrad = [phi/mesh.volumes for phi in ad.gradients(objective, fields)]
-            adjointFields = self.getSymbolicFields(False)
-            gradientInputs = fields + adjoint.getGradFields()
-            scalarFields = sum([ad.sum(newFields[index]*adjointFields[index]*mesh.volumes) \
-                                for index in range(0, len(fields))])
-            gradients = list(ad.gradients(scalarFields, gradientInputs)) + objGrad
-            for index in range(0, len(fields)):
-                gradients[index] /= mesh.volumes
-            self.gradient = self.function(fields + adjointFields + [self.dt, self.t0], \
-                            gradients, 'adjoint')
-            #self.tangent = self.function([stackedFields, stackedAdjointFields, self.dt], \
-            #                ad.Rop(newStackedFields, stackedFields, stackedAdjointFields), 'tangent')
-        #if config.compile:
-        #    exit()
-        pprint()
-
+        
     def function(self, inputs, outputs, name, **kwargs):
         return SolverFunction(inputs, outputs, self, name, **kwargs)
 
@@ -312,7 +295,7 @@ class Solver(object):
                 pprint()
 
             inputs = [phi.field for phi in fields] + \
-                     [np.array([[dt]]), np.array([[t]])] + \
+                     [np.array([[dt]])] + \
                      mesh.getTensor() + mesh.getScalar() + \
                      self.getBoundaryTensor(1) + \
                      [x[1] for x in self.extraArgs]

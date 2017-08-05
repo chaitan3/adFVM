@@ -867,7 +867,10 @@ class Mesh(object):
 
         for attr in Mesh.gradFields:
             value = getattr(self.parent, attr)
-            setattr(self, attr, Variable((self.nFaces,) + value.shape[1:]))
+            size = self.nFaces
+            if attr == 'volumesR':
+                size = self.nInternalFaces
+            setattr(self, attr, Variable((size,) + value.shape[1:]))
 
         for attr in Mesh.intFields:
             value = getattr(self.parent, attr)

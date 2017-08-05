@@ -190,7 +190,7 @@ class Adjoint(Solver):
                 dtca = np.zeros((mesh.nInternalCells, 1)).astype(config.precision)
                 obja = np.ones((1, 1)).astype(config.precision)
                 inputs = [phi.field for phi in previousSolution] + \
-                     [np.array([[dt]]), np.array([[t]])] + \
+                     [np.array([[dt]])] + \
                      mesh.getTensor() + mesh.getScalar() + \
                      primal.getBoundaryTensor(1) + \
                      [x[1] for x in primal.extraArgs] + \
@@ -219,7 +219,7 @@ class Adjoint(Solver):
                 #import pdb;pdb.set_trace()
 
                 # only mesh gradients supported for now
-                gradient, paramGradient = outputs[:n], outputs[n+2:n+2+len(mesh.gradFields)]
+                gradient, paramGradient = outputs[:n], outputs[n+1:n+1+len(mesh.gradFields)]
                 for index in range(0, len(fields)):
                     fields[index].field = gradient[index]
                 #print(fields[0].field.max())

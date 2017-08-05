@@ -88,12 +88,12 @@ class RCF(Solver):
         extraArgs = [x[0] for x in self.extraArgs]
         # init function
         
-        self.t0 = Variable((1,1))
+        #self.t0 = Variable((1,1))
         self.dt = Variable((1,1))
-        self.t = self.t0
+        #self.t = self.t0
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
         rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
-        self.map = Function('primal', [rho, rhoU, rhoE, self.dt, self.t0] + meshArgs + BCArgs + extraArgs, [rhoN, rhoUN, rhoEN, self.dtc, self.obj])
+        self.map = Function('primal', [rho, rhoU, rhoE, self.dt] + meshArgs + BCArgs + extraArgs, [rhoN, rhoUN, rhoEN, self.dtc, self.obj])
 
     def getBoundaryTensor(self, index=0):
         return super(RCF, self).getBoundaryTensor(index) + \

@@ -289,6 +289,7 @@ class Function(object):
                 gradients[out] = 1.
         children = self._children.copy()
         #print children.values()
+        # TODO: better handling of None, change integer grad to None
         def _diffFunc(out):
             assert children[out] == 0
             grads = []
