@@ -218,7 +218,8 @@ class Adjoint(Solver):
                 #print(x1, x2, x1-x2)
                 #import pdb;pdb.set_trace()
 
-                gradient, paramGradient = outputs[:n], outputs[n:]
+                # only mesh gradients supported for now
+                gradient, paramGradient = outputs[:n], outputs[n+2:n+2+len(mesh.gradFields)]
                 for index in range(0, len(fields)):
                     fields[index].field = gradient[index]
                 #print(fields[0].field.max())
