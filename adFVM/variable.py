@@ -303,18 +303,13 @@ class Function(object):
         def _diffFunc(out):
             assert children[out] == 0
             grads = []
-            if gradients[out] == None:
-                grads = tuple([None]*len(out.args))
-            else:
-                grads = out.grad(gradients[out])
+            grads = out.grad(gradients[out])
             #elif hasattr(out, 'grad'):
             #assert len(grads) == len(out.args)
             for grad, inp in zip(grads, out.args):
                 #if isinstance(inp, TensorFunctionOp):
                 #    assert grad.dtype == 'scalar'
-                if grad is None and inp not in gradients:
-                    gradients[inp] = None
-                elif inp not in gradients:
+                if inp not in gradients:
                     gradients[inp] = (grad,)
                 else:
                     gradients[inp] += (grad,)
