@@ -237,8 +237,10 @@ class Function(object):
         gradOutputs = []
         cache = FunctionOp._gradCache
         for out in self._outputs:
+            name = out.name + '_adj'
             grad = Variable(out.shape, out.dtype)
-            cache[out.name] = grad
+            grad.name = name
+            cache[name] = grad
             gradients[out] = (grad,)
             gradOutputs.append(grad)
         gradInputs = self._diff(self._outputs, self._inputs, gradients)
