@@ -115,6 +115,7 @@ class FunctionOp(object):
             inputs[-1].index = out.index
             inputs[-1].outputIndex = index
         inputs = list(sorted(inputs, key=lambda x: x.outputIndex))
+        gradOutputs = tuple(inputs)
         assert len(inputs) == n
         for out1, out2 in zip(inputs, _outputs):
             assert out1.shape == out2.shape
@@ -134,8 +135,7 @@ class FunctionOp(object):
         outputs = tuple(outputs)
         assert len(inputs) == len(self.args)
         assert len(outputs) == len(_inputs)
-        #print self.name, len(self.outputs), [(x.name, x.dtype) for x in self.outputs], [(x.name, x.dtype) for x in grad], [(x.name, x.dtype) for x in outputs[:len(self.outputs)]]
-        return inputs, outputs
+        return inputs, outputs, gradOutputs
 
     @classmethod
     def clear_cache(self):
@@ -169,13 +169,13 @@ class TensorFunctionOp(FunctionOp):
     
     def grad(self, grad):
         n = len(self.outputs)
-        args, outputs = self._grad(grad)
+        args, outputs, gradOutputs = self._grad(grad)
         gradInputs = TensorFunctionOp(self.func.grad, args, outputs, self.indices).outputs
         cache = FunctionOp._gradCache
         for out in gradInputs:
             cache[out.name] = out
         gradInputs[0].args[0].info = ['grad'] + self.info
-        return gradInputs
+        return gradInputs + gradOutputs
 
 
 class ExternalFunctionOp(FunctionOp):
@@ -202,7 +202,7 @@ class ExternalFunctionOp(FunctionOp):
         cache = FunctionOp._gradCache
         for out in gradInputs:
             cache[out.name] = out
-        return gradInputs
+        return gradInputs + grad
 
 class Function(object):
     _index = 0
@@ -274,9 +274,9 @@ class Function(object):
                 codeFile.write('\tarrType<{}, {}> {}({}, true);\n'.format(op.dtype, shape, op.name, _getName(op.shape[0]))) 
             elif isinstance(op, TensorFunctionOp):
                 codeFile.write('\t/* {} */\n'.format(op.info))
-                for index, inp in enumerate(op.args[:-len(op.outputs)]):
-                    if not isinstance(inp.shape[0], int) and op.func._inputsUsed[index]:
-                        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
+                #for index, inp in enumerate(op.args[:-len(op.outputs)]):
+                #    if not isinstance(inp.shape[0], int) and op.func._inputsUsed[index]:
+                #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
                 codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):
                 codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
@@ -293,34 +293,26 @@ class Function(object):
         codeFile.close()
 
     def _diff(self, outputs, inputs, gradients=None):
-        if gradients is None:
-            gradients = {}
-            for out in outputs:
-                gradients[out] = 1.
         children = self._children.copy()
-        #print children.values()
+        print children.values()
         # TODO: better handling of None, change integer grad to None
         def _diffFunc(out):
-            assert children[out] == 0
-            grads = []
+            #assert children[out] == 0
             grads = out.grad(gradients[out])
-            #elif hasattr(out, 'grad'):
-            #assert len(grads) == len(out.args)
+            assert len(grads) == len(out.args)
             for grad, inp in zip(grads, out.args):
-                #if isinstance(inp, TensorFunctionOp):
-                #    assert grad.dtype == 'scalar'
                 if inp not in gradients:
-                    gradients[inp] = (grad,)
-                else:
-                    gradients[inp] += (grad,)
+                    gradients[inp] = tuple()
+                gradients[inp] += (grad,)
                 children[inp] -= 1
                 if children[inp] == 0:
                     _diffFunc(inp)
         for out in outputs:
             if children[out] == 0:
                 _diffFunc(out)
-        #print children.values()
-        #print([len(gradients.get(inp, (None,))) for inp in inputs])
+        print children.values()
+        #exit(1)
+        print(self.name, [len(gradients.get(inp, (None,))) for inp in inputs])
         return [gradients.get(inp, (None,))[-1] for inp in inputs]
 
     def __call__(self, *args):
