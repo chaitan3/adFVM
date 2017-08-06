@@ -85,20 +85,21 @@ class Solver(object):
         return sum([phi.getTensor(index) for phi in self.fields], [])
 
     def boundaryInit(self, *fields):
-        fields = list(ExternalFunctionOp('mpi_init1', (), fields, empty=True).outputs)
+        fields = list(ExternalFunctionOp('mpi_init1', fields, fields, empty=True).outputs)
         for index, phi in enumerate(fields):
-            phi = ExternalFunctionOp('mpi_init2', (), (phi,)).outputs[0]
+            phi = ExternalFunctionOp('mpi_init2', (phi,), (phi,)).outputs[0]
             fields[index] = phi
-        return ExternalFunctionOp('mpi_init3', (), tuple(fields), empty=True).outputs
+        fields = tuple(fields)
+        return ExternalFunctionOp('mpi_init3', fields, fields, empty=True).outputs
 
     def boundaryEnd(self, *fields):
-        return ExternalFunctionOp('mpi_end', (), fields, empty=True).outputs
+        return ExternalFunctionOp('mpi_end', fields, fields, empty=True).outputs
 
     def boundary(self, *fields):
         fields = list(fields)
         for index, phi in enumerate(fields):
             phi = self.fields[index].completeField(phi)
-            phi = ExternalFunctionOp('mpi', (), (phi,)).outputs[0]
+            phi = ExternalFunctionOp('mpi', (phi,), (phi,)).outputs[0]
             fields[index] = phi
         return tuple(fields)
 
@@ -309,7 +310,6 @@ class Solver(object):
             outputs = self.map(*inputs)
             newFields, dtc, objective = outputs[:3], outputs[3], outputs[4]
             objective = objective[0,0]
-            #print objective
             local = remote = 0
             #exit(1)
 

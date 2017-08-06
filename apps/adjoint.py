@@ -208,7 +208,6 @@ class Adjoint(Solver):
                 #print(fields[0].field.max())
                 outputs = self.map(*inputs)
                 n = len(fields)
-                gradient = outputs
 
                 #print(sum([(1e-3*phi).sum() for phi in gradient]))
                 #inp1 = inputs[:3] + inputs[-3:-1]

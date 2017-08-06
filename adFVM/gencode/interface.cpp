@@ -668,14 +668,14 @@ static map<void *, scalar *> mpi_reqBuf;
 
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi(std::vector<arrType<dtype, shape1, shape2>*> phiP) {
-    arrType<dtype, shape1, shape2>& phi = *(phiP[0]);
+    arrType<dtype, shape1, shape2>& phi = *(phiP[1]);
     const Mesh& mesh = *meshp;
     //MPI_Barrier(MPI_COMM_WORLD);
 
     dtype* phiBuf = NULL;
     if (mesh.nRemotePatches > 0) {
         phiBuf = new dtype[(mesh.nCells-mesh.nLocalCells)*shape1*shape2];
-        mpi_reqBuf[phiP[0]] = phiBuf;
+        mpi_reqBuf[phiP[1]] = phiBuf;
     }
 
     for (auto& patch: mesh.boundary) {
@@ -712,14 +712,14 @@ void Function_mpi(std::vector<arrType<dtype, shape1, shape2>*> phiP) {
 }
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi_grad(std::vector<arrType<dtype, shape1, shape2>*> phiP) {
-    arrType<dtype, shape1, shape2>& phi = *(phiP[0]);
+    arrType<dtype, shape1, shape2>& phi = *(phiP[1]);
     const Mesh& mesh = *meshp;
     //MPI_Barrier(MPI_COMM_WORLD);
 
     dtype* phiBuf = NULL;
     if (mesh.nRemotePatches > 0) {
         phiBuf = new dtype[(mesh.nCells-mesh.nLocalCells)*shape1*shape2];
-        mpi_reqBuf[phiP[0]] = phiBuf;
+        mpi_reqBuf[phiP[1]] = phiBuf;
     }
 
     for (auto& patch: mesh.boundary) {
@@ -800,9 +800,9 @@ void Function_mpi_init2(std::vector<arrType<dtype, shape1, shape2>*> phiP) {};
 
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi_init2_grad(std::vector<arrType<dtype, shape1, shape2>*> phiP) {
-    arrType<dtype, shape1, shape2>& phi = *(phiP[0]);
+    arrType<dtype, shape1, shape2>& phi = *(phiP[1]);
     const Mesh& mesh = *meshp;
-    scalar *phiBuf = mpi_reqBuf[phiP[0]];
+    scalar *phiBuf = mpi_reqBuf[phiP[1]];
     //MPI_Barrier(MPI_COMM_WORLD);
     for (auto& patch: mesh.boundary) {
         string patchType = patch.second.at("type");
