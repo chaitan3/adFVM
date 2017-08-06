@@ -125,10 +125,12 @@ class FunctionOp(object):
         inputs = _inputs + tuple(inputs)
         outputs = []
         for inp in _inputs:
-            if inp.name in cache:
-                out = cache[inp.name]
+            name = inp.name + '_adj'
+            if name in cache:
+                out = cache[name]
             else:
                 out = Zeros(inp.shape, inp.dtype)
+                out.name = name
                 #cache[inp.name] = out
             outputs.append(out[inp.index])
             #cache[inp.name] = outputs[-1]
