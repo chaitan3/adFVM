@@ -143,12 +143,9 @@ class Adjoint(Solver):
                     mesh.origMesh.boundary = lastMesh.boundarydata[m:].reshape(-1,1)
                 else:
                     lastSolution = solutions[-1]
-                #fields = objectiveGradient(*lastSolution)
-                #fields = [phi/(nSteps + 1) for phi in fields]
-                #fields = self.getFields(fields, IOField)
 
                 fieldsCopy = [phi.copy() for phi in fields]
-                self.writeFields(fieldsCopy, t, skipProcessor=True)
+                self.writeFields(fields, t, skipProcessor=True)
                 fields = fieldsCopy
 
             for step in range(0, writeInterval):
@@ -173,16 +170,6 @@ class Adjoint(Solver):
                     pprint('Time step', adjointIndex)
                 else:
                     pprint('Time step', adjointIndex)
-
-                #inputs = [phi.field for phi in previousSolution] + \
-                #         mesh.getTensor() + mesh.getScalar() + \
-                #         primal.getBoundaryTensor(1)
-                #inputs = list(primal.mapBoundary(*inputs)) + \
-                #         mesh.getTensor() + mesh.getScalar() + \
-                #         primal.getBoundaryTensor(1) + \
-                #         [np.zeros((mesh.nCells,) + dims) for dims in self.dimensions]
-                #print(primal.mapBoundary.grad(*inputs))
-                #exit(1)
 
                 n = len(fields)
                 for index in range(0, n):
