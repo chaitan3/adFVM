@@ -108,7 +108,7 @@ class FunctionOp(object):
         for out1, out2 in zip(grad, [_outputs[i] for i in indices]):
             inputs.append(out1[out2.index])
             inputs[-1].outputIndex = out1.outputIndex
-        extraIndices = set(range(0, len(self.outputs)))-indices
+        extraIndices = set(range(0, n))-indices
         for index in extraIndices:
             out = _outputs[index]
             inputs.append(Zeros(out.shape, out.dtype))
@@ -122,7 +122,7 @@ class FunctionOp(object):
             assert out1.dtype == out2.dtype
             assert out1.index == out2.index
         cache = FunctionOp._gradCache
-        inputs = _inputs + tuple(inputs)
+        inputs = _inputs + gradOutputs
         outputs = []
         for inp in _inputs:
             name = inp.name + '_adj'
@@ -138,6 +138,11 @@ class FunctionOp(object):
         assert len(inputs) == len(self.args)
         assert len(outputs) == len(_inputs)
         return inputs, outputs, gradOutputs
+
+    def insert_cache(self, gradInputs):
+        cache = FunctionOp._gradCache
+        for out in gradInputs:
+            cache[out.name] = out
 
     @classmethod
     def clear_cache(self):
@@ -167,15 +172,12 @@ class TensorFunctionOp(FunctionOp):
         #for out in self.outputs:
         #    callString += '{}, '.format(out.name)
         return callString[:-2]
-
     
     def grad(self, grad):
         n = len(self.outputs)
         args, outputs, gradOutputs = self._grad(grad)
         gradInputs = TensorFunctionOp(self.func.grad, args, outputs, self.indices).outputs
-        cache = FunctionOp._gradCache
-        for out in gradInputs:
-            cache[out.name] = out
+        self.insert_cache(gradInputs)
         gradInputs[0].args[0].info = ['grad'] + self.info
         return gradInputs + gradOutputs
 
@@ -198,13 +200,11 @@ class ExternalFunctionOp(FunctionOp):
 
     def grad(self, grad):
         n = len(self.outputs)
-        args, outputs = self._grad(grad)
+        args, outputs, gradOutputs = self._grad(grad)
         name = self.name[len('Function_'):] + '_grad'
         gradInputs = ExternalFunctionOp(name, args, outputs, self.empty).outputs
-        cache = FunctionOp._gradCache
-        for out in gradInputs:
-            cache[out.name] = out
-        return gradInputs + grad
+        self.insert_cache(gradInputs)
+        return gradInputs + gradOutputs
 
 class Function(object):
     _index = 0

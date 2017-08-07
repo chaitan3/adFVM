@@ -98,9 +98,9 @@ def objective(fields, solver):
     b = -0.71e-3/(120*k)/2000.
 
     # MPI ALLREDUCE
-    #inputs = (pl, w, ht, w2)
-    #outputs = tuple([tensor.Zeros(x.shape) for x in inputs])
-    #pl, w, ht, w2 = tensor.ExternalFunctionOp('mpi_allreduce', inputs, outputs).outputs
+    inputs = (pl, w, ht, w2)
+    outputs = tuple([tensor.Zeros(x.shape) for x in inputs])
+    pl, w, ht, w2 = tensor.ExternalFunctionOp('mpi_allreduce', inputs, outputs).outputs
 
     # then elemwise
     def _combine(pl, w, ht, w2):
@@ -256,7 +256,7 @@ primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective)
 getPlane(primal)
 getWeights(primal)
 
-def makePerturb(param, eps=1e-4):
+def makePerturb(param, eps=1e-7):
     def perturbMesh(fields, mesh, t):
         if not hasattr(perturbMesh, 'perturbation'):
             ## do the perturbation based on param and eps

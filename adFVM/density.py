@@ -331,7 +331,7 @@ class RCF(Solver):
         outputs = list(self.boundaryInit(*outputs))
         for index, phi in enumerate(outputs):
             phi = self.gradFields[index].updateGhostCells(phi)
-            #phi = ExternalFunctionOp('mpi', (phi,), (phi,)).outputs[0]
+            phi = ExternalFunctionOp('mpi', (phi,), (phi,)).outputs[0]
             outputs[index] = phi
         outputs = self.boundaryEnd(*outputs)
         gradU, gradT, gradp = outputs
