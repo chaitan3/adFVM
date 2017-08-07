@@ -45,6 +45,7 @@ def timeStepper(equation, initFields, solver):
         i = kwargs['i']
         currFields = [0]*n
         LHS, fields, dt = args[:n], args[n:-1], args[-1]
+        dt = dt.scalar()
         for j in range(0, i+1):
             for index in range(0, n):
                 currFields[index] += alpha[i,j]*fields[j*n+index]

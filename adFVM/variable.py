@@ -298,7 +298,7 @@ class Function(object):
 
     def _diff(self, outputs, inputs, gradients=None):
         children = self._children.copy()
-        print children.values()
+        #print children.values()
         # TODO: better handling of None, change integer grad to None
         def _diffFunc(out):
             #assert children[out] == 0
@@ -314,9 +314,9 @@ class Function(object):
         for out in outputs:
             if children[out] == 0:
                 _diffFunc(out)
-        print children.values()
+        #print children.values()
         #exit(1)
-        print(self.name, [len(gradients.get(inp, (None,))) for inp in inputs])
+        #print(self.name, [len(gradients.get(inp, (None,))) for inp in inputs])
         return [gradients.get(inp, (None,))[-1] for inp in inputs]
 
     def __call__(self, *args):

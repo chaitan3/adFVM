@@ -158,6 +158,9 @@ class Tensor(ArithBase):
         assert self.shape == (1,)
         return Tensor.collate(self, Tensor((1,), [ConstantOp(0)]))
 
+    def scalar(self):
+        return self.extract(Tensor((1,), [ConstantOp(0)]))
+
     @classmethod
     def collate(cls, *args):
         n = len(args)//2
@@ -309,10 +312,7 @@ class TensorFunction(object):
             names[op] = 'Intermediate_{}'.format(index)
             code = ''
             #print names[op], index, op, len(op.args)
-            if isinstance(op, ConstScalar) and not isinstance(op, OpBase):
-                tensorIndex = self._inputTensorIndices[op]
-                code = '{} {} = {}[0];'.format(dtype, names[op], tensorIndex[0])
-            elif isinstance(op, Scalar) and not isinstance(op, OpBase):
+            if isinstance(op, Scalar) and not isinstance(op, OpBase):
                 tensorIndex = self._inputTensorIndices[op]
                 if not tensorIndex[3]:
                     code = '{} {} = {}[i*{} + {}];'.format(dtype, names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
@@ -321,6 +321,7 @@ class TensorFunction(object):
                 code = '{} {} = {}[i*{} + {}];'.format('integer', names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
             elif isinstance(op, Extract):
                 a, b = op.args
+                assert b.dtype == 'integer'
                 tensorIndex = self._inputTensorIndices[a]
                 assert tensorIndex[3]
                 code = '{} {} = {}[{}*{} + {}];'.format(dtype, names[op], tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2])
@@ -331,6 +332,7 @@ class TensorFunction(object):
                 n = len(op.args)//2
                 for i in range(0, n):
                     a, b = op.args[2*i], op.args[2*i+1]
+                    assert b.dtype == 'integer'
                     code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                 #print code
             else:
@@ -362,9 +364,7 @@ def Tensorize(func):
                 tensorArgs = []
                 #print len(args), len(kwargs)
                 for x in args:
-                    if x.shape[0] == 1:
-                        tensorArgs.append(Tensor((1,), scalars=[ConstScalar()]))
-                    elif x.dtype == 'scalar':
+                    if x.dtype == 'scalar':
                         tensorArgs.append(Tensor(x.shape[1:]))
                     elif x.dtype == 'integer':
                         tensorArgs.append(Tensor(x.shape[1:], scalars=[IntegerScalar()]))

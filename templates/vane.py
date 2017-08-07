@@ -104,6 +104,8 @@ def objective(fields, solver):
 
     # then elemwise
     def _combine(pl, w, ht, w2):
+        pl, w = pl.scalar(), w.scalar()
+        ht, w2 = ht.scalar(), w2.scalar()
         obj = pl/w
         obj2 = ht/w2
         return a*obj + b*obj2

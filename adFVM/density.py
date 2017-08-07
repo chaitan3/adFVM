@@ -1,5 +1,5 @@
 from . import config, riemann, interp
-from .tensor import Tensorize, ConstScalar, ExternalFunctionOp
+from .tensor import Tensorize, ExternalFunctionOp
 from .variable import Variable, Function, Zeros
 from .field import Field, IOField, CellField
 from .op import  div, absDiv, snGrad, grad, internal_sum

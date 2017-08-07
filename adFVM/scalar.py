@@ -93,14 +93,12 @@ class Scalar(ArithBase):
     def _unaryOp(self, op):
         return unaryOpClass[op](op, self)
 
-class ConstScalar(Scalar):
-    pass
-
 class OpBase(Scalar):
     _cache = {}
     def __new__(cls, *args, **kwargs):
         assert len(kwargs) == 0
-        key = (cls,) + args
+        #key = (cls,) + args
+        key = (cls,) + args + tuple([type(x) for x in args])
         if key in OpBase._cache:
             obj = OpBase._cache[key]
         else:
