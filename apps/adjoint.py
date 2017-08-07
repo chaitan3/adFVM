@@ -41,7 +41,7 @@ class Adjoint(Solver):
     def createFields(self):
         fields = []
         for name, dims in zip(self.names, self.dimensions):
-            phi = np.zeros((self.mesh.origMesh.nInternalCells, dims[0]), config.precision)
+            phi = np.zeros((self.mesh.nInternalCells, dims[0]), config.precision)
             fields.append(IOField(name, phi, dims, self.mesh.defaultBoundary))
         self.fields = fields
         for phi in self.fields:
@@ -106,8 +106,6 @@ class Adjoint(Solver):
     
     def run(self, readFields=False):
 
-        
-
         mesh = self.mesh
         result, firstCheckpoint = self.result, self.firstCheckpoint
         timeSteps = self.timeSteps
@@ -133,10 +131,7 @@ class Adjoint(Solver):
             t = timeSteps[primalIndex, 0]
             dts = timeSteps[primalIndex:primalIndex+writeInterval+1, 1]
 
-            #self.fields = fields
-            #print(fields[0].field.max())
             solutions = primal.run(startTime=t, dt=dts, nSteps=writeInterval, mode='forward', reportInterval=reportInterval)
-            #print(fields[0].field.max())
 
             pprint('ADJOINT BACKWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
             pprint('Time marching for', ' '.join(self.names))
@@ -152,7 +147,9 @@ class Adjoint(Solver):
                 #fields = [phi/(nSteps + 1) for phi in fields]
                 #fields = self.getFields(fields, IOField)
 
-                self.writeFields(fields, t, skipProcessor=True)
+                fieldsCopy = [phi.copy() for phi in fields]
+                self.writeFields(fieldsCopy, t, skipProcessor=True)
+                fields = fieldsCopy
 
             for step in range(0, writeInterval):
                 report = (step % reportInterval) == 0
@@ -187,6 +184,10 @@ class Adjoint(Solver):
                 #print(primal.mapBoundary.grad(*inputs))
                 #exit(1)
 
+                n = len(fields)
+                for index in range(0, n):
+                    fields[index].field *= mesh.volumes
+
                 dtca = np.zeros((mesh.nInternalCells, 1)).astype(config.precision)
                 obja = np.ones((1, 1)).astype(config.precision)
                 inputs = [phi.field for phi in previousSolution] + \
@@ -197,17 +198,7 @@ class Adjoint(Solver):
                      [phi.field for phi in fields] + \
                      [dtca, obja]
 
-                #print(len(inputs), len(mesh.getTensor()), len(mesh.getScalar()), len(primal.extraArgs), len(primal.getBoundaryTensor(1)))
-
-                #inputs = [phi.field for phi in previousSolution] + \
-                #         [phi[1] for phi in primal.sourceTerms] + \
-                #         [phi.field for phi in fields] + [dt, t] + \
-                #         [(parameters[0] == 'source')*1]
-
-                #outputs = self.map(*inputs)
-                #print(fields[0].field.max())
                 outputs = self.map(*inputs)
-                n = len(fields)
 
                 #print(sum([(1e-3*phi).sum() for phi in gradient]))
                 #inp1 = inputs[:3] + inputs[-3:-1]
@@ -219,8 +210,8 @@ class Adjoint(Solver):
 
                 # only mesh gradients supported for now
                 gradient, paramGradient = outputs[:n], outputs[n+1:n+1+len(mesh.gradFields)]
-                for index in range(0, len(fields)):
-                    fields[index].field = gradient[index]
+                for index in range(0, n):
+                    fields[index].field = gradient[index]/mesh.volumes
                 #print(fields[0].field.max())
 
                 if self.scaling:

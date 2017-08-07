@@ -166,7 +166,7 @@ class Solver(object):
     def writeFields(self, fields, t, **kwargs):
         n = len(self.names)
         fields, rest = fields[:n], fields[n:]
-        x = fields
+        oldFields = fields
         fields = self.initFields(fields)
         #print(x[0].field.max())
         for phi, phiN in zip(self.fields, fields):

@@ -121,6 +121,9 @@ class Field(object):
         fieldMax = parallel.max(field, allreduce=False)
         pprint(' min:', fieldMin, 'max:', fieldMax)
 
+    def copy(self):
+        return self.__class__(self.name, self.field[:], self.dimensions)
+
     def cross(self, phi):
         assert self.dimensions == (3,)
         assert phi.dimensions == (3,)
