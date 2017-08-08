@@ -8,6 +8,11 @@ import nlopt
 from pyDOE import *
 import gp_noder
 
+beta = 1.
+beta = 0.
+beta = 0.5
+beta = 2.0
+
 def _sanitize(x):
     if isinstance(x, list):
         x = np.array(x)
@@ -225,7 +230,7 @@ class ExpectedImprovement(AcquisitionFunction):
 
     def optimize(self):
         res = self.gp.posterior_min()
-        self.fmin = res[1] + 1.*self.gp.evaluate(res[0])[1][0][0]**0.5
+        self.fmin = res[1] + beta*self.gp.evaluate(res[0])[1][0][0]**0.5
         res = _optimize(lambda x: -self.evaluate(x)[0], self.gp.bounds, cons=self.gp.cons)
         return res[0]
 
