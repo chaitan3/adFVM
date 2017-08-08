@@ -45,6 +45,7 @@ class arrType {
         this->strides[0] = shape1*this->strides[1];
         //cout << endl;
         this -> size = this->strides[0]*shape;
+        this -> data = NULL;
         this -> ownData = true;
     }
 
@@ -53,12 +54,6 @@ class arrType {
             delete[] this -> data; 
             this -> data = NULL;
         }
-    }
-
-    void move(arrType&& that) {
-        this->init(that.shape);
-        this->data = that.data;
-        that.ownData = false;
     }
 
     arrType () {
@@ -187,6 +182,80 @@ class arrType {
     }
 
 };
+
+#ifdef GPU
+template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
+class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
+    public:
+    gpuArrType(const integer shape, bool zero=false) {
+        this -> init(shape);
+        cudaMalloc(&this->data, this->size*sizeof(dtype));
+        if (zero) 
+            this -> zero();
+    }
+    void destroy() {
+        if (this->ownData && this->data != NULL) {
+            cudaFree(this->data);
+            this -> data = NULL;
+        }
+    }
+    void zero() {
+        cudaMemset(this->data, 0, this->size*sizeof(dtype));
+    }
+    dtype* toHost() const {
+        dtype* hdata = new dtype[this->size];
+        cudaMemcpy(hdata, this->data, this->size*sizeof(dtype), cudaMemcpyDeviceToHost);
+        return hdata;
+    }
+    void toDevice(dtype* data) {
+        cudaMalloc(&this->data, this->size*sizeof(dtype));
+        cudaMemcpy(this->data, data, this->size*sizeof(dtype), cudaMemcpyHostToDevice);
+        this->ownData = true;
+    }
+    void info() const {
+        dtype minPhi, maxPhi;
+        minPhi = 1e30;
+        maxPhi = -1e30;
+        integer minLoc = -1, maxLoc = -1;
+        dtype* hdata = this->toHost();
+        for (integer i = 0; i < this->size; i++) {
+            if (hdata[i] < minPhi) {
+                minPhi = hdata[i];
+                minLoc = i;
+            }
+            if (hdata[i] > maxPhi) {
+                maxPhi = hdata[i];
+                maxLoc = i;
+            }
+
+        }
+        delete[] hdata;
+        cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
+        //cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
+    }
+    gpuArrType() : arrType<dtype, shape1, shape2, shape3>() {}
+    gpuArrType& operator=(gpuArrType&& that) {
+        assert(this != &that);
+        this->destroy();
+        //this->move(that);
+        this->init(that.shape);
+        this->data = that.data;
+        this->ownData = that.ownData;
+        that.ownData = false;
+        return *this;
+
+    }
+    ~gpuArrType() {
+        this->destroy();
+    };
+};
+#endif
+typedef gpuArrType<scalar> gvec;
+typedef gpuArrType<scalar, 3> gmat;
+
+typedef gpuArrType<integer> givec;
+typedef gpuArrType<integer, 3> gimat;
+
 
 typedef arrType<scalar> vec;
 typedef arrType<scalar, 3> mat;

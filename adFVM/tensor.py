@@ -350,7 +350,10 @@ class TensorFunction(object):
                 for i in range(0, n):
                     a, b = op.args[2*i], op.args[2*i+1]
                     assert b.dtype == 'integer'
-                    code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
+                    if Function.gpu:
+                        code += 'atomicAdd(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
+                    else:
+                        code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                 #print code
             else:
                 code = op.c_code(names)

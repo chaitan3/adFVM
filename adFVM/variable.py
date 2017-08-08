@@ -215,6 +215,11 @@ class Function(object):
     funcs = []
 
     def __init__(self, name, inputs, outputs, grad=True):
+        if Function.gpu:
+            self.arrType = 'gpuArrType'
+        else:
+            self.arrType = 'arrType'
+            #self.arrType = 'gpuArrType'
         self.name = name
         self._inputs = inputs
         self._outputs = outputs
@@ -260,7 +265,7 @@ class Function(object):
                 continue
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
-            codeFile.write('\tarrType<{}, {}> {};\n'.format(inp.dtype, shape, inp.name))
+            codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
             codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0});\n'.format(inp.name))
         codeFile.write('\n')
 
@@ -278,7 +283,7 @@ class Function(object):
                 assert len(op.args) == 0
                 #codeFile.write('\t// init var {}\n'.format(op.name)) 
                 shape = ','.join([str(x) for x in op.shape[1:]])
-                codeFile.write('\tarrType<{}, {}> {}({}, true);\n'.format(op.dtype, shape, op.name, _getName(op.shape[0]))) 
+                codeFile.write('\t{}<{}, {}> {}({}, true);\n'.format(self.arrType, op.dtype, shape, op.name, _getName(op.shape[0]))) 
             elif isinstance(op, TensorFunctionOp):
                 codeFile.write('\t/* {} */\n'.format(op.info))
                 #for index, inp in enumerate(op.args[:-len(op.outputs)]):

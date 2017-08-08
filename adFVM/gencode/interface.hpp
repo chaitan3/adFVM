@@ -138,6 +138,70 @@ PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
     return array;
 }
 
+#ifdef GPU
+template <typename dtype, integer shape1, integer shape2>
+void getArray(PyArrayObject *array, gpuArrType<dtype, shape1, shape2> & tmp) {
+    assert(array);
+    int nDims = PyArray_NDIM(array);
+    npy_intp* dims = PyArray_DIMS(array);
+    if (nDims > 1) {
+        assert(dims[1] == shape1);
+        //cout << dims[1] << " " << shape1 << endl;
+    }
+    if (nDims > 2) {
+        assert(dims[2] == shape2);
+        //cout << dims[2] << " " << shape2 << endl;
+    }
+    assert(PyArray_IS_C_CONTIGUOUS(array));
+    assert(PyArray_ITEMSIZE(array) == sizeof(dtype));
+
+    dtype *data = (dtype *) PyArray_DATA(array);
+
+    //arrType<dtype, shape1, shape2> test(dims[0], data);
+    //test.info();
+
+    gpuArrType<dtype, shape1, shape2> result(dims[0], NULL);
+    result.toDevice(data);
+    //result.info();
+    //cout << rows << " " << cols << endl;
+    //if ((typeid(dtype) != type(uscalar)) && (typeid(dtype) != typeid(integer))) {
+    tmp = move(result);
+    //result.ownData = false;
+}
+
+template <typename dtype, integer shape1>
+PyObject* putArray(gpuArrType<dtype, shape1> &tmp) {
+    npy_intp shape[2] = {tmp.shape, shape1};
+    dtype* data = tmp.toHost();
+    PyObject *array;
+    if (typeid(dtype) == typeid(double)) {
+        array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
+    } else if (typeid(dtype) == typeid(float)) {
+        array = PyArray_SimpleNewFromData(2, shape, NPY_FLOAT, data);
+    } else {
+        array = PyArray_SimpleNewFromData(2, shape, NPY_INT32, data);
+    }
+    PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
+    return array;
+}
+template <typename dtype, integer shape1, integer shape2>
+PyObject* putArray(gpuArrType<dtype, shape1, shape2> &tmp) {
+    npy_intp shape[3] = {tmp.shape, shape1, shape2};
+    dtype* data = tmp.toHost();
+
+    PyObject *array;
+    if (typeid(dtype) == typeid(double)) {
+        array = PyArray_SimpleNewFromData(3, shape, NPY_DOUBLE, data);
+    } else if (typeid(dtype) == typeid(float)) {
+        array = PyArray_SimpleNewFromData(3, shape, NPY_FLOAT, data);
+    } else {
+        array = PyArray_SimpleNewFromData(3, shape, NPY_INT32, data);
+    }
+    PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
+    return array;
+}
+#endif
+
 
 //template<typename dtype, integer shape1, integer shape2>
 // PyObject * putArray(arrType<dtype, shape1, shape2>&);
