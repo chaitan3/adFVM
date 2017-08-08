@@ -5,8 +5,6 @@ import os
 from os.path import expanduser
 home = expanduser("~")
 
-#os.environ['CC'] = 'ccache mpicc'
-#os.environ['CXX'] = 'mpicxx'
 os.environ['CC'] = 'ccache mpicc'
 os.environ['CXX'] = 'mpicxx'
 #os.environ['CC'] = '/home/talnikar/local/bin/gcc'
@@ -15,7 +13,7 @@ os.environ['CXX'] = 'mpicxx'
 incdirs = [np.get_include()]
 libdirs = []
 libs = []
-sources = ['interface.cpp', 'matop.cpp', 'code.cpp']
+sources = ['interface.cpp', 'matop.cpp', 'kernel.cpp', 'code.cpp']
 
 #incdirs += [home + '/.local/include']
 #libdirs += [home + '/.local/lib']

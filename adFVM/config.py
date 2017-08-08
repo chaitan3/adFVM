@@ -52,10 +52,10 @@ def stop():
 
 # compute type
 if not user.use_gpu:
-    device = 'cpu'
+    gpu = False
     precision = np.float64
 else:
-    device = 'gpu0'
+    gpu = True
     precision = np.float32
 
 compile = user.compile and (parallel.rank == 0)

@@ -2,7 +2,7 @@
 import os, sys, subprocess, shutil
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 
-from . import config, parallel
+from . import config
 from .scalar import *
 _dtype = dtype
 
@@ -209,7 +209,10 @@ class ExternalFunctionOp(FunctionOp):
 class Function(object):
     _index = 0
     _module = None
+    _init = False
     codeDir = os.path.dirname(__file__) + '/gencode/'
+    gpu = False
+    codeFile = 'code.cpp'
     funcs = []
 
     def __init__(self, name, inputs, outputs, grad=True):
@@ -225,6 +228,9 @@ class Function(object):
             self.grad = self._getAdjoint()
 
         Function.funcs.append(self.name)
+        if not Function._init:
+            Function.clean()
+            Function._init = True
 
     def _getAdjoint(self):
         #gradOutputs = []
@@ -247,7 +253,7 @@ class Function(object):
         return Function(self.name + '_grad', self._inputs + gradOutputs, gradInputs, grad=False)
         
     def _genCode(self, outputs):
-        codeFile = open(self.codeDir + 'code.cpp', 'a')
+        codeFile = open(self.codeDir + self.codeFile, 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args) {{\n'.format(self.name))
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
@@ -334,17 +340,13 @@ class Function(object):
     def clean(self):
         if not config.compile:
             return
-        #try:
-        #    os.remove(self.codeDir + 'code.cpp')
-        #except:
-        #    pass
-        with open(self.codeDir + 'code.cpp', 'a') as f:
+        with open(self.codeDir + self.codeFile, 'w') as f:
             f.write('#include "code.hpp"\n')
 
     @classmethod
     def compile(self):
         if config.compile:
-            with open(self.codeDir + 'code.cpp', 'a') as f:
+            with open(self.codeDir + self.codeFile, 'a') as f:
                 f.write("""PyMethodDef Methods[] = {
         {"initialize",  initSolver, METH_VARARGS, "Execute a shell command."},
         {"viscosity",  viscosity, METH_VARARGS, "Execute a shell command."},
@@ -360,9 +362,10 @@ class Function(object):
 """)
             if config.py3:
                 subprocess.check_call(['make', 'python3'], cwd=self.codeDir)
+            elif Function.gpu:
+                subprocess.check_call(['make', 'gpu'], cwd=self.codeDir)
             else:
                 subprocess.check_call(['make'], cwd=self.codeDir)
-        parallel.mpi.Barrier()
         sys.path.append(self.codeDir)
         import interface as mod
         Function._module = mod

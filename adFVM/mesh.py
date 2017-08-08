@@ -529,8 +529,7 @@ class Mesh(object):
         # uses neighbour
         self.cellFaces = self.getCellFaces()     # nInternalCells
         # time consuming 
-        if config.device == 'cpu':
-            self.cells = getCells(self)
+        self.cells = getCells(self, np.zeros((1,), config.precision))
 
     def populateSizes(self):
         self.nInternalFaces = len(self.neighbour)

@@ -96,6 +96,7 @@ void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp) {
         //cout << dims[2] << " " << shape2 << endl;
     }
     assert(PyArray_IS_C_CONTIGUOUS(array));
+    assert(PyArray_ITEMSIZE(array) == sizeof(dtype));
 
     arrType<dtype, shape1, shape2> result(dims[0], (dtype *) PyArray_DATA(array));
     //cout << rows << " " << cols << endl;

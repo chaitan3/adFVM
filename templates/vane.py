@@ -28,8 +28,8 @@ def objectiveHeatTransfer(U, T, p, weight, *mesh, **options):
 
 # pressure loss
 def getPlane(solver):
-    point = np.array([0.052641,-0.1,0.005])
-    normal = np.array([1.,0.,0.])
+    point = np.array([0.052641,-0.1,0.005]).astype(config.precision)
+    normal = np.array([1.,0.,0.]).astype(config.precision)
     interCells, interArea = intersectPlane(solver.mesh, point, normal)
     interCells = interCells.astype(np.int32)
     assert interCells.shape[0] == interArea.shape[0]

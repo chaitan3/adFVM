@@ -14,11 +14,5 @@ def norm(a, axis, **kwuser):
 
 
 def add_at(a, indices, b):
-    try:
-        np.add.at(a, indices, b)
-    except:
-        assert indices.dtype == np.int32
-        assert a.dtype == np.float64
-        assert b.dtype == np.float64
-        cfuncs.add_at(a, indices, b)
-
+    np.add.at(a, indices, b)
+    

@@ -4,7 +4,7 @@ import numpy as np
 import operator
 import numbers
 
-from . import config, parallel
+from . import config
 from .scalar import *
 from .variable import *
 
@@ -196,8 +196,9 @@ class Tensor(ArithBase):
 
 class TensorFunction(object):
     _index = 0
-    _module = None
-    extraCode = ""
+    _init = False
+    codeFile = 'kernel.cpp'
+    headerFile = 'kernel.hpp'
 
     def __init__(self, name, inputs, outputs, grad=True):
         index = TensorFunction._index
@@ -230,6 +231,11 @@ class TensorFunction(object):
         OpBase.clear_cache()
         if grad:
             self.grad = self._getAdjoint()
+
+        if not TensorFunction._init:
+            TensorFunction.clean()
+            TensorFunction._init = True
+
 
     def _getAdjoint(self):
         gradOutputs = []
@@ -295,14 +301,18 @@ class TensorFunction(object):
 
     def _genCode(self, inputs, outputs, children):
         sortedOps = graphTopologicalSort(outputs, children)
-        codeFile = open(Function.codeDir + 'code.cpp', 'a')
+        codeFile = open(Function.codeDir + self.codeFile, 'a')
+        headerFile = open(Function.codeDir + self.headerFile, 'a')
 
         memString = '' 
         for inp in self._inputTensors:
             memString += 'const {}* {}, '.format(inp.dtype, inp.name)
         for out in self._outputTensors:
             memString += '{}* {}, '.format(out.dtype, out.name)
-        codeFile.write('\nvoid {}(int n, {}) {}\n'.format(self.name, memString[:-2], '{'))
+        memString = '\nvoid {}(int n, {})'.format(self.name, memString[:-2])
+        headerFile.write(memString + ';')
+        codeFile.write(memString)
+        codeFile.write(' {\n')
         #codeFile.write('\tlong long start = current_timestamp();\n')
         codeFile.write('\tfor (integer i = 0; i < n; i++) {\n')
         names = {}
@@ -347,7 +357,15 @@ class TensorFunction(object):
         #codeFile.write('\tlong long end = current_timestamp(); mil += end-start; printf("c module {}: %lld\\n", mil);\n'.format(self.name))
         codeFile.write('}\n')
         codeFile.close()
+        headerFile.close()
         return
+
+    @classmethod
+    def clean(self):
+        if not config.compile:
+            return
+        with open(Function.codeDir + self.codeFile, 'w') as f:
+            f.write('#include "code.hpp"\n')
 
 
 import random, string
@@ -364,7 +382,7 @@ def Tensorize(func):
                 tensorArgs = []
                 #print len(args), len(kwargs)
                 for x in args:
-                    if x.dtype == 'scalar':
+                    if x.dtype == dtype:
                         tensorArgs.append(Tensor(x.shape[1:]))
                     elif x.dtype == 'integer':
                         tensorArgs.append(Tensor(x.shape[1:], scalars=[IntegerScalar()]))

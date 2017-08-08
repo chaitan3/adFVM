@@ -1,5 +1,4 @@
 #include "common.hpp"
-#include "density.hpp"
 
 #ifndef MATOP_HPP
 #define MATOP_HPP
