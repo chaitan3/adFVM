@@ -289,7 +289,8 @@ class Function(object):
                 #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
                 codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):
-                codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
+                if not Function.gpu:
+                    codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
             elif not isinstance(op, Variable):
                 raise Exception('op not recognised', op)
 
