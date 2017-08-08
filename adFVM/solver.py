@@ -64,7 +64,7 @@ class Solver(object):
         self.compileInit()
         self.compileSolver()
         Function.compile()
-        Function._module.initialize(*([self.mesh.origMesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
+        Function._module.initialize(*([self.mesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
         return
         
     def function(self, inputs, outputs, name, **kwargs):
@@ -298,10 +298,12 @@ class Solver(object):
                 pprint()
 
             inputs = [phi.field for phi in fields] + \
-                     [np.array([[dt]])] + \
+                     [np.array([[dt]], config.precision)] + \
                      mesh.getTensor() + mesh.getScalar() + \
                      self.getBoundaryTensor(1) + \
                      [x[1] for x in self.extraArgs]
+
+            print [x.dtype for x in inputs if hasattr(x, 'dtype')]
 
             #print(len(inputs), len(mesh.getTensor()), len(mesh.getScalar()), len(self.extraArgs), len(self.getBoundaryTensor(1)))
             #inputs = [phi.field for phi in fields] + \
@@ -310,6 +312,7 @@ class Solver(object):
             #outputs = self.map(fields)
 
             outputs = self.map(*inputs)
+            print [x.dtype for x in outputs if hasattr(x, 'dtype')]
             newFields, dtc, objective = outputs[:3], outputs[3], outputs[4]
             objective = objective[0,0]
             local = remote = 0

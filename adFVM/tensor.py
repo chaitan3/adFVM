@@ -201,6 +201,10 @@ class TensorFunction(object):
     headerFile = 'kernel.hpp'
 
     def __init__(self, name, inputs, outputs, grad=True):
+        if not TensorFunction._init:
+            TensorFunction.clean()
+            TensorFunction._init = True
+
         index = TensorFunction._index
         TensorFunction._index += 1
         #self.name = 'Function_{}'.format(index)
@@ -232,9 +236,6 @@ class TensorFunction(object):
         if grad:
             self.grad = self._getAdjoint()
 
-        if not TensorFunction._init:
-            TensorFunction.clean()
-            TensorFunction._init = True
 
 
     def _getAdjoint(self):
@@ -314,8 +315,7 @@ class TensorFunction(object):
         else:
             memString = '\nvoid {}(int n, {})'.format(self.name, memString[:-2])
         headerFile.write(memString + ';\n')
-        codeFile.write(memString)
-        codeFile.write(' {\n')
+        codeFile.write(memString + ' {\n') 
         #codeFile.write('\tlong long start = current_timestamp();\n')
         if Function.gpu:
             codeFile.write('\tinteger i = threadIdx.x + blockDim.x*blockIdx.x;\n')

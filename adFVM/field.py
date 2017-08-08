@@ -380,7 +380,6 @@ class IOField(Field):
             dimensions = (1,)
                 #import pdb;pdb.set_trace()
         #value = extractField(self.patch[key], nFaces, dimensions)
-
         return self(name, internalField, dimensions, boundary)
 
     @classmethod

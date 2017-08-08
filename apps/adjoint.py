@@ -178,7 +178,7 @@ class Adjoint(Solver):
                 dtca = np.zeros((mesh.nInternalCells, 1)).astype(config.precision)
                 obja = np.ones((1, 1)).astype(config.precision)
                 inputs = [phi.field for phi in previousSolution] + \
-                     [np.array([[dt]])] + \
+                     [np.array([[dt]], config.precision)] + \
                      mesh.getTensor() + mesh.getScalar() + \
                      primal.getBoundaryTensor(1) + \
                      [x[1] for x in primal.extraArgs] + \

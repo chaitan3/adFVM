@@ -110,7 +110,14 @@ PyObject* putArray(arrType<dtype, shape1> &tmp) {
     npy_intp shape[2] = {tmp.shape, shape1};
     dtype* data = tmp.data;
     tmp.ownData = false;
-    PyObject* array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
+    PyObject *array;
+    if (typeid(dtype) == typeid(double)) {
+        array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
+    } else if (typeid(dtype) == typeid(float)) {
+        array = PyArray_SimpleNewFromData(2, shape, NPY_FLOAT, data);
+    } else {
+        array = PyArray_SimpleNewFromData(2, shape, NPY_INT32, data);
+    }
     PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
     return array;
 }
@@ -122,6 +129,8 @@ PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
     PyObject *array;
     if (typeid(dtype) == typeid(double)) {
         array = PyArray_SimpleNewFromData(3, shape, NPY_DOUBLE, data);
+    } else if (typeid(dtype) == typeid(float)) {
+        array = PyArray_SimpleNewFromData(3, shape, NPY_FLOAT, data);
     } else {
         array = PyArray_SimpleNewFromData(3, shape, NPY_INT32, data);
     }

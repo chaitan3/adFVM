@@ -209,7 +209,6 @@ class ExternalFunctionOp(FunctionOp):
 class Function(object):
     _index = 0
     _module = None
-    _init = False
     codeDir = os.path.dirname(__file__) + '/gencode/'
     gpu = False
     codeFile = 'code.cpp'
@@ -228,9 +227,6 @@ class Function(object):
             self.grad = self._getAdjoint()
 
         Function.funcs.append(self.name)
-        if not Function._init:
-            Function.clean()
-            Function._init = True
 
     def _getAdjoint(self):
         #gradOutputs = []
@@ -255,6 +251,7 @@ class Function(object):
     def _genCode(self, outputs):
         codeFile = open(self.codeDir + self.codeFile, 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args) {{\n'.format(self.name))
+        codeFile.write('\tinteger blocks, threads;\n')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
         for index, inp in enumerate(self._inputs):
@@ -287,7 +284,13 @@ class Function(object):
                 #for index, inp in enumerate(op.args[:-len(op.outputs)]):
                 #    if not isinstance(inp.shape[0], int) and op.func._inputsUsed[index]:
                 #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
-                codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
+                if Function.gpu:
+                    name = _getName(op.indices)
+                    codeFile.write('\tblocks = {}/1024 + 1;\n'.format(name))
+                    codeFile.write('\tthreads = min(1024, {});\n'.format(name))
+                    codeFile.write('\t{}<<<blocks, threads>>>({}, {});\n'.format(op.name, name, op.getCallString()))
+                else:
+                    codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):
                 if not Function.gpu:
                     codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
@@ -336,6 +339,7 @@ class Function(object):
         if config.compile:
             assert not os.path.exists(self.codeDir)
             shutil.copytree(scriptDir + '/gencode', self.codeDir)
+            Function.clean()
 
     @classmethod
     def clean(self):

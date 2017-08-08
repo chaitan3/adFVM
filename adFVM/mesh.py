@@ -138,7 +138,7 @@ class Mesh(object):
         self.symMesh.parent = self
         self.symMesh.makeTensor()
         self.parent = self
-        #import pdb;pdb.set_trace()
+        print [getattr(self, x).dtype for x in self.gradFields]
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
         pprint('nFaces:', parallel.sum(self.origMesh.nFaces))

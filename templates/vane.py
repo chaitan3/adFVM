@@ -71,7 +71,7 @@ def getWeights(solver):
         else:
             weights = np.logical_and(centres[:,0] >= 0.035241, centres[:, 1] <= 0.044337)
         nFaces = mesh.boundary[patchID]['nFaces']
-        solver.extraArgs.append((tensor.Variable((nFaces, 1)), weights*1.))
+        solver.extraArgs.append((tensor.Variable((nFaces, 1)), (weights*1.).astype(config.precision)))
     
 def objective(fields, solver):
     U, T, p = fields

@@ -1,8 +1,8 @@
 CC=nvcc
 CFLAGS=-std=c++11 -Xcompiler="-fPIC" -O3 -g -DGPU
-LDFLAGS=
+LDFLAGS=-shared
 INCDIRS=-I/usr/include/python2.7 -I/usr/lib/python2.7/site-packages/numpy/core/include
-LIBDIRS=-I/usr/lib/openmpi
+LIBDIRS=-L/usr/lib/openmpi
 LIBS=-lpython2.7 -lmpi
 BUILD=build
 OBJ=$(BUILD)/interface.o $(BUILD)/kernel.o $(BUILD)/code.o
