@@ -17,7 +17,11 @@ using namespace std;
 
 //#define ADIFF 1
 
-typedef double scalar;
+#ifdef GPU
+    typedef float scalar;
+#else
+    typedef double scalar;
+#endif
 typedef int32_t integer;
 
 #define NDIMS 4

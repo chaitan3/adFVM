@@ -1,5 +1,5 @@
 CC=nvcc
-CFLAGS=-std=c++11 -Xcompiler="-fPIC" -O3 -g
+CFLAGS=-std=c++11 -Xcompiler="-fPIC" -O3 -g -DGPU
 LDFLAGS=
 INCDIRS=-I/usr/include/python2.7 -I/usr/lib/python2.7/site-packages/numpy/core/include
 LIBDIRS=-I/usr/lib/openmpi
@@ -17,7 +17,7 @@ $(BUILD):
 	mkdir $(BUILD)
 
 $(BUILD)/%.o: %.cpp 
-	$(CC) $(CFLAGS) $(INCDIRS) $^ -c -o $@
+	$(CC) -x cu $(CFLAGS) $(INCDIRS) $^ -c -o $@
 
 gpu: $(BUILD) $(OBJ)
-	$(CC) $(LDFLAGS) $(LIBS) -o $(TARGET)
+	$(CC) $(LDFLAGS) $(LIBDIRS) $(LIBS) $(OBJ) -o $(TARGET)

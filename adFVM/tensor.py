@@ -309,12 +309,19 @@ class TensorFunction(object):
             memString += 'const {}* {}, '.format(inp.dtype, inp.name)
         for out in self._outputTensors:
             memString += '{}* {}, '.format(out.dtype, out.name)
-        memString = '\nvoid {}(int n, {})'.format(self.name, memString[:-2])
-        headerFile.write(memString + ';')
+        if Function.gpu:
+            memString = '__global__ void {}(int n, {})'.format(self.name, memString[:-2])
+        else:
+            memString = '\nvoid {}(int n, {})'.format(self.name, memString[:-2])
+        headerFile.write(memString + ';\n')
         codeFile.write(memString)
         codeFile.write(' {\n')
         #codeFile.write('\tlong long start = current_timestamp();\n')
-        codeFile.write('\tfor (integer i = 0; i < n; i++) {\n')
+        if Function.gpu:
+            codeFile.write('\tinteger i = threadIdx.x;\n')
+            codeFile.write('\tif (i < n) {\n')
+        else:
+            codeFile.write('\tfor (integer i = 0; i < n; i++) {\n')
         names = {}
         for index, op in enumerate(sortedOps):
             if op in names:
