@@ -303,7 +303,7 @@ class Solver(object):
                      self.getBoundaryTensor(1) + \
                      [x[1] for x in self.extraArgs]
 
-            #print [x.dtype for x in inputs if hasattr(x, 'dtype')]
+            #print [x.shape for x in inputs if hasattr(x, 'shape')]
 
             #print(len(inputs), len(mesh.getTensor()), len(mesh.getScalar()), len(self.extraArgs), len(self.getBoundaryTensor(1)))
             #inputs = [phi.field for phi in fields] + \

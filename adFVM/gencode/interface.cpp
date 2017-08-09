@@ -381,6 +381,7 @@ static integer mpi_reqIndex;
 static integer mpi_reqField = 0;
 static map<void *, scalar *> mpi_reqBuf;
 
+
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi(std::vector<arrType<dtype, shape1, shape2>*> phiP) {
     arrType<dtype, shape1, shape2>& phi = *(phiP[1]);
@@ -418,8 +419,8 @@ void Function_mpi(std::vector<arrType<dtype, shape1, shape2>*> phiP) {
                 MPI_Request *req = mpi_req;
                 integer tag = mpi_reqField*100 + mesh.tags.at(patchID);
                 //cout << patchID << " " << tag << endl;
-                MPI_Isend(&phiBuf[bufStartFace*shape1*shape2], size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex]);
-                MPI_Irecv(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex+1]);
+                MPI_Isend(&phiBuf[bufStartFace*shape1*shape2], size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex]);
+                MPI_Irecv(&phi(cellStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex+1]);
                 mpi_reqIndex += 2;
         }
     }
@@ -453,8 +454,8 @@ void Function_mpi_grad(std::vector<arrType<dtype, shape1, shape2>*> phiP) {
             MPI_Request *req = (MPI_Request*) mpi_req;
             integer tag = mpi_reqField*10000 + mesh.tags.at(patchID);
             //cout << "send " << patchID << " " << phi(cellStartFace) << " " << shape1 << shape2 << endl;
-            MPI_Isend(&phi(cellStartFace), size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex]);
-            MPI_Irecv(&phiBuf[bufStartFace*shape1*shape2], size, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex+1]);
+            MPI_Isend(&phi(cellStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex]);
+            MPI_Irecv(&phiBuf[bufStartFace*shape1*shape2], size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex+1]);
             mpi_reqIndex += 2;
         }
     }
@@ -477,7 +478,7 @@ void Function_mpi_allreduce(std::vector<vec*> vals) {
     for (integer i = 0; i < n; i++) {
         in(i) = (*vals[i])(0);
     }
-    MPI_Allreduce(&in(0), &out(0), n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&in(0), &out(0), n, mpi_type<decltype(vals[0]->type)>(), MPI_SUM, MPI_COMM_WORLD);
     for (integer i = 0; i < n; i++) {
         (*vals[i + n])(0) = out(i);
     }

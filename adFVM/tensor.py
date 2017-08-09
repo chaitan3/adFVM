@@ -379,6 +379,7 @@ class TensorFunction(object):
 
 
 import random, string
+random.seed(3)
 def randomName(N):
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N))
 

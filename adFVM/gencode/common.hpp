@@ -20,7 +20,8 @@ using namespace std;
 #ifdef GPU
     typedef float scalar;
 #else
-    typedef double scalar;
+    //typedef double scalar;
+    typedef float scalar;
 #endif
 typedef int32_t integer;
 
@@ -29,6 +30,7 @@ typedef int32_t integer;
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class arrType {
     public:
+    dtype type;
     dtype* data;
     //integer dims;
     integer shape;
@@ -250,12 +252,6 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     };
 };
 #endif
-typedef gpuArrType<scalar> gvec;
-typedef gpuArrType<scalar, 3> gmat;
-
-typedef gpuArrType<integer> givec;
-typedef gpuArrType<integer, 3> gimat;
-
 
 typedef arrType<scalar> vec;
 typedef arrType<scalar, 3> mat;

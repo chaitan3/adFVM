@@ -242,6 +242,11 @@ void Function_mpi_grad(std::vector<arrType<dtype, shape1, shape2>*> phiP);
 #define Function_mpi_end_grad Function_mpi_init1
 void Function_mpi_allreduce_grad(std::vector<vec*> vals);
 
+
+template<typename T> inline MPI_Datatype mpi_type();
+template<> inline MPI_Datatype mpi_type<float>() {return MPI_FLOAT;}
+template<> inline MPI_Datatype mpi_type<double>() {return MPI_DOUBLE;}
+
 Boundary getBoundary(PyObject*);
 Boundary getMeshBoundary(PyObject *mesh, const string attr);
 extern Mesh* meshp;
