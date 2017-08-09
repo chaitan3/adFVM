@@ -294,6 +294,7 @@ class Function(object):
                     codeFile.write('\tblocks = {}/1024 + 1;\n'.format(name))
                     codeFile.write('\tthreads = min(1024, {});\n'.format(name))
                     codeFile.write('\t{}<<<blocks, threads>>>({}, {});\n'.format(op.name, name, op.getCallString()))
+                    codeFile.write('\tgpuErrorCheck(cudaPeekAtLastError());\n')
                 else:
                     codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):

@@ -186,12 +186,22 @@ class arrType {
 };
 
 #ifdef GPU
+#define gpuErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+   if (code != cudaSuccess) 
+   {
+      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      if (abort) exit(code);
+   }
+}
+
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     public:
     gpuArrType(const integer shape, bool zero=false) {
         this -> init(shape);
-        cudaMalloc(&this->data, this->size*sizeof(dtype));
+        gpuErrorCheck(cudaMalloc(&this->data, this->size*sizeof(dtype)));
         if (zero) 
             this -> zero();
     }
@@ -202,16 +212,16 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         }
     }
     void zero() {
-        cudaMemset(this->data, 0, this->size*sizeof(dtype));
+        gpuErrorCheck(cudaMemset(this->data, 0, this->size*sizeof(dtype)));
     }
     dtype* toHost() const {
         dtype* hdata = new dtype[this->size];
-        cudaMemcpy(hdata, this->data, this->size*sizeof(dtype), cudaMemcpyDeviceToHost);
+        gpuErrorCheck(cudaMemcpy(hdata, this->data, this->size*sizeof(dtype), cudaMemcpyDeviceToHost));
         return hdata;
     }
     void toDevice(dtype* data) {
-        cudaMalloc(&this->data, this->size*sizeof(dtype));
-        cudaMemcpy(this->data, data, this->size*sizeof(dtype), cudaMemcpyHostToDevice);
+        gpuErrorCheck(cudaMalloc(&this->data, this->size*sizeof(dtype)));
+        gpuErrorCheck(cudaMemcpy(this->data, data, this->size*sizeof(dtype), cudaMemcpyHostToDevice));
         this->ownData = true;
     }
     void info() const {
@@ -251,6 +261,8 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         this->destroy();
     };
 };
+
+
 #endif
 
 typedef arrType<scalar> vec;
