@@ -291,15 +291,16 @@ class Function(object):
                 #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
                 if Function.gpu:
                     name = _getName(op.indices)
-                    codeFile.write('\tblocks = {}/1024 + 1;\n'.format(name))
-                    codeFile.write('\tthreads = min(1024, {});\n'.format(name))
-                    codeFile.write('\t{}<<<blocks, threads>>>({}, {});\n'.format(op.name, name, op.getCallString()))
-                    codeFile.write('\tgpuErrorCheck(cudaPeekAtLastError());\n')
+                    codeFile.write('\tif ({} > 0) {{\n'.format(name))
+                    codeFile.write('\t\tblocks = {}/GPU_THREADS_PER_BLOCK + 1;\n'.format(name))
+                    codeFile.write('\t\tthreads = min(GPU_THREADS_PER_BLOCK, {});\n'.format(name))
+                    codeFile.write('\t\t{}<<<blocks, threads>>>({}, {});\n'.format(op.name, name, op.getCallString()))
+                    codeFile.write('\t\tgpuErrorCheck(cudaPeekAtLastError());\n')
+                    codeFile.write('\t}\n')
                 else:
                     codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):
-                if not Function.gpu:
-                    codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
+                codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
             elif not isinstance(op, Variable):
                 raise Exception('op not recognised', op)
 
