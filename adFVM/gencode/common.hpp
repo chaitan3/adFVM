@@ -27,6 +27,7 @@ typedef int32_t integer;
 
 #define NDIMS 4
 
+
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class arrType {
     public:
@@ -175,6 +176,31 @@ class arrType {
     void zero() {
         memset(this->data, 0, this->size*sizeof(dtype));
     }
+
+    void copy(integer index, dtype* sdata, integer n) {
+        memcpy(&this->data[index], sdata, n*sizeof(dtype));
+    }
+    void extract(integer index, integer* indices, dtype* phiBuf, integer n) {
+        for (integer i = 0; i < n; i++) {
+            integer p = indices[i];
+            integer b = index + i;
+            for (integer j = 0; j < shape1; j++) {
+                for (integer k = 0; k < shape2; k++) {
+                    (*this)(b, j, k) += phiBuf[p*shape1*shape2 + j*shape2 + k];
+                }
+            }
+        }
+    }
+    void extract(integer *indices, dtype* phiBuf, integer n) {
+        for (integer i = 0; i < n; i++) {
+            integer p = indices[i];
+            for (integer j = 0; j < shape1; j++) {
+                for (integer k = 0; k < shape2; k++) {
+                    (*this)(p, j, k) += phiBuf[i*shape1*shape2 + j*shape2 + k];
+                }
+            }
+        }
+    }
     dtype sum() {
         dtype s = 0;
         for (integer i = 0; i < this->size; i++) {
@@ -184,6 +210,14 @@ class arrType {
     }
 
 };
+
+typedef arrType<scalar> vec;
+typedef arrType<scalar, 3> mat;
+
+typedef arrType<integer> ivec;
+typedef arrType<integer, 3> imat;
+
+
 
 #ifdef GPU
 #define GPU_THREADS_PER_BLOCK 256
@@ -216,6 +250,37 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     }
     void zero() {
         gpuErrorCheck(cudaMemset(this->data, 0, this->size*sizeof(dtype)));
+    }
+    void copy(integer index, dtype* sdata, integer n) {
+        cudaMemcpy(&this->data[index], sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice);
+    }
+    void extract(integer* indices, dtype* phiBuf, integer n) {
+        this->_extract1<<<blocks, threads>>>(n, this->data, phiBuf, indices);
+    }
+    void extract(integer index, integer* indices, dtype* phiBuf, integer n) {
+        this->_extract2<<<blocks, threads>>>(n, &(*this)[index]), phiBuf, indices);
+    }
+    __global__ void _extract1(integer n, dtype* phi1, dtype* phi2, integer* indices) {
+        int i = threadIdx.x + blockDim.x*blockIdx.x;
+        if (i < n) {
+            integer p = indices[i];
+            for (integer j = 0; j < shape1; j++) {
+                for (integer k = 0; k < shape2; k++) {
+                     atomicAdd(&phi1[p*shape1*shape2 + j*shape2 + k], phi2[i*shape1*shape2 + j*shape2 + k]);
+                }
+            }
+        }
+    }
+    __global__ void _extract2(integer n, dtype* phi1, dtype* phi2, integer* indices) {
+        int i = threadIdx.x + blockDim.x*blockIdx.x;
+        if (i < n) {
+            integer p = indices[i];
+            for (integer j = 0; j < shape1; j++) {
+                for (integer k = 0; k < shape2; k++) {
+                     phi1[i*shape1*shape2 + j*shape2 + k] += phi2[p*shape1*shape2 + j*shape2 + k];
+                }
+            }
+        }
     }
     dtype* toHost() const {
         dtype* hdata = new dtype[this->size];
@@ -265,15 +330,14 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     };
 };
 
+#define extArrType gpuArrType
+
+#else
+
+#define extArrType arrType
 
 #endif
 
-typedef arrType<scalar> vec;
-typedef arrType<scalar, 3> mat;
-
-typedef arrType<integer> ivec;
-typedef arrType<integer, 3> imat;
-
-#define SMALL 1e-30
+typedef extArrType<scalar, 1> ext_vec;
 
 #endif

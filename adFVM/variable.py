@@ -186,13 +186,14 @@ class ExternalFunctionOp(FunctionOp):
     def __init__(self, name, args, outputs, empty=False):
         self._init('Function_' + name, args, outputs)
         self.empty = empty
+        self.arrType = None
 
     def getCallString(self):
         if self.empty:
             return ''
         inp = self.args[0]
         shape = ','.join([str(x) for x in inp.shape[1:]])
-        callString = 'std::vector<arrType<{}, {}>*>{{'.format(inp.dtype, shape)
+        callString = 'std::vector<{}<{}, {}>*>{{'.format(self.arrType, inp.dtype, shape)
         for inp in self.args:
             callString += '&{},'.format(inp.name)
         callString = callString[:-1] + '}'
@@ -300,6 +301,7 @@ class Function(object):
                 else:
                     codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):
+                op.arrType = self.arrType
                 codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
             elif not isinstance(op, Variable):
                 raise Exception('op not recognised', op)

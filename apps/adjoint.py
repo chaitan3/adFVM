@@ -172,8 +172,8 @@ class Adjoint(Solver):
                     pprint('Time step', adjointIndex)
 
                 n = len(fields)
-                for index in range(0, n):
-                    fields[index].field *= mesh.volumes
+                #for index in range(0, n):
+                #    fields[index].field *= mesh.volumes
 
                 dtca = np.zeros((mesh.nInternalCells, 1)).astype(config.precision)
                 obja = np.ones((1, 1)).astype(config.precision)
@@ -198,10 +198,13 @@ class Adjoint(Solver):
                 # only mesh gradients supported for now
                 gradient, paramGradient = outputs[:n], outputs[n+1:n+1+len(mesh.gradFields)]
                 for index in range(0, n):
-                    fields[index].field = gradient[index]/mesh.volumes
+                    fields[index].field = gradient[index]
+                    #fields[index].field = gradient[index]/mesh.volumes
                 #print(fields[0].field.max())
 
                 if self.scaling:
+                    for phi in fields:
+                        phi.field /= mesh.volumes
                     if report:
                         pprint('Smoothing adjoint field')
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
@@ -230,6 +233,8 @@ class Adjoint(Solver):
                     fields = self.getFields(newFields, IOField)
                     for phi in fields:
                         phi.field = np.ascontiguousarray(phi.field)
+                    for phi in fields:
+                        phi.field *= mesh.volumes
 
                     start4 = time.time()
                     pprint('Timers 1:', start3-start2, '2:', start4-start3)
@@ -260,7 +265,11 @@ class Adjoint(Solver):
 
             #exit(1)
             #print(fields[0].field.max())
+            for phi in fields:
+                phi.field /= mesh.volumes
             self.writeFields(fields, t, skipProcessor=True)
+            for phi in fields:
+                phi.field *= mesh.volumes
             #print(fields[0].field.max())
             self.writeStatusFile([checkpoint + 1, result])
             #energyTimeSeries = mpi.gather(timeSeries, root=0)
