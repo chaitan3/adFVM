@@ -53,8 +53,8 @@ def stop():
 # compute type
 if not user.use_gpu:
     gpu = False
-    #precision = np.float64
-    precision = np.float32
+    precision = np.float64
+    #precision = np.float32
 else:
     gpu = True
     precision = np.float32

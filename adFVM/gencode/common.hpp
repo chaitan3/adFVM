@@ -20,13 +20,14 @@ using namespace std;
 #ifdef GPU
     typedef float scalar;
 #else
-    //typedef double scalar;
-    typedef float scalar;
+    typedef double scalar;
+    //typedef float scalar;
 #endif
 typedef int32_t integer;
 
 #define NDIMS 4
 
+extern int memUsage;
 
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class arrType {
@@ -50,8 +51,8 @@ class arrType {
         this -> size = this->strides[0]*shape;
         this -> data = NULL;
         this -> ownData = true;
+        memUsage += this->size*sizeof(dtype);
     }
-
     void destroy() {
         if (this->ownData && this->data != NULL) {
             delete[] this -> data; 

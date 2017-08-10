@@ -258,6 +258,7 @@ class Function(object):
         codeFile = open(self.codeDir + self.codeFile, 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args) {{\n'.format(self.name))
         codeFile.write('\tinteger blocks, threads;\n')
+        codeFile.write('\tmemUsage = 0;')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
         for index, inp in enumerate(self._inputs):
@@ -305,6 +306,8 @@ class Function(object):
                 codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
             elif not isinstance(op, Variable):
                 raise Exception('op not recognised', op)
+
+            #codeFile.write('\tcout << memUsage << endl;\n')
 
         codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(outputs)))
         for index, out in enumerate(outputs):
