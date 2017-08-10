@@ -23,6 +23,7 @@ sources = ['interface.cpp', 'matop.cpp', 'kernel.cpp', 'code.cpp']
 module = 'interface'
 #compile_args = ['-std=c++11', '-O3']#, '-march=native']
 compile_args = ['-std=c++11', '-O3', '-g']#, '-march=native']
+compile_args += ['-DMPI_GPU']
 
 matop = True
 matop = False

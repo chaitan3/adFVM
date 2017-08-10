@@ -177,10 +177,10 @@ class arrType {
         memset(this->data, 0, this->size*sizeof(dtype));
     }
 
-    void copy(integer index, dtype* sdata, integer n) {
+    void copy(const integer index, const dtype* sdata, const integer n) {
         memcpy(&this->data[index], sdata, n*sizeof(dtype));
     }
-    void extract(integer index, integer* indices, dtype* phiBuf, integer n) {
+    void extract(const integer index, const dtype* phiBuf, const integer* indices, const integer n) {
         for (integer i = 0; i < n; i++) {
             integer p = indices[i];
             integer b = index + i;
@@ -191,7 +191,7 @@ class arrType {
             }
         }
     }
-    void extract(integer *indices, dtype* phiBuf, integer n) {
+    void extract(const integer *indices, const dtype* phiBuf, const integer n) {
         for (integer i = 0; i < n; i++) {
             integer p = indices[i];
             for (integer j = 0; j < shape1; j++) {
@@ -233,6 +233,32 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
+template<typename dtype, integer shape1, integer shape2>
+__global__ void _extract1(const integer n, dtype* phi1, const dtype* phi2, const integer* indices) {
+    int i = threadIdx.x + blockDim.x*blockIdx.x;
+    if (i < n) {
+        integer p = indices[i];
+        for (integer j = 0; j < shape1; j++) {
+            for (integer k = 0; k < shape2; k++) {
+                 atomicAdd(&phi1[p*shape1*shape2 + j*shape2 + k], phi2[i*shape1*shape2 + j*shape2 + k]);
+            }
+        }
+    }
+}
+
+template<typename dtype, integer shape1, integer shape2>
+__global__ void _extract2(const integer n, dtype* phi1, const dtype* phi2, const integer* indices) {
+    int i = threadIdx.x + blockDim.x*blockIdx.x;
+    if (i < n) {
+        integer p = indices[i];
+        for (integer j = 0; j < shape1; j++) {
+            for (integer k = 0; k < shape2; k++) {
+                 phi1[i*shape1*shape2 + j*shape2 + k] += phi2[p*shape1*shape2 + j*shape2 + k];
+            }
+        }
+    }
+}
+
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     public:
@@ -254,34 +280,17 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     void copy(integer index, dtype* sdata, integer n) {
         cudaMemcpy(&this->data[index], sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice);
     }
-    void extract(integer* indices, dtype* phiBuf, integer n) {
-        this->_extract1<<<blocks, threads>>>(n, this->data, phiBuf, indices);
+    void extract(const integer index, const dtype* phiBuf, const integer* indices, const integer n) {
+        integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
+        integer threads = min(GPU_THREADS_PER_BLOCK, n);
+        _extract1<dtype, shape1, shape2><<<blocks, threads>>>(n, &(*this)(index), phiBuf, indices);
     }
-    void extract(integer index, integer* indices, dtype* phiBuf, integer n) {
-        this->_extract2<<<blocks, threads>>>(n, &(*this)[index]), phiBuf, indices);
+    void extract(const integer *indices, const dtype* phiBuf, const integer n) {
+        integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
+        integer threads = min(GPU_THREADS_PER_BLOCK, n);
+        _extract2<dtype, shape1, shape2><<<blocks, threads>>>(n, this->data, phiBuf, indices);
     }
-    __global__ void _extract1(integer n, dtype* phi1, dtype* phi2, integer* indices) {
-        int i = threadIdx.x + blockDim.x*blockIdx.x;
-        if (i < n) {
-            integer p = indices[i];
-            for (integer j = 0; j < shape1; j++) {
-                for (integer k = 0; k < shape2; k++) {
-                     atomicAdd(&phi1[p*shape1*shape2 + j*shape2 + k], phi2[i*shape1*shape2 + j*shape2 + k]);
-                }
-            }
-        }
-    }
-    __global__ void _extract2(integer n, dtype* phi1, dtype* phi2, integer* indices) {
-        int i = threadIdx.x + blockDim.x*blockIdx.x;
-        if (i < n) {
-            integer p = indices[i];
-            for (integer j = 0; j < shape1; j++) {
-                for (integer k = 0; k < shape2; k++) {
-                     phi1[i*shape1*shape2 + j*shape2 + k] += phi2[p*shape1*shape2 + j*shape2 + k];
-                }
-            }
-        }
-    }
+    
     dtype* toHost() const {
         dtype* hdata = new dtype[this->size];
         gpuErrorCheck(cudaMemcpy(hdata, this->data, this->size*sizeof(dtype), cudaMemcpyDeviceToHost));
