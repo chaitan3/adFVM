@@ -35,8 +35,13 @@ class Adjoint(Solver):
 
     def initFields(self, fields):
         mesh = self.mesh
-        newFields = self.mapBoundary(*[phi.field for phi in fields] + mesh.getTensor() + mesh.getScalar() + self.getBoundaryTensor(1))
-        return self.getFields(newFields, IOField, refFields=fields)
+
+        for phi, phiN in zip(self.fields, fields):
+            phi.field = phiN.field
+            phi.defaultComplete()
+        return self.fields
+        #newFields = self.mapBoundary(*[phi.field for phi in fields] + mesh.getTensor() + mesh.getScalar() + self.getBoundaryTensor(1))
+        #return self.getFields(newFields, IOField, refFields=fields)
 
     def createFields(self):
         fields = []
@@ -50,17 +55,17 @@ class Adjoint(Solver):
 
     def compileInit(self):
         primal.compileInit()
-        mesh = self.mesh.symMesh
-        meshArgs = mesh.getTensor() + mesh.getScalar()
-        BCArgs = self.getBoundaryTensor(0)
-        # init function
-        rhoa, rhoUa, rhoEa = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
-        outputs = Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1))
-        outputs = self.boundaryInit(*outputs)
-        outputs = self.boundary(*outputs)
-        outputs = self.boundaryEnd(*outputs)
-        rhoaN, rhoUaN, rhoEaN = outputs
-        self.mapBoundary = Function('adjoint_init', [rhoa, rhoUa, rhoEa] + meshArgs + BCArgs, [rhoaN, rhoUaN, rhoEaN])
+        #mesh = self.mesh.symMesh
+        #meshArgs = mesh.getTensor() + mesh.getScalar()
+        #BCArgs = self.getBoundaryTensor(0)
+        ## init function
+        #rhoa, rhoUa, rhoEa = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
+        #outputs = Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1))
+        #outputs = self.boundaryInit(*outputs)
+        #outputs = self.boundary(*outputs)
+        #outputs = self.boundaryEnd(*outputs)
+        #rhoaN, rhoUaN, rhoEaN = outputs
+        #self.mapBoundary = Function('adjoint_init', [rhoa, rhoUa, rhoEa] + meshArgs + BCArgs, [rhoaN, rhoUaN, rhoEaN])
         return
 
     def compileSolver(self):

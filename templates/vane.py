@@ -260,7 +260,7 @@ primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective)
 getPlane(primal)
 getWeights(primal)
 
-def makePerturb(param, eps=1e-7):
+def makePerturb(param, eps=1e-5):
     def perturbMesh(fields, mesh, t):
         if not hasattr(perturbMesh, 'perturbation'):
             ## do the perturbation based on param and eps
@@ -291,8 +291,8 @@ parameters = 'mesh'
 
 #parameters = 'source'
 
-nSteps = 10
-writeInterval = 10
+nSteps = 100
+writeInterval = 100
 #nSteps = 100
 #writeInterval = 20
 #nSteps = 100000

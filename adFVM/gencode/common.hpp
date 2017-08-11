@@ -55,6 +55,7 @@ class arrType {
     }
     void destroy() {
         if (this->ownData && this->data != NULL) {
+            memUsage -= this->size*sizeof(dtype);
             delete[] this -> data; 
             this -> data = NULL;
         }

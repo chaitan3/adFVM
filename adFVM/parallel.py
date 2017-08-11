@@ -109,7 +109,7 @@ class Exchanger(object):
 
 #mtime = 0.
 #wtime = 0.
-def getRemoteCells(fields, meshC, fieldTag=0):
+def getRemoteCells(fields, mesh, fieldTag=0):
     # mesh values required outside theano
     #logger.info('fetching remote cells')
     if nProcessors == 1:
@@ -126,7 +126,6 @@ def getRemoteCells(fields, meshC, fieldTag=0):
     #start2 = time.time()
     #wtime += start2-start
     exchanger = Exchanger()
-    mesh = meshC.origMesh
     phis = []
     for index, field in enumerate(fields):
         assert field.shape[0] <= mesh.nCells
@@ -134,8 +133,8 @@ def getRemoteCells(fields, meshC, fieldTag=0):
         phi = np.concatenate((field[:mesh.nLocalCells].copy(), np.zeros((mesh.nCells-mesh.nLocalCells,) + field.shape[1:], field.dtype)))
         phis.append(phi)
         assert field.flags['C_CONTIGUOUS']
-        for patchID in meshC.remotePatches:
-            local, remote, tag = meshC.getProcessorPatchInfo(patchID)
+        for patchID in mesh.remotePatches:
+            local, remote, tag = mesh.getProcessorPatchInfo(patchID)
             tag += 1000*index
             startFace, endFace, cellStartFace, cellEndFace, _ = mesh.getPatchFaceCellRange(patchID)
             exchanger.exchange(remote, phi[mesh.owner[startFace:endFace]], phi[cellStartFace:cellEndFace], fieldTag + tag)
