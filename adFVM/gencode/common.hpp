@@ -51,7 +51,6 @@ class arrType {
         this -> size = this->strides[0]*shape;
         this -> data = NULL;
         this -> ownData = true;
-        memUsage += this->size*sizeof(dtype);
     }
     void destroy() {
         if (this->ownData && this->data != NULL) {
@@ -76,6 +75,7 @@ class arrType {
         this -> data = new dtype[this->size];
         if (zero) 
             this -> zero();
+        memUsage += this->size*sizeof(dtype);
     }
 
     arrType(const integer shape, dtype* data) {
@@ -267,11 +267,13 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     gpuArrType(const integer shape, bool zero=false) {
         this -> init(shape);
         gpuErrorCheck(cudaMalloc(&this->data, this->size*sizeof(dtype)));
+        memUsage += this->size*sizeof(dtype);
         if (zero) 
             this -> zero();
     }
     void destroy() {
         if (this->ownData && this->data != NULL) {
+            memUsage -= this->size*sizeof(dtype);
             cudaFree(this->data);
             this -> data = NULL;
         }
@@ -299,6 +301,7 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         return hdata;
     }
     void toDevice(dtype* data) {
+        memUsage += this->size*sizeof(dtype);
         gpuErrorCheck(cudaMalloc(&this->data, this->size*sizeof(dtype)));
         gpuErrorCheck(cudaMemcpy(this->data, data, this->size*sizeof(dtype), cudaMemcpyHostToDevice));
         this->ownData = true;

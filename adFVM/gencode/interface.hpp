@@ -119,6 +119,7 @@ PyObject* putArray(arrType<dtype, shape1> &tmp) {
         array = PyArray_SimpleNewFromData(2, shape, NPY_INT32, data);
     }
     PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
+    memUsage -= tmp.size*sizeof(dtype);
     return array;
 }
 template <typename dtype, integer shape1, integer shape2>
@@ -135,6 +136,7 @@ PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
         array = PyArray_SimpleNewFromData(3, shape, NPY_INT32, data);
     }
     PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
+    memUsage -= tmp.size*sizeof(dtype);
     return array;
 }
 
