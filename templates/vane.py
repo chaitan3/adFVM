@@ -115,7 +115,7 @@ def objective(fields, solver):
         return a*obj + b*obj2
     return tensor.Tensorize(_combine)(1)(pl, w, ht, w2)[0]
 
-primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective)
+primal = RCF('/home/talnikar/adFVM/cases/vane/laminar_gpu/', objective=objective)
 getPlane(primal)
 getWeights(primal)
 

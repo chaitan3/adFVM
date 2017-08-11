@@ -53,6 +53,7 @@ class Variable(ArithBase):
         self.index = 0
         self.dtype = dtype
         self.outputIndex = None
+        self.static = False
 
     def __getitem__(self, index):
         #print self.index
@@ -268,7 +269,9 @@ class Function(object):
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
-            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0});\n'.format(inp.name))
+            if inp.static and self.gpu:
+                codeFile.write('\t{}.staticVariable = true;\n'.format(inp.name))
+            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, "{0}");\n'.format(inp.name))
         codeFile.write('\n')
 
         #codeFile.write('\nvoid Function_{}({}) {}\n'.format(self.name, memString[:-2], '{\n'))

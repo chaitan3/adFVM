@@ -60,6 +60,7 @@ class BoundaryCondition(object):
         value = extractField(self.patch[key], nFaces, dimensions)
         self.patch['_{}'.format(key)] = value
         symbolic = Variable((self.nFaces,) + dimensions)
+        symbolic.static = True
         self.inputs.append((symbolic, value))
         return symbolic
 
@@ -92,6 +93,7 @@ class cyclic(BoundaryCondition):
         neighbourPatch = self.mesh.boundary[patchID]['neighbourPatch']
         neighbourStartFace = self.mesh.symMesh.boundary[neighbourPatch]['startFace']
         self.inputs.append((self.owner[neighbourStartFace], None))
+        self.inputs[-1][0].static = True
 
     def _update(self, phi, neighbourIndices):
         logger.debug('cyclic BC for {0}'.format(self.patchID))
@@ -101,6 +103,7 @@ class zeroGradient(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         self.inputs.append((self.owner[self.startFace], None))
+        self.inputs[-1][0].static = True
 
     def _update(self, phi, owner):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))
@@ -164,6 +167,7 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
             self.createInput('direction', (3,))
         else:
             self.inputs.append((self.normals, None))
+            self.inputs[-1][0].static = True
 
     def _update(self, U, T, p, Tt, pt, direction):
         Un = U.dot(direction)

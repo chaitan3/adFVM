@@ -161,7 +161,7 @@ class Adjoint(Solver):
                 if primal.dynamicMesh:
                     previousMesh, previousSolution = solutions[adjointIndex]
                     # new mesh boundary
-                    mesh.origMesh.boundary = previousMesh.boundary
+                    mesh.boundary = previousMesh.boundary
                 else:
                     previousSolution = solutions[adjointIndex]
                 primal.updateSource(source(previousSolution, mesh.origMesh, t))

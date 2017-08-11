@@ -10,6 +10,7 @@
 #include <limits>
 #include <iomanip>
 #include <vector>
+#include <map>
 #include <cassert>
 #include <typeinfo>
 
@@ -30,6 +31,7 @@ typedef int32_t integer;
 struct memory {
     int usage;
     int maxUsage;
+    map<string, void *> refs;
 };
 extern struct memory mem;
 
@@ -43,8 +45,21 @@ class arrType {
     integer size;
     integer strides[NDIMS];
     bool ownData;
+    bool staticVariable;
+
+    void initPre() {
+        this->shape = 0;
+        for (integer i = 0; i < NDIMS; i++)  {
+            this->strides[i] = 0;
+        }
+        this -> size = 0;
+        this -> data = NULL;
+        this -> ownData = false;
+        this -> staticVariable = false;
+    }
 
     void init(const integer shape) {
+        this->initPre();
         this->shape = shape;
         //integer temp = 1;
         this->strides[3] = 1;
@@ -53,8 +68,6 @@ class arrType {
         this->strides[0] = shape1*this->strides[1];
         //cout << endl;
         this -> size = this->strides[0]*shape;
-        this -> data = NULL;
-        this->ownData = false;
     }
     void destroy() {
         if (this->ownData && this->data != NULL) {
@@ -75,13 +88,7 @@ class arrType {
     }
 
     arrType () {
-        this->shape = 0;
-        for (integer i = 0; i < NDIMS; i++)  {
-            this->strides[i] = 0;
-        }
-        this -> size = 0;
-        this -> data = NULL;
-        this -> ownData = false;
+        this->initPre();
     }
 
     arrType(const integer shape, bool zero=false) {
@@ -273,6 +280,7 @@ __global__ void _extract2(const integer n, dtype* phi1, const dtype* phi2, const
         }
     }
 }
+
 
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {

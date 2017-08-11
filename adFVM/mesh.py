@@ -869,11 +869,15 @@ class Mesh(object):
             size = self.nFaces
             if attr == 'volumesR':
                 size = self.nInternalFaces
-            setattr(self, attr, Variable((size,) + value.shape[1:]))
+            var = Variable((size,) + value.shape[1:])
+            var.static = True
+            setattr(self, attr, var)
 
         for attr in Mesh.intFields:
             value = getattr(self.parent, attr)
-            setattr(self, attr, Variable((self.nFaces, 1), dtype='integer'))
+            var = Variable((self.nFaces, 1), dtype='integer')
+            var.static = True
+            setattr(self, attr, var)
 
         for patchID in self.parent.localPatches:
             self.boundary[patchID] = {}
