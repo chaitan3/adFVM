@@ -102,7 +102,6 @@ void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp) {
     //cout << rows << " " << cols << endl;
     //if ((typeid(dtype) != type(uscalar)) && (typeid(dtype) != typeid(integer))) {
     tmp = move(result);
-    //result.ownData = false;
 }
 
 template <typename dtype, integer shape1>
@@ -162,13 +161,13 @@ void getArray(PyArrayObject *array, gpuArrType<dtype, shape1, shape2> & tmp) {
     //arrType<dtype, shape1, shape2> test(dims[0], data);
     //test.info();
 
-    gpuArrType<dtype, shape1, shape2> result(dims[0], NULL);
+    dtype *store = NULL;
+    gpuArrType<dtype, shape1, shape2> result(dims[0], store);
     result.toDevice(data);
     //result.info();
     //cout << rows << " " << cols << endl;
     //if ((typeid(dtype) != type(uscalar)) && (typeid(dtype) != typeid(integer))) {
     tmp = move(result);
-    //result.ownData = false;
 }
 
 template <typename dtype, integer shape1>
