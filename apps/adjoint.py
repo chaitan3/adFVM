@@ -245,7 +245,7 @@ class Adjoint(Solver):
                     pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
                 # compute sensitivity using adjoint solution
-                sensTimeSeries.append([0.]*nPerturb)
+                sensitivities = []
                 for index in range(0, len(perturb)):
                     perturbation = perturb[index](None, mesh.origMesh, t)
                     if isinstance(perturbation, tuple):
@@ -253,13 +253,16 @@ class Adjoint(Solver):
                     if not isinstance(perturbation, list):# or (len(parameters) == 1 and len(perturbation) > 1):
                         perturbation = [perturbation]
                         # complex parameter perturbation not supported
-                    
+                    sensitivity = 0.
+                    # make efficient cpu implementation
                     for derivative, delphi in zip(paramGradient, perturbation):
-                        #sensitivity = np.sum(derivative * delphi)
-                        sensitivity = parallel.sum(derivative * delphi, allreduce=False)
-                        if (nSteps - (primalIndex + adjointIndex)) > avgStart:
-                            result[index] += sensitivity
-                        sensTimeSeries[-1][index] = sensitivity
+                        sensitivity += np.sum(derivative * delphi)
+                    sensitivities.apppend(sensitivity)
+                sensitivities = parallel.sum(sensitvities, allreduce=False)
+                if (nSteps - (primalIndex + adjointIndex)) > avgStart:
+                    for index in range(0, len(perturb)):
+                        result[index] += sensitivities[index]
+                sensTimeSeries.append(sensitivities)
 
                 #parallel.mpi.Barrier()
                 if report:

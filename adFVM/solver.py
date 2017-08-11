@@ -363,8 +363,9 @@ class Solver(object):
                 dt = dtc
             elif isinstance(dts, np.ndarray):
                 dt = dts[timeIndex]
-            #elif not self.fixedTimeStep:
-            elif (not self.fixedTimeStep) and report:
+            elif not self.fixedTimeStep:
+            #elif (not self.fixedTimeStep) and report:
+                # make efficient cpu implementation
                 dt = min(parallel.min(2*self.CFL/dtc), dt*self.stepFactor, endTime-t)
             if self.dynamicMesh:
                 mesh.update(t, dt)
