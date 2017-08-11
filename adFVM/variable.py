@@ -258,7 +258,7 @@ class Function(object):
         codeFile = open(self.codeDir + self.codeFile, 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args) {{\n'.format(self.name))
         codeFile.write('\tinteger blocks, threads;\n')
-        #codeFile.write('\tprintf("%d\\n", memUsage);\n')
+        codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
         for index, inp in enumerate(self._inputs):
@@ -274,6 +274,12 @@ class Function(object):
         #codeFile.write('\nvoid Function_{}({}) {}\n'.format(self.name, memString[:-2], '{\n'))
 
         sortedOps = graphTopologicalSort(outputs, self._children.copy())
+        visitedOps = {}
+        for k,v in self._children.items():
+            if k.name not in visitedOps:
+                visitedOps[k.name] = 0
+            visitedOps[k.name] += v
+        outputNames = [out.name for out in outputs]
         def _getName(op):
             if isinstance(op, int):
                 name = op
@@ -304,15 +310,25 @@ class Function(object):
             elif isinstance(op, ExternalFunctionOp):
                 op.arrType = self.arrType
                 codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
-            elif not isinstance(op, Variable):
+            elif isinstance(op, Variable):
+                pass
+            else:
                 raise Exception('op not recognised', op)
+            for arg in op.args:
+                parent = arg.name
+                assert visitedOps[parent] > 0
+                visitedOps[parent] -= 1
+                if visitedOps[parent] == 0 and \
+                   isinstance(arg, Variable) and \
+                   parent not in outputNames:
+                    codeFile.write('\t{}.destroy();\n'.format(parent))
 
             #codeFile.write('\tcout << memUsage << endl;\n')
 
         codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(outputs)))
         for index, out in enumerate(outputs):
             codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}));\n'.format(index, out.name))
-        #codeFile.write('\tprintf("%d\\n", memUsage);\n')
+        codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         codeFile.write('\treturn outputs;')
         codeFile.write('\n')
         codeFile.write('}\n\n')

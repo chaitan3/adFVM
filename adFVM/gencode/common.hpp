@@ -27,7 +27,11 @@ typedef int32_t integer;
 
 #define NDIMS 4
 
-extern int memUsage;
+struct memory {
+    int usage;
+    int maxUsage;
+};
+extern struct memory mem;
 
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class arrType {
@@ -54,10 +58,20 @@ class arrType {
     }
     void destroy() {
         if (this->ownData && this->data != NULL) {
-            memUsage -= this->size*sizeof(dtype);
+            this->dec_mem();
             delete[] this -> data; 
             this -> data = NULL;
         }
+    }
+    void inc_mem() {
+        mem.usage += this->size*sizeof(dtype);
+        if (mem.usage > mem.maxUsage) {
+            mem.maxUsage = mem.usage;
+        }
+    }
+
+    void dec_mem() {
+        mem.usage -= this->size*sizeof(dtype);
     }
 
     arrType () {
@@ -76,7 +90,7 @@ class arrType {
         this -> ownData = true;
         if (zero) 
             this -> zero();
-        memUsage += this->size*sizeof(dtype);
+        this->inc_mem();
     }
 
     arrType(const integer shape, dtype* data) {
@@ -266,7 +280,7 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     gpuArrType(const integer shape, bool zero=false) {
         this -> init(shape);
         gpuErrorCheck(cudaMalloc(&this->data, this->size*sizeof(dtype)));
-        memUsage += this->size*sizeof(dtype);
+        this->inc_mem();
         this->ownData = true;
         if (zero) 
             this -> zero();
@@ -277,7 +291,7 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     }
     void destroy() {
         if (this->ownData && this->data != NULL) {
-            memUsage -= this->size*sizeof(dtype);
+            this->dec_mem();
             cudaFree(this->data);
             this -> data = NULL;
         }
@@ -306,7 +320,7 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     }
     void toDevice(dtype* data) {
         assert (this->data == NULL);
-        memUsage += this->size*sizeof(dtype);
+        this->inc_mem();
         gpuErrorCheck(cudaMalloc(&this->data, this->size*sizeof(dtype)));
         gpuErrorCheck(cudaMemcpy(this->data, data, this->size*sizeof(dtype), cudaMemcpyHostToDevice));
         this->ownData = true;

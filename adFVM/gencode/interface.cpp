@@ -1,7 +1,7 @@
 #include "interface.hpp"
 
 long long mil = 0;
-int memUsage = 0;
+struct memory mem = {0, 0};
 
 long long current_timestamp() {
     struct timeval te; 
