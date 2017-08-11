@@ -501,7 +501,7 @@ class Mesh(object):
         self.cellFaces = self.getCellFaces()     # nInternalCells
         # time consuming 
         if config.device == 'cpu':
-            self.cells = getCells(self)
+            self.cells = getCells(self, np.ones(1, config.precision))
 
     def populateSizes(self):
         self.nInternalFaces = len(self.neighbour)
