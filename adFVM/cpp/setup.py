@@ -1,42 +1,27 @@
 from distutils.core import setup, Extension
 import numpy as np
 import os
+#from . import include
 
 from os.path import expanduser
-from adFVM import cpp
-cppDir = os.path.dirname(cpp.__file__)
+home = expanduser("~")
 
 os.environ['CC'] = 'ccache mpicc'
 os.environ['CXX'] = 'mpicxx'
 #os.environ['CC'] = '/home/talnikar/local/bin/gcc'
 #os.environ['CXX'] = '/home/talnikar/local/bin/gcc'
 
-home = expanduser("~")
-incdirs = [np.get_include(), cppDir + '/include']
+incdirs = [np.get_include()]
+#incdirs += [os.path.dirname(include.__file__)]
+incdirs += ['include/']
 libdirs = []
 libs = []
-common = ['parallel.cpp', 'mesh.cpp']
-sources = ['{}/{}'.format(cppDir, x) for x in common]
-sources += ['interface.cpp', 'matop.cpp', 'kernel.cpp', 'code.cpp']
+sources = ['mesh.cpp', 'cmesh.cpp']
 
-#incdirs += [home + '/.local/include']
-#libdirs += [home + '/.local/lib']
-#incdirs += ['/projects/LESOpt/talnikar/local/include']
-#libdirs += ['/projects/LESOpt/talnikar/local/lib/']
-
-module = 'interface'
+module = 'cmesh'
 #compile_args = ['-std=c++11', '-O3']#, '-march=native']
 compile_args = ['-std=c++11', '-O3', '-g']#, '-march=native']
 compile_args += ['-DMPI_GPU']
-
-matop = True
-matop = False
-if matop:
-    compile_args += ['-DMATOP']
-    home = os.path.expanduser('~') + '/sources/petsc/'
-    incdirs += [home + '/linux-gnu-c-opt/include', home + '/include']
-    libdirs += [home + '/linux-gnu-c-opt/lib']
-    libs += ['petsc', 'lapack']
 
 mod = Extension(module,
                 sources=sources,

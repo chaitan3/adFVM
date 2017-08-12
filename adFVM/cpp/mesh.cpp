@@ -4,16 +4,15 @@ Mesh::Mesh (PyObject* meshObject) {
     this->mesh = meshObject;
     //Py_DECREF(args);
     assert(this->mesh);
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    this->rank = rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &this->rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &this->nProcs);
     
-    this->nInternalFaces = getInteger(this->mesh, "nInternalFaces");
-    this->nFaces = getInteger(this->mesh, "nFaces");
-    this->nBoundaryFaces = getInteger(this->mesh, "nBoundaryFaces");
-    this->nInternalCells = getInteger(this->mesh, "nInternalCells");
-    this->nGhostCells = getInteger(this->mesh, "nGhostCells");
     this->nCells = getInteger(this->mesh, "nCells");
+    this->nFaces = getInteger(this->mesh, "nFaces");
+    this->nInternalFaces = getInteger(this->mesh, "nInternalFaces");
+    this->nInternalCells = getInteger(this->mesh, "nInternalCells");
+    this->nBoundaryFaces = getInteger(this->mesh, "nBoundaryFaces");
+    this->nGhostCells = getInteger(this->mesh, "nGhostCells");
     this->nLocalPatches = getInteger(this->mesh, "nLocalPatches");
     this->nRemotePatches = getInteger(this->mesh, "nRemotePatches");
 
@@ -21,7 +20,6 @@ Mesh::Mesh (PyObject* meshObject) {
     getMeshArray(this->mesh, "points", this->points);
     getMeshArray(this->mesh, "owner", this->owner);
     getMeshArray(this->mesh, "neighbour", this->neighbour);
-
 
     this->boundary = getMeshBoundary(this->mesh, "boundary");
     this->tags = getTags(this->mesh, "tags");
@@ -32,22 +30,18 @@ Mesh::Mesh (PyObject* meshObject) {
         integer nFaces = stoi(patchInfo.at("nFaces"));
         this->boundaryFaces[patchID] = make_pair(startFace, nFaces);
     }
-    MPI_Comm_size(MPI_COMM_WORLD, &this->nProcs);
 }
 
 void Mesh::init () {
     this->nLocalCells = getInteger(this->mesh, "nLocalCells");
     this->nLocalFaces = this->nFaces - (this->nCells-this->nLocalCells);
     getMeshArray(this->mesh, "cellNeighboursMatOp", this->cellNeighbours);
-    getMeshArray(this->mesh, "cellCentres", this->cellCentres);
     if (this->rank == 0) {
         std::cout << "Initializing C++ interface" << endl;
     }
 }
 
-void Mesh::build () {
 
-}
 
 Mesh::~Mesh () {
     //Py_DECREF(this->mesh);

@@ -64,7 +64,7 @@ class Solver(object):
         self.compileInit()
         self.compileSolver()
         Function.compile()
-        Function._module.initialize(*([self.mesh] + [phi.boundary for phi in self.fields] + [self.__class__.defaultConfig]))
+        Function._module.initialize(self.mesh)
         return
         
     def function(self, inputs, outputs, name, **kwargs):

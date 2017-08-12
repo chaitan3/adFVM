@@ -8,12 +8,13 @@ long long current_timestamp() {
     struct timeval te; 
     gettimeofday(&te, NULL); // get current time
     long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // caculate milliseconds
-     //printf("milliseconds: %lld\n", milliseconds);
-         return milliseconds;
-     }
+    //printf("milliseconds: %lld\n", milliseconds);
+    return milliseconds;
+}
+
+void Mesh::build() {}
 
 Mesh *meshp = NULL;
-//#include "code.hpp"
 #ifdef MATOP
     #include "matop.hpp"
     Matop *matop;
@@ -43,6 +44,7 @@ PyObject* initSolver(PyObject *self, PyObject *args) {
     Py_INCREF(meshObject);
 
     meshp = new Mesh(meshObject);
+    meshp->init();
     #ifdef MATOP
         integer argc = 0;
         PetscInitialize(&argc, NULL, NULL, NULL);

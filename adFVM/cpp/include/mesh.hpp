@@ -6,17 +6,16 @@
 typedef map<string, map<string, string> > Boundary;
 class Mesh {
     public:
-        string caseDir;
         int nCells;
         int nFaces;
         int nInternalCells;
         int nInternalFaces;
         int nBoundaryFaces;
         int nGhostCells;
-        int nLocalFaces;
-        int nLocalCells;
         int nLocalPatches;
         int nRemotePatches;
+        int nLocalCells;
+        int nLocalFaces;
         int nProcs, rank;
 
         imat faces;
@@ -24,19 +23,14 @@ class Mesh {
         ivec owner;
         ivec neighbour;
 
-        arrType<integer, 6> cellFaces;
-        arrType<integer, 6> cellNeighbours;
-        vec volumes;
-
-        vec areas, weights, deltas;
-        vec volumesL, volumesR;
         mat normals;
+        vec areas, weights, deltas, volumes;
         arrType<scalar, 2> linearWeights;
         arrType<scalar, 2, 3> quadraticWeights;
-
-        mat deltasUnit;
         mat faceCentres;
         mat cellCentres;
+        arrType<integer, 6> cellFaces;
+        arrType<integer, 6> cellNeighbours;
 
         Boundary boundary;
         map<string, pair<integer, integer>> boundaryFaces;
