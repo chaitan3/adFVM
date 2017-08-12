@@ -31,6 +31,7 @@ Mesh::Mesh (PyObject* meshObject) {
     getMeshArray(this->mesh, "points", this->points);
     getMeshArray(this->mesh, "owner", this->owner);
     getMeshArray(this->mesh, "neighbour", this->neighbour);
+    getMeshArray(this->mesh, "cellFaces", this->cellFaces);
 
     this->boundary = getMeshBoundary(this->mesh, "boundary");
     this->tags = getTags(this->mesh, "tags");

@@ -18,7 +18,7 @@ class Mesh {
         int nLocalFaces;
         int nProcs, rank;
 
-        imat faces;
+        arrType<integer, 5> faces;
         mat points;
         ivec owner;
         ivec neighbour;

@@ -11,6 +11,7 @@ from .compat import norm, decompose, getCells, add_at
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
 from .tensor import IntegerScalar, Container, Variable
+from .cpp import cmesh
 
 try:
     import h5py
@@ -91,14 +92,14 @@ class Mesh(object):
     @config.timeFunction('Time for building mesh')
     def build(self, meshData, currTime='constant'):
         pprint('Building mesh')
-
-        self.points, self.faces, self.owner, self.neighbour, \
-                self.addressing, self.boundary = meshData
         import time
         start = time.time()
 
+        self.points, self.faces, self.owner, self.neighbour, \
+                self.addressing, self.boundary = meshData
+
         self.buildBeforeWrite()
-        print(1, time.time()-start)
+        print(time.time()-start)
 
         # patches
         self.localPatches, self.remotePatches = self.splitPatches(self.boundary)
@@ -111,13 +112,22 @@ class Mesh(object):
         self.boundaryTensor = {}
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
-       
-        self.normals = self.getNormals()
-        self.faceCentres, self.areas = self.getFaceCentresAndAreas()
-        self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 
+
+        self.normals, self.faceCentres, self.areas, self.cellCentres, self.volumes = cmesh.build(self)
+        print(time.time()-start)
+        #self.normals = self.getNormals()
+        #self.faceCentres, self.areas = self.getFaceCentresAndAreas()
+        #self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 
+        #print(time.time()-start)
+        #print (np.abs(normals-self.normals)).max()
+        #print (np.abs(faceCentres-self.faceCentres)).max()
+        #print (np.abs(areas-self.areas)).max()
+        #print (np.abs(cellCentres-self.cellCentres)).max()
+        #print (np.abs(volumes-self.volumes)).max()
 
         # ghost cell modification: neighbour and cellCentres
         self.nLocalCells = self.createGhostCells()
+        print(time.time()-start)
         self.deltas, self.deltasUnit = self.getDeltas()           # nFaces 
         self.weights, self.linearWeights, self.quadraticWeights = self.getWeights()   # nFaces
 
@@ -126,6 +136,7 @@ class Mesh(object):
         self.cellNeighbours = self.getCellNeighbours()
 
         self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
+        print(time.time()-start)
         #self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)
         #self.checkWeights()
         
@@ -146,6 +157,7 @@ class Mesh(object):
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
         pprint('nFaces:', parallel.sum(self.origMesh.nFaces))
+        print(time.time()-start)
 
         printMemUsage()
         return 

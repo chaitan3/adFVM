@@ -28,8 +28,6 @@ Mesh *meshp = NULL;
 #endif
 #define modName "interface"
 
-
-
 PyObject* initSolver(PyObject *self, PyObject *args) {
 
     PyObject *meshObject = PyTuple_GetItem(args, 0);
