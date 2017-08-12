@@ -46,16 +46,31 @@ def copyToTemp(home, coresPerNode):
     pprint()
     return temp
 
-def reduction(data, op, allreduce=True):
-    np_op, mpi_op = op
-    redData = np_op(data)
-    if nProcessors > 1:
-        if allreduce:
-            return mpi.allreduce(redData, op=mpi_op)
-        else:
-            return mpi.reduce(redData, op=mpi_op, root=0)
+def reduction(data, op, allreduce):
+    if not isinstance(data, list):
+        data = [data]
+        singleton = True
     else:
-        return redData                           
+        singleton = False
+    np_op, mpi_op = op
+    redData = []
+    n = len(data)
+    for d in data:
+        redData.append(np_op(data))
+    if nProcessors > 1:
+        redData = np.array(redData)
+        ret = np.zeros(n, redData.dtype)
+        if allreduce:
+            mpi.Allreduce(redData, ret, op=mpi_op)
+        else:
+            mpi.Reduce(redData, ret, op=mpi_op, root=0)
+        ret = ret.tolist()
+    else:
+        ret = redData                           
+    if singleton:
+        return ret[0]
+    else:
+        return ret
 
 def max(data, allreduce=True):
     return reduction(data, (np.max, MPI.MAX), allreduce)
@@ -64,11 +79,7 @@ def min(data, allreduce=True):
     return reduction(data, (np.min, MPI.MIN), allreduce)
 
 def sum(data, allreduce=True):
-    sumData = reduction(data, (np.sum, MPI.SUM), allreduce)
-    if sumData is None:
-        return 0
-    else:
-        return sumData
+    return reduction(data, (np.sum, MPI.SUM), allreduce)
 
 def argmin(data):
     minData, index = np.min(data), np.argmin(data)

@@ -8,9 +8,11 @@ rank = mpi.rank
 n = mpi.Get_size()
 hostname = MPI.Get_processor_name()
 
-print mpi.gather(1, root=0)
-print mpi.scatter([1], root=0)
-print mpi.bcast([1], root=0)
+print mpi.allreduce([rank, rank+20])
+print mpi.reduce([[rank], [rank+20]])
+#print mpi.gather(1, root=0)
+#print mpi.scatter([1], root=0)
+#print mpi.bcast([1], root=0)
 
 #print 'I\'m call', sys.argv[1], 'at', rank, 'of', n, 'processors on', hostname
 

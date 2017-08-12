@@ -257,8 +257,8 @@ class Adjoint(Solver):
                     # make efficient cpu implementation
                     for derivative, delphi in zip(paramGradient, perturbation):
                         sensitivity += np.sum(derivative * delphi)
-                    sensitivities.apppend(sensitivity)
-                sensitivities = parallel.sum(sensitvities, allreduce=False)
+                    sensitivities.append(sensitivity)
+                sensitivities = parallel.sum(sensitivities, allreduce=False)
                 if (nSteps - (primalIndex + adjointIndex)) > avgStart:
                     for index in range(0, len(perturb)):
                         result[index] += sensitivities[index]
@@ -310,7 +310,6 @@ def main():
         global matop_petsc
         from adFVM import matop_petsc
 
-    print(type(adjoint.timeSteps[nSteps-writeInterval][0]))
     primal.readFields(adjoint.timeSteps[nSteps-writeInterval][0])
     adjoint.createFields()
     adjoint.compile()
