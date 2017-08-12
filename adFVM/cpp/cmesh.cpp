@@ -1,6 +1,5 @@
 #include "mesh.hpp"
 
-
 void Mesh::build() {
     cout << "hello" << endl;
 }

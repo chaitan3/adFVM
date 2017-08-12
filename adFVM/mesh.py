@@ -112,9 +112,9 @@ class Mesh(object):
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
        
-        #self.normals = self.getNormals()
-        #self.faceCentres, self.areas = self.getFaceCentresAndAreas()
-        #self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 
+        self.normals = self.getNormals()
+        self.faceCentres, self.areas = self.getFaceCentresAndAreas()
+        self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 
 
         # ghost cell modification: neighbour and cellCentres
         self.nLocalCells = self.createGhostCells()

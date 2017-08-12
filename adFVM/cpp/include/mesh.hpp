@@ -47,7 +47,7 @@ class Mesh {
 int getInteger(PyObject*, const string);
 map<string, integer> getTags(PyObject *mesh, const string attr);
 template<typename dtype, integer shape1, integer shape2>
- void getMeshArray(PyObject *, const string, arrType<dtype, shape1, shape2> &);
+void getMeshArray(PyObject *, const string, arrType<dtype, shape1, shape2> &);
 
 Boundary getBoundary(PyObject*);
 Boundary getMeshBoundary(PyObject *mesh, const string attr);

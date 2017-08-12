@@ -1,4 +1,15 @@
+#define NO_IMPORT_ARRAY
 #include "mesh.hpp"
+
+template <typename dtype, integer shape1, integer shape2>
+void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shape2>& tmp) {
+    PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
+    //cout << attr << " " << array << endl;
+    //cout << attr << " " << PyArray_DESCR(array)->elsize << endl;
+    assert (array != NULL);
+    getArray(array, tmp);
+    Py_DECREF(array);
+}
 
 Mesh::Mesh (PyObject* meshObject) {
     this->mesh = meshObject;

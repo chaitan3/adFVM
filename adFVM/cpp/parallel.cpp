@@ -1,3 +1,4 @@
+#define NO_IMPORT_ARRAY
 #include "parallel.hpp"
 #include "mesh.hpp"
 
