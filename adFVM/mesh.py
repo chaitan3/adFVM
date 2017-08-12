@@ -7,7 +7,7 @@ import copy
 import os
 
 from . import config, parallel
-from .compat import norm, decompose, getCells, add_at
+from .compat import norm, decompose
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
 from .tensor import IntegerScalar, Container, Variable
@@ -99,6 +99,8 @@ class Mesh(object):
                 self.addressing, self.boundary = meshData
 
         self.buildBeforeWrite()
+        print self.cellFaces.shape
+        print self.cells.shape
         print(time.time()-start)
 
         # patches
@@ -543,9 +545,7 @@ class Mesh(object):
         self.populateSizes()
         # mesh computation
         # uses neighbour
-        self.cellFaces = self.getCellFaces()     # nInternalCells
-        # time consuming 
-        self.cells = getCells(self, np.zeros((1,), config.precision))
+        self.cellFaces, self.cells = cmesh.buildBeforeWrite(self)
 
     def populateSizes(self):
         self.nInternalFaces = len(self.neighbour)

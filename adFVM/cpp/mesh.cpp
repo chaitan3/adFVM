@@ -24,17 +24,13 @@ Mesh::Mesh (PyObject* meshObject) {
     this->nInternalCells = getInteger(this->mesh, "nInternalCells");
     this->nBoundaryFaces = getInteger(this->mesh, "nBoundaryFaces");
     this->nGhostCells = getInteger(this->mesh, "nGhostCells");
-    this->nLocalPatches = getInteger(this->mesh, "nLocalPatches");
-    this->nRemotePatches = getInteger(this->mesh, "nRemotePatches");
 
     getMeshArray(this->mesh, "faces", this->faces);
     getMeshArray(this->mesh, "points", this->points);
     getMeshArray(this->mesh, "owner", this->owner);
     getMeshArray(this->mesh, "neighbour", this->neighbour);
-    getMeshArray(this->mesh, "cellFaces", this->cellFaces);
 
     this->boundary = getMeshBoundary(this->mesh, "boundary");
-    this->tags = getTags(this->mesh, "tags");
     for (auto& patch: this->boundary) {
         string patchID = patch.first;
         auto& patchInfo = patch.second;
@@ -47,6 +43,10 @@ Mesh::Mesh (PyObject* meshObject) {
 void Mesh::init () {
     this->nLocalCells = getInteger(this->mesh, "nLocalCells");
     this->nLocalFaces = this->nFaces - (this->nCells-this->nLocalCells);
+    this->nLocalPatches = getInteger(this->mesh, "nLocalPatches");
+    this->nRemotePatches = getInteger(this->mesh, "nRemotePatches");
+    this->tags = getTags(this->mesh, "tags");
+
     getMeshArray(this->mesh, "cellNeighboursMatOp", this->cellNeighbours);
     if (this->rank == 0) {
         std::cout << "Initializing C++ interface" << endl;

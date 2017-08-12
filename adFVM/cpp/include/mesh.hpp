@@ -30,6 +30,7 @@ class Mesh {
         mat faceCentres;
         mat cellCentres;
         arrType<integer, 6> cellFaces;
+        arrType<integer, 8> cells;
         arrType<integer, 6> cellNeighbours;
 
         Boundary boundary;
@@ -41,6 +42,7 @@ class Mesh {
         Mesh (PyObject *);
         void init();
         void build();
+        void buildBeforeWrite();
         ~Mesh ();
 };
 

@@ -13,6 +13,7 @@ long long current_timestamp() {
 }
 
 void Mesh::build() {}
+void Mesh::buildBeforeWrite() {}
 
 Mesh *meshp = NULL;
 #ifdef MATOP

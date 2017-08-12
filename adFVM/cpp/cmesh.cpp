@@ -1,15 +1,77 @@
 #include "mesh.hpp"
 
+void Mesh::buildBeforeWrite() {
+    this->cellFaces = move(arrType<integer, 6>(this->nInternalCells));
+    this->cells = move((arrType<integer, 8>(this->nInternalCells)));
+    integer i, j, k, l, m, n;
+    ivec indices(this->nInternalCells, true);
+    #pragma omp parallel for private(i)
+    for (i = 0; i < this->nFaces; i++) {
+        integer p = this->owner(i);
+        this->cellFaces(p, indices(p)) = i;
+        indices(p) += 1;
+    }
+    #pragma omp parallel for private(i)
+    for (i = 0; i < this->nInternalFaces; i++) {
+        integer p = this->neighbour(i);
+        this->cellFaces(p, indices(p)) = i;
+        indices(p) += 1;
+    }
+    #pragma omp parallel for private(i, j, k, m, l, n)
+    for (i = 0; i < this->nInternalCells; i++) {
+        integer firstFace[4];
+        integer nextFace[4];
+        integer point, found;
+        integer f = this->cellFaces(i, 0);
+        for (j = 0; j < 4; j++) {
+            firstFace[j] = this->faces(f, 1+j);
+        }
+        integer* cellPoint = &this->cells(i);
+        for (j = 0; j < 4; j++) {
+            point = firstFace[j];
+            found = 0;
+            for (n = 1; n < 6; n++) {
+                f = this->cellFaces(i, n);
+                for (k = 0; k < 4; k++) {
+                    nextFace[k] = this->faces(f, 1+k);
+                }
+                for (k = 0; k < 4; k++) {
+                    if (nextFace[k] == point) {
+                        l = (k + 1) % 4;
+                        for (m = 0; m < 4; m++) {
+                            if (firstFace[m] == nextFace[l]) {
+                                l = (k - 1) % 4;
+                                break;
+                            }
+                        }
+                        cellPoint[4+j] = nextFace[l];
+                        found = 1;
+                        break;
+                    }
+                if (found)
+                    break;
+                }
+            }
+        }
+
+        for (j = 0; j < 4; j++) {
+            cellPoint[j] = firstFace[j];
+        }
+    }
+}
+
 void Mesh::build() {
     this->normals = move(mat(this->nFaces));
     this->faceCentres = move(mat(this->nFaces));
     this->areas = move(vec(this->nFaces));
-    for (integer f = 0; f < this->nFaces; f++) {
+    integer i, j, c, f;
+    #pragma omp parallel for private(f, i, j)
+    for (f = 0; f < this->nFaces; f++) {
         scalar *a = &this->points(this->faces(f, 1));
         scalar *b = &this->points(this->faces(f, 2));
         scalar *c = &this->points(this->faces(f, 3));
         scalar v1[3], v2[3];
-        for (integer i = 0; i < 3; i++) {
+        for (i = 0; i < 3; i++) {
             v1[i] = a[i]-b[i];
             v2[i] = b[i]-c[i];
         }
@@ -18,21 +80,21 @@ void Mesh::build() {
         normal[1] = v1[2]*v2[0]-v1[0]*v2[2];
         normal[2] = v1[0]*v2[1]-v1[1]*v2[0];
         scalar Ns = sqrt(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2]);
-        for (integer i = 0; i < 3; i++) {
+        for (i = 0; i < 3; i++) {
             normal[i] /= Ns;
         }
         scalar* sumCentre = &this->faceCentres(f);
         scalar faceCentre[3] = {0, 0, 0};
         scalar* area = &this->areas(f);
         area[0] = 0;
-        for (integer i = 0; i < 3; i++) {
+        for (i = 0; i < 3; i++) {
             sumCentre[i] = 0;
-            for (integer j = 1; j < 5; j++) {
+            for (j = 1; j < 5; j++) {
                 faceCentre[i] += this->points(this->faces(f, j), i);
             }
             faceCentre[i] /= 4;
         }
-        for (integer j = 1; j < 5; j++) {
+        for (j = 1; j < 5; j++) {
             scalar* point = &this->points(this->faces(f, j));
             scalar* nextPoint = &this->points(this->faces(f, (j % 4) + 1));
             scalar avgPoint[3] = {0, 0, 0};
@@ -51,26 +113,27 @@ void Mesh::build() {
                 sumCentre[i] += Ns*avgPoint[i]/2;
             }
         }
-        for (integer i = 0; i < 3; i++) {
+        for (i = 0; i < 3; i++) {
             sumCentre[i] /= area[0];
         }
     }
 
     this->cellCentres = move(mat(this->nInternalCells));
     this->volumes = move(vec(this->nInternalCells));
-    for (integer c = 0; c < this->nInternalCells; c++) {
+    #pragma omp parallel for private(c, i, j)
+    for (c = 0; c < this->nInternalCells; c++) {
         scalar* volume = &this->volumes(c);
         scalar* sumCentre = &this->cellCentres(c);
         scalar cellCentre[3] = {0, 0, 0};
         volume[0] = 0;
-        for (integer i = 0; i < 3; i++) {
+        for (i = 0; i < 3; i++) {
             sumCentre[i] = 0;
             for (integer j = 0; j < 6; j++) {
                 cellCentre[i] += this->faceCentres(this->cellFaces(c, j), i);
             }
             cellCentre[i] /= 6;
         }
-        for (integer j = 0; j < 6; j++) {
+        for (j = 0; j < 6; j++) {
             integer f = this->cellFaces(c, j);
             scalar* faceCentre = &this->faceCentres(f);
             scalar area = this->areas(f);
@@ -85,11 +148,11 @@ void Mesh::build() {
             }
             v = abs(v/3);
             volume[0] += v;
-            for (integer i = 0; i < 3; i++) {
+            for (i = 0; i < 3; i++) {
                 sumCentre[i] += v*avgCentre[i];
             }
         }
-        for (integer i = 0; i < 3; i++) {
+        for (i = 0; i < 3; i++) {
             sumCentre[i] /= volume[0];
         }
     }
@@ -112,7 +175,7 @@ PyObject* buildMesh(PyObject *self, PyObject *args) {
     PyObject *meshObject = PyTuple_GetItem(args, 0);
     Py_INCREF(meshObject);
 
-    meshp = new Mesh(meshObject);
+    //meshp = new Mesh(meshObject);
     meshp->build();
     PyObject* outputs = PyTuple_New(5);
     PyTuple_SetItem(outputs, 0, putArray(meshp->normals));
@@ -123,8 +186,22 @@ PyObject* buildMesh(PyObject *self, PyObject *args) {
     return outputs;
 }
 
+PyObject* buildMeshBeforeWrite(PyObject *self, PyObject *args) {
+
+    PyObject *meshObject = PyTuple_GetItem(args, 0);
+    //Py_INCREF(meshObject);
+
+    meshp = new Mesh(meshObject);
+    meshp->buildBeforeWrite();
+    PyObject* outputs = PyTuple_New(2);
+    PyTuple_SetItem(outputs, 0, putArray(meshp->cellFaces));
+    PyTuple_SetItem(outputs, 1, putArray(meshp->cells));
+    return outputs;
+}
+
 PyMethodDef Methods[] = {
     {"build",  buildMesh, METH_VARARGS, "Execute a shell command."},
+    {"buildBeforeWrite",  buildMeshBeforeWrite, METH_VARARGS, "Execute a shell command."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
