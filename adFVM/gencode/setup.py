@@ -13,7 +13,7 @@ os.environ['CXX'] = 'mpicxx'
 incdirs = [np.get_include()]
 libdirs = []
 libs = []
-sources = ['interface.cpp', 'matop.cpp', 'kernel.cpp', 'code.cpp']
+sources = ['interface.cpp', 'parallel.cpp', 'mesh.cpp', 'matop.cpp', 'kernel.cpp', 'code.cpp']
 
 #incdirs += [home + '/.local/include']
 #libdirs += [home + '/.local/lib']

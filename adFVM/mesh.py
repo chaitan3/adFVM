@@ -34,14 +34,13 @@ class Mesh(object):
                  'nLocalCells', 'nRemoteCells', 'nLocalFaces']
 
     def __init__(self):
-        pass
         #for attr in Mesh.constants:
         #    setattr(self, attr, 0)
         #for attr in Mesh.fields:
         #    setattr(self, attr, np.array([[]]))
         self.boundary = {}
-        for attr in Mesh.gradFields:
-            setattr(self, attr, 0)
+        #for attr in Mesh.gradFields:
+        #    setattr(self, attr, 0)
 
         #self.localRemoteCells = None
         #self.localRemoteFaces = None
@@ -95,8 +94,11 @@ class Mesh(object):
 
         self.points, self.faces, self.owner, self.neighbour, \
                 self.addressing, self.boundary = meshData
+        import time
+        start = time.time()
 
         self.buildBeforeWrite()
+        print(1, time.time()-start)
 
         # patches
         self.localPatches, self.remotePatches = self.splitPatches(self.boundary)
@@ -110,25 +112,27 @@ class Mesh(object):
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
        
-        self.normals = self.getNormals()
-        self.faceCentres, self.areas = self.getFaceCentresAndAreas()
-        self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 
-        self.volumesL = self.volumes[self.owner]
-        self.volumesR = self.volumes[self.neighbour[:self.nInternalFaces]]
+        #self.normals = self.getNormals()
+        #self.faceCentres, self.areas = self.getFaceCentresAndAreas()
+        #self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 
 
         # ghost cell modification: neighbour and cellCentres
         self.nLocalCells = self.createGhostCells()
-        self.nRemoteCells = self.nCells - self.nLocalCells
-        self.nLocalFaces = self.nLocalCells - self.nInternalCells + self.nInternalFaces
         self.deltas, self.deltasUnit = self.getDeltas()           # nFaces 
         self.weights, self.linearWeights, self.quadraticWeights = self.getWeights()   # nFaces
 
         # uses neighbour
         self.cellNeighboursMatOp = self.getCellNeighbours(boundary=False)
         self.cellNeighbours = self.getCellNeighbours()
+
         self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
         #self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)
-        self.checkWeights()
+        #self.checkWeights()
+        
+        self.volumesL = self.volumes[self.owner]
+        self.volumesR = self.volumes[self.neighbour[:self.nInternalFaces]]
+        self.nRemoteCells = self.nCells - self.nLocalCells
+        self.nLocalFaces = self.nLocalCells - self.nInternalCells + self.nInternalFaces
 
         # theano shared variables
         self.origMesh = self

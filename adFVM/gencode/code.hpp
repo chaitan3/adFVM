@@ -4,6 +4,7 @@
 #define NO_IMPORT_ARRAY
 #include "common.hpp"
 #include "interface.hpp"
+#include "parallel.hpp"
+#include "mesh.hpp"
 #include "kernel.hpp"
-//#include "module.hpp"
 #endif

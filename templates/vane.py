@@ -115,8 +115,8 @@ def objective(fields, solver):
         return a*obj + b*obj2
     return tensor.Tensorize(_combine)(1)(pl, w, ht, w2)[0]
 
-primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective)
-#primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective)
+#primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective)
+primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective)
 getPlane(primal)
 getWeights(primal)
 
@@ -151,8 +151,8 @@ parameters = 'mesh'
 
 #parameters = 'source'
 
-nSteps = 10
-writeInterval = 10
+nSteps = 100
+writeInterval = 100
 #nSteps = 100
 #writeInterval = 20
 #nSteps = 100000
