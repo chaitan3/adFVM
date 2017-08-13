@@ -118,7 +118,7 @@ def objective(fields, solver):
 
 #primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective)
 primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective)
-primal = RCF('/home/talnikar/adFVM/cases/vane/les/', objective=objective)
+#primal = RCF('/home/talnikar/adFVM/cases/vane/les/', objective=objective)
 getPlane(primal)
 getWeights(primal)
 
