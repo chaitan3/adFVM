@@ -30,8 +30,6 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
     cdef int d = faces.shape[1]-1
     cdef int i, j, k
 
-    import time
-    start = time.time()
     cdef np.ndarray[dtype, ndim=2] left = np.zeros((nFaces, d), point.dtype)
     cdef np.ndarray[int] counter = np.zeros(nFaces, np.int32)
     with nogil, parallel():
@@ -46,7 +44,6 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
     #left = (points[faces[:,1:]]-point).dot(normal) > 0.
     #counter = left.sum(axis=1)
     inter = np.where((counter > 0) & (counter < d))[0]
-    print(time.time()-start)
     cdef int n = inter.shape[0]
     cdef np.ndarray[int, ndim=2] lines = -np.ones((n, 4), np.int32)
 
@@ -72,7 +69,6 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
                     lines[i,k+1] = (k-1)%d
                 else:
                     lines[i,k+1] = (k+1)%d
-    print(time.time()-start)
 
     # get points of intersection
     interPoints = np.zeros((n, 2, 3), mesh.points.dtype)
@@ -82,7 +78,6 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
         l = (l1-l0)
         t = ((point-l0).dot(normal)/l.dot(normal)).reshape((-1, 1))
         interPoints[:,i/2,:] = l0 + t*l
-    print(time.time()-start)
 
     # get intersected cells
     internalInter = inter[inter < nInternalFaces]
@@ -102,7 +97,6 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
             curr = interCellFaces[cell,0]
             interCellFaces[cell,curr+1] = i
             interCellFaces[cell,0] += 1
-    print(time.time()-start)
             
     # get intersection area
     interCellPoints = interPoints[interCellFaces[:,1:]].reshape((-1, 2*4, 3))
@@ -115,7 +109,6 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
     a = interCellPoints[np.arange(len(interCells)),interDist1,:]-interCellPoints[:,1,:]
     b = interCellPoints[np.arange(len(interCells)),interDist2,:]-interCellPoints[:,0,:]
     area = np.linalg.norm(np.cross(a, b), axis=1)/2
-    print(time.time()-start)
     return interCells, area.reshape((-1, 1))
         
             
