@@ -19,9 +19,6 @@ $(BUILD):
 $(BUILD)/%.o: %.cpp 
 	$(CC) -x cu $(CFLAGS) $(INCDIRS) $^ -c -o $@
 
-%.cpp: 
-	cp /home/talnikar/adFVM/adFVM/cpp/$@ .
-
 $(TARGET): $(BUILD) $(OBJ)
 	$(CC) $(LDFLAGS) $(LIBDIRS) $(LIBS) $(OBJ) -o $(TARGET)
 

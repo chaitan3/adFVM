@@ -371,6 +371,8 @@ class Function(object):
         if config.compile:
             assert not os.path.exists(self.codeDir)
             shutil.copytree(scriptDir + '/gencode', self.codeDir)
+            shutil.copy(scriptDir + '/cpp/mesh.cpp', self.codeDir)
+            shutil.copy(scriptDir + '/cpp/parallel.cpp', self.codeDir)
             Function.clean()
 
     @classmethod
