@@ -1,7 +1,7 @@
 import numpy as np
 
 from adFVM import config
-from adFVM.compat import norm, intersectPlane
+from adFVM.compat import intersectPlane
 from adFVM.density import RCF 
 from adFVM import tensor
 from adFVM.mesh import Mesh
@@ -27,6 +27,7 @@ def objectiveHeatTransfer(U, T, p, weight, *mesh, **options):
     return ht.sum(), w.sum()
 
 # pressure loss
+@config.timeFunction('Time for finding intersection plane')
 def getPlane(solver):
     point = np.array([0.052641,-0.1,0.005]).astype(config.precision)
     normal = np.array([1.,0.,0.]).astype(config.precision)
@@ -117,6 +118,7 @@ def objective(fields, solver):
 
 #primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective)
 primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective)
+primal = RCF('/home/talnikar/adFVM/cases/vane/les/', objective=objective)
 getPlane(primal)
 getWeights(primal)
 

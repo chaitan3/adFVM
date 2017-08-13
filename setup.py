@@ -17,9 +17,12 @@ class CleanCommand(Command):
 
 
 compatDir = 'adFVM/compat/'
+compile_args = ['-fopenmp']
+link_args = ['-lgomp']
 cfuncs = cythonize(
         [Extension(compatDir + 'cfuncs', [compatDir + 'cfuncs.pyx'], 
-        language='c++')])
+        language='c++', extra_compile_args=compile_args, extra_link_args=link_args)])
+
 
 setup(name='adFVM',
       version='0.1.1',

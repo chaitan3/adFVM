@@ -15,9 +15,7 @@ home = expanduser("~")
 incdirs = [np.get_include(), cppDir + '/include']
 libdirs = []
 libs = []
-common = ['parallel.cpp', 'mesh.cpp']
-sources = ['{}/{}'.format(cppDir, x) for x in common]
-sources += ['interface.cpp', 'matop.cpp', 'kernel.cpp', 'code.cpp']
+sources = ['interface.cpp', 'matop.cpp', 'kernel.cpp', 'code.cpp', 'mesh.cpp', 'parallel.cpp']
 
 #incdirs += [home + '/.local/include']
 #libdirs += [home + '/.local/lib']

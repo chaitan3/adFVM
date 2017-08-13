@@ -7,7 +7,7 @@ import copy
 import os
 
 from . import config, parallel
-from .compat import norm, decompose
+from .compat import decompose
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
 from .tensor import IntegerScalar, Container, Variable
@@ -102,7 +102,7 @@ class Mesh(object):
                 self.addressing, self.boundary = meshData
 
         self.buildBeforeWrite()
-        print(time.time()-start)
+        #print(time.time()-start)
 
         # patches
         self.localPatches, self.remotePatches = self.splitPatches(self.boundary)
@@ -117,7 +117,7 @@ class Mesh(object):
         self.calculatedBoundary = self.getCalculatedBoundary()
 
         cmesh.build(self)
-        print(time.time()-start)
+        #print(time.time()-start)
         #self.normals = self.getNormals()
         #self.faceCentres, self.areas = self.getFaceCentresAndAreas()
         #self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 

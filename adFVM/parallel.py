@@ -22,7 +22,6 @@ except:
     mpi.scatter = lambda x, root: x[0]
     mpi.gather = lambda x, root: [x]
 
-from .compat import add_at
 
 processorDirectory = '/'
 if nProcessors > 1:
@@ -228,7 +227,7 @@ def getAdjointRemoteCells(fields, meshC, fieldTag=0):
     for phi, field, adj in zip(phis, fields, adjointRemoteCells):
         for patchID in meshC.remotePatches:
             startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
-            add_at(phi, mesh.owner[startFace:endFace], adj[patchID])
+            np.add.at(phi, mesh.owner[startFace:endFace], adj[patchID])
     return phis
 
 def gatherCells(field, mesh, axis=0):

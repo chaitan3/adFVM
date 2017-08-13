@@ -1,5 +1,6 @@
 cimport numpy as np
 cimport cython
+from cython.parallel import prange, parallel
 #cimport part_mesh
 from libcpp.vector cimport vector
 from libcpp.set cimport set
@@ -23,17 +24,32 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
     cdef np.ndarray[dtype, ndim=2] points = mesh.points
     cdef np.ndarray[int] owner = mesh.origMesh.owner
     cdef np.ndarray[int] neighbour = mesh.origMesh.neighbour
-    cdef int nInternalCells = mesh.origMesh.nInternalCells
-    cdef int nInternalFaces = mesh.origMesh.nInternalFaces
+    cdef int nInternalCells = mesh.nInternalCells
+    cdef int nInternalFaces = mesh.nInternalFaces
+    cdef int nFaces = mesh.nFaces
     cdef int d = faces.shape[1]-1
+    cdef int i, j, k
 
-    left = (points[faces[:,1:]]-point).dot(normal) > 0.
-    counter = left.sum(axis=1)
+    import time
+    start = time.time()
+    cdef np.ndarray[dtype, ndim=2] left = np.zeros((nFaces, d), point.dtype)
+    cdef np.ndarray[int] counter = np.zeros(nFaces, np.int32)
+    with nogil, parallel():
+        for i in prange(0, nFaces):
+            for j in range(1, d+1):
+                left[i,j-1] = 0.
+                for k in range(0, 3):
+                    left[i,j-1] += (points[faces[i,j], k]-point[k])*normal[k]
+                counter[i] += left[i,j-1] > 0.
+
+
+    #left = (points[faces[:,1:]]-point).dot(normal) > 0.
+    #counter = left.sum(axis=1)
     inter = np.where((counter > 0) & (counter < d))[0]
+    print(time.time()-start)
     cdef int n = inter.shape[0]
     cdef np.ndarray[int, ndim=2] lines = -np.ones((n, 4), np.int32)
 
-    cdef int i, j, k
     cdef int truth
 
     # get lines of intersection
@@ -56,6 +72,7 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
                     lines[i,k+1] = (k-1)%d
                 else:
                     lines[i,k+1] = (k+1)%d
+    print(time.time()-start)
 
     # get points of intersection
     interPoints = np.zeros((n, 2, 3), mesh.points.dtype)
@@ -65,6 +82,7 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
         l = (l1-l0)
         t = ((point-l0).dot(normal)/l.dot(normal)).reshape((-1, 1))
         interPoints[:,i/2,:] = l0 + t*l
+    print(time.time()-start)
 
     # get intersected cells
     internalInter = inter[inter < nInternalFaces]
@@ -84,6 +102,7 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
             curr = interCellFaces[cell,0]
             interCellFaces[cell,curr+1] = i
             interCellFaces[cell,0] += 1
+    print(time.time()-start)
             
     # get intersection area
     interCellPoints = interPoints[interCellFaces[:,1:]].reshape((-1, 2*4, 3))
@@ -96,6 +115,7 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
     a = interCellPoints[np.arange(len(interCells)),interDist1,:]-interCellPoints[:,1,:]
     b = interCellPoints[np.arange(len(interCells)),interDist2,:]-interCellPoints[:,0,:]
     area = np.linalg.norm(np.cross(a, b), axis=1)/2
+    print(time.time()-start)
     return interCells, area.reshape((-1, 1))
         
             
