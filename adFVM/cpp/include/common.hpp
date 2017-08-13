@@ -16,7 +16,11 @@
 
 using namespace std;
 
-//#define ADIFF 1
+//#define ADIFF 1#
+//
+#define STRING(s) #s
+#define VALUE(x) STRING(x)
+#define PRINT(var) #var "="  VALUE(var)
 
 #if defined(GPU) || defined(CPU_FLOAT32)
     typedef float scalar;

@@ -7,6 +7,7 @@ from os.path import expanduser
 home = expanduser("~")
 
 os.environ['CC'] = 'ccache mpicc'
+#os.environ['CC'] = 'mpicc'
 os.environ['CXX'] = 'mpicxx'
 #os.environ['CC'] = '/home/talnikar/local/bin/gcc'
 #os.environ['CXX'] = '/home/talnikar/local/bin/gcc'
