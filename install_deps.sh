@@ -22,14 +22,7 @@ sudo apt-get install -y ccache autoconf
 
 mkdir -p ~/sources
 cd ~/sources
-    git clone git@github.com:michel2323/AdjointMPI.git
-    cd AdjointMPI
-        ./bootstrap.sh
-        ./configure --prefix=$HOME/.local && make && make install
-    cd ..
-    git clone git@github.com:SciCompKL/CoDiPack.git
-
-#petsc 
+    #petsc 
     export PETSC_DIR=~/sources/petsc-3.7.5
     export PETSC_ARCH=arch-linux2-c-opt
     cd petsc-3.7.5

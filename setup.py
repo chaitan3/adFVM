@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import sys
-sys.path.insert(0, '/master/home/talnikar/.local/lib/python2.7/site-packages/')
 from setuptools import setup, Extension, Command
 from Cython.Build import cythonize
 
@@ -31,7 +30,7 @@ setup(name='adFVM',
       author_email='talnikar@mit.edu',
       packages=['adFVM', 'adFVM.compat'],
       package_data={
-      'adFVM': ['gencode/*.cpp', 'gencode/*.hpp', 'gencode/Makefile', 'gencode/setup.py'],
+      'adFVM': ['gencode/*', 'cpp/*', 'cpp/include/*'],
       },
       include_package_data=True,
       ext_modules = cfuncs,
@@ -42,7 +41,6 @@ setup(name='adFVM',
           'mpi4py >= 0.13.1',
           'cython >= 0.24',
           #'h5py >= 2.6.0',
-          #'theano >= 0.7.0',
           'matplotlib >= 1.3.1'
       ],
       cmdclass={
