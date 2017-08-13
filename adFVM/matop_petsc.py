@@ -1,6 +1,5 @@
 from . import config
 from .parallel import pprint
-from .compat import add_at
 
 from .interp import central
 from .op import grad, internal_sum_numpy
@@ -177,7 +176,7 @@ def laplacian(phi, DT, correction=True):
     #cols = np.arange(0, nrhs).astype(np.int32)
     #indices, inverse = np.unique(indices, return_inverse=True)
     #uniqData = np.zeros((indices.shape[0], data.shape[1]))
-    #add_at(uniqData, inverse, data)
+    #np.add.at(uniqData, inverse, data)
     #b.setValues(il + indices, cols, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
 
     # neumann, how does this affect processor?
@@ -187,7 +186,7 @@ def laplacian(phi, DT, correction=True):
     	data = faceData[m:o].reshape(-1,1)/mesh.volumes[indices]
     	indices, inverse = np.unique(indices, return_inverse=True)
     	uniqData = np.zeros((indices.shape[0], 1), config.precision)
-    	add_at(uniqData, inverse, data)
+    	np.add.at(uniqData, inverse, data)
     	indices = indices.reshape(-1,1)
     	A.assemble()
     	A.setValuesRCV(il + indices, jl + indices, uniqData, addv=PETSc.InsertMode.ADD_VALUES)
