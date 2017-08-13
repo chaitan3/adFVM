@@ -25,6 +25,7 @@ class Mesh {
 
         mat normals;
         vec areas, weights, deltas, volumes;
+        mat deltasUnit;
         arrType<scalar, 2> linearWeights;
         arrType<scalar, 2, 3> quadraticWeights;
         mat faceCentres;
@@ -48,8 +49,15 @@ class Mesh {
 
 int getInteger(PyObject*, const string);
 map<string, integer> getTags(PyObject *mesh, const string attr);
-template<typename dtype, integer shape1, integer shape2>
-void getMeshArray(PyObject *, const string, arrType<dtype, shape1, shape2> &);
+template <typename dtype, integer shape1, integer shape2>
+void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shape2>& tmp) {
+    PyArrayObject *array = (PyArrayObject*) PyObject_GetAttrString(mesh, attr.c_str());
+    //cout << attr << " " << array << endl;
+    //cout << attr << " " << PyArray_DESCR(array)->elsize << endl;
+    assert (array != NULL);
+    getArray(array, tmp);
+    Py_DECREF(array);
+}
 
 Boundary getBoundary(PyObject*);
 Boundary getMeshBoundary(PyObject *mesh, const string attr);

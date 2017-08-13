@@ -99,8 +99,6 @@ class Mesh(object):
                 self.addressing, self.boundary = meshData
 
         self.buildBeforeWrite()
-        print self.cellFaces.shape
-        print self.cells.shape
         print(time.time()-start)
 
         # patches
@@ -115,7 +113,7 @@ class Mesh(object):
         self.defaultBoundary = self.getDefaultBoundary()
         self.calculatedBoundary = self.getCalculatedBoundary()
 
-        self.normals, self.faceCentres, self.areas, self.cellCentres, self.volumes = cmesh.build(self)
+        cmesh.build(self)
         print(time.time()-start)
         #self.normals = self.getNormals()
         #self.faceCentres, self.areas = self.getFaceCentresAndAreas()
@@ -128,16 +126,21 @@ class Mesh(object):
         #print (np.abs(volumes-self.volumes)).max()
 
         # ghost cell modification: neighbour and cellCentres
-        self.nLocalCells = self.createGhostCells()
-        print(time.time()-start)
-        self.deltas, self.deltasUnit = self.getDeltas()           # nFaces 
-        self.weights, self.linearWeights, self.quadraticWeights = self.getWeights()   # nFaces
+        #self.nLocalCells = self.createGhostCells()
+        #deltas, deltasUnit = self.getDeltas()           # nFaces 
+        #weights, linearWeights, quadraticWeights = self.getWeights()   # nFaces
+        #print 'check', (np.abs(deltas-self.deltas)).max()
+        #print 'check', (np.abs(deltasUnit-self.deltasUnit)).max()
+        #print 'check', (np.abs(weights-self.weights)).max()
+        #print 'check', (np.abs(linearWeights-self.linearWeights)).max()
+        #print 'check', (np.abs(quadraticWeights-self.quadraticWeights)).max()
+        #exit(1)
 
         # uses neighbour
         self.cellNeighboursMatOp = self.getCellNeighbours(boundary=False)
         self.cellNeighbours = self.getCellNeighbours()
 
-        self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
+        #self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
         print(time.time()-start)
         #self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)
         #self.checkWeights()
@@ -159,7 +162,6 @@ class Mesh(object):
 
         pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
         pprint('nFaces:', parallel.sum(self.origMesh.nFaces))
-        print(time.time()-start)
 
         printMemUsage()
         return 
@@ -545,7 +547,7 @@ class Mesh(object):
         self.populateSizes()
         # mesh computation
         # uses neighbour
-        self.cellFaces, self.cells = cmesh.buildBeforeWrite(self)
+        cmesh.buildBeforeWrite(self)
 
     def populateSizes(self):
         self.nInternalFaces = len(self.neighbour)
@@ -812,7 +814,7 @@ class Mesh(object):
             elif patch['type'] not in config.processorPatches:
                 nLocalCells += nFaces
             # append neighbour
-            self.neighbour[startFace:endFace] = range(cellStartFace, cellEndFace)
+            self.neighbour[startFace:endFace] = np.arange(cellStartFace, cellEndFace)
             if patch['type'] in config.cyclicPatches:
                 #print patchID, self.cellCentres[self.owner[startFace:endFace]][0]
                 neighbourPatch = self.boundary[patch['neighbourPatch']]   

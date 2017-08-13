@@ -5,13 +5,13 @@ void Mesh::buildBeforeWrite() {
     this->cells = move((arrType<integer, 8>(this->nInternalCells)));
     integer i, j, k, l, m, n;
     ivec indices(this->nInternalCells, true);
-    #pragma omp parallel for private(i)
+    //#pragma omp parallel for private(i)
     for (i = 0; i < this->nFaces; i++) {
         integer p = this->owner(i);
         this->cellFaces(p, indices(p)) = i;
         indices(p) += 1;
     }
-    #pragma omp parallel for private(i)
+    //#pragma omp parallel for private(i)
     for (i = 0; i < this->nInternalFaces; i++) {
         integer p = this->neighbour(i);
         this->cellFaces(p, indices(p)) = i;
@@ -58,6 +58,8 @@ void Mesh::buildBeforeWrite() {
             cellPoint[j] = firstFace[j];
         }
     }
+    PyObject_SetAttrString(this->mesh, "cellFaces", putArray(this->cellFaces));
+    PyObject_SetAttrString(this->mesh, "cells", putArray(this->cells));
 }
 
 void Mesh::build() {
@@ -117,6 +119,9 @@ void Mesh::build() {
             sumCentre[i] /= area[0];
         }
     }
+    PyObject_SetAttrString(this->mesh, "normals", putArray(this->normals));
+    PyObject_SetAttrString(this->mesh, "faceCentres", putArray(this->faceCentres));
+    PyObject_SetAttrString(this->mesh, "areas", putArray(this->areas));
 
     this->cellCentres = move(mat(this->nInternalCells));
     this->volumes = move(vec(this->nInternalCells));
@@ -156,6 +161,69 @@ void Mesh::build() {
             sumCentre[i] /= volume[0];
         }
     }
+    PyObject_SetAttrString(this->mesh, "cellCentres", putArray(this->cellCentres));
+    PyObject_SetAttrString(this->mesh, "volumes", putArray(this->volumes));
+
+    PyObject* ret = PyObject_CallMethod(this->mesh, "createGhostCells", NULL);
+    PyObject_SetAttrString(this->mesh, "nLocalCells", ret);
+    getMeshArray(this->mesh, "neighbour", this->neighbour);
+    getMeshArray(this->mesh, "cellCentres", this->cellCentres);
+
+    this->deltas = move(vec(nFaces));
+    this->deltasUnit = move(mat(nFaces));
+    this->weights = move(vec(nFaces));
+    this->linearWeights = move(arrType<scalar, 2>(nFaces));
+    this->quadraticWeights = move(arrType<scalar, 2, 3>(nFaces));
+    #pragma omp parallel for private(f, i, j)
+    for (f = 0; f < this->nFaces; f++) {
+        integer p = this->owner(f);
+        integer n = this->neighbour(f);
+        scalar* P = &this->cellCentres(p);
+        scalar* N = &this->cellCentres(n);
+        scalar delta[3];
+        for (i = 0; i < 3; i++) {
+            delta[i] = P[i]-N[i];
+        }
+        scalar d = sqrt(delta[0]*delta[0] + delta[1]*delta[1] + delta[2]*delta[2]);
+        this->deltas(f) = d;
+        for (i = 0; i < 3; i++) {
+            this->deltasUnit(f, i) = delta[i]/d;
+        }
+        scalar* F = &this->faceCentres(f);
+        scalar nD = 0, pD = 0;
+        scalar* normal = &this->normals(f);
+        scalar nF[3], pF[3];
+        for (i = 0; i < 3; i++) {
+            nF[i] = (F[i]-N[i]);
+            pF[i] = (F[i]-P[i]);
+            nD += nF[i]*normal[i];
+            pD += pF[i]*normal[i];
+        }
+        nD = abs(nD);
+        pD = abs(pD);
+        this->weights(f) = nD/(nD + pD);
+        //this->weights(f) = nD;
+        scalar w1 = 0, w2 = 0;
+        d = 0;
+        for (i = 0; i < 3; i++) {
+            w1 += -delta[i]*pF[i];
+            w2 += delta[i]*nF[i];
+            d += delta[i]*delta[i];
+        }
+        w1 /= d;
+        w2 /= d;
+        this->linearWeights(f, 0) = w1/3;
+        this->linearWeights(f, 1) = w2/3;
+        for (i = 0; i < 3; i++) {
+            this->quadraticWeights(f, 0, i) = 2./3*pF[i] + 1./3*(pF[i]+w1*delta[i]);
+            this->quadraticWeights(f, 1, i) = 2./3*nF[i] + 1./3*(nF[i]-w2*delta[i]);
+        }
+    }
+    PyObject_SetAttrString(this->mesh, "deltas", putArray(this->deltas));
+    PyObject_SetAttrString(this->mesh, "deltasUnit", putArray(this->deltasUnit));
+    PyObject_SetAttrString(this->mesh, "weights", putArray(this->weights));
+    PyObject_SetAttrString(this->mesh, "linearWeights", putArray(this->linearWeights));
+    PyObject_SetAttrString(this->mesh, "quadraticWeights", putArray(this->quadraticWeights));
 }
 
 struct memory mem = {0, 0};
@@ -177,13 +245,8 @@ PyObject* buildMesh(PyObject *self, PyObject *args) {
 
     //meshp = new Mesh(meshObject);
     meshp->build();
-    PyObject* outputs = PyTuple_New(5);
-    PyTuple_SetItem(outputs, 0, putArray(meshp->normals));
-    PyTuple_SetItem(outputs, 1, putArray(meshp->faceCentres));
-    PyTuple_SetItem(outputs, 2, putArray(meshp->areas));
-    PyTuple_SetItem(outputs, 3, putArray(meshp->cellCentres));
-    PyTuple_SetItem(outputs, 4, putArray(meshp->volumes));
-    return outputs;
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 PyObject* buildMeshBeforeWrite(PyObject *self, PyObject *args) {
@@ -193,10 +256,8 @@ PyObject* buildMeshBeforeWrite(PyObject *self, PyObject *args) {
 
     meshp = new Mesh(meshObject);
     meshp->buildBeforeWrite();
-    PyObject* outputs = PyTuple_New(2);
-    PyTuple_SetItem(outputs, 0, putArray(meshp->cellFaces));
-    PyTuple_SetItem(outputs, 1, putArray(meshp->cells));
-    return outputs;
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 PyMethodDef Methods[] = {
