@@ -18,11 +18,10 @@ using namespace std;
 
 //#define ADIFF 1
 
-#ifdef GPU
+#if defined(GPU) || defined(CPU_FLOAT32)
     typedef float scalar;
 #else
     typedef double scalar;
-    //typedef float scalar;
 #endif
 typedef int32_t integer;
 

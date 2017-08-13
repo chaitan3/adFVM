@@ -252,12 +252,23 @@ Mesh *meshp = NULL;
 
 //
 
+#ifdef CPU_FLOAT32
+#ifdef PY3
+    #define initFunc PyInit_cmesh_gpu
+#else
+    #define initFunc initcmesh_gpu
+#endif
+#define modName "cmesh_gpu"
+#else
 #ifdef PY3
     #define initFunc PyInit_cmesh
 #else
     #define initFunc initcmesh
 #endif
 #define modName "cmesh"
+#endif
+
+
 
 PyObject* buildMesh(PyObject *self, PyObject *args) {
 
