@@ -137,11 +137,10 @@ class Mesh(object):
         #exit(1)
 
         # uses neighbour
-        self.cellNeighboursMatOp = self.getCellNeighbours(boundary=False)
-        self.cellNeighbours = self.getCellNeighbours()
+        #self.cellNeighboursMatOp = self.getCellNeighbours(boundary=False)
+        #self.cellNeighbours = self.getCellNeighbours()
 
         #self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
-        print(time.time()-start)
         #self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)
         #self.checkWeights()
         

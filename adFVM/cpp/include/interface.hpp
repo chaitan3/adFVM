@@ -22,7 +22,7 @@ char* PyString_AsString(PyObject* result);
 scalar getMaxEigenvalue(arrType<scalar, 5, 5>& phi, vec& eigPhi);
 
 template <typename dtype, integer shape1, integer shape2>
-void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp) {
+void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp, const string& attr="") {
     assert(array);
     int nDims = PyArray_NDIM(array);
     npy_intp* dims = PyArray_DIMS(array);

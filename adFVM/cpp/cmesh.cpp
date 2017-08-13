@@ -224,6 +224,27 @@ void Mesh::build() {
     PyObject_SetAttrString(this->mesh, "weights", putArray(this->weights));
     PyObject_SetAttrString(this->mesh, "linearWeights", putArray(this->linearWeights));
     PyObject_SetAttrString(this->mesh, "quadraticWeights", putArray(this->quadraticWeights));
+
+    this->cellNeighbours = move(arrType<integer, 6>(this->nInternalCells));
+    #pragma omp parallel for private(c, i, j)
+    for (c = 0; c < this->nInternalCells; c++) {
+        integer* neigh = &this->cellNeighbours(c);
+        for (j = 0; j < 6; j++) {
+            integer f = this->cellFaces(c, j);
+            integer p = this->owner(f);
+            integer n = this->neighbour(f);
+            if (p != c) {
+                neigh[j] = p;
+            } else {
+                if (n < this->nInternalCells) {
+                    neigh[j] = n;
+                } else {
+                    neigh[j] = -1;
+                }
+            }
+        }
+    }
+    PyObject_SetAttrString(this->mesh, "cellNeighboursMatOp", putArray(this->cellNeighbours));
 }
 
 struct memory mem = {0, 0};
