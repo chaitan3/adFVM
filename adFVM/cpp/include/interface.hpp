@@ -17,7 +17,11 @@ char* PyString_AsString(PyObject* result);
 #define PyString_Check PyUnicode_Check
 #endif
 
+
 #include "common.hpp"
+
+#define _GET_MODULE(name, mod) name##mod
+#define GET_MODULE(name, mod) _GET_MODULE(name, mod)
 
 scalar getMaxEigenvalue(arrType<scalar, 5, 5>& phi, vec& eigPhi);
 

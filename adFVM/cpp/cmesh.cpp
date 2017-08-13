@@ -250,15 +250,11 @@ void Mesh::build() {
 struct memory mem = {0, 0};
 Mesh *meshp = NULL;
 
-//
-
 #ifdef CPU_FLOAT32
     #define MODULE cmesh_gpu
 #else
     #define MODULE cmesh
 #endif
-#define _GET_MODULE(name, mod) name##mod
-#define GET_MODULE(name, mod) _GET_MODULE(name, mod)
 #ifdef PY3
     #define initFunc GET_MODULE(PyInit_,MODULE)
 #else

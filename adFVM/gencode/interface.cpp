@@ -21,13 +21,13 @@ Mesh *meshp = NULL;
     Matop *matop;
 #endif
 
-
+#define MODULE interface
 #ifdef PY3
-    #define initFunc PyInit_interface
+    #define initFunc GET_MODULE(PyInit_,MODULE)
 #else
-    #define initFunc initinterface
+    #define initFunc GET_MODULE(init,MODULE)
 #endif
-#define modName "interface"
+#define modName VALUE(MODULE)
 
 PyObject* initSolver(PyObject *self, PyObject *args) {
 
