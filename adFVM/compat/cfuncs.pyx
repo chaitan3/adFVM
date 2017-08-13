@@ -11,14 +11,10 @@ from libc.stdio cimport sprintf
 import copy
 import numpy as np
 import scipy as sp
-ctypedef double dtype
+ctypedef fused dtype:
+    cython.double
+    cython.float
 
-def add_at(np.ndarray[dtype, ndim=2] a, np.ndarray[int] indices, np.ndarray[dtype,ndim=2] b):
-    cdef int n = indices.shape[0]
-    cdef int m = a.shape[1]
-    for i in range(0, n):
-        for j in range(0, m):
-            a[indices[i], j] += b[i, j]
 
 @cython.boundscheck(False)
 def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] normal):
@@ -104,7 +100,7 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
         
             
 @cython.boundscheck(False)
-def getCells(object mesh):
+def getCells(object mesh, np.ndarray[dtype] infer):
     cdef np.ndarray[dtype, ndim=2] points = mesh.points
     cdef np.ndarray[int, ndim=2] cellFaces = mesh.cellFaces
     cdef np.ndarray[int, ndim=2] faces = mesh.faces
@@ -168,7 +164,7 @@ cdef set_to_numpy(set[int] &arr):
     return np_arr
 
 @cython.boundscheck(False)
-def decompose(object mesh, int nprocs):
+def decompose(object mesh, int nprocs, np.ndarray[dtype] infer):
 
     meshO = mesh.origMesh
     ne = meshO.nInternalCells
