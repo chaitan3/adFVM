@@ -230,7 +230,7 @@ class Adjoint(Solver):
                         sensitivity = parallel.sum(derivative * delphi, allreduce=False)
                         if (nSteps - (primalIndex + adjointIndex)) > avgStart:
                             result[index] += sensitivity
-                        sensTimeSeries[-1][index] = sensitivity
+                        sensTimeSeries[-1][index] += sensitivity
 
                 #parallel.mpi.Barrier()
                 if report:
