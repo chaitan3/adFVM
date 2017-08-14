@@ -24,6 +24,9 @@ $(BUILD)/%.o: %.cpp
 $(TARGET): $(BUILD) $(OBJ)
 	$(CC) $(LDFLAGS) $(LIBDIRS) $(LIBS) $(OBJ) -o $(TARGET)
 
+test: test.cpp
+	$(CC) -x cu $(CFLAGS) $(INCDIRS) $(LIBDIRS) $(LIBS) $^  -o $@
+
 clean: $(BUILD) $(TARGET)
 
 gpu: $(TARGET)
