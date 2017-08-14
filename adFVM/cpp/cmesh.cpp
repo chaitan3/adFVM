@@ -165,6 +165,7 @@ void Mesh::build() {
     PyObject_SetAttrString(this->mesh, "volumes", putArray(this->volumes));
 
     PyObject* ret = PyObject_CallMethod(this->mesh, "createGhostCells", NULL);
+    assert (ret != NULL);
     PyObject_SetAttrString(this->mesh, "nLocalCells", ret);
     getMeshArray(this->mesh, "neighbour", this->neighbour);
     getMeshArray(this->mesh, "cellCentres", this->cellCentres);

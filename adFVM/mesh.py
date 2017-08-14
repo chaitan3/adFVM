@@ -831,6 +831,8 @@ class Mesh(object):
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
                 local, remote, tag = self.getProcessorPatchInfo(patchID)
+                assert local < parallel.nProcs
+                assert remote < parallel.nProcs
                 # exchange data
                 exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
                 tag += self.nLocalPatches + 1
@@ -840,6 +842,8 @@ class Mesh(object):
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
                 local, remote, tag = self.getProcessorPatchInfo(patchID)
+                assert local < parallel.nProcs
+                assert remote < parallel.nProcs
                 # apply transformation
                 exchanger.exchange(remote, -self.faceCentres[startFace:endFace] + self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
                 tag += self.nLocalPatches + 1
@@ -858,7 +862,6 @@ class Mesh(object):
             startFace, endFace, cellStartFace, cellEndFace, _ = self.getPatchFaceCellRange(patchID)
             if patch['type'] == 'processorCyclic':
                 self.cellCentres[cellStartFace:cellEndFace] += self.faceCentres[startFace:endFace]
-
         return nLocalCells
 
     def getPointsPerturbation(self, pointsPerturbation):
