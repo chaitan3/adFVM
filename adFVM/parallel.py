@@ -2,27 +2,34 @@ from __future__ import print_function
 import numpy as np
 import subprocess
 import time
+import os
+
+import multiprocessing
+nProcsPerNode = multiprocessing.cpu_count()
+def setNumThreads(nRanksPerNode, nProcsPerNode):
+    nThreads = nProcsPerNode/nRanksPerNode
+    os.environ['OMP_NUM_THREADS'] = str(nThreads)
+def getLocalRank(mpi, name, rank):
+    nameRanks = mpi.gather((name, rank), root=0)
+    names = {}
+    if rank == 0:
+        for n, r in nameRanks:
+            if n not in names:
+                names[n] = []
+            names[n].append(r)
+        for n in names:
+            names[n].sort()
+        names[n].index(rank)
+    names = mpi.bcast(names, root=0)
+    return names[name].index(rank), len(names[name])
+
 try:
     from mpi4py import MPI
     mpi = MPI.COMM_WORLD
     nProcessors = mpi.Get_size()
     name = MPI.Get_processor_name()
     rank = mpi.Get_rank()
-    def getLocalRank(name, rank):
-        nameRanks = mpi.gather((name, rank), root=0)
-        names = {}
-        if rank == 0:
-            for n, r in nameRanks:
-                if n not in names:
-                    names[n] = []
-                names[n].append(r)
-            for n in names:
-                names[n].sort()
-            names[n].index(rank)
-        names = mpi.bcast(names, root=0)
-        return names[name].index(rank)
-    localRank = getLocalRank(name, rank)
-    assert localRank is not None
+    localRank, nRanksPerNode = getLocalRank(mpi, name, rank)
 except:
     print('mpi4py NOT LOADED: YOU SHOULD BE RUNNING ON A SINGLE CORE')
     class Container(object):
@@ -31,12 +38,14 @@ except:
     nProcessors = 1
     name = ''
     rank = 0
-    localRank = 0
+    localRank, nRanksPerNode = 0, 1
     mpi.bcast = lambda x, root: x
     mpi.Bcast = lambda x, root: None
     mpi.Barrier = lambda : None
     mpi.scatter = lambda x, root: x[0]
     mpi.gather = lambda x, root: [x]
+
+setNumThreads(nRanksPerNode, nProcsPerNode)
 
 processorDirectory = '/'
 if nProcessors > 1:
