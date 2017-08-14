@@ -143,3 +143,20 @@ Boundary getBoundary(PyObject *dict) {
     }
     return boundary;
 }
+
+double __sync_fetch_and_add(scalar *operand, scalar incr) {
+  union {
+    double   d;
+    uint64_t i;
+  } oldval, newval, retval;
+  do {
+    oldval.d = *(volatile double *)operand;
+    newval.d = oldval.d + incr;
+    __asm__ __volatile__ ("lock; cmpxchgq %1, (%2)"
+      : "=a" (retval.i)
+      : "r" (newval.i), "r" (operand),
+       "0" (oldval.i)
+      : "memory");
+  } while (retval.i != oldval.i);
+  return oldval.d;
+}

@@ -359,6 +359,7 @@ class TensorFunction(object):
                         #code += '//invalid in openmp;\n\t\t'
                         code += '#pragma omp atomic\n\t\t'
                         code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
+                        #code += '__sync_fetch_and_add(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                     else:
                         code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                 #print code

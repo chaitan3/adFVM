@@ -44,6 +44,8 @@ extern struct memory mem;
    #define omp_get_thread_num() 0
 #endif
 
+double __sync_fetch_and_add(scalar *operand, scalar incr);
+
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class arrType {
     public:
@@ -205,6 +207,7 @@ class arrType {
                 for (k = 0; k < shape2; k++) {
                     #pragma omp atomic 
                     (*this)(p, j, k) += phiBuf[i*shape1*shape2 + j*shape2 + k];
+                    //__sync_fetch_and_add(&(*this)(p, j, k), phiBuf[i*shape1*shape2 + j*shape2 + k]);
                 }
             }
         }
