@@ -32,12 +32,11 @@ void Function_mpi(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
                 integer bufStartFace = cellStartFace - mesh.nLocalCells;
                 integer size = nFaces*shape1*shape2;
                 integer dest = stoi(patchInfo.at("neighbProcNo"));
-                phiBuf->extract(bufStartFace, &phi(0), &mesh.owner(startFace), nFaces);
-                MPI_Request *req = mpi_req;
+                phiBuf->extract(bufStartFace, &mesh.owner(startFace), &phi(0), nFaces);
                 integer tag = mpi_reqField*100 + mesh.tags.at(patchID);
                 //cout << patchID << " " << tag << endl;
-                MPI_Isend(&(*phiBuf)(bufStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex]);
-                MPI_Irecv(&phi(cellStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex+1]);
+                MPI_Isend(&(*phiBuf)(bufStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &mpi_req[mpi_reqIndex]);
+                MPI_Irecv(&phi(cellStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &mpi_req[mpi_reqIndex+1]);
                 mpi_reqIndex += 2;
         }
     }
@@ -67,11 +66,10 @@ void Function_mpi_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
             integer size = nFaces*shape1*shape2;
             integer dest = stoi(patchInfo.at("neighbProcNo"));
             
-            MPI_Request *req = (MPI_Request*) mpi_req;
             integer tag = mpi_reqField*10000 + mesh.tags.at(patchID);
             //cout << "send " << patchID << " " << phi(cellStartFace) << " " << shape1 << shape2 << endl;
-            MPI_Isend(&phi(cellStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex]);
-            MPI_Irecv(&(*phiBuf)(bufStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &req[mpi_reqIndex+1]);
+            MPI_Isend(&phi(cellStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &mpi_req[mpi_reqIndex]);
+            MPI_Irecv(&(*phiBuf)(bufStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &mpi_req[mpi_reqIndex+1]);
             mpi_reqIndex += 2;
         }
     }

@@ -405,7 +405,8 @@ class Function(object):
                 subprocess.check_call(['make', 'gpu'], cwd=self.codeDir)
             else:
                 subprocess.check_call(['make'], cwd=self.codeDir)
+        config.parallel.mpi.Barrier()
         sys.path.append(self.codeDir)
-        import interface as mod
-        Function._module = mod
+        import interface
+        Function._module = interface
 

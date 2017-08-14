@@ -205,7 +205,7 @@ class arrType {
     void copy(const integer index, const dtype* sdata, const integer n) {
         memcpy(&this->data[index], sdata, n*sizeof(dtype));
     }
-    void extract(const integer index, const dtype* phiBuf, const integer* indices, const integer n) {
+    void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
         for (integer i = 0; i < n; i++) {
             integer p = indices[i];
             integer b = index + i;
@@ -314,15 +314,17 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     void copy(integer index, dtype* sdata, integer n) {
         cudaMemcpy(&this->data[index], sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice);
     }
-    void extract(const integer index, const dtype* phiBuf, const integer* indices, const integer n) {
+    void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
         integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
         integer threads = min(GPU_THREADS_PER_BLOCK, n);
-        _extract1<dtype, shape1, shape2><<<blocks, threads>>>(n, &(*this)(index), phiBuf, indices);
+        _extract2<dtype, shape1, shape2><<<blocks, threads>>>(n, &(*this)(index), phiBuf, indices);
+        cudaDeviceSynchronize();
     }
     void extract(const integer *indices, const dtype* phiBuf, const integer n) {
         integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
         integer threads = min(GPU_THREADS_PER_BLOCK, n);
-        _extract2<dtype, shape1, shape2><<<blocks, threads>>>(n, this->data, phiBuf, indices);
+        _extract1<dtype, shape1, shape2><<<blocks, threads>>>(n, this->data, phiBuf, indices);
+        cudaDeviceSynchronize();
     }
     
     dtype* toHost() const {
