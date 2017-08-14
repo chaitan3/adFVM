@@ -60,7 +60,7 @@ class Solver(object):
     def compile(self, adjoint=None):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         Function.createCodeDir(self.mesh.caseDir)
-        Function.gpu = config.gpu
+        Function.gpu, Function.openmp = config.gpu, config.openmp
         self.compileInit()
         self.compileSolver()
         Function.compile()

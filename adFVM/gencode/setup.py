@@ -27,9 +27,13 @@ module = 'interface'
 #compile_args = ['-std=c++11', '-O3']#, '-march=native']
 compile_args = ['-std=c++11', '-O3', '-g']#, '-march=native']
 compile_args += ['-DMPI_GPU']
+link_args = []
+openmp = 'WITH_OPENMP' in os.environ
+if openmp:
+    compile_args += ['-fopenmp']
+    link_args = ['-lgomp']
 
-matop = True
-matop = False
+matop = 'WITH_MATOP' in os.environ
 if matop:
     compile_args += ['-DMATOP']
     home = os.path.expanduser('~') + '/sources/petsc/'
@@ -40,6 +44,7 @@ if matop:
 mod = Extension(module,
                 sources=sources,
                 extra_compile_args=compile_args,
+                extra_link_args=link_args,
                 library_dirs=libdirs,
                 libraries=libs,
                 include_dirs=incdirs,

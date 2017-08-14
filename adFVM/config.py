@@ -14,6 +14,7 @@ py3 = not (sys.version_info[0] < 3)
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-g', '--gpu', action='store_true', dest='use_gpu')
+parser.add_argument('-m', '--omp', action='store_true', dest='use_openmp')
 parser.add_argument('--temp', action='store_true', dest='use_temp')
 parser.add_argument('-p', '--no_pickle', action='store_true')
 parser.add_argument('-u', '--no_unpickle', action='store_true')
@@ -60,6 +61,7 @@ else:
     precision = np.float32
 
 compile = user.compile and (parallel.rank == 0)
+openmp = user.use_openmp
 
 #import tensorflow as ad
 #ad.sum = ad.reduce_sum

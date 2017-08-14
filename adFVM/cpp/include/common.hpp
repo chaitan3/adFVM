@@ -38,6 +38,12 @@ struct memory {
 };
 extern struct memory mem;
 
+#ifdef _OPENMP
+   #include <omp.h>
+#else
+   #define omp_get_thread_num() 0
+#endif
+
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class arrType {
     public:
@@ -170,6 +176,40 @@ class arrType {
         return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1, i2, i3));
     }
 
+    void zero() {
+        memset(this->data, 0, this->size*sizeof(dtype));
+    }
+
+    void copy(const integer index, const dtype* sdata, const integer n) {
+        memcpy(&this->data[index], sdata, n*sizeof(dtype));
+    }
+    void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
+        integer i, j, k;
+        #pragma omp parallel for private(i, j, k)
+        for (integer i = 0; i < n; i++) {
+            integer p = indices[i];
+            integer b = index + i;
+            for (integer j = 0; j < shape1; j++) {
+                for (integer k = 0; k < shape2; k++) {
+                    (*this)(b, j, k) += phiBuf[p*shape1*shape2 + j*shape2 + k];
+                }
+            }
+        }
+    }
+    void extract(const integer *indices, const dtype* phiBuf, const integer n) {
+        integer i, j, k;
+        #pragma omp parallel for private(i, j, k)
+        for (i = 0; i < n; i++) {
+            integer p = indices[i];
+            for (j = 0; j < shape1; j++) {
+                for (k = 0; k < shape2; k++) {
+                    // invalid in openmp
+                    (*this)(p, j, k) += phiBuf[i*shape1*shape2 + j*shape2 + k];
+                }
+            }
+        }
+    }
+    // not used by default
     bool checkNAN() {
         for (integer i = 0; i < this->size; i++) {
             if (std::isnan(this->data[i])) {
@@ -197,35 +237,6 @@ class arrType {
         cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
         //cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
     } 
-
-    void zero() {
-        memset(this->data, 0, this->size*sizeof(dtype));
-    }
-
-    void copy(const integer index, const dtype* sdata, const integer n) {
-        memcpy(&this->data[index], sdata, n*sizeof(dtype));
-    }
-    void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
-        for (integer i = 0; i < n; i++) {
-            integer p = indices[i];
-            integer b = index + i;
-            for (integer j = 0; j < shape1; j++) {
-                for (integer k = 0; k < shape2; k++) {
-                    (*this)(b, j, k) += phiBuf[p*shape1*shape2 + j*shape2 + k];
-                }
-            }
-        }
-    }
-    void extract(const integer *indices, const dtype* phiBuf, const integer n) {
-        for (integer i = 0; i < n; i++) {
-            integer p = indices[i];
-            for (integer j = 0; j < shape1; j++) {
-                for (integer k = 0; k < shape2; k++) {
-                    (*this)(p, j, k) += phiBuf[i*shape1*shape2 + j*shape2 + k];
-                }
-            }
-        }
-    }
     dtype sum() {
         dtype s = 0;
         for (integer i = 0; i < this->size; i++) {

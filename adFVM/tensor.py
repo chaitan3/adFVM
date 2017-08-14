@@ -321,7 +321,10 @@ class TensorFunction(object):
             codeFile.write('\tinteger i = threadIdx.x + blockDim.x*blockIdx.x + gridDim.x*blockDim.x*blockIdx.y;\n')
             codeFile.write('\tif (i < n) {\n')
         else:
-            codeFile.write('\tfor (integer i = 0; i < n; i++) {\n')
+            codeFile.write('\tinteger i;\n')
+            if Function.openmp:
+                codeFile.write('\t#pragma omp parallel for private(i)\n')
+            codeFile.write('\tfor (i = 0; i < n; i++) {\n')
         names = {}
         for index, op in enumerate(sortedOps):
             if op in names:
@@ -352,6 +355,9 @@ class TensorFunction(object):
                     assert b.dtype == 'integer'
                     if Function.gpu:
                         code += 'atomicAdd(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
+                    elif Function.openmp:
+                        code += '//invalid in openmp;\n\t\t'
+                        code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                     else:
                         code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                 #print code

@@ -213,6 +213,7 @@ class Function(object):
     _module = None
     codeDir = os.path.dirname(__file__) + '/gencode/'
     gpu = False
+    openmp = False
     codeFile = 'code.cpp'
     funcs = []
 
@@ -399,6 +400,8 @@ class Function(object):
                 {NULL, NULL, 0, NULL}        /* Sentinel */
         };
 """)
+            if Function.openmp:
+                os.environ['WITH_OPENMP'] = '1'
             if config.py3:
                 subprocess.check_call(['make', 'python3'], cwd=self.codeDir)
             elif Function.gpu:
