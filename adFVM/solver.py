@@ -64,7 +64,7 @@ class Solver(object):
         self.compileInit()
         self.compileSolver()
         Function.compile()
-        Function._module.initialize(self.mesh)
+        Function._module.initialize(self.mesh, parallel.localRank)
         return
         
     def function(self, inputs, outputs, name, **kwargs):

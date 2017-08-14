@@ -16,7 +16,7 @@ class Mesh {
         int nRemotePatches;
         int nLocalCells;
         int nLocalFaces;
-        int nProcs, rank;
+        int nProcs, rank, localRank;
 
         arrType<integer, 5> faces;
         mat points;

@@ -8,6 +8,21 @@ try:
     nProcessors = mpi.Get_size()
     name = MPI.Get_processor_name()
     rank = mpi.Get_rank()
+    def getLocalRank(name, rank):
+        nameRanks = mpi.gather((name, rank), root=0)
+        names = {}
+        if rank == 0:
+            for n, r in nameRanks:
+                if n not in names:
+                    names[n] = []
+                names[n].append(r)
+            for n in names:
+                names[n].sort()
+            names[n].index(rank)
+        names = mpi.bcast(names, root=0)
+        return names[name].index(rank)
+    localRank = getLocalRank(name, rank)
+    assert localRank is not None
 except:
     print('mpi4py NOT LOADED: YOU SHOULD BE RUNNING ON A SINGLE CORE')
     class Container(object):
@@ -16,12 +31,12 @@ except:
     nProcessors = 1
     name = ''
     rank = 0
+    localRank = 0
     mpi.bcast = lambda x, root: x
     mpi.Bcast = lambda x, root: None
     mpi.Barrier = lambda : None
     mpi.scatter = lambda x, root: x[0]
     mpi.gather = lambda x, root: [x]
-
 
 processorDirectory = '/'
 if nProcessors > 1:

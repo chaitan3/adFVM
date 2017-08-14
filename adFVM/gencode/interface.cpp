@@ -36,11 +36,13 @@ PyObject* initSolver(PyObject *self, PyObject *args) {
 
     meshp = new Mesh(meshObject);
     meshp->init();
+    meshp->localRank = PyInt_AsLong(PyTuple_GetItem(args, 1));
 
     #ifdef GPU
         int count;
         gpuErrorCheck(cudaGetDeviceCount(&count));
         printf("GPU devices: %d, rank: %d\n", count, meshp->rank);
+        gpuErrorCheck(cudaSetDevice(meshp->localRank));
     #endif
 
     #ifdef MATOP
