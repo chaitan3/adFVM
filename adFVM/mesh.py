@@ -831,8 +831,8 @@ class Mesh(object):
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
                 local, remote, tag = self.getProcessorPatchInfo(patchID)
-                assert local < parallel.nProcs
-                assert remote < parallel.nProcs
+                assert local < parallel.nProcessors
+                assert remote < parallel.nProcessors
                 # exchange data
                 exchanger.exchange(remote, self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
                 tag += self.nLocalPatches + 1
@@ -842,8 +842,8 @@ class Mesh(object):
                 patch['neighbProcNo'] = int(patch['neighbProcNo'])
                 patch['myProcNo'] = int(patch['myProcNo'])
                 local, remote, tag = self.getProcessorPatchInfo(patchID)
-                assert local < parallel.nProcs
-                assert remote < parallel.nProcs
+                assert local < parallel.nProcessors
+                assert remote < parallel.nProcessors
                 # apply transformation
                 exchanger.exchange(remote, -self.faceCentres[startFace:endFace] + self.cellCentres[self.owner[startFace:endFace]], self.cellCentres[cellStartFace:cellEndFace], tag)
                 tag += self.nLocalPatches + 1
