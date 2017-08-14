@@ -203,7 +203,7 @@ class arrType {
             integer p = indices[i];
             for (j = 0; j < shape1; j++) {
                 for (k = 0; k < shape2; k++) {
-                    // invalid in openmp
+                    #pragma omp atomic 
                     (*this)(p, j, k) += phiBuf[i*shape1*shape2 + j*shape2 + k];
                 }
             }

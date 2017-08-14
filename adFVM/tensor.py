@@ -356,7 +356,8 @@ class TensorFunction(object):
                     if Function.gpu:
                         code += 'atomicAdd(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                     elif Function.openmp:
-                        code += '//invalid in openmp;\n\t\t'
+                        #code += '//invalid in openmp;\n\t\t'
+                        code += '#pragma omp atomic\n\t\t'
                         code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                     else:
                         code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
