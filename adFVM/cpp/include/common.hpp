@@ -246,6 +246,7 @@ typedef arrType<integer, 3> imat;
 
 #ifdef GPU
 #define GPU_THREADS_PER_BLOCK 256
+#define GPU_MAX_BLOCKS 65536
 //#define GPU_THREADS_PER_BLOCK 512
 //#define GPU_THREADS_PER_BLOCK 1024
 #define gpuErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }

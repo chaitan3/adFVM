@@ -318,7 +318,7 @@ class TensorFunction(object):
         codeFile.write(memString + ' {\n') 
         #codeFile.write('\tlong long start = current_timestamp();\n')
         if Function.gpu:
-            codeFile.write('\tinteger i = threadIdx.x + blockDim.x*blockIdx.x;\n')
+            codeFile.write('\tinteger i = threadIdx.x + blockDim.x*blockIdx.x + gridDim.x*blockDim.x*blockIdx.y;\n')
             codeFile.write('\tif (i < n) {\n')
         else:
             codeFile.write('\tfor (integer i = 0; i < n; i++) {\n')

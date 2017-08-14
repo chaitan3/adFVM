@@ -1,5 +1,7 @@
 CC=nvcc
-CFLAGS=-std=c++11 -Xcompiler="-fPIC" -O3 -g -DGPU --ptxas-options=-v
+#NV_ARCH=-gencode=arch=compute_35,code=\"sm_37,compute_35\"
+NV_ARCH=-gencode=arch=compute_52,code=\"sm_52,compute_52\"
+CFLAGS=-std=c++11 -Xcompiler="-fPIC" -O3 -g -DGPU --ptxas-options=-v $(NVARCH)
 LDFLAGS=-shared
 INCDIRS=-I/usr/include/python2.7 -I/usr/lib/python2.7/site-packages/numpy/core/include -I/home/talnikar/adFVM/adFVM/cpp/include
 LIBDIRS=-L/usr/lib/openmpi

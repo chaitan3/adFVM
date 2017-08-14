@@ -36,6 +36,13 @@ PyObject* initSolver(PyObject *self, PyObject *args) {
 
     meshp = new Mesh(meshObject);
     meshp->init();
+
+    #ifdef GPU
+        int count;
+        gpuErrorCheck(cudaGetDeviceCount(&count));
+        printf("GPU devices: %d, rank: %d\n", count, meshp->rank);
+    #endif
+
     #ifdef MATOP
         integer argc = 0;
         PetscInitialize(&argc, NULL, NULL, NULL);

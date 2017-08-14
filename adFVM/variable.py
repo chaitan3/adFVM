@@ -258,7 +258,6 @@ class Function(object):
     def _genCode(self, outputs):
         codeFile = open(self.codeDir + self.codeFile, 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args) {{\n'.format(self.name))
-        codeFile.write('\tinteger blocks, threads;\n')
         codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
@@ -303,8 +302,9 @@ class Function(object):
                 if Function.gpu:
                     name = _getName(op.indices)
                     codeFile.write('\tif ({} > 0) {{\n'.format(name))
-                    codeFile.write('\t\tblocks = {}/GPU_THREADS_PER_BLOCK + 1;\n'.format(name))
-                    codeFile.write('\t\tthreads = min(GPU_THREADS_PER_BLOCK, {});\n'.format(name))
+                    codeFile.write('\t\tinteger nBlocks = {}/GPU_THREADS_PER_BLOCK + 1;\n'.format(name))
+                    codeFile.write('\t\tdim3 blocks(nBlocks / GPU_MAX_BLOCKS + 1, min(nBlocks, GPU_MAX_BLOCKS));\n')
+                    codeFile.write('\t\tdim3 threads(min(GPU_THREADS_PER_BLOCK, {}));\n'.format(name))
                     codeFile.write('\t\t{}<<<blocks, threads>>>({}, {});\n'.format(op.name, name, op.getCallString()))
                     codeFile.write('\t\tgpuErrorCheck(cudaPeekAtLastError());\n')
                     codeFile.write('\t}\n')
