@@ -35,6 +35,7 @@ void Function_mpi(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
                 phiBuf->extract(bufStartFace, &mesh.owner(startFace), &phi(0), nFaces);
                 integer tag = mpi_reqField*100 + mesh.tags.at(patchID);
                 //cout << patchID << " " << tag << endl;
+                assert(bufStartFace < mesh.nCells-mesh.nLocalCells);
                 MPI_Isend(&(*phiBuf)(bufStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &mpi_req[mpi_reqIndex]);
                 MPI_Irecv(&phi(cellStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &mpi_req[mpi_reqIndex+1]);
                 mpi_reqIndex += 2;

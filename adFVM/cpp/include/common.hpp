@@ -318,7 +318,7 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     void destroy() {
         if (this->ownData && this->data != NULL) {
             this->dec_mem();
-            cudaFree(this->data);
+            gpuErrorCheck(cudaFree(this->data));
             this -> data = NULL;
         }
     }
@@ -326,19 +326,21 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         gpuErrorCheck(cudaMemset(this->data, 0, this->size*sizeof(dtype)));
     }
     void copy(integer index, dtype* sdata, integer n) {
-        cudaMemcpy(&this->data[index], sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice);
+        gpuErrorCheck(cudaMemcpy(&this->data[index], sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice));
     }
     void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
         integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
         integer threads = min(GPU_THREADS_PER_BLOCK, n);
         _extract2<dtype, shape1, shape2><<<blocks, threads>>>(n, &(*this)(index), phiBuf, indices);
-        cudaDeviceSynchronize();
+        gpuErrorCheck(cudaPeekAtLastError());
+        gpuErrorCheck(cudaDeviceSynchronize());
     }
     void extract(const integer *indices, const dtype* phiBuf, const integer n) {
         integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
         integer threads = min(GPU_THREADS_PER_BLOCK, n);
         _extract1<dtype, shape1, shape2><<<blocks, threads>>>(n, this->data, phiBuf, indices);
-        cudaDeviceSynchronize();
+        gpuErrorCheck(cudaPeekAtLastError());
+        gpuErrorCheck(cudaDeviceSynchronize());
     }
     
     dtype* toHost() const {
