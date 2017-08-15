@@ -333,14 +333,14 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         integer threads = min(GPU_THREADS_PER_BLOCK, n);
         _extract2<dtype, shape1, shape2><<<blocks, threads>>>(n, &(*this)(index), phiBuf, indices);
         gpuErrorCheck(cudaPeekAtLastError());
-        gpuErrorCheck(cudaDeviceSynchronize());
+        //gpuErrorCheck(cudaDeviceSynchronize());
     }
     void extract(const integer *indices, const dtype* phiBuf, const integer n) {
         integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
         integer threads = min(GPU_THREADS_PER_BLOCK, n);
         _extract1<dtype, shape1, shape2><<<blocks, threads>>>(n, this->data, phiBuf, indices);
         gpuErrorCheck(cudaPeekAtLastError());
-        gpuErrorCheck(cudaDeviceSynchronize());
+        //gpuErrorCheck(cudaDeviceSynchronize());
     }
     
     dtype* toHost() const {

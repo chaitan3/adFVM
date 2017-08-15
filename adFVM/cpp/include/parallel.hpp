@@ -3,22 +3,20 @@
 
 #include "interface.hpp"
 
-void Function_mpi_init1();
 template <typename dtype, integer shape1, integer shape2>
-void Function_mpi_init2(std::vector<extArrType<dtype, shape1, shape2>*> phiP);
-void Function_mpi_init3();
+void Function_mpi_init(std::vector<extArrType<dtype, shape1, shape2>*> phiP);
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi(std::vector<extArrType<dtype, shape1, shape2>*> phiP);
-void Function_mpi_end();
+template <typename dtype, integer shape1, integer shape2>
+void Function_mpi_end(std::vector<extArrType<dtype, shape1, shape2>*> phiP);
 void Function_mpi_allreduce(std::vector<ext_vec*> vals);
 
-void Function_mpi_init1_grad();
 template <typename dtype, integer shape1, integer shape2>
-void Function_mpi_init2_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP);
-void Function_mpi_init3_grad();
+void Function_mpi_init_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP);
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP);
-#define Function_mpi_end_grad Function_mpi_init1
+template <typename dtype, integer shape1, integer shape2>
+void Function_mpi_end_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP);
 void Function_mpi_allreduce_grad(std::vector<ext_vec*> vals);
 
 

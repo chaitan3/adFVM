@@ -85,28 +85,25 @@ class Solver(object):
         return sum([phi.getTensor(index) for phi in self.fields], [])
 
     def boundaryInit(self, *fields):
-        #if config.gpu:
-        #    return fields
-        fields = list(ExternalFunctionOp('mpi_init1', fields, fields, empty=True).outputs)
+        fields = list(fields)
         for index, phi in enumerate(fields):
-            phi = ExternalFunctionOp('mpi_init2', (phi,), (phi,)).outputs[0]
+            phi = ExternalFunctionOp('mpi_init', (phi,), (phi,)).outputs[0]
             fields[index] = phi
         fields = tuple(fields)
-        fields = ExternalFunctionOp('mpi_init3', fields, fields, empty=True).outputs
         return fields
 
     def boundaryEnd(self, *fields):
-        #if config.gpu:
-        #    return fields
-        fields = ExternalFunctionOp('mpi_end', fields, fields, empty=True).outputs
+        fields = list(fields)
+        for index, phi in enumerate(fields):
+            phi = ExternalFunctionOp('mpi_end', (phi,), (phi,)).outputs[0]
+            fields[index] = phi
+        fields = tuple(fields)
         return fields
 
     def boundary(self, *fields):
         fields = list(fields)
         for index, phi in enumerate(fields):
             phi = self.fields[index].completeField(phi)
-            #if not config.gpu:
-                #phi = ExternalFunctionOp('mpi', (phi,), (phi,)).outputs[0]
             phi = ExternalFunctionOp('mpi', (phi,), (phi,)).outputs[0]
             fields[index] = phi
         return tuple(fields)
