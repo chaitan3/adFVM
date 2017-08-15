@@ -202,22 +202,24 @@ MPI_SPECIALIZE(Function_mpi_end)
 MPI_SPECIALIZE(Function_mpi_end_grad)
 
 void Function_mpi_allreduce(std::vector<ext_vec*> vals) {
+    const Mesh& mesh = *meshp;
     integer n = vals.size()/2;
     ext_vec in(n, true);
     ext_vec out(n, true);
     for (integer i = 0; i < n; i++) {
         in.copy(i, &(*vals[i])(0), 1);
     }
-    #ifdef MPI_GPU
-    MPI_Allreduce(&in(0), &out(0), n, mpi_type<decltype(vals[0]->type)>(), MPI_SUM, MPI_COMM_WORLD);
-    for (integer i = 0; i < n; i++) {
-        (*vals[i+n]).copy(0, &out(i), 1);
+    if (mesh.nRemotePatches > 0) {
+        MPI_Allreduce(&in(0), &out(0), n, mpi_type<decltype(vals[0]->type)>(), MPI_SUM, MPI_COMM_WORLD);
+        for (integer i = 0; i < n; i++) {
+            (*vals[i+n]).copy(0, &out(i), 1);
+        }
     }
-    #else
-    for (integer i = 0; i < n; i++) {
-        (*vals[i+n]).copy(0, &in(i), 1);
+    else {
+        for (integer i = 0; i < n; i++) {
+            (*vals[i+n]).copy(0, &in(i), 1);
+        }
     }
-    #endif
 }
 
 void Function_mpi_allreduce_grad(std::vector<ext_vec*> vals) {
@@ -227,4 +229,4 @@ void Function_mpi_allreduce_grad(std::vector<ext_vec*> vals) {
     }
 }
 
-
+void Function_mpi_dummy () {};

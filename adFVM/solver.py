@@ -90,9 +90,11 @@ class Solver(object):
             phi = ExternalFunctionOp('mpi_init', (phi,), (phi,)).outputs[0]
             fields[index] = phi
         fields = tuple(fields)
+        fields = ExternalFunctionOp('mpi_dummy', fields, fields, empty=True).outputs
         return fields
 
     def boundaryEnd(self, *fields):
+        fields = ExternalFunctionOp('mpi_dummy', fields, fields, empty=True).outputs
         fields = list(fields)
         for index, phi in enumerate(fields):
             phi = ExternalFunctionOp('mpi_end', (phi,), (phi,)).outputs[0]
