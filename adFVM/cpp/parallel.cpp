@@ -17,7 +17,7 @@ static map<void *, void *> mpi_reqBuf;
 extArrType<integer> owner;
 
 void parallel_init() {
-    const Mesh& mesh = *meshp;
+    Mesh& mesh = *meshp;
     #ifdef GPU 
         integer* store = NULL;
         owner = move(extArrType<integer>(mesh.owner.shape, store));
