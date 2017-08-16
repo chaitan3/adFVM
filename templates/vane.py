@@ -153,8 +153,8 @@ parameters = 'mesh'
 
 #parameters = 'source'
 
-nSteps = 100
-writeInterval = 100
+nSteps = 10
+writeInterval = 10
 #nSteps = 100
 #writeInterval = 20
 #nSteps = 100000

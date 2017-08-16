@@ -89,14 +89,14 @@ PyObject* viscosity(PyObject *self, PyObject *args) {
     return putArray(un);
 }
 
-PyObject* finalSolver(PyObject *self, PyObject *args) {
-    //delete rcf;
+void interface_exit() {
+    parallel_exit();
     delete meshp;
     #ifdef MATOP
         PetscFinalize();
         delete matop;
     #endif
-    return NULL;
+    //return NULL;
 }
 
 extern PyMethodDef Methods[];
@@ -124,6 +124,7 @@ initFunc(void)
             return;
     #endif
     import_array();
+    Py_AtExit(interface_exit);
 
     //SpamError = PyErr_NewException("spam.error", NULL, NULL);
     //Py_INCREF(SpamError);

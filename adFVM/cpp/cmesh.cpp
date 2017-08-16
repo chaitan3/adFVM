@@ -303,6 +303,10 @@ static struct PyModuleDef moduledef = {
 };
 #endif
 
+void cmesh_exit() {
+    delete meshp;
+}
+
 PyMODINIT_FUNC
 initFunc(void)
 {
@@ -316,6 +320,7 @@ initFunc(void)
             return;
     #endif
     import_array();
+    Py_AtExit(cmesh_exit);
 
     #ifdef PY3
         return m;

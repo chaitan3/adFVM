@@ -27,6 +27,10 @@ void parallel_init() {
     #endif
 }
 
+void parallel_exit() {
+    owner.destroy();
+}
+
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
     extArrType<dtype, shape1, shape2>& phi = *(phiP[1]);

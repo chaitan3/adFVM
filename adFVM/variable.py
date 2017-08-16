@@ -390,7 +390,6 @@ class Function(object):
                 f.write("""PyMethodDef Methods[] = {
         {"initialize",  initSolver, METH_VARARGS, "Execute a shell command."},
         {"viscosity",  viscosity, METH_VARARGS, "Execute a shell command."},
-        {"finalize",  finalSolver, METH_VARARGS, "Execute a shell command."},
 """)
 
                 for name in Function.funcs:
