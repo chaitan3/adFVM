@@ -259,7 +259,7 @@ class Function(object):
     def _genCode(self, outputs):
         codeFile = open(self.codeDir + self.codeFile, 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args) {{\n'.format(self.name))
-        codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
+        #codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
         for index, inp in enumerate(self._inputs):
@@ -332,7 +332,7 @@ class Function(object):
         codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(outputs)))
         for index, out in enumerate(outputs):
             codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}));\n'.format(index, out.name))
-        codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
+        #codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         codeFile.write('\treturn outputs;')
         codeFile.write('\n')
         codeFile.write('}\n\n')
