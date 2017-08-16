@@ -275,7 +275,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 
 template<typename dtype, integer shape1, integer shape2>
 __global__ void _extract1(const integer n, dtype* phi1, const dtype* phi2, const integer* indices) {
-    int i = threadIdx.x + blockDim.x*blockIdx.x;
+    integer i = threadIdx.x + blockDim.x*blockIdx.x;
     if (i < n) {
         integer p = indices[i];
         for (integer j = 0; j < shape1; j++) {
@@ -288,12 +288,12 @@ __global__ void _extract1(const integer n, dtype* phi1, const dtype* phi2, const
 
 template<typename dtype, integer shape1, integer shape2>
 __global__ void _extract2(const integer n, dtype* phi1, const dtype* phi2, const integer* indices) {
-    int i = threadIdx.x + blockDim.x*blockIdx.x;
+    integer i = threadIdx.x + blockDim.x*blockIdx.x;
     if (i < n) {
         integer p = indices[i];
         for (integer j = 0; j < shape1; j++) {
             for (integer k = 0; k < shape2; k++) {
-                 phi1[i*shape1*shape2 + j*shape2 + k] += phi2[p*shape1*shape2 + j*shape2 + k];
+                phi1[i*shape1*shape2 + j*shape2 + k] += phi2[p*shape1*shape2 + j*shape2 + k];
             }
         }
     }
@@ -333,7 +333,6 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         integer threads = min(GPU_THREADS_PER_BLOCK, n);
         _extract2<dtype, shape1, shape2><<<blocks, threads>>>(n, &(*this)(index), phiBuf, indices);
         gpuErrorCheck(cudaPeekAtLastError());
-        //gpuErrorCheck(cudaDeviceSynchronize());
     }
     void extract(const integer *indices, const dtype* phiBuf, const integer n) {
         integer blocks = n/GPU_THREADS_PER_BLOCK + 1;

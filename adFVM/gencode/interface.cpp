@@ -1,4 +1,5 @@
 #include "interface.hpp"
+#include "parallel.hpp"
 #include "mesh.hpp"
 
 long long mil = 0;
@@ -37,6 +38,7 @@ PyObject* initSolver(PyObject *self, PyObject *args) {
     meshp = new Mesh(meshObject);
     meshp->init();
     meshp->localRank = PyInt_AsLong(PyTuple_GetItem(args, 1));
+    parallel_init();
 
     #ifdef GPU
         int count;

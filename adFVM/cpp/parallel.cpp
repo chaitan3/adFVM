@@ -14,6 +14,18 @@ static integer mpi_reqField = 0;
 static bool mpi_init = false;
 static bool mpi_init_grad = false;
 static map<void *, void *> mpi_reqBuf;
+extArrType<integer> owner;
+
+void parallel_init() {
+    const Mesh& mesh = *meshp;
+    #ifdef GPU 
+        integer* store = NULL;
+        owner = move(extArrType<integer>(mesh.owner.shape, store));
+        owner.toDevice(mesh.owner.data);
+    #else 
+        owner = move(mesh.owner);
+    #endif
+}
 
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
@@ -114,7 +126,7 @@ void Function_mpi_init(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
             //cout << "hello " << patchID << endl;
             integer bufStartFace = cellStartFace - mesh.nLocalCells;
             //cout << "recv " << patchID << " " << phiBuf[bufStartFace*shape1*shape2] << " " << shape1 << shape2 << endl;
-            phiBuf->extract(bufStartFace, &mesh.owner(startFace), &phi(0), nFaces);
+            phiBuf->extract(bufStartFace, &owner(startFace), &phi(0), nFaces);
         }
     }
 
@@ -146,7 +158,7 @@ void Function_mpi_init_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP
             //cout << "hello " << patchID << endl;
             integer bufStartFace = cellStartFace - mesh.nLocalCells;
             //cout << "recv " << patchID << " " << phiBuf[bufStartFace*shape1*shape2] << " " << shape1 << shape2 << endl;
-            phi.extract(&mesh.owner(startFace), &(*phiBuf)(bufStartFace), nFaces);
+            phi.extract(&owner(startFace), &(*phiBuf)(bufStartFace), nFaces);
         }
     }
     if (mesh.nRemotePatches > 0) {
