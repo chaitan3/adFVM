@@ -57,7 +57,7 @@ class Matrix(object):
 
 def laplacian(phi, DT):
     dim = phi.dimensions
-    mesh = phi.mesh.origMesh
+    mesh = phi.mesh
     #n = mesh.nLocalCells
     #m = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
     n = mesh.nInternalCells
@@ -80,14 +80,14 @@ def laplacian(phi, DT):
     return M
 
 def ddt(phi, dt):
-    mesh = phi.mesh.origMesh
+    mesh = phi.mesh
     #A = sp.eye(mesh.nInternalCells, mesh.nLocalCells)*(1./dt)
     A = sp.eye(mesh.nInternalCells)*(1./dt)
     b = -phi.old[:mesh.nInternalCells]/dt
     return Matrix(A, b)
 
 def BCs(phi, M):
-    mesh = phi.mesh.origMesh
+    mesh = phi.mesh
     m = mesh.nLocalCells-mesh.nInternalCells
     n = mesh.nLocalCells
     data = np.concatenate((np.ones(m),-np.ones(m)))

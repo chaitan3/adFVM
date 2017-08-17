@@ -41,7 +41,7 @@ def getEnstrophyAndQ(gradU):
     return enstrophy, Q
 
 def getYPlus(U, T, rho, patches):
-    mesh = U.mesh.origMesh
+    mesh = U.mesh
     solver = U.solver
     yplus = {}
     uplus = {}
@@ -68,7 +68,7 @@ def getYPlus(U, T, rho, patches):
     return uplus, yplus, ustar, yplus1
 
 def getHTC(T, T0, patches):
-    mesh = T.mesh.origMesh
+    mesh = T.mesh
     solver = T.solver
     htc = {}
     for patchID in patches:
@@ -85,7 +85,7 @@ def getHTC(T, T0, patches):
     return htc
 
 def getIsentropicMa(p, p0, patches):
-    mesh = p.mesh.origMesh
+    mesh = p.mesh
     solver = p.solver
     g = solver.gamma
     Ma = {}
@@ -119,15 +119,15 @@ def getPressureLoss(p, T, U, p0, point, normal):
 
 def getFieldByVolume(phi):
     mesh = phi.mesh
-    phiByV = np.zeros((mesh.origMesh.nCells,) + phi.dimensions, config.precision)
-    nInternalCells = mesh.origMesh.nInternalCells
-    phiByV[:nInternalCells] = phi.field[:nInternalCells]/mesh.origMesh.volumes
+    phiByV = np.zeros((mesh.nCells,) + phi.dimensions, config.precision)
+    nInternalCells = mesh.nInternalCells
+    phiByV[:nInternalCells] = phi.field[:nInternalCells]/mesh.volumes
     phiByV = IOField(phi.name + 'ByV', phiByV, (1,), boundary=mesh.calculatedBoundary)
     return phiByV
 
 def getAdjointEnergy(solver, rhoa, rhoUa, rhoEa):
     # J = rhohV*rho/t
-    mesh = solver.mesh.origMesh
+    mesh = solver.mesh
     Uref, Tref, pref = solver.Uref, solver.Tref, solver.pref
     rhoref = pref/(Tref*solver.R)
     rhoUref = Uref*rhoref

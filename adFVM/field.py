@@ -28,8 +28,6 @@ class Field(object):
         cls.mesh = mesh
         if not hasattr(mesh, 'Normals'):
             mesh.Normals = Field('nF', mesh.normals, (3,))
-        if not hasattr(mesh.origMesh, 'Normals'):
-            mesh.origMesh.Normals = Field('nF', mesh.origMesh.normals, (3,))
 
     def __init__(self, name, field, dimensions):
         self.name = name
@@ -45,7 +43,7 @@ class Field(object):
 
     def _getMesh(self):
         if isinstance(self.field, np.ndarray):
-            return self.mesh.origMesh
+            return self.mesh
         else:
             return self.mesh
 
@@ -103,7 +101,7 @@ class Field(object):
 
     # apply to np
     def info(self):
-        mesh = self.mesh.origMesh
+        mesh = self.mesh
         pprint(self.name + ':', end='')
         # mesh values required outside theano
         field = self.field[:mesh.nLocalCells]
@@ -270,7 +268,7 @@ class CellField(Field):
 
     def updateGhostCells(self, phi):
         logger.info('updating ghost cells for {0}'.format(self.name))
-        patches = sorted(self.mesh.localPatches, key=lambda x: self.mesh.origMesh.boundary[x]['startFace'])
+        patches = sorted(self.mesh.localPatches, key=lambda x: self.mesh.boundary[x]['startFace'])
         #print phi
         for patchID in patches:
             #print patchID, self.BC[patchID]
@@ -299,7 +297,7 @@ class IOField(Field):
 
     @classmethod
     def boundaryField(self, name, boundary, dimensions):
-        mesh = self.mesh.origMesh
+        mesh = self.mesh
         field = np.zeros((mesh.nCells,) + dimensions, config.precision)
         meshBoundary = copy.deepcopy(self.mesh.defaultBoundary)
         for patchID in boundary.keys():
@@ -322,7 +320,7 @@ class IOField(Field):
         # mesh values required outside theano
         pprint('reading foam field {0}, time {1}'.format(name, self.time))
         timeDir = self._handle
-        mesh = self.mesh.origMesh
+        mesh = self.mesh
         try: 
             content = open(timeDir + name).read()
             foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
@@ -400,7 +398,7 @@ class IOField(Field):
         with parallelEndData.collective:
             parallelEnd = parallelEndData[rank]
 
-        mesh = self.mesh.origMesh
+        mesh = self.mesh
         fieldData = fieldGroup['field']
         if skipField:
             delta = mesh.nInternalCells
@@ -459,13 +457,13 @@ class IOField(Field):
         self.closeHandle()
 
     def getInternalField(self):
-        return self.field[:self.mesh.origMesh.nInternalCells]
+        return self.field[:self.mesh.nInternalCells]
 
     def getInternal(self):
         return self.__class__(self.name, self.getInternalField(), self.dimensions, self.boundary)
 
     def defaultComplete(self):
-        mesh = self.mesh.origMesh
+        mesh = self.mesh
         field = np.zeros((mesh.nCells,) + self.dimensions)
         field[:mesh.nInternalCells] = self.field[:mesh.nInternalCells]
         for patchID in self.boundary:
@@ -496,7 +494,7 @@ class IOField(Field):
         return self.phi.getTensor(*args, **kwargs)
 
     def partialComplete(self, value=0.):
-        mesh = self.mesh.origMesh
+        mesh = self.mesh
         boundary = self.boundary
         self.field = np.vstack((self.field, value*np.ones((mesh.nGhostCells,) + self.dimensions, config.precision)))
         for patchID in self.boundary:
@@ -537,7 +535,7 @@ class IOField(Field):
         np.set_printoptions(precision=16)
         pprint('writing field {0}, time {1}'.format(self.name, self.time))
 
-        mesh = self.mesh.origMesh
+        mesh = self.mesh
         internalField = field[:mesh.nInternalCells]
         boundary = self.boundary
         for patchID in boundary:
@@ -627,7 +625,7 @@ class IOField(Field):
 
     def decompose(self, time, data):
         assert parallel.nProcessors == 1
-        mesh = self.mesh.origMesh
+        mesh = self.mesh
         decomposed, addressing = data
         nprocs = len(decomposed)
         for i in range(0, nprocs):
@@ -676,7 +674,7 @@ class IOField(Field):
 
     def interpolate(self, points):
         from scipy.interpolate import griddata
-        mesh = self.mesh.origMesh
+        mesh = self.mesh
         cellCentres = mesh.cellCentres[:mesh.nInternalCells]
         internalField = self.getInternalField()
         field = griddata(cellCentres[:,:2], internalField, points[:,:2])

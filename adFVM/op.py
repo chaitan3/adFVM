@@ -108,7 +108,6 @@ def gradOld(phi, ghost=False, op=False, numpy=False):
         assert not op
         loc_internal_sum = internal_sum_numpy
         mod = IOField
-        mesh = mesh.origMesh
         ad = np
     else:
         loc_internal_sum = internal_sum
@@ -145,7 +144,7 @@ def curl(phi):
     assert isinstance(phi.field, np.ndarray)
     logger.info('vorticity of {0}'.format(phi.name))
     mesh = phi.mesh
-    vort = Field('N', mesh.origMesh.normals, (3,)).cross(phi)
+    vort = Field('N', mesh.normals, (3,)).cross(phi)
     vort.name = 'curl({0})'.format(phi.name)
     return vort
 

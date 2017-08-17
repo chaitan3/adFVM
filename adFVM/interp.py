@@ -48,7 +48,7 @@ class Reconstruct(object):
         self.solver = solver
         self.mesh = solver.mesh
         mesh = self.mesh
-        meshO = mesh.origMesh
+        meshO = mesh
         indices = [np.arange(0, meshO.nInternalFaces)]
         Cindices = []
         Bindices = []
@@ -233,7 +233,7 @@ class ENO(Reconstruct):
     def __init__(self, solver):
         super(ENO, self).__init__(solver)
         mesh = self.mesh
-        meshO = mesh.origMesh
+        meshO = mesh
         combinations = np.array(list(itertools.combinations(range(0, 6), 3)))
         enoCount = np.zeros(meshO.volumes.shape[0], np.int32)
         enoIndices = []

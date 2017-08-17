@@ -126,8 +126,7 @@ class Matrix(object):
 # cyclic and BC support
 def laplacian(phi, DT, correction=True):
 #def laplacian_new(phi, DT):
-    meshC = phi.mesh
-    mesh = meshC.origMesh
+    mesh = phi.mesh
     nrhs = phi.dimensions[0]
     n = mesh.nInternalCells
     m = mesh.nInternalFaces
@@ -150,7 +149,7 @@ def laplacian(phi, DT, correction=True):
     neighbourData /= mesh.volumes
     row = np.arange(0, n, dtype=np.int32).reshape(-1,1)
     
-    col = meshC.cellNeighboursMatOp.copy()
+    col = mesh.cellNeighboursMatOp.copy()
     col[col > -1] += jl
     A.setValuesRCV(il + row, col, neighbourData)
 
@@ -158,7 +157,7 @@ def laplacian(phi, DT, correction=True):
     A.setValuesRCV(il + row, jl + row, cellData)
 
     ranges = A.getOwnershipRangesColumn()
-    for patchID in meshC.remotePatches:
+    for patchID in mesh.remotePatches:
         patch = mesh.boundary[patchID]
         startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
         proc = patch['neighbProcNo']

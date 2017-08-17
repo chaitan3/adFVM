@@ -153,7 +153,6 @@ class Mesh(object):
         self.nLocalFaces = self.nLocalCells - self.nInternalCells + self.nInternalFaces
 
         # theano shared variables
-        self.origMesh = self
         self.symMesh = Mesh()
         # update mesh initialization call
         self.update(currTime, 0.)
@@ -162,8 +161,8 @@ class Mesh(object):
         self.parent = self
         #print [getattr(self, x).dtype for x in self.gradFields]
 
-        pprint('nCells:', parallel.sum(self.origMesh.nInternalCells))
-        pprint('nFaces:', parallel.sum(self.origMesh.nFaces))
+        pprint('nCells:', parallel.sum(self.nInternalCells))
+        pprint('nFaces:', parallel.sum(self.nFaces))
 
         printMemUsage()
         return 
@@ -207,7 +206,7 @@ class Mesh(object):
         pprint('Re-reading mesh, time', timeDir)
         for patchID in boundary:
             if boundary[patchID]['type'] == 'slidingPeriodic1D':
-                self.origMesh.boundary[patchID].update(boundary[patchID])
+                self.boundary[patchID].update(boundary[patchID])
         self.update(time, 0.)
 
     @config.timeFunction('Time for reading mesh')
@@ -377,7 +376,7 @@ class Mesh(object):
             meshDir = timeDir + '/polyMesh/'
             if not os.path.exists(meshDir):
                 os.makedirs(meshDir)
-            self.writeFoamBoundary(meshDir + 'boundary', self.origMesh.boundary)
+            self.writeFoamBoundary(meshDir + 'boundary', self.boundary)
 
     def writeFoamFile(self, fileName, data):
         assert config.fileFormat == 'binary'
@@ -457,7 +456,7 @@ class Mesh(object):
         pprint('writing hdf5 mesh')
         meshFile = h5py.File(case + 'mesh.hdf5', 'w', driver='mpio', comm=parallel.mpi)
 
-        mesh = self.origMesh
+        mesh = self
         faces, points, owner, neighbour = self.faces, self.points, mesh.owner, mesh.neighbour
         cells = self.cells
 
@@ -519,7 +518,7 @@ class Mesh(object):
         boundary = []
         boundaryField = []
         for patchID in self.patches:
-            for key, value in self.origMesh.boundary[patchID].items():
+            for key, value in self.boundary[patchID].items():
                 if key.startswith('loc_'):
                     continue
                 elif isinstance(value, np.ndarray):
@@ -865,19 +864,19 @@ class Mesh(object):
         return nLocalCells
 
     def getPointsPerturbation(self, pointsPerturbation):
-        mesh = self.origMesh
+        mesh = self
         meshData = self.points + pointsPerturbation, self.faces, mesh.owner, mesh.neighbour[:mesh.nInternalFaces], \
                 self.addressing, copy.deepcopy(mesh.boundary)
         mesh = Mesh()
         mesh.build(meshData, 'constant')
-        diff = [getattr(mesh.origMesh, field) - getattr(self.origMesh, field) for field in Mesh.gradFields]
+        diff = [getattr(mesh, field) - getattr(self, field) for field in Mesh.gradFields]
         return diff
 
     def getPerturbation(self, caseDir=None):
         if caseDir is None:
             caseDir = self.caseDir
         mesh = Mesh.create(caseDir)
-        diff = [getattr(mesh.origMesh, field) - getattr(self.origMesh, field) for field in Mesh.gradFields]
+        diff = [getattr(mesh, field) - getattr(self, field) for field in Mesh.gradFields]
         return diff
         
     def makeTensor(self):
@@ -924,7 +923,7 @@ class Mesh(object):
         indices = ad.placeholder(ad.int64)
         values = ad.placeholder(config.dtype)
         shape = ad.placeholder(ad.int64)
-        sparse = getattr(self.origMesh, attr)
+        sparse = getattr(self, attr)
         sparse.indices = np.stack((sparse.row, sparse.col), axis=1).astype(np.int64)
         sparse.values = sparse.data
         sparse.dense_shape = np.array(sparse.shape).astype(np.int64)
@@ -940,7 +939,7 @@ class Mesh(object):
                 self.updateSlidingPatch(patchID, t, dt)
 
     def initSlidingPatch(self, patchID):
-        mesh = self.origMesh
+        mesh = self
         patch = mesh.boundary[patchID]
         nFaces = patch['nFaces']
 
@@ -976,7 +975,7 @@ class Mesh(object):
         return
 
     def updateSlidingPatch(self, patchID, t, dt):
-        mesh = self.origMesh
+        mesh = self
         patch = mesh.boundary[patchID]
         nFaces = patch['nFaces']
 
@@ -990,7 +989,7 @@ class Mesh(object):
             patch['loc_velocity'] = np.fromstring(patch['velocity'][1:-1], sep=' ', dtype=config.precision)
             return
 
-        mesh = self.origMesh
+        mesh = self
         patch['movingCellCentres'] += patch['loc_velocity']*dt
         # only supports low enough velocities
         transformIndices = (patch['movingCellCentres']-patch['loc_periodicLimit']).dot(patch['loc_velocity']) > 1e-6

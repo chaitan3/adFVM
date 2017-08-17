@@ -113,7 +113,7 @@ class Solver(object):
     def initSource(self):
         self.sourceFields = self.getSymbolicFields()
         symbolics = [phi.field for phi in self.sourceFields]
-        values = [np.zeros((self.mesh.origMesh.nInternalCells, nDims[0]), config.precision) for nDims in self.dimensions]
+        values = [np.zeros((self.mesh.nInternalCells, nDims[0]), config.precision) for nDims in self.dimensions]
         self.sourceTerms = zip(symbolics, values)
         return
 
@@ -152,7 +152,7 @@ class Solver(object):
                 patch = phi.BC[patchID]
                 for key, value in zip(patch.keys, patch.inputs):
                     if key == 'value':
-                        nFaces = self.mesh.origMesh.boundary[patchID]['nFaces']
+                        nFaces = self.mesh.boundary[patchID]['nFaces']
                         value[1][:] = extractField(phiB[patchID][key], nFaces, phi.dimensions)
         return
 
@@ -223,7 +223,7 @@ class Solver(object):
         dts = dt
         timeIndex = startIndex
         if self.localTimeStep:
-            dt = dts*np.ones_like(mesh.origMesh.volumes)
+            dt = dts*np.ones_like(mesh.volumes)
         elif isinstance(dts, np.ndarray):
             dt = dts[timeIndex]
 
@@ -235,7 +235,7 @@ class Solver(object):
         if mode == 'forward':
             if self.dynamicMesh:
                 instMesh = Mesh()
-                instMesh.boundary = copy.deepcopy(self.mesh.origMesh.boundary)
+                instMesh.boundary = copy.deepcopy(self.mesh.boundary)
                 solutions = [[instMesh] + fields]
             else:
                 solutions = [fields]
@@ -243,7 +243,7 @@ class Solver(object):
 
         def doPerturb(revert=False):
             parameters, perturb = perturbation
-            values = perturb(fields, mesh.origMesh, t)
+            values = perturb(fields, mesh, t)
             if not isinstance(values, list) or (len(parameters) == 1 and len(values) > 1):
                 values = [values]
             for param, value in zip(parameters, values):
@@ -257,9 +257,9 @@ class Solver(object):
                     for attr, delta in zip(Mesh.gradFields, value):
                         if revert:
                             delta = -delta
-                        field = getattr(mesh.origMesh, attr)
+                        field = getattr(mesh, attr)
                         field += delta
-                        assert field is getattr(mesh.origMesh, attr)
+                        assert field is getattr(mesh, attr)
                 elif isinstance(param, tuple):
                     if revert:
                         value = -value
@@ -280,7 +280,7 @@ class Solver(object):
             report = (timeIndex % reportInterval) == 0
 
             # source term update
-            self.updateSource(source(fields, mesh.origMesh, t))
+            self.updateSource(source(fields, mesh, t))
             # perturbation
             if perturbation:
                 doPerturb()
@@ -378,7 +378,7 @@ class Solver(object):
             if mode == 'forward':
                 if self.dynamicMesh:
                     instMesh = Mesh()
-                    instMesh.boundary = copy.deepcopy(self.mesh.origMesh.boundary)
+                    instMesh.boundary = copy.deepcopy(self.mesh.boundary)
                     solutions.append([instMesh] + fields)
                 else:
                     solutions.append(fields)
@@ -386,7 +386,7 @@ class Solver(object):
                 # write mesh, fields, status
                 if mode == 'orig' or mode == 'simulation':
                     #if len(dtc.shape) == 0:
-                    #    dtc = dtc*np.ones((mesh.origMesh.nInternalCells, 1))
+                    #    dtc = dtc*np.ones((mesh.nInternalCells, 1))
                     #dtc = IOField.internalField('dtc', dtc, (1,))
                     # how do i do value BC patches?
                     #self.writeFields(fields + [dtc], t)
