@@ -121,7 +121,6 @@ for rank, processor in enumerate(processorDirs):
             mesh.neighbour, mesh.addressing, mesh.boundary = mesh.readFoam(processor, 'constant')
     mesh.buildBeforeWrite()
 
-    mesh.origMesh = mesh
     meshes.append(mesh)
 
 

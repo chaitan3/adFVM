@@ -22,8 +22,8 @@ def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] norma
     # face points lie to left or right of plane
     cdef np.ndarray[int, ndim=2] faces = mesh.faces
     cdef np.ndarray[dtype, ndim=2] points = mesh.points
-    cdef np.ndarray[int] owner = mesh.origMesh.owner
-    cdef np.ndarray[int] neighbour = mesh.origMesh.neighbour
+    cdef np.ndarray[int] owner = mesh.owner
+    cdef np.ndarray[int] neighbour = mesh.neighbour
     cdef int nInternalCells = mesh.nInternalCells
     cdef int nInternalFaces = mesh.nInternalFaces
     cdef int nFaces = mesh.nFaces
@@ -179,8 +179,7 @@ cdef set_to_numpy(set[int] &arr):
 @cython.boundscheck(False)
 def decompose(object mesh, int nprocs, np.ndarray[dtype] infer):
 
-    meshO = mesh.origMesh
-    ne = meshO.nInternalCells
+    ne = mesh.nInternalCells
     nn = mesh.points.shape[0]
     cdef np.ndarray[int, ndim=1] eptr = np.arange(0, ne*8+1, 8, dtype=np.int32)
     cdef np.ndarray[int, ndim=2] eind = mesh.cells.astype(np.int32)
@@ -203,16 +202,16 @@ def decompose(object mesh, int nprocs, np.ndarray[dtype] infer):
 
     print 'metis completed'
 
-    cdef np.ndarray[int, ndim=1] owner = meshO.owner
-    cdef np.ndarray[int, ndim=1] neighbour = meshO.neighbour
+    cdef np.ndarray[int, ndim=1] owner = mesh.owner
+    cdef np.ndarray[int, ndim=1] neighbour = mesh.neighbour
     cdef np.ndarray[int, ndim=2] cells = mesh.cells
     cdef np.ndarray[dtype, ndim=2] points = mesh.points
     cdef np.ndarray[int, ndim=2] faces = mesh.faces
-    boundary = meshO.boundary
+    boundary = mesh.boundary
 
-    cdef int nFaces = meshO.nFaces
-    cdef int nInternalFaces = meshO.nInternalFaces
-    cdef int nInternalCells = meshO.nInternalCells
+    cdef int nFaces = mesh.nFaces
+    cdef int nInternalFaces = mesh.nInternalFaces
+    cdef int nInternalCells = mesh.nInternalCells
     cdef int i, j, k, l, m, n, o
 
     cdef vector[vector[int]] faceProc
@@ -254,14 +253,14 @@ def decompose(object mesh, int nprocs, np.ndarray[dtype] infer):
     for i in range(0, nInternalCells):
         cellProc[epart[i]].push_back(i)
 
-    for patchID in meshO.boundary:
-        meshPatch = meshO.boundary[patchID]
+    for patchID in mesh.boundary:
+        meshPatch = mesh.boundary[patchID]
         patch = patchID
         k = meshPatch['startFace']
         l = k + meshPatch['nFaces']
         n = 0
         if meshPatch['type'] == 'cyclic':
-            neighbourPatch = meshO.boundary[meshPatch['neighbourPatch']]
+            neighbourPatch = mesh.boundary[meshPatch['neighbourPatch']]
             m = neighbourPatch['startFace']
             n = 1
         for i in range(0, nprocs):

@@ -58,7 +58,7 @@ def writeResult(option, result, info='-', timeSeriesFile=None):
                 handle.write('{} {} {} {} {}\n'.format(option, index, info, globalResult[index], noise[index]))
 
 if __name__ == "__main__":
-    mesh = primal.mesh.origMesh
+    mesh = primal.mesh
     timeStepFile = primal.timeStepFile
 
     parser = argparse.ArgumentParser()

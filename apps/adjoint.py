@@ -145,7 +145,7 @@ class Adjoint(Solver):
                 t, _ = timeSteps[-1]
                 if primal.dynamicMesh:
                     lastMesh, lastSolution = solutions[-1]
-                    mesh.origMesh.boundary = lastMesh.boundarydata[m:].reshape(-1,1)
+                    mesh.boundary = lastMesh.boundarydata[m:].reshape(-1,1)
                 else:
                     lastSolution = solutions[-1]
 
@@ -164,7 +164,7 @@ class Adjoint(Solver):
                     mesh.boundary = previousMesh.boundary
                 else:
                     previousSolution = solutions[adjointIndex]
-                primal.updateSource(source(previousSolution, mesh.origMesh, t))
+                primal.updateSource(source(previousSolution, mesh, t))
 
                 if report:
                     printMemUsage()
@@ -223,7 +223,7 @@ class Adjoint(Solver):
                     else:
                         inputs = previousSolution + [self.scaling]
                         kwargs = {'visc': self.viscosityType, 'scale': self.viscosityScaler, 'report':report}
-                        weight = interp.centralOld(getAdjointViscosity(*inputs, **kwargs), mesh.origMesh)
+                        weight = interp.centralOld(getAdjointViscosity(*inputs, **kwargs), mesh)
                         start3 = time.time()
                         stackedPhi = Field('a', stackedFields, (5,))
                         stackedPhi.old = stackedFields
@@ -247,7 +247,7 @@ class Adjoint(Solver):
                 # compute sensitivity using adjoint solution
                 sensitivities = []
                 for index in range(0, len(perturb)):
-                    perturbation = perturb[index](None, mesh.origMesh, t)
+                    perturbation = perturb[index](None, mesh, t)
                     if isinstance(perturbation, tuple):
                         perturbation = list(perturbation)
                     if not isinstance(perturbation, list):# or (len(parameters) == 1 and len(perturbation) > 1):

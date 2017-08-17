@@ -24,7 +24,7 @@ def diffAllTimes():
         with IOField.handle(time2):
             phi2 = IOField.read(field)
         diff = np.abs(phi1.field-phi2.field)
-        norm = np.sqrt(parallel.sum(diff**2*mesh1.origMesh.volumes))
+        norm = np.sqrt(parallel.sum(diff**2*mesh1.volumes))
         pprint(parallel.min(diff))
         pprint('norm:', norm)
 

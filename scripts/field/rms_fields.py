@@ -11,7 +11,6 @@ case, field = sys.argv[1:3]
 #times = sys.argv[3:]
 mesh = Mesh.create(case)
 Field.setMesh(mesh)
-meshO = mesh.origMesh
 
 # time avg: no dt
 times = mesh.getTimes()
@@ -36,11 +35,11 @@ def average(start, end):
     spanAvg = np.tile(spanAvg, (nLayers,1))
     std[start:end] = spanAvg
 
-average(0, meshO.nInternalCells)
+average(0, mesh.nInternalCells)
 for patchID in mesh.localPatches:
-    patch = meshO.boundary[patchID]
+    patch = mesh.boundary[patchID]
     if patch['type'] in BCs.valuePatches:
-        cellStartFace = patch['startFace']-meshO.nInternalFaces + meshO.nInternalCells
+        cellStartFace = patch['startFace']-mesh.nInternalFaces + mesh.nInternalCells
         cellEndFace = cellStartFace + patch['nFaces']
         average(cellStartFace, cellEndFace)
 

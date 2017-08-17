@@ -11,7 +11,6 @@ case = sys.argv[1]
 fields = sys.argv[2:]
 mesh = Mesh.create(case)
 Field.setMesh(mesh)
-meshO = mesh.origMesh
 
 times = mesh.getTimes()
 #times = filter(lambda x: x > 1.002, times)
@@ -39,11 +38,11 @@ for field in fields:
         spanAvg = np.tile(spanAvg, (nLayers,1))
         avg[start:end] = spanAvg
 
-    average(0, meshO.nInternalCells)
+    average(0, mesh.nInternalCells)
     for patchID in mesh.localPatches:
-        patch = meshO.boundary[patchID]
+        patch = mesh.boundary[patchID]
         if patch['type'] in BCs.valuePatches:
-            cellStartFace, cellEndFace, _ = meshO.getPatchCellRange(patchID)
+            cellStartFace, cellEndFace, _ = mesh.getPatchCellRange(patchID)
             average(cellStartFace, cellEndFace)
 
     phi.name = field + '_avg'

@@ -12,8 +12,6 @@ time2 = float(time2)
 
 mesh1 = Mesh.create(case1)
 mesh2 = Mesh.create(case2)
-meshO1 = mesh1.origMesh
-meshO2 = mesh2.origMesh
 
 from scipy.spatial import cKDTree as KDTree
 def mapNearest(centres1, centres2):
@@ -27,15 +25,15 @@ def getPatchInfo(mesh, patchID):
     indices = mesh.neighbour[startFace:endFace]
     return startFace, endFace, indices
 
-centres1 = meshO1.cellCentres[:meshO1.nInternalCells]
-centres2 = meshO2.cellCentres[:meshO2.nInternalCells]
+centres1 = mesh1.cellCentres[:mesh1.nInternalCells]
+centres2 = mesh2.cellCentres[:mesh2.nInternalCells]
 internalIndices = mapNearest(centres1, centres2)
 patchIndices = {} 
-for patchID in meshO1.boundary:
-    startFace, endFace, indices1 = getPatchInfo(meshO1, patchID)
-    centres1 = meshO1.faceCentres[startFace:endFace]
-    startFace, endFace, indices2 = getPatchInfo(meshO2, patchID)
-    centres2 = meshO2.faceCentres[startFace:endFace]
+for patchID in mesh1.boundary:
+    startFace, endFace, indices1 = getPatchInfo(mesh1, patchID)
+    centres1 = mesh1.faceCentres[startFace:endFace]
+    startFace, endFace, indices2 = getPatchInfo(mesh2, patchID)
+    centres2 = mesh2.faceCentres[startFace:endFace]
     patchIndices[patchID] = mapNearest(centres1, centres2)
 
 for field in mesh1.getFields(time1):
@@ -46,13 +44,13 @@ for field in mesh1.getFields(time1):
         phi1.partialComplete()
     dims = phi1.dimensions
 
-    phi2 = np.zeros((meshO2.nCells, ) + dims)
+    phi2 = np.zeros((mesh2.nCells, ) + dims)
     phi2 = IOField(field, phi2, dims)
 
-    phi2.field[:meshO2.nInternalCells] = phi1.field[internalIndices]
+    phi2.field[:mesh2.nInternalCells] = phi1.field[internalIndices]
     for patchID in phi1.boundary:
-        startFace, endFace, indices1 = getPatchInfo(meshO1, patchID)
-        startFace, endFace, indices2 = getPatchInfo(meshO2, patchID)
+        startFace, endFace, indices1 = getPatchInfo(mesh1, patchID)
+        startFace, endFace, indices2 = getPatchInfo(mesh2, patchID)
         phi2.field[indices2] = phi1.field[indices1][patchIndices[patchID]]
     phi2.boundary = copy.deepcopy(phi1.boundary)
 
