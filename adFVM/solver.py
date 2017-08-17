@@ -118,7 +118,6 @@ class Solver(object):
         return
 
     def updateSource(self, source, perturb=False):
-        return
         for index, value in enumerate(source):
             #if index == 1:
             #    phi = IOField.internalField('rhoUS', value, (3,))

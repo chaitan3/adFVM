@@ -186,7 +186,7 @@ class Adjoint(Solver):
                 ms = n+1
                 me = ms + len(mesh.gradFields)
                 meshGradient = outputs[ms:me]
-                ss = n+1+len(mesh.getTensor() + mesh.getScalar())
+                ss = n+1+len(mesh.gradFields + mesh.intFields)
                 se = ss + n
                 sourceGradient = outputs[ss:se]
                 for index in range(0, n):

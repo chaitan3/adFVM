@@ -141,7 +141,7 @@ parameters = 'mesh'
 
 def makePerturb(mid):
     def perturb(fields, mesh, t):
-        G = 10*np.exp(-1e4*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+        G = 1e1*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1, keepdims=1)**2)
         #rho
         rho = G
         rhoU = np.zeros((mesh.nInternalCells, 3))
