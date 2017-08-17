@@ -206,7 +206,7 @@ class Adjoint(Solver):
                     stackedFields = np.ascontiguousarray(stackedFields)
 
                     start2 = time.time() 
-                    if self.matop:
+                    if config.matop:
                         scaling = np.array([[self.scaling]]).astype(config.precision)
                         inputs = [phi.field for phi in previousSolution] + [scaling] + mesh.getTensor() + mesh.getScalar() + primal.getBoundaryTensor(1)
                         (DT,) = Function._module.viscosity(*inputs)
@@ -299,13 +299,11 @@ class Adjoint(Solver):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--readFields', action='store_true')
-    parser.add_argument('--matop', action='store_true')
     user, args = parser.parse_known_args()
 
     adjoint = Adjoint(primal)
     adjoint.initPrimalData()
-    adjoint.matop = user.matop
-    if not adjoint.matop:
+    if not config.matop:
         global matop_petsc
         from adFVM import matop_petsc
 

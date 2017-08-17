@@ -429,6 +429,8 @@ class Function(object):
 """)
             if Function.openmp:
                 os.environ['WITH_OPENMP'] = '1'
+            if config.matop:
+                os.environ['WITH_MATOP'] = '1'
             if config.py3:
                 subprocess.check_call(['make', 'python3'], cwd=self.codeDir)
             elif Function.gpu:
