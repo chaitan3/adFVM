@@ -36,11 +36,10 @@ void Function_mpi(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
     extArrType<dtype, shape1, shape2>& phi = *(phiP[1]);
     const Mesh& mesh = *meshp;
     //MPI_Barrier(MPI_COMM_WORLD);
+    if (mesh.nProcs == 1) return;
 
     extArrType<dtype, shape1, shape2>* phiBuf;
-    if (mesh.nRemotePatches > 0) {
-        phiBuf = (extArrType<dtype, shape1, shape2>*)mpi_reqBuf[phiP[1]];
-    }
+    phiBuf = (extArrType<dtype, shape1, shape2>*)mpi_reqBuf[phiP[1]];
 
     for (auto& patch: mesh.boundary) {
         string patchType = patch.second.at("type");
@@ -70,11 +69,11 @@ void Function_mpi_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
     extArrType<dtype, shape1, shape2>& phi = *(phiP[1]);
     const Mesh& mesh = *meshp;
     //MPI_Barrier(MPI_COMM_WORLD);
+    if (mesh.nProcs == 1) return;
 
     extArrType<dtype, shape1, shape2>* phiBuf;
-    if (mesh.nRemotePatches > 0) {
-        phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf[phiP[1]];
-    }
+    phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf[phiP[1]];
+
     for (auto& patch: mesh.boundary) {
         string patchType = patch.second.at("type");
         if (patchType == "processor" || patchType == "processorCyclic") {
@@ -103,21 +102,21 @@ MPI_SPECIALIZE(Function_mpi_grad)
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi_init(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
     const Mesh& mesh = *meshp;
+    if (mesh.nProcs == 1) return;
+
     // run once
-    if (mesh.nRemotePatches > 0) {
-        if (!mpi_init) {
-            mpi_reqIndex = 0;
-            mpi_reqBuf.clear();
-            mpi_req = new MPI_Request[2*3*mesh.nRemotePatches];
-            mpi_init = true;
-        }
+    if (!mpi_init) {
+        mpi_reqIndex = 0;
+        mpi_reqBuf.clear();
+        mpi_req = new MPI_Request[2*3*mesh.nRemotePatches];
+        mpi_init = true;
     }
+
     extArrType<dtype, shape1, shape2>& phi = *(phiP[1]);
     extArrType<dtype, shape1, shape2>* phiBuf;
-    if (mesh.nRemotePatches > 0) {
-        phiBuf = new extArrType<dtype, shape1, shape2>(mesh.nCells-mesh.nLocalCells, true);
-        mpi_reqBuf[phiP[1]] = (void *) phiBuf;
-    }
+    phiBuf = new extArrType<dtype, shape1, shape2>(mesh.nCells-mesh.nLocalCells, true);
+    mpi_reqBuf[phiP[1]] = (void *) phiBuf;
+
     //MPI_Barrier(MPI_COMM_WORLD);
     for (auto& patch: mesh.boundary) {
         string patchType = patch.second.at("type");
@@ -138,17 +137,18 @@ void Function_mpi_init(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi_init_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
     const Mesh& mesh = *meshp;
+    if (mesh.nProcs == 1) return;
+
     extArrType<dtype, shape1, shape2>& phi = *(phiP[1]);
     extArrType<dtype, shape1, shape2>* phiBuf;
-    if (mesh.nRemotePatches > 0) {
         // run once
-        if (mpi_init_grad) {
-            MPI_Waitall(mpi_reqIndex, (mpi_req), MPI_STATUSES_IGNORE);
-            delete[] mpi_req;
-            mpi_init_grad = false;
-        }
-        phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf[phiP[1]];
+    if (mpi_init_grad) {
+        MPI_Waitall(mpi_reqIndex, (mpi_req), MPI_STATUSES_IGNORE);
+        delete[] mpi_req;
+        mpi_init_grad = false;
     }
+    phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf[phiP[1]];
+    
     //MPI_Barrier(MPI_COMM_WORLD);
     for (auto& patch: mesh.boundary) {
         string patchType = patch.second.at("type");
@@ -163,10 +163,9 @@ void Function_mpi_init_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP
             phi.extract(&owner(startFace), &(*phiBuf)(bufStartFace), nFaces);
         }
     }
-    if (mesh.nRemotePatches > 0) {
-        phiBuf->destroy();
-        delete phiBuf;
-    }
+
+    phiBuf->destroy();
+    delete phiBuf;
 };
 MPI_SPECIALIZE(Function_mpi_init)
 MPI_SPECIALIZE(Function_mpi_init_grad)
@@ -174,35 +173,34 @@ MPI_SPECIALIZE(Function_mpi_init_grad)
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi_end(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
     const Mesh& mesh = *meshp;
-    if (mesh.nRemotePatches > 0) {
+    if (mesh.nProcs == 1) return;
         // run once
-        if (mpi_init) {
-            MPI_Waitall(mpi_reqIndex, (mpi_req), MPI_STATUSES_IGNORE);
-            delete[] mpi_req;
-            mpi_init = false;
-        }
-
-        extArrType<dtype,shape1,shape2>* phiBuf = (extArrType<dtype,shape1,shape2>*)mpi_reqBuf[phiP[1]];
-        phiBuf->destroy();
-        delete phiBuf;
+    if (mpi_init) {
+        MPI_Waitall(mpi_reqIndex, (mpi_req), MPI_STATUSES_IGNORE);
+        delete[] mpi_req;
+        mpi_init = false;
     }
+
+    extArrType<dtype,shape1,shape2>* phiBuf = (extArrType<dtype,shape1,shape2>*)mpi_reqBuf[phiP[1]];
+    phiBuf->destroy();
+    delete phiBuf;
 }
 
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi_end_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
     const Mesh& mesh = *meshp;
+    if (mesh.nProcs == 1) return;
     // run once
-    if (mesh.nRemotePatches > 0) {
-        if (!mpi_init_grad) {
-            mpi_reqIndex = 0;
-            mpi_reqBuf.clear();
-            mpi_req = new MPI_Request[2*3*mesh.nRemotePatches];
-            mpi_init_grad = true;
-        }
-        extArrType<dtype, shape1, shape2>* phiBuf = new extArrType<dtype, shape1, shape2>(mesh.nCells-mesh.nLocalCells, true);
-        mpi_reqBuf[phiP[1]] = (void *) phiBuf;
-        
+    
+    if (!mpi_init_grad) {
+        mpi_reqIndex = 0;
+        mpi_reqBuf.clear();
+        mpi_req = new MPI_Request[2*3*mesh.nRemotePatches];
+        mpi_init_grad = true;
     }
+
+    extArrType<dtype, shape1, shape2>* phiBuf = new extArrType<dtype, shape1, shape2>(mesh.nCells-mesh.nLocalCells, true);
+    mpi_reqBuf[phiP[1]] = (void *) phiBuf;
 }
 
 MPI_SPECIALIZE(Function_mpi_end)
@@ -216,15 +214,14 @@ void Function_mpi_allreduce(std::vector<ext_vec*> vals) {
     for (integer i = 0; i < n; i++) {
         in.copy(i, &(*vals[i])(0), 1);
     }
-    if (mesh.nRemotePatches > 0) {
+    if (mesh.nProcs == 1) {
+        for (integer i = 0; i < n; i++) {
+            (*vals[i+n]).copy(0, &in(i), 1);
+        }
+    } else {
         MPI_Allreduce(&in(0), &out(0), n, mpi_type<decltype(vals[0]->type)>(), MPI_SUM, MPI_COMM_WORLD);
         for (integer i = 0; i < n; i++) {
             (*vals[i+n]).copy(0, &out(i), 1);
-        }
-    }
-    else {
-        for (integer i = 0; i < n; i++) {
-            (*vals[i+n]).copy(0, &in(i), 1);
         }
     }
 }
