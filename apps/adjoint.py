@@ -72,26 +72,6 @@ class Adjoint(Solver):
         primal.compileSolver()
         self.map = primal.map.grad
     
-    def getGradFields(self):
-        variables = []
-        for param in parameters:
-            if param == 'source':
-                pprint('Gradient wrt source')
-                variables.extend(list(zip(*primal.sourceTerms)[0]))
-            elif param == 'mesh':
-                pprint('Gradient wrt mesh')
-                variables.extend([getattr(self.mesh, field) for field in Mesh.gradFields])
-            elif isinstance(param, tuple):
-                assert param[0] == 'BCs'
-                pprint('Gradient wrt', param)
-                _, phi, patchID, key = param
-                patch = getattr(primal, phi).phi.BC[patchID]
-                index = patch.keys.index(key)
-                variables.append(patch.inputs[index][0])
-            elif isinstance(param, ad.TensorType):
-                variables.append(param)
-        return variables
-
     def initPrimalData(self):
         if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
             self.firstCheckpoint, self.result  = primal.readStatusFile()
@@ -185,6 +165,7 @@ class Adjoint(Solver):
                 inputs = [phi.field for phi in previousSolution] + \
                      [np.array([[dt]], config.precision)] + \
                      mesh.getTensor() + mesh.getScalar() + \
+                     [x[1] for x in primal.sourceTerms] + \
                      primal.getBoundaryTensor(1) + \
                      [x[1] for x in primal.extraArgs] + \
                      [phi.field for phi in fields] + \
@@ -200,8 +181,14 @@ class Adjoint(Solver):
                 #print(x1, x2, x1-x2)
                 #import pdb;pdb.set_trace()
 
-                # only mesh gradients supported for now
-                gradient, paramGradient = outputs[:n], outputs[n+1:n+1+len(mesh.gradFields)]
+                # gradients
+                gradient = outputs[:n]
+                ms = n+1
+                me = ms + len(mesh.gradFields)
+                meshGradient = outputs[ms:me]
+                ss = n+1+len(mesh.getTensor() + mesh.getScalar())
+                se = ss + n
+                sourceGradient = outputs[ss:se]
                 for index in range(0, n):
                     fields[index].field = gradient[index]
                     #fields[index].field = gradient[index]/mesh.volumes
@@ -255,6 +242,13 @@ class Adjoint(Solver):
                         # complex parameter perturbation not supported
                     sensitivity = 0.
                     # make efficient cpu implementation
+                    param = parameters[0]
+                    if param == 'source':
+                        paramGradient = sourceGradient
+                    elif param == 'mesh':
+                        paramGradient = meshGradient
+                    else:
+                        raise Exception('unrecognized perturbation')
                     for derivative, delphi in zip(paramGradient, perturbation):
                         sensitivity += np.sum(derivative * delphi)
                     sensitivities.append(sensitivity)

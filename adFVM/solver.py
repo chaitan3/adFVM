@@ -111,9 +111,9 @@ class Solver(object):
         return tuple(fields)
 
     def initSource(self):
-        self.sourceFields = self.getSymbolicFields()
-        symbolics = [phi.field for phi in self.sourceFields]
-        values = [np.zeros((self.mesh.nInternalCells, nDims[0]), config.precision) for nDims in self.dimensions]
+        mesh = self.mesh
+        symbolics = [Variable((mesh.nInternalCells,) + dims) for dims in self.dimensions]
+        values = [np.zeros((self.mesh.nInternalCells, dims[0]), config.precision) for dims in self.dimensions]
         self.sourceTerms = zip(symbolics, values)
         return
 
@@ -249,7 +249,7 @@ class Solver(object):
             for param, value in zip(parameters, values):
                 if param == 'source':
                     if revert:
-                        value = -value
+                        value = [-x for x in value]
                     pprint('Perturbing source')
                     self.updateSource(value, perturb=True)
                 elif param == 'mesh':
@@ -305,6 +305,7 @@ class Solver(object):
             inputs = [phi.field for phi in fields] + \
                      [np.array([[dt]], config.precision)] + \
                      mesh.getTensor() + mesh.getScalar() + \
+                     [x[1] for x in self.sourceTerms] + \
                      self.getBoundaryTensor(1) + \
                      [x[1] for x in self.extraArgs]
 

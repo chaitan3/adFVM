@@ -49,7 +49,7 @@ class RCF(Solver):
         self.names = ['rho', 'rhoU', 'rhoE']
         self.dimensions = [(1,), (3,), (1,)]
 
-        #self.initSource()
+        self.initSource()
 
         self.Uref = 33.
         self.Tref = 300.
@@ -84,6 +84,7 @@ class RCF(Solver):
         self._boundaryFlux = Tensorize(self.boundaryFlux)
         mesh = self.mesh.symMesh
         meshArgs = mesh.getTensor() + mesh.getScalar()
+        sourceArgs = [x[0] for x in self.sourceTerms]
         BCArgs = self.getBoundaryTensor(0)
         extraArgs = [x[0] for x in self.extraArgs]
         # init function
@@ -93,7 +94,7 @@ class RCF(Solver):
         #self.t = self.t0
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
         rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
-        self.map = Function('primal', [rho, rhoU, rhoE, self.dt] + meshArgs + BCArgs + extraArgs, [rhoN, rhoUN, rhoEN, self.dtc, self.obj])
+        self.map = Function('primal', [rho, rhoU, rhoE, self.dt] + meshArgs + sourceArgs + BCArgs + extraArgs, [rhoN, rhoUN, rhoEN, self.dtc, self.obj])
 
     def getBoundaryTensor(self, index=0):
         return super(RCF, self).getBoundaryTensor(index) + \
