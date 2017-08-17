@@ -66,12 +66,11 @@ PyObject* damp(PyObject *self, PyObject *args) {
 
     arrType<scalar, 5> u;
     vec DT;
-    mat rhoU;
     getArray((PyArrayObject *)uObject, u);
     getArray((PyArrayObject *)DTObject, DT);
-    const Mesh& mesh = *meshp;
 
-    arrType<scalar, 5> un(mesh.nInternalCells);
+    const Mesh& mesh = *meshp;
+    arrType<scalar, 5> un(mesh.nInternalCells, true);
     #ifdef MATOP
         matop->heat_equation(u, DT, dt, un);
     #endif
@@ -156,6 +155,7 @@ void Function_get_max_eigenvalue(std::vector<extArrType<double, 5, 5>*> phiP) {
     double work[lwork];
     int info;
     double w[5];
+    //cout << phi.shape << endl;
 
     for (int i = 0; i < phi.shape; i++) {
         dsyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);

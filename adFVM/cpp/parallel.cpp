@@ -104,15 +104,14 @@ template <typename dtype, integer shape1, integer shape2>
 void Function_mpi_init(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
     const Mesh& mesh = *meshp;
     // run once
-    if (!mpi_init) {
-        mpi_reqIndex = 0;
-        mpi_reqBuf.clear();
-        if (mesh.nRemotePatches > 0) {
+    if (mesh.nRemotePatches > 0) {
+        if (!mpi_init) {
+            mpi_reqIndex = 0;
+            mpi_reqBuf.clear();
             mpi_req = new MPI_Request[2*3*mesh.nRemotePatches];
+            mpi_init = true;
         }
-        mpi_init = true;
     }
-
     extArrType<dtype, shape1, shape2>& phi = *(phiP[1]);
     extArrType<dtype, shape1, shape2>* phiBuf;
     if (mesh.nRemotePatches > 0) {
@@ -193,16 +192,13 @@ template <typename dtype, integer shape1, integer shape2>
 void Function_mpi_end_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
     const Mesh& mesh = *meshp;
     // run once
-    if (!mpi_init_grad) {
-        mpi_reqIndex = 0;
-        mpi_reqBuf.clear();
-        if (mesh.nRemotePatches > 0) {
-            mpi_req = new MPI_Request[2*3*mesh.nRemotePatches];
-        }
-        mpi_init_grad = true;
-    }
-
     if (mesh.nRemotePatches > 0) {
+        if (!mpi_init_grad) {
+            mpi_reqIndex = 0;
+            mpi_reqBuf.clear();
+            mpi_req = new MPI_Request[2*3*mesh.nRemotePatches];
+            mpi_init_grad = true;
+        }
         extArrType<dtype, shape1, shape2>* phiBuf = new extArrType<dtype, shape1, shape2>(mesh.nCells-mesh.nLocalCells, true);
         mpi_reqBuf[phiP[1]] = (void *) phiBuf;
         

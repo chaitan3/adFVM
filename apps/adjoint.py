@@ -71,6 +71,9 @@ class Adjoint(Solver):
     def compileSolver(self):
         primal.compileSolver()
         self.map = primal.map.grad
+
+    def compileExtra(self):
+        primal.compileExtra()
     
     def initPrimalData(self):
         if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
@@ -204,8 +207,11 @@ class Adjoint(Solver):
 
                     start2 = time.time() 
                     if self.matop:
-                        inputs = [phi.field for phi in previousSolution] + [self.scaling] + mesh.getTensor() + mesh.getScalar() + primal.getBoundaryTensor(1)
-                        DT = Function._module.viscosity(*inputs)
+                        scaling = np.array([[self.scaling]]).astype(config.precision)
+                        inputs = [phi.field for phi in previousSolution] + [scaling] + mesh.getTensor() + mesh.getScalar() + primal.getBoundaryTensor(1)
+                        (DT,) = Function._module.viscosity(*inputs)
+                        #DT = interp.centralOld(Field('DT', DT, (1,)), mesh).field
+                        #DT = np.zeros((mesh.nFaces, 1))
                         newStackedFields = Function._module.damp(stackedFields, DT, dt)
                         start3 = time.time()
                     else:

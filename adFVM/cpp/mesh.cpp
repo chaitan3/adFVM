@@ -40,6 +40,10 @@ void Mesh::init () {
     this->tags = getTags(this->mesh, "tags");
 
     getMeshArray(this->mesh, "cellNeighboursMatOp", this->cellNeighbours);
+    getMeshArray(this->mesh, "areas", this->areas);
+    getMeshArray(this->mesh, "deltas", this->deltas);
+    getMeshArray(this->mesh, "cellFaces", this->cellFaces);
+    getMeshArray(this->mesh, "volumes", this->volumes);
     if (this->rank == 0) {
         std::cout << "Initializing C++ interface" << endl;
     }

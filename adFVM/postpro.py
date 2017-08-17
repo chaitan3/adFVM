@@ -441,9 +441,10 @@ def getAdjointViscosityCpp(solver, rho, rhoU, rhoE, scaling):
         MS = (Mc + Mc.transpose())/2
         return MS
 
-    (MS,) = Tensorize(getMaxEigenvalue)(mesh.nInternalCells)(U, T, p, gradU, divU, gradp, gradc)
+    MS = Zeros((mesh.nInternalCells, 5, 5))
+    (MS,) = Tensorize(getMaxEigenvalue)(mesh.nInternalCells, (MS,))(U, T, p, gradU, divU, gradp, gradc)
 
-    M_2norm = Zeros((mesh.nCells, 1))
+    M_2norm = Zeros((mesh.nInternalCells, 1))
     M_2norm = ExternalFunctionOp('get_max_eigenvalue', (MS,), (M_2norm,)).outputs[0]
 
     def computeNorm(M_2norm, volumes):
@@ -458,7 +459,8 @@ def getAdjointViscosityCpp(solver, rho, rhoU, rhoE, scaling):
     def scaleM(M_2norm, N, V, scaling):
         N, V, scaling = N.scalar(), V.scalar(), scaling.scalar()
         return M_2norm*scaling*V/N
-    (M_2norm,) = Tensorize(scaleM)(mesh.nInternalCells)(M_2norm, N, V, scaling)
+    M_2norm_out = Zeros((mesh.nCells, 1))
+    (M_2norm,) = Tensorize(scaleM)(mesh.nInternalCells, (M_2norm_out,))(M_2norm, N, V, scaling)
 
     (phi,) = solver.boundaryInit(M_2norm)
     phi = CellField('M_2norm', None, (1,)).updateGhostCells(phi)
@@ -468,7 +470,9 @@ def getAdjointViscosityCpp(solver, rho, rhoU, rhoE, scaling):
 
     def interpolate(M_2norm, *mesh):
         mesh = Mesh.container(mesh)
-        return interp.central(M_2norm, mesh)
+        M_2norm = interp.central(M_2norm, mesh)
+        return M_2norm
     meshArgs = _meshArgs()
-    (DT,) = Tensorize(interpolate)(mesh.nFaces)(M_2norm, *meshArgs)
+    DT = Zeros((mesh.nFaces, 1))
+    (DT,) = Tensorize(interpolate)(mesh.nFaces, (DT,))(M_2norm, *meshArgs)
     return DT
