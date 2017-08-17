@@ -217,9 +217,10 @@ class ExternalFunctionOp(FunctionOp):
             return ''
         inp = self.args[0]
         shape = ','.join([str(x) for x in inp.shape[1:]])
-        callString = 'std::vector<{}<{}, {}>*>{{'.format(self.arrType, inp.dtype, shape)
+        pointer = '{}<{},{}>*'.format(self.arrType, inp.dtype, shape)
+        callString = 'std::vector<{}>{{'.format(pointer)
         for inp in self.args:
-            callString += '&{},'.format(inp.name)
+            callString += '({})&{},'.format(pointer, inp.name)
         callString = callString[:-1] + '}'
         return callString
 
@@ -416,7 +417,7 @@ class Function(object):
             with open(self.codeDir + self.codeFile, 'a') as f:
                 f.write("""PyMethodDef Methods[] = {
         {"initialize",  initSolver, METH_VARARGS, "Execute a shell command."},
-        {"viscosity",  viscosity, METH_VARARGS, "Execute a shell command."},
+        {"damp",  damp, METH_VARARGS, "Execute a shell command."},
 """)
 
                 for name in Function.funcs:

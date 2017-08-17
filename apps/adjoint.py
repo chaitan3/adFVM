@@ -204,8 +204,9 @@ class Adjoint(Solver):
 
                     start2 = time.time() 
                     if self.matop:
-                        inputs = [phi.field for phi in previousSolution] + [self.scaling, dt, report]
-                        newStackedFields = TensorFunction._module.viscosity(stackedFields, *inputs)
+                        inputs = [phi.field for phi in previousSolution] + [self.scaling] + mesh.getTensor() + mesh.getScalar() + primal.getBoundaryTensor(1)
+                        DT = Function._module.viscosity(*inputs)
+                        newStackedFields = Function._module.damp(stackedFields, DT, dt)
                         start3 = time.time()
                     else:
                         inputs = previousSolution + [self.scaling]

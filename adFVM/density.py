@@ -96,6 +96,15 @@ class RCF(Solver):
         rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
         self.map = Function('primal', [rho, rhoU, rhoE, self.dt] + meshArgs + sourceArgs + BCArgs + extraArgs, [rhoN, rhoUN, rhoEN, self.dtc, self.obj])
 
+    def compileExtra(self):
+        mesh = self.mesh.symMesh
+        meshArgs = mesh.getTensor() + mesh.getScalar()
+        BCArgs = self.getBoundaryTensor(0)
+        rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1))
+        scaling = Variable((1,1))
+        DT = postpro.getAdjointViscosityCpp(self, rho, rhoU, rhoE, scaling)
+        self.viscosity = Function('viscosity', [rho, rhoU, rhoE, scaling] + meshArgs + BCArgs, [DT], grad=False)
+
     def getBoundaryTensor(self, index=0):
         return super(RCF, self).getBoundaryTensor(index) + \
                sum([phi.getTensor(index) for phi in self.gradFields], [])

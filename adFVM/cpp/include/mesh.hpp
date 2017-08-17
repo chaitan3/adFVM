@@ -62,9 +62,6 @@ void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shap
 Boundary getBoundary(PyObject*);
 Boundary getMeshBoundary(PyObject *mesh, const string attr);
 
-PyObject* finalSolver(PyObject *self, PyObject *args);
-PyObject* initSolver(PyObject *self, PyObject *args);
-PyObject* viscosity(PyObject *self, PyObject *args);
 
 extern Mesh* meshp;
 

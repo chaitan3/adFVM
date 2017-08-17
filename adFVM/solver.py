@@ -63,6 +63,7 @@ class Solver(object):
         Function.gpu, Function.openmp = config.gpu, config.openmp
         self.compileInit()
         self.compileSolver()
+        self.compileExtra()
         Function.compile()
         Function._module.initialize(self.mesh, parallel.localRank)
         return

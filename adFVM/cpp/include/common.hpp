@@ -121,11 +121,10 @@ class arrType {
         this->data = const_cast<dtype *>(data);
     }
 
-    //arrType(const integer shape, const string& data) {
-    //    this->init(shape);
-    //    this->data = const_cast<dtype *>((dtype *)data.data());
-    //    this->ownData = false ;
-    //}
+    arrType(const integer shape, const string& data) {
+        this->init(shape);
+        this->data = const_cast<dtype *>((dtype *)data.data());
+    }
 
     // copy constructor?
 

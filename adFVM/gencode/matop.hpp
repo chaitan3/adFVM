@@ -12,8 +12,7 @@ class Matop {
 
     public:
 
-    Matop(RCF* rcf);    
-    void heat_equation(RCF *rcf, const arrType<scalar, 5>& u, const vec& DT, const scalar dt, arrType<scalar, 5>& un);
-    void viscosity(const vec& rho, const mat& rhoU, const vec& rhoE, vec& M_2norm, vec& DT, scalar scaling, bool report);
+    Matop();    
+    void heat_equation(const arrType<scalar, 5>& u, const vec& DT, const scalar dt, arrType<scalar, 5>& un);
 };
 #endif

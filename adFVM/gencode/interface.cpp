@@ -51,39 +51,29 @@ PyObject* initSolver(PyObject *self, PyObject *args) {
     #ifdef MATOP
         integer argc = 0;
         PetscInitialize(&argc, NULL, NULL, NULL);
-        matop = new Matop(rcf);
+        matop = new Matop();
     #endif
 
     return Py_None;
 }
 
-PyObject* viscosity(PyObject *self, PyObject *args) {
+PyObject* damp(PyObject *self, PyObject *args) {
 
     //cout << "forward 1" << endl;
-    PyObject *uObject, *rhoObject, *rhoUObject, *rhoEObject;
-    bool report;
-    scalar dt, scaling;
-    PyArg_ParseTuple(args, "OOOOddb", &uObject, &rhoObject, &rhoUObject, &rhoEObject, &scaling, &dt, &report);
+    PyObject *uObject, *DTObject;
+    scalar dt;
+    PyArg_ParseTuple(args, "OOd", &uObject, &DTObject, &dt);
 
     arrType<scalar, 5> u;
-    vec rho, rhoE;
+    vec DT;
     mat rhoU;
     getArray((PyArrayObject *)uObject, u);
-    getArray((PyArrayObject *)rhoObject, rho);
-    getArray((PyArrayObject *)rhoUObject, rhoU);
-    getArray((PyArrayObject *)rhoEObject, rhoE);
+    getArray((PyArrayObject *)DTObject, DT);
     const Mesh& mesh = *meshp;
-
-    vec M_2norm(mesh.nCells);
-    vec DT(mesh.nFaces);
-
-    //matop->viscosity(rho, rhoU, rhoE, M_2norm, DT, scaling, report);
-    //return putArray(M_2norm);
 
     arrType<scalar, 5> un(mesh.nInternalCells);
     #ifdef MATOP
-        matop->viscosity(rho, rhoU, rhoE, M_2norm, DT, scaling, report);
-        matop->heat_equation(rcf, u, DT, dt, un);
+        matop->heat_equation(u, DT, dt, un);
     #endif
     
     return putArray(un);
@@ -150,29 +140,27 @@ char* PyString_AsString(PyObject* result) {
 }
 #endif
 
-#ifdef MATOP
-    extern "C"{
-    void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
-        double* w, double* work, int* lwork, int* info );
+extern "C"{
+void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
+    double* w, double* work, int* lwork, int* info );
+}
+
+void Function_get_max_eigenvalue(std::vector<extArrType<double, 5, 5>*> phiP) {
+    arrType<double, 5, 5>& phi = *phiP[0];
+    arrType<double>& eigPhi = *((arrType<double>*) phiP[1]);
+    char jobz = 'N';
+    char uplo = 'U';
+    int n = 5;
+    int lda = 5;
+    int lwork = 3*n-1;
+    double work[lwork];
+    int info;
+    double w[5];
+
+    for (int i = 0; i < phi.shape; i++) {
+        dsyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
+        assert(info == 0);
+        eigPhi(i) = w[4];
     }
-
-    scalar getMaxEigenvalue(arrType<double, 5, 5>& phi, vec& eigPhi) {
-        char jobz = 'N';
-        char uplo = 'U';
-        int n = 5;
-        int lda = 5;
-        int lwork = 3*n-1;
-        double work[lwork];
-        int info;
-        double w[5];
-
-        for (int i = 0; i < phi.shape; i++) {
-            dsyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
-            assert(info == 0);
-            eigPhi(i) = w[4];
-        }
-        return 0;
-    }
-#endif
-
+}
 

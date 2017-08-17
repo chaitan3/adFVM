@@ -217,7 +217,7 @@ def laplacian(phi, DT, correction=True):
 
 #def laplacian(phi, DT):
 def laplacian_old(phi, DT):
-    mesh = phi.mesh.origMesh
+    mesh = phi.mesh
     #n = mesh.nLocalCells
     #m = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
     l = mesh.nFaces
@@ -294,7 +294,7 @@ def laplacian_old(phi, DT):
     return M
 
 def ddt(phi, dt):
-    mesh = phi.mesh.origMesh
+    mesh = phi.mesh
     n = mesh.nInternalCells
     nrhs = phi.dimensions[0]
     M = Matrix.create(n, n, 1, nrhs)

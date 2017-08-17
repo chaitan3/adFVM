@@ -1,10 +1,11 @@
 import numpy as np
 
 from . import parallel, config
-from .field import IOField
+from .field import IOField, CellField
 from . import op, interp
 from .compat import intersectPlane
 import time
+from .mesh import Mesh
 
 def computeGradients(solver, U, T, p):
     mesh = solver.mesh
@@ -335,11 +336,17 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True, **kwa
     return viscosity
 
 from adFVM.tensor import *
-def getAdjointViscosityCpp(solver):
+def getAdjointViscosityCpp(solver, rho, rhoU, rhoE, scaling):
     g = solver.gamma
     mesh = solver.mesh.symMesh
-    def gradients(name, neighbour=True, boundary=False):
-        U, T, p = CellTensor((3,)), CellTensor((1,)), CellTensor((1,))
+
+    def _meshArgs(start=0):
+        return [x[start] for x in mesh.getTensor()]
+
+    def gradients(U, T, p, *mesh, **options):
+        mesh = Mesh.container(mesh)
+        neighbour = options.pop('neighbour', True)
+        boundary = options.pop('boundary', False)
 
         if boundary:
             UF = U.extract(mesh.neighbour)
@@ -357,64 +364,111 @@ def getAdjointViscosityCpp(solver):
         divU = op.div(UF.dot(mesh.normals), mesh, neighbour)
         gradp = op.grad(pF, mesh, neighbour)
         gradc = op.grad(cF, mesh, neighbour)
+        return gradU, divU, gradp, gradc
+    computeGradients = Tensorize(gradients)
+    boundaryComputeGradients = Tensorize(gradients)
+    coupledComputeGradients = Tensorize(gradients)
 
-        inputs = [getattr(mesh, attr) for attr in mesh.gradFields] + \
-                 [getattr(mesh, attr) for attr in mesh.intFields]
+    U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
+    outputs = solver._primitive(mesh.nInternalCells, (U, T, p))(rho, rhoU, rhoE)
+    # boundary update
+    outputs = solver.boundaryInit(*outputs)
+    outputs = solver.boundary(*outputs)
+    outputs = solver.boundaryEnd(*outputs)
+    U, T, p = outputs
 
-        return TensorFunction(name, [U, T, p] + inputs, [gradU, divU, gradp, gradc], grad=False)
-    gradients('computeGradients')
-    gradients('coupledComputeGradients', False)
-    gradients('boundaryComputeGradients', False, True)
+    meshArgs = _meshArgs()
+    gradU, divU, gradp, gradc = Zeros((mesh.nInternalCells, 3, 3)), Zeros((mesh.nInternalCells, 1)), Zeros((mesh.nInternalCells, 3)), Zeros((mesh.nInternalCells, 3))
+    outputs = computeGradients(mesh.nInternalFaces, (gradU, divU, gradp, gradc))(U, T, p, *meshArgs)
+    for patchID in solver.mesh.localPatches:
+        startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
+        patchType = solver.mesh.boundary[patchID]['type']
+        meshArgs = _meshArgs(startFace)
+        if patchType in config.coupledPatches:
+            outputs = coupledComputeGradients(nFaces, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
+            outputs[0].args[0].info += [[x.shape for x in solver.mesh.getTensor()], patchID, solver.mesh.boundary[patchID]['startFace'], solver.mesh.boundary[patchID]['nFaces']]
+        else:
+            outputs = boundaryComputeGradients(nFaces, outputs)(U, T, p, neighbour=False, boundary=True, *meshArgs)
+    meshArgs = _meshArgs(mesh.nLocalFaces)
+    outputs = coupledComputeGradients(mesh.nRemoteCells, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
+    gradU, divU, gradp, gradc = outputs
 
-    U, T, p = Tensor((3,)), Tensor((1,)), Tensor((1,))
-    #gradU, divU, gradp, gradc = Tensor((3,3)), Tensor((1,)), Tensor((1, 3)), Tensor((1, 3))
-    gradU, divU, gradp, gradc = Tensor((3,3)), Tensor((1,)), Tensor((3,)), Tensor((3,))
+    def getMaxEigenvalue(U, T, p, gradU, divU, gradp, gradc):
+        Uref, Tref, pref = solver.Uref, solver.Tref, solver.pref
+        sg = np.sqrt(g)
+        g1 = g-1
+        sg1 = np.sqrt(g1)
+        sge = sg1*sg
 
-    Uref, Tref, pref = solver.Uref, solver.Tref, solver.pref
-    sg = np.sqrt(g)
-    g1 = g-1
-    sg1 = np.sqrt(g1)
-    sge = sg1*sg
+        rho, _, _ = solver.conservative(U, T, p)
+        c = (g*p/rho).sqrt()
+        gradrho = g*(gradp-c*p)/(c*c)
+        b = c/sg
+        a = sg1*c/sg
+        gradb = gradc/sg
+        grada = gradc*sg1/sg
+        Z = Tensor((1,), [ConstantOp(0.)])
+        U1, U2, U3 = U[0], U[1], U[2]
+        Us = U.magSqr()
+        c2 = c*c
 
-    rho, _, _ = solver.conservative(U, T, p)
-    c = (g*p/rho).sqrt()
-    gradrho = g*(gradp-c*p)/(c*c)
-    b = c/sg
-    a = sg1*c/sg
-    gradb = gradc/sg
-    grada = gradc*sg1/sg
-    Z = Tensor((1,), [ConstantOp(0.)])
-    U1, U2, U3 = U[0], U[1], U[2]
-    Us = U.magSqr()
-    c2 = c*c
+        M1 = Tensor((5, 5), [divU, gradb[0], gradb[1], gradb[2], Z,
+                             gradb[0], divU, Z, Z, grada[0],
+                             gradb[1], Z, divU, Z, grada[1],
+                             gradb[2], Z, Z, divU, grada[2],
+                             Z, grada[0], grada[1], grada[2], divU])
+        tmp1 = b*gradrho/rho
+        tmp2 = a*gradp/(2*p)
+        tmp3 = 2*grada/g1
 
-    M1 = Tensor((5, 5), [divU, gradb[0], gradb[1], gradb[2], Z,
-                         gradb[0], divU, Z, Z, grada[0],
-                         gradb[1], Z, divU, Z, grada[1],
-                         gradb[2], Z, Z, divU, grada[2],
-                         Z, grada[0], grada[1], grada[2], divU])
-    tmp1 = b*gradrho/rho
-    tmp2 = a*gradp/(2*p)
-    tmp3 = 2*grada/g1
+        M2 = Tensor((5, 5), [Z, tmp1[0], tmp1[1], tmp1[2], sg1*divU/2,
+                             Z, gradU[0,0], gradU[0,1], gradU[0,2], tmp2[0],
+                             Z, gradU[1,0], gradU[1,1], gradU[1,2], tmp2[1],
+                             Z, gradU[2,0], gradU[2,1], gradU[2,2], tmp2[2],
+                             Z, tmp3[0], tmp3[1], tmp3[2], g1*divU/2])
+        
+        Ti = Tensor((5, 5), [rho/b, Z, Z, Z, Z,
+                             rho*U1/b, rho, Z, Z, Z,
+                             rho*U2/b, Z, rho, Z, Z,
+                             rho*U3/b, Z, Z, rho, Z,
+                             rho*(c2*2/(g1*g)+Us)/(2*b), rho*U1, rho*U2, rho*U3, c*rho/sge])
+        Ti = Ti.transpose()
 
-    M2 = Tensor((5, 5), [Z, tmp1[0], tmp1[1], tmp1[2], sg1*divU/2,
-                         Z, gradU[0,0], gradU[0,1], gradU[0,2], tmp2[0],
-                         Z, gradU[1,0], gradU[1,1], gradU[1,2], tmp2[1],
-                         Z, gradU[2,0], gradU[2,1], gradU[2,2], tmp2[2],
-                         Z, tmp3[0], tmp3[1], tmp3[2], g1*divU/2])
-    
-    Ti = Tensor((5, 5), [rho/b, Z, Z, Z, Z,
-                         rho*U1/b, rho, Z, Z, Z,
-                         rho*U2/b, Z, rho, Z, Z,
-                         rho*U3/b, Z, Z, rho, Z,
-                         rho*(c2*2/(g1*g)+Us)/(2*b), rho*U1, rho*U2, rho*U3, c*rho/sge])
-    Ti = Ti.transpose()
+        M = M1/2-M2
+        X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref])
+        TiX = Ti.matmul(X)
+        Mc = TiX.transpose().matmul(M.matmul(TiX))
+        MS = (Mc + Mc.transpose())/2
+        return MS
 
-    M = M1/2-M2
-    X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref])
-    TiX = Ti.matmul(X)
-    Mc = TiX.transpose().matmul(M.matmul(TiX))
-    MS = (Mc + Mc.transpose())/2
-    TensorFunction('viscosity', [U, T, p, gradU, divU, gradp, gradc], [MS], grad=False)
+    (MS,) = Tensorize(getMaxEigenvalue)(mesh.nInternalCells)(U, T, p, gradU, divU, gradp, gradc)
 
-    return 
+    M_2norm = Zeros((mesh.nCells, 1))
+    M_2norm = ExternalFunctionOp('get_max_eigenvalue', (MS,), (M_2norm,)).outputs[0]
+
+    def computeNorm(M_2norm, volumes):
+        N = (M_2norm*M_2norm*volumes).sum()
+        V = volumes.sum()
+        return N, V
+    N, V = Zeros((1,1)), Zeros((1,1))
+    inputs = Tensorize(computeNorm)(mesh.nInternalCells, (N, V))(M_2norm, mesh.volumes)
+    outputs = tuple([Zeros(x.shape) for x in inputs])
+    N, V = ExternalFunctionOp('mpi_allreduce', inputs, outputs).outputs
+
+    def scaleM(M_2norm, N, V, scaling):
+        N, V, scaling = N.scalar(), V.scalar(), scaling.scalar()
+        return M_2norm*scaling*V/N
+    (M_2norm,) = Tensorize(scaleM)(mesh.nInternalCells)(M_2norm, N, V, scaling)
+
+    (phi,) = solver.boundaryInit(M_2norm)
+    phi = CellField('M_2norm', None, (1,)).updateGhostCells(phi)
+    phi = ExternalFunctionOp('mpi', (phi,), (phi,)).outputs[0]
+    (phi,) = solver.boundaryEnd(phi)
+    M_2norm = phi
+
+    def interpolate(M_2norm, *mesh):
+        mesh = Mesh.container(mesh)
+        return interp.central(M_2norm, mesh)
+    meshArgs = _meshArgs()
+    (DT,) = Tensorize(interpolate)(mesh.nFaces)(M_2norm, *meshArgs)
+    return DT

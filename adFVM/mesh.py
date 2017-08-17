@@ -28,6 +28,7 @@ class Mesh(object):
     gradFields = ['areas', 'volumesL', 'volumesR',
                   'weights', 'deltas', 'normals',
                   'linearWeights', 'quadraticWeights',
+                  'volumes'
                   #'cellCentres', 'faceCentres', 
                   #'gradOp'
                  ]

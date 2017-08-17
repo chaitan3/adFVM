@@ -33,7 +33,8 @@ if openmp:
     compile_args += ['-fopenmp']
     link_args = ['-lgomp']
 
-matop = 'WITH_MATOP' in os.environ
+#matop = 'WITH_MATOP' in os.environ
+matop = True
 if matop:
     compile_args += ['-DMATOP']
     home = os.path.expanduser('~') + '/sources/petsc/'
