@@ -9,7 +9,7 @@ nProcsPerNode = multiprocessing.cpu_count()
 
 def setNumThreads(nRanksPerNode, nProcsPerNode):
     nThreads = nProcsPerNode/nRanksPerNode
-    os.environ['OMP_NUM_THREADS'] = str(nThreads)
+    os.environ['OMP_NUM_THREADS'] = str(max(1, nThreads))
 
 def getLocalRank(mpi, name, rank):
     nameRanks = mpi.gather((name, rank), root=0)

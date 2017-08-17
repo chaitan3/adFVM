@@ -116,13 +116,13 @@ def objective(fields, solver):
         return a*obj + b*obj2
     return tensor.Tensorize(_combine)(1)(pl, w, ht, w2)[0]
 
-#primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective)
-primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective)
+primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective, fixedTimeStep=True)
+#primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective)
 #primal = RCF('/home/talnikar/adFVM/cases/vane/les/', objective=objective)
 getPlane(primal)
 getWeights(primal)
 
-def makePerturb(param, eps=1e-3):
+def makePerturb(param, eps=1e-6):
     def perturbMesh(fields, mesh, t):
         if not hasattr(perturbMesh, 'perturbation'):
             ## do the perturbation based on param and eps
@@ -130,6 +130,7 @@ def makePerturb(param, eps=1e-3):
             points = np.zeros_like(mesh.points)
             #points[param] = eps
             points[:] = eps*mesh.points
+            #points[:] = eps
             perturbMesh.perturbation = mesh.getPointsPerturbation(points)
         return perturbMesh.perturbation
     return perturbMesh

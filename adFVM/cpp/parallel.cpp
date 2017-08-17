@@ -146,10 +146,9 @@ void Function_mpi_init_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP
         if (mpi_init_grad) {
             MPI_Waitall(mpi_reqIndex, (mpi_req), MPI_STATUSES_IGNORE);
             delete[] mpi_req;
-
-            phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf[phiP[1]];
             mpi_init_grad = false;
         }
+        phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf[phiP[1]];
     }
     //MPI_Barrier(MPI_COMM_WORLD);
     for (auto& patch: mesh.boundary) {
@@ -204,12 +203,8 @@ void Function_mpi_end_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP)
     }
 
     if (mesh.nRemotePatches > 0) {
-        extArrType<dtype, shape1, shape2>& phi = *(phiP[1]);
-        extArrType<dtype, shape1, shape2>* phiBuf;
-        if (mesh.nRemotePatches > 0) {
-            phiBuf = new extArrType<dtype, shape1, shape2>(mesh.nCells-mesh.nLocalCells, true);
-            mpi_reqBuf[phiP[1]] = (void *) phiBuf;
-        }
+        extArrType<dtype, shape1, shape2>* phiBuf = new extArrType<dtype, shape1, shape2>(mesh.nCells-mesh.nLocalCells, true);
+        mpi_reqBuf[phiP[1]] = (void *) phiBuf;
         
     }
 }
