@@ -285,6 +285,9 @@ def gen_mesh_param(param, base, case, fields=True, perturb=True):
     return
 
 if __name__ == '__main__':
+    #extrude_mesh('3d_10/', spawn_job)
+    #exit(0)
+
     func = locals()[sys.argv[1]]
     paramsFile = sys.argv[2]
     #params = [np.zeros(4), './', 'param0/']

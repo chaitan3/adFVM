@@ -6,7 +6,7 @@ from adFVM import config
 from adFVM.field import Field, IOField
 from adFVM.mesh import Mesh
 
-config.hdf5 = True
+#config.hdf5 = True
 case1, case2, time1, time2 = sys.argv[1:5]
 if len(sys.argv) > 5:
     skipZ = True
