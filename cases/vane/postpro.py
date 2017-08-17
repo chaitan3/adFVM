@@ -1,8 +1,8 @@
 import numpy as np
 import sys
-from match import *
+#from match import *
 
-from adFVM import config
+from adFVM import config, parallel
 from adFVM.field import IOField
 from adFVM.parallel import pprint
 from adFVM.postpro import getHTC, getIsentropicMa, getPressureLoss, getYPlus
@@ -14,14 +14,14 @@ def postprocess(solver, time, suffix=''):
     mesh = solver.mesh.origMesh
 
     T0 = 420.
-    p0 = 175158
+    p0 = 175158.
     point = np.array([0.052641,-0.1,0.005])
     normal = np.array([1.,0.,0.])
     patches = ['pressure', 'suction']
 
     pprint('postprocessing', time)
-    rho, rhoU, rhoE = solver.initFields(time, suffix=suffix)
-    U, T, p = solver.U, solver.T, solver.p
+    rho, rhoU, rhoE = solver.initFields(solver.readFields(time, suffix=suffix))
+    U, T, p = solver.primitive(rho, rhoU, rhoE)
     
     htc = getHTC(T, T0, patches)
     Ma = getIsentropicMa(p, p0, patches)
@@ -49,12 +49,14 @@ def postprocess(solver, time, suffix=''):
         Ma.write()
         uplus.write()
         yplus.write()
-        join = '/'
-        if config.hdf5:
-            join = '_'
-        with open(solver.mesh.getTimeDir(time) + join +  'wake' + suffix, 'w') as f:
-            np.savez(f, wakeCells, pl)
+        #join = '/'
+        #if config.hdf5:
+        #    join = '_'
+        #with open(solver.mesh.getTimeDir(time) + join +  'wake' + suffix, 'w') as f:
+        #    np.savez(f, wakeCells, pl)
 
+
+ 
 if __name__ == '__main__':
     case = sys.argv[1]
     times = [float(x) for x in sys.argv[2:]]
@@ -63,7 +65,7 @@ if __name__ == '__main__':
     if len(times) == 0:
         times = solver.mesh.getTimes()
     solver.readFields(times[0])
-    solver.compileInit()
+    solver.compile()
 
     # average
     time = times[0]

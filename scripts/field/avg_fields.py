@@ -6,7 +6,9 @@ import numpy as np
 from adFVM import config, BCs
 from adFVM.field import Field, IOField
 from adFVM.mesh import Mesh
+from adFVM.parallel import pprint
 
+config.hdf5 = True
 case = sys.argv[1]
 fields = sys.argv[2:]
 mesh = Mesh.create(case)
@@ -14,7 +16,7 @@ Field.setMesh(mesh)
 
 times = mesh.getTimes()
 #times = filter(lambda x: x > 1.002, times)
-print times
+pprint(times)
 
 nLayers = 200
 #nLayers = 1
@@ -34,8 +36,8 @@ for field in fields:
     #nLayers = 1
     def average(start, end):
         nCellsPerLayer = (end-start)/nLayers
-        spanAvg = avg[start:end].reshape((nLayers, nCellsPerLayer, nDims)).sum(axis=0)/nLayers
-        spanAvg = np.tile(spanAvg, (nLayers,1))
+        spanAvg = avg[start:end].reshape((nCellsPerLayer, nLayers, nDims)).sum(axis=1,keepdims=1)/nLayers
+        spanAvg = np.tile(spanAvg, (1,nLayers,1)).reshape((end-start, nDims))
         avg[start:end] = spanAvg
 
     average(0, mesh.nInternalCells)

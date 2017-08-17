@@ -25,6 +25,7 @@ sources += ['kernel.cpp', 'code.cpp']
 
 module = 'interface'
 #compile_args = ['-std=c++11', '-O3']#, '-march=native']
+
 compile_args = ['-std=c++11', '-O3', '-g', '-march=native']
 link_args = []
 openmp = 'WITH_OPENMP' in os.environ

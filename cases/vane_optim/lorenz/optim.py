@@ -138,14 +138,14 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
             with open(paramDir + 'primal_output.log', 'w') as f, open(paramDir + 'primal_error.log', 'w') as fe, \
                     open(paramDir + 'adjoint_output.log', 'w') as f2, open(paramDir + 'adjoint_error.log', 'w') as fe2:
                 p1 = spawnJob([sys.executable, primal, primalFile], f, fe, cwd=paramDir)
-                p2 = spawnJob([sys.executable, primal, adjointFile, '--matop'], f2, fe2, cwd=paramDir, block='BLOCK2')
+                p2 = spawnJob([sys.executable, primal, adjointFile], f2, fe2, cwd=paramDir, block='BLOCK2')
                 ret = p2.wait()
                 assert ret == 0
-                #p2 = spawnJob([sys.executable, adjoint, adjointFile, '--matop'], f2, fe2, cwd=paramDir, block='BLOCK2')
-                p2 = spawnJob([sys.executable, adjoint, adjointFile], f2, fe2, cwd=paramDir, block='BLOCK2')
-                ret = p2.wait()
-                assert ret == 0
+                p2 = spawnJob([sys.executable, adjoint, adjointFile, '--matop'], f2, fe2, cwd=paramDir, block='BLOCK2')
+                #p2 = spawnJob([sys.executable, adjoint, adjointFile], f2, fe2, cwd=paramDir, block='BLOCK2')
                 ret = p1.wait()
+                assert ret == 0
+                ret = p2.wait()
                 assert ret == 0
             update_state(state, 'PRIMADJ', currIndex)
         ##if stateIndex <= 1:
