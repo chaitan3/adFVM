@@ -81,7 +81,7 @@ def reduction(data, op, allreduce):
     redData = []
     n = len(data)
     for d in data:
-        redData.append(np_op(data))
+        redData.append(np_op(d))
     if nProcessors > 1:
         redData = np.array(redData)
         ret = np.zeros(n, redData.dtype)
