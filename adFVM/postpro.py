@@ -458,7 +458,7 @@ def getAdjointViscosityCpp(solver, rho, rhoU, rhoE, scaling):
 
     def scaleM(M_2norm, N, V, scaling):
         N, V, scaling = N.scalar(), V.scalar(), scaling.scalar()
-        return M_2norm*scaling*V/N
+        return M_2norm*scaling*(V/N).sqrt()
     M_2norm_out = Zeros((mesh.nCells, 1))
     (M_2norm,) = Tensorize(scaleM)(mesh.nInternalCells, (M_2norm_out,))(M_2norm, N, V, scaling)
 

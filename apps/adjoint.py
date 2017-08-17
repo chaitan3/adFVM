@@ -210,8 +210,6 @@ class Adjoint(Solver):
                         scaling = np.array([[self.scaling]]).astype(config.precision)
                         inputs = [phi.field for phi in previousSolution] + [scaling] + mesh.getTensor() + mesh.getScalar() + primal.getBoundaryTensor(1)
                         (DT,) = Function._module.viscosity(*inputs)
-                        #DT = interp.centralOld(Field('DT', DT, (1,)), mesh).field
-                        #DT = np.zeros((mesh.nFaces, 1))
                         newStackedFields = Function._module.damp(stackedFields, DT, dt)
                         start3 = time.time()
                     else:
