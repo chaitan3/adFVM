@@ -139,14 +139,11 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
                     open(paramDir + 'adjoint_output.log', 'w') as f2, open(paramDir + 'adjoint_error.log', 'w') as fe2:
                 p1 = spawnJob([sys.executable, primal, primalFile], f, fe, cwd=paramDir)
                 p2 = spawnJob([sys.executable, primal, adjointFile], f2, fe2, cwd=paramDir, block='BLOCK2')
-                ret = p2.wait()
-                assert ret == 0
-                p2 = spawnJob([sys.executable, adjoint, adjointFile, '--matop'], f2, fe2, cwd=paramDir, block='BLOCK2')
-                #p2 = spawnJob([sys.executable, adjoint, adjointFile], f2, fe2, cwd=paramDir, block='BLOCK2')
-                ret = p1.wait()
-                assert ret == 0
-                ret = p2.wait()
-                assert ret == 0
+                assert p2.wait() == 0
+                for i in range(0, 2):
+                    p2 = spawnJob([sys.executable, adjoint, adjointFile, '--matop'], f2, fe2, cwd=paramDir, block='BLOCK2')
+                    assert p2.wait() == 0
+                assert p1.wait() == 0
             update_state(state, 'PRIMADJ', currIndex)
         ##if stateIndex <= 1:
         ##    spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
@@ -200,8 +197,8 @@ def doe():
 def optim():
     
     orig_bounds = np.array([[0.,1.], [0,1], [0,1], [0,1]])
-    L = 0.3
-    sigma = 0.003
+    L, sigma = 0.5, 0.001
+    #L, sigma = 0.3, 0.003
     mean = 0.01
     kernel = GP.SquaredExponentialKernel([L, L, L, L], sigma)
     gp = GP.GaussianProcess(kernel, orig_bounds, noise=[5e-9, [1e-9, 1e-7, 1e-8, 1e-7]], noiseGP=True, cons=constraint)

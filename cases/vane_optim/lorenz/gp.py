@@ -198,6 +198,7 @@ class GaussianProcess(object):
         else:
             self.noiseGP[0].train(x, np.log(yn/self.noise[0]))
             for i in range(1, 1 + self.ndim):
+                ydn[ydn[:,i-1]==0.] = self.noise[1][i-1]
                 self.noiseGP[i].train(x, np.log(ydn[:, i-1]/self.noise[1][i-1]))
             indices = np.indices((len(self.x), len(self.x)))
             yn = self.noiseGP[0].exponential(self.x)[0]*self.noise[0]
