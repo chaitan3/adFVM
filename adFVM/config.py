@@ -38,7 +38,7 @@ if user.titan:
 import numpy as np
 np.random.seed(3)
 from . import parallel
-parallel.pprint('Running on {} threads'.format(user.coresPerNode))
+#parallel.pprint('Running on {} threads'.format(user.coresPerNode))
 
 def exceptInfo(e, info=''):
     rank = parallel.rank
