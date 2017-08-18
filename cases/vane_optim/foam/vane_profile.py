@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import interpolate, spatial, integrate
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from cStringIO import StringIO
@@ -97,20 +97,24 @@ def create_displacement(param, base, case):
 
     tsuction = transform(suction)
     tpressure = transform(pressure)
+
     #plt.scatter(suction[0], suction[1])
     #plt.scatter(pressure[0], pressure[1])
     #plt.axis('scaled')
     #plt.show()
+    #exit(0)
 
     points = np.hstack((tpressure[:,-5:-1], tsuction[:,-5:][:,::-1]))
     t = interpolate.splrep(points[0], points[1], k=4, s=5e-7)
     x = np.linspace(points[0,0], points[0,-1], 10000)
     y = interpolate.splev(x, t)
     yd = interpolate.splev(x, t, der=1)
-    #plt.plot(x, y)
+    plt.plot(x, y)
     #plt.scatter(points[0], points[1])
     #plt.axis('scaled')
     #plt.show()
+    #exit(0)
+
     ts = []
     ys = []
     for i in range(1, 5):
@@ -118,12 +122,12 @@ def create_displacement(param, base, case):
         points2 = np.hstack((tpressure[:,-5:-2], per_points.T, tsuction[:,-5:-2][:,::-1]))
         ts.append(interpolate.splrep(points2[0], points2[1], k=4, s=1e-6))
         ys.append(interpolate.splev(x, ts[-1]))
-        #plt.plot(x, ys[-1])
+        plt.plot(x, ys[-1])
         #plt.scatter(points2[0], points2[1])
-        #plt.axis('scaled')
         #plt.show()
-    #plt.show()
-
+    plt.axis('scaled')
+    plt.show()
+    exit(0)
 
     #ti = interpolate.splrep(x, yd)
     #tn = interpolate.splantider(ti)
@@ -288,9 +292,10 @@ if __name__ == '__main__':
     #extrude_mesh('3d_10/', spawn_job)
     #exit(0)
 
-    func = locals()[sys.argv[1]]
-    paramsFile = sys.argv[2]
-    #params = [np.zeros(4), './', 'param0/']
-    with open(paramsFile) as f:
-        params = pickle.load(f)
+    #func = locals()[sys.argv[1]]
+    #paramsFile = sys.argv[2]
+    #with open(paramsFile) as f:
+    #    params = pickle.load(f)
+    params = [np.zeros(4), './', 'test/']
+    func = gen_mesh_param
     func(*params)

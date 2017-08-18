@@ -6,14 +6,6 @@ from adFVM.density import RCF
 from adFVM import tensor
 from adFVM.mesh import Mesh
 
-#primal = RCF('/home/talnikar/adFVM/cases/vane_optim/foam/laminar/3d_baseline/par-16/', objective='drag', objectiveDragInfo='pressure')
-#primal = RCF('/master/home/talnikar/adFVM/cases/vane/les/', faceReconstructor='SecondOrder')#, timeIntegrator='euler')
-#primal = RCF('/master/home/talnikar/foam/blade/les/')
-#primal = RCF('/lustre/atlas/proj-shared/tur103/les/')
-
-def dot(a, b):
-    return ad.reshape(ad.sum(a*b, axis=1), (-1,1))
-
 # heat transfer
 def objectiveHeatTransfer(U, T, p, weight, *mesh, **options):
     solver = options['solver']
@@ -161,4 +153,4 @@ writeInterval = 10
 startTime = 3.0
 dt = 1e-8
 
-adjParams = [1e-3, 'abarbanel', None]
+#adjParams = [1e-3, 'abarbanel', None]

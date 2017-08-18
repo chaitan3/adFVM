@@ -14,7 +14,7 @@ os.environ['CXX'] = 'mpicxx'
 home = expanduser("~")
 incdirs = [np.get_include(), cppDir + '/include']
 libdirs = []
-libs = []
+libs = ['lapack']
 sources = ['interface.cpp', 'matop.cpp', 'mesh.cpp', 'parallel.cpp']
 sources += ['kernel.cpp', 'code.cpp']
 
@@ -39,7 +39,7 @@ if matop:
     home = os.path.expanduser('~') + '/sources/petsc/'
     incdirs += [home + '/linux-gnu-c-opt/include', home + '/include']
     libdirs += [home + '/linux-gnu-c-opt/lib']
-    libs += ['petsc', 'lapack']
+    libs += ['petsc']
 
 mod = Extension(module,
                 sources=sources,

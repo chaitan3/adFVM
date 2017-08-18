@@ -146,6 +146,17 @@ void ssyev_( char* jobz, char* uplo, int* n, float* a, int* lda,
     float* w, float* work, int* lwork, int* info );
 }
 
+template<typename dtype> void eigenvalue_solver (char* jobz, char* uplo, int* n, dtype* a, int* lda,
+dtype* w, dtype* work, int* lwork, int* info );
+
+template<> void eigenvalue_solver (char* jobz, char* uplo, int* n, float* a, int* lda,
+float* w, float* work, int* lwork, int* info ) {
+    ssyev_(jobz, uplo, n, a, lda, w, work, lwork, info);
+}
+template<> void eigenvalue_solver (char* jobz, char* uplo, int* n, double* a, int* lda,
+double* w, double* work, int* lwork, int* info ) {
+    dsyev_(jobz, uplo, n, a, lda, w, work, lwork, info);
+}
 
 
 #ifdef GPU
@@ -165,7 +176,7 @@ void Function_get_max_eigenvalue(std::vector<gpuArrType<float, 5, 5>*> phiP) {
     float* phiData = phi.toHost();
     float* eigPhiData = new float[phi.shape];
     for (int i = 0; i < phi.shape; i++) {
-        ssyev_(&jobz, &uplo, &n, &phiData[25*i], &lda, w, work, &lwork, &info);
+        eigenvalue_solver<float>(&jobz, &uplo, &n, &phiData[25*i], &lda, w, work, &lwork, &info);
         assert(info == 0);
         eigPhiData[i] = w[4];
     }
@@ -188,11 +199,7 @@ void Function_get_max_eigenvalue(std::vector<arrType<scalar, 5, 5>*> phiP) {
     //cout << phi.shape << endl;
 
     for (int i = 0; i < phi.shape; i++) {
-        if (std::is_same<scalar, float>::value) {
-            ssyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
-        } else {
-            dsyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
-        }
+        eigenvalue_solver<scalar>(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
         assert(info == 0);
         eigPhi(i) = w[4];
     }

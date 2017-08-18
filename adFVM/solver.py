@@ -112,7 +112,7 @@ class Solver(object):
         return tuple(fields)
 
     def initSource(self):
-        mesh = self.mesh
+        mesh = self.mesh.symMesh
         symbolics = [Variable((mesh.nInternalCells,) + dims) for dims in self.dimensions]
         values = [np.zeros((self.mesh.nInternalCells, dims[0]), config.precision) for dims in self.dimensions]
         self.sourceTerms = zip(symbolics, values)
