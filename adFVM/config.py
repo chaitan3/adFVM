@@ -30,7 +30,6 @@ parser.add_argument('--titan', action='store_true')
 parser.add_argument('--bw', action='store_true')
 parser.add_argument('--mira', action='store_true')
 parser.add_argument('-d', '--hdf5', action='store_true')
-parser.add_argument('--coresPerNode', required=False, default=0, type=int)
 user, args = parser.parse_known_args()
 
 if user.titan:
