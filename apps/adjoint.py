@@ -189,6 +189,7 @@ class Adjoint(Solver):
                 ms = n+1
                 me = ms + len(mesh.gradFields)
                 meshGradient = outputs[ms:me]
+                #import pdb;pdb.set_trace()
                 ss = n+1+len(mesh.gradFields + mesh.intFields)
                 se = ss + n
                 sourceGradient = outputs[ss:se]

@@ -131,20 +131,20 @@ perturb = [makePerturb(1)]
 
 parameters = 'mesh'
 
-def makePerturb(mid):
-    def perturb(fields, mesh, t):
-        G = 1e1*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1, keepdims=1)**2)
-        #rho
-        rho = G
-        rhoU = np.zeros((mesh.nInternalCells, 3))
-        rhoU[:, 0] = G.flatten()*100
-        rhoE = G*2e5
-        return rho, rhoU, rhoE
-    return perturb
-perturb = [makePerturb(np.array([-0.02, 0.01, 0.005])),
-           makePerturb(np.array([-0.08, -0.01, 0.005]))]
-
-parameters = 'source'
+#def makePerturb(mid):
+#    def perturb(fields, mesh, t):
+#        G = 1e1*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1, keepdims=1)**2)
+#        #rho
+#        rho = G
+#        rhoU = np.zeros((mesh.nInternalCells, 3))
+#        rhoU[:, 0] = G.flatten()*100
+#        rhoE = G*2e5
+#        return rho, rhoU, rhoE
+#    return perturb
+#perturb = [makePerturb(np.array([-0.02, 0.01, 0.005])),
+#           makePerturb(np.array([-0.08, -0.01, 0.005]))]
+#
+#parameters = 'source'
 
 nSteps = 10
 writeInterval = 10

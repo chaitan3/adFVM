@@ -892,6 +892,8 @@ class Mesh(object):
             size = self.nFaces
             if attr == 'volumesR':
                 size = self.nInternalFaces
+            elif attr == 'volumes':
+                size = self.nInternalCells
             var = Variable((size,) + value.shape[1:])
             var.static = True
             setattr(self, attr, var)
