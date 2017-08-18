@@ -41,7 +41,7 @@ setup(name='adFVM',
           'mpi4py >= 0.13.1',
           'cython >= 0.24',
           #'h5py >= 2.6.0',
-          'matplotlib >= 1.3.1'
+          #'matplotlib >= 1.3.1'
       ],
       cmdclass={
         'clean': CleanCommand,

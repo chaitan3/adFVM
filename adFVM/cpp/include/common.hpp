@@ -182,7 +182,7 @@ class arrType {
     }
 
     void copy(const integer index, const dtype* sdata, const integer n) {
-        memcpy(&this->data[index], sdata, n*sizeof(dtype));
+        memcpy(&(*this)(index), sdata, n*sizeof(dtype));
     }
     void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
         integer i, j, k;
@@ -326,7 +326,7 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         gpuErrorCheck(cudaMemset(this->data, 0, this->size*sizeof(dtype)));
     }
     void copy(integer index, dtype* sdata, integer n) {
-        gpuErrorCheck(cudaMemcpy(&this->data[index], sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice));
+        gpuErrorCheck(cudaMemcpy(&(*this)(index), sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice));
     }
     void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
         integer blocks = n/GPU_THREADS_PER_BLOCK + 1;

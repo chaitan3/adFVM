@@ -146,29 +146,12 @@ void ssyev_( char* jobz, char* uplo, int* n, float* a, int* lda,
     float* w, float* work, int* lwork, int* info );
 }
 
-void Function_get_max_eigenvalue(std::vector<extArrType<double, 5, 5>*> phiP) {
-    arrType<double, 5, 5>& phi = *phiP[0];
-    arrType<double>& eigPhi = *((arrType<double>*) phiP[1]);
-    char jobz = 'N';
-    char uplo = 'U';
-    int n = 5;
-    int lda = 5;
-    int lwork = 3*n-1;
-    double work[lwork];
-    int info;
-    double w[5];
-    //cout << phi.shape << endl;
 
-    for (int i = 0; i < phi.shape; i++) {
-        dsyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
-        assert(info == 0);
-        eigPhi(i) = w[4];
-    }
-}
 
-void Function_get_max_eigenvalue(std::vector<extArrType<float, 5, 5>*> phiP) {
-    arrType<float, 5, 5>& phi = *phiP[0];
-    arrType<float>& eigPhi = *((arrType<float>*) phiP[1]);
+#ifdef GPU
+void Function_get_max_eigenvalue(std::vector<gpuArrType<float, 5, 5>*> phiP) {
+    gpuArrType<float, 5, 5>& phi = *phiP[0];
+    gpuArrType<float>& eigPhi = *((extArrType<float>*) phiP[1]);
     char jobz = 'N';
     char uplo = 'U';
     int n = 5;
@@ -178,10 +161,40 @@ void Function_get_max_eigenvalue(std::vector<extArrType<float, 5, 5>*> phiP) {
     int info;
     float w[5];
     //cout << phi.shape << endl;
+    // figure out how to get eigenvalue on GPU
+    float* phiData = phi.toHost();
+    float* eigPhiData = new float[phi.shape];
+    for (int i = 0; i < phi.shape; i++) {
+        ssyev_(&jobz, &uplo, &n, &phiData[25*i], &lda, w, work, &lwork, &info);
+        assert(info == 0);
+        eigPhiData[i] = w[4];
+    }
+    gpuErrorCheck(cudaMemcpy(&eigPhi(0), eigPhiData, phi.shape*sizeof(float), cudaMemcpyHostToDevice));
+    delete []phiData;
+    delete []eigPhiData;
+}
+#else
+void Function_get_max_eigenvalue(std::vector<arrType<scalar, 5, 5>*> phiP) {
+    arrType<scalar, 5, 5>& phi = *phiP[0];
+    arrType<scalar>& eigPhi = *((arrType<scalar>*) phiP[1]);
+    char jobz = 'N';
+    char uplo = 'U';
+    int n = 5;
+    int lda = 5;
+    int lwork = 3*n-1;
+    scalar work[lwork];
+    int info;
+    scalar w[5];
+    //cout << phi.shape << endl;
 
     for (int i = 0; i < phi.shape; i++) {
-        ssyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
+        if (std::is_same<scalar, float>::value) {
+            ssyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
+        } else {
+            dsyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
+        }
         assert(info == 0);
         eigPhi(i) = w[4];
     }
 }
+#endif

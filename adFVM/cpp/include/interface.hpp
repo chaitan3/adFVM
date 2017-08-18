@@ -154,8 +154,11 @@ PyObject* putArray(gpuArrType<dtype, shape1, shape2> &tmp) {
 }
 #endif
 
-void Function_get_max_eigenvalue(std::vector<extArrType<double, 5, 5>*> phiP);
-void Function_get_max_eigenvalue(std::vector<extArrType<float, 5, 5>*> phiP);
+#ifdef GPU
+    void Function_get_max_eigenvalue(std::vector<gpuArrType<float, 5, 5>*> phiP);
+#else
+    void Function_get_max_eigenvalue(std::vector<arrType<scalar, 5, 5>*> phiP);
+#endif
 PyObject* initSolver(PyObject *self, PyObject *args);
 PyObject* damp(PyObject *self, PyObject *args);
 
