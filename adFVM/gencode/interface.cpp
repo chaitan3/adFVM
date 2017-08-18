@@ -142,6 +142,8 @@ char* PyString_AsString(PyObject* result) {
 extern "C"{
 void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
     double* w, double* work, int* lwork, int* info );
+void ssyev_( char* jobz, char* uplo, int* n, float* a, int* lda,
+    float* w, float* work, int* lwork, int* info );
 }
 
 void Function_get_max_eigenvalue(std::vector<extArrType<double, 5, 5>*> phiP) {
@@ -164,3 +166,22 @@ void Function_get_max_eigenvalue(std::vector<extArrType<double, 5, 5>*> phiP) {
     }
 }
 
+void Function_get_max_eigenvalue(std::vector<extArrType<float, 5, 5>*> phiP) {
+    arrType<float, 5, 5>& phi = *phiP[0];
+    arrType<float>& eigPhi = *((arrType<float>*) phiP[1]);
+    char jobz = 'N';
+    char uplo = 'U';
+    int n = 5;
+    int lda = 5;
+    int lwork = 3*n-1;
+    float work[lwork];
+    int info;
+    float w[5];
+    //cout << phi.shape << endl;
+
+    for (int i = 0; i < phi.shape; i++) {
+        ssyev_(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
+        assert(info == 0);
+        eigPhi(i) = w[4];
+    }
+}

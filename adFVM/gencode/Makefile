@@ -5,7 +5,7 @@ CFLAGS=-std=c++11 -Xcompiler="-fPIC" -O3 -g -DGPU --ptxas-options=-v $(NVARCH)
 LDFLAGS=-shared
 INCDIRS=-I/usr/include/python2.7 -I/usr/lib/python2.7/site-packages/numpy/core/include -I/home/talnikar/adFVM/adFVM/cpp/include -I/home/talnikar/.local/include/
 LIBDIRS=-L/home/talnikar/.local/lib
-LIBS=-lpython2.7 -lmpi
+LIBS=-lpython2.7 -lmpi -llapack
 BUILD=build
 OBJ=$(BUILD)/interface.o $(BUILD)/kernel.o $(BUILD)/code.o $(BUILD)/parallel.o $(BUILD)/mesh.o
 TARGET=interface.so
