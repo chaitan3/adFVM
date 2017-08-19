@@ -197,7 +197,7 @@ class Tensor(ArithBase):
 class TensorFunction(object):
     _index = 0
     _init = False
-    codeFile = 'kernel.cpp'
+    codeFile = 'kernel.{}'.format(config.codeExt)
     headerFile = 'kernel.hpp'
 
     def __init__(self, name, inputs, outputs, grad=True):
@@ -310,19 +310,19 @@ class TensorFunction(object):
             memString += 'const {}* {}, '.format(inp.dtype, inp.name)
         for out in self._outputTensors:
             memString += '{}* {}, '.format(out.dtype, out.name)
-        if Function.gpu:
+        if config.gpu:
             memString = '__global__ void {}(int n, {})'.format(self.name, memString[:-2])
         else:
             memString = '\nvoid {}(int n, {})'.format(self.name, memString[:-2])
         headerFile.write(memString + ';\n')
         codeFile.write(memString + ' {\n') 
         #codeFile.write('\tlong long start = current_timestamp();\n')
-        if Function.gpu:
+        if config.gpu:
             codeFile.write('\tinteger i = threadIdx.x + blockDim.x*blockIdx.x + gridDim.x*blockDim.x*blockIdx.y;\n')
             codeFile.write('\tif (i < n) {\n')
         else:
             codeFile.write('\tinteger i;\n')
-            if Function.openmp:
+            if config.openmp:
                 codeFile.write('\t#pragma omp parallel for private(i)\n')
             codeFile.write('\tfor (i = 0; i < n; i++) {\n')
         names = {}
@@ -353,9 +353,9 @@ class TensorFunction(object):
                 for i in range(0, n):
                     a, b = op.args[2*i], op.args[2*i+1]
                     assert b.dtype == 'integer'
-                    if Function.gpu:
+                    if config.gpu:
                         code += 'atomicAdd(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
-                    elif Function.openmp:
+                    elif config.openmp:
                         #code += '//invalid in openmp;\n\t\t'
                         code += '#pragma omp atomic\n\t\t'
                         code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])

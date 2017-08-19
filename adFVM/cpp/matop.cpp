@@ -1,7 +1,4 @@
-#ifdef MATOP
-
 #include "matop.hpp"
-#include "code.hpp"
 #define nrhs 5
 
 Matop::Matop() {
@@ -137,5 +134,3 @@ void Matop::heat_equation(const arrType<scalar, nrhs>& u, const vec& DT, const s
     MatDestroy(&A);
 }
 
-
-#endif

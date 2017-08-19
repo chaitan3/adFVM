@@ -39,12 +39,27 @@ struct memory {
 extern struct memory mem;
 
 #ifdef _OPENMP
-   #include <omp.h>
+    #include <omp.h>
+    //double __sync_fetch_and_add(scalar *operand, scalar incr) {
+    //union {
+    //    double   d;
+    //    uint64_t i;
+    //} oldval, newval, retval;
+    //do {
+    //    oldval.d = *(volatile double *)operand;
+    //    newval.d = oldval.d + incr;
+    //    __asm__ __volatile__ ("lock; cmpxchgq %1, (%2)"
+    //      : "=a" (retval.i)
+    //      : "r" (newval.i), "r" (operand),
+    //       "0" (oldval.i)
+    //      : "memory");
+    //    } while (retval.i != oldval.i);
+    //    return oldval.d;
+    //}
 #else
-   #define omp_get_thread_num() 0
+    #define omp_get_thread_num() 0
 #endif
 
-double __sync_fetch_and_add(scalar *operand, scalar incr);
 
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class arrType {
@@ -249,157 +264,16 @@ class arrType {
 
 };
 
-typedef arrType<scalar> vec;
-typedef arrType<scalar, 3> mat;
-
-typedef arrType<integer> ivec;
-typedef arrType<integer, 3> imat;
-
-
-
 #ifdef GPU
-#define GPU_THREADS_PER_BLOCK 256
-#define GPU_MAX_BLOCKS 65536
-//#define GPU_THREADS_PER_BLOCK 512
-//#define GPU_THREADS_PER_BLOCK 1024
-#define gpuErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
-{
-   if (code != cudaSuccess) 
-   {
-      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-      assert(!abort);
-      if (abort) exit(code);
-   }
-}
-
-template<typename dtype, integer shape1, integer shape2>
-__global__ void _extract1(const integer n, dtype* phi1, const dtype* phi2, const integer* indices) {
-    integer i = threadIdx.x + blockDim.x*blockIdx.x;
-    if (i < n) {
-        integer p = indices[i];
-        for (integer j = 0; j < shape1; j++) {
-            for (integer k = 0; k < shape2; k++) {
-                 atomicAdd(&phi1[p*shape1*shape2 + j*shape2 + k], phi2[i*shape1*shape2 + j*shape2 + k]);
-            }
-        }
-    }
-}
-
-template<typename dtype, integer shape1, integer shape2>
-__global__ void _extract2(const integer n, dtype* phi1, const dtype* phi2, const integer* indices) {
-    integer i = threadIdx.x + blockDim.x*blockIdx.x;
-    if (i < n) {
-        integer p = indices[i];
-        for (integer j = 0; j < shape1; j++) {
-            for (integer k = 0; k < shape2; k++) {
-                phi1[i*shape1*shape2 + j*shape2 + k] += phi2[p*shape1*shape2 + j*shape2 + k];
-            }
-        }
-    }
-}
-
-
-template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
-class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
-    public:
-    gpuArrType(const integer shape, bool zero=false) {
-        this -> init(shape);
-        gpuErrorCheck(cudaMalloc(&this->data, this->size*sizeof(dtype)));
-        this->inc_mem();
-        this->ownData = true;
-        if (zero) 
-            this -> zero();
-    }
-    gpuArrType(const integer shape, dtype* data) {
-        this -> init(shape);
-        this -> data = data;
-    }
-    void destroy() {
-        if (this->ownData && this->data != NULL) {
-            this->dec_mem();
-            gpuErrorCheck(cudaFree(this->data));
-            this -> data = NULL;
-        }
-    }
-    void zero() {
-        gpuErrorCheck(cudaMemset(this->data, 0, this->size*sizeof(dtype)));
-    }
-    void copy(integer index, dtype* sdata, integer n) {
-        gpuErrorCheck(cudaMemcpy(&(*this)(index), sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice));
-    }
-    void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
-        integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
-        integer threads = min(GPU_THREADS_PER_BLOCK, n);
-        _extract2<dtype, shape1, shape2><<<blocks, threads>>>(n, &(*this)(index), phiBuf, indices);
-        gpuErrorCheck(cudaPeekAtLastError());
-    }
-    void extract(const integer *indices, const dtype* phiBuf, const integer n) {
-        integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
-        integer threads = min(GPU_THREADS_PER_BLOCK, n);
-        _extract1<dtype, shape1, shape2><<<blocks, threads>>>(n, this->data, phiBuf, indices);
-        gpuErrorCheck(cudaPeekAtLastError());
-        //gpuErrorCheck(cudaDeviceSynchronize());
-    }
-    
-    dtype* toHost() const {
-        dtype* hdata = new dtype[this->size];
-        gpuErrorCheck(cudaMemcpy(hdata, this->data, this->size*sizeof(dtype), cudaMemcpyDeviceToHost));
-        return hdata;
-    }
-    void toDevice(dtype* data) {
-        assert (this->data == NULL);
-        this->inc_mem();
-        gpuErrorCheck(cudaMalloc(&this->data, this->size*sizeof(dtype)));
-        gpuErrorCheck(cudaMemcpy(this->data, data, this->size*sizeof(dtype), cudaMemcpyHostToDevice));
-        this->ownData = true;
-    }
-    void info() const {
-        dtype minPhi, maxPhi;
-        minPhi = 1e30;
-        maxPhi = -1e30;
-        integer minLoc = -1, maxLoc = -1;
-        dtype* hdata = this->toHost();
-        for (integer i = 0; i < this->size; i++) {
-            if (hdata[i] < minPhi) {
-                minPhi = hdata[i];
-                minLoc = i;
-            }
-            if (hdata[i] > maxPhi) {
-                maxPhi = hdata[i];
-                maxLoc = i;
-            }
-
-        }
-        delete[] hdata;
-        cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
-        //cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
-    }
-    gpuArrType() : arrType<dtype, shape1, shape2, shape3>() {}
-    gpuArrType& operator=(gpuArrType&& that) {
-        assert(this != &that);
-        this->destroy();
-        //this->move(that);
-        this->init(that.shape);
-        this->data = that.data;
-        this->ownData = that.ownData;
-        that.ownData = false;
-        return *this;
-
-    }
-    ~gpuArrType() {
-        this->destroy();
-    };
-};
-
-#define extArrType gpuArrType
-
+    #include "gpu.hpp"
 #else
-
-#define extArrType arrType
-
+    #define extArrType arrType
 #endif
 
+typedef arrType<scalar> vec;
+typedef arrType<scalar, 3> mat;
+typedef arrType<integer> ivec;
+typedef arrType<integer, 3> imat;
 typedef extArrType<scalar, 1> ext_vec;
 
 #endif

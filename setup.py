@@ -21,20 +21,22 @@ os.environ['CXX'] = 'mpicxx'
 compatDir = 'adFVM/compat/'
 compile_args = ['-fopenmp']
 link_args = ['-lgomp']
-cfuncs = cythonize(
+modules = cythonize(
         [Extension(compatDir + 'cfuncs', [compatDir + 'cfuncs.pyx'], 
         language='c++', extra_compile_args=compile_args, extra_link_args=link_args)])
 
+cppDir = 'adFVM/cpp/'
 incdirs = [np.get_include()]
-incdirs += ['include/']
+incdirs += [cppDir + 'include/']
 libdirs = []
 libs = []
 sources = ['mesh.cpp', 'cmesh.cpp']
+sources = [cppDir + f for f in sources]
 
 #compile_args = ['-std=c++11', '-O3']#, '-march=native']
 compile_args += ['-std=c++11', '-O3', '-g']#, '-march=native']
 
-for module, c_args in [['cmesh', []], ['cmesh_gpu', ['-DCPU_FLOAT32']]]:
+for module, c_args in [[cppDir + 'cmesh', []], [cppDir + 'cmesh_gpu', ['-DCPU_FLOAT32']]]:
     mod = Extension(module,
                     sources=sources,
                     extra_compile_args=compile_args + c_args,
@@ -43,11 +45,7 @@ for module, c_args in [['cmesh', []], ['cmesh_gpu', ['-DCPU_FLOAT32']]]:
                     libraries=libs,
                     include_dirs=incdirs,
                     undef_macros = [ "NDEBUG" ])
-
-    setup (name = module,
-           version = '0.0.1',
-           description = 'This is a demo package',
-           ext_modules = [mod])
+    modules.append(mod)
 
 setup(name='adFVM',
       version='0.1.1',
@@ -59,8 +57,8 @@ setup(name='adFVM',
       'adFVM': ['gencode/*', 'cpp/*', 'cpp/include/*'],
       },
       include_package_data=True,
-      ext_modules = cfuncs,
-      include_dirs=[np.get_include()],
+      ext_modules = modules,
+      include_dirs=incdirs,
       install_requires=[ 
           'numpy >= 1.8.2',
           'scipy >= 0.13.3',

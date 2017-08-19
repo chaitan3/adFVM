@@ -1,9 +1,9 @@
-#include "common.hpp"
 
 #ifndef MATOP_HPP
 #define MATOP_HPP
 
 #include <petscksp.h>
+#include "common.hpp"
 
 class Matop {
     map<string, ivec> boundaryNeighbours;

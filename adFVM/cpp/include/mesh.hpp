@@ -62,7 +62,6 @@ void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shap
 Boundary getBoundary(PyObject*);
 Boundary getMeshBoundary(PyObject *mesh, const string attr);
 
-
 extern Mesh* meshp;
 
 #endif

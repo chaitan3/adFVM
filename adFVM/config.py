@@ -59,6 +59,7 @@ if not user.use_gpu:
 else:
     gpu = True
     precision = np.float32
+codeExt = 'cu' if gpu else 'cpp'
 
 compile = user.compile and (parallel.rank == 0)
 openmp = user.use_openmp

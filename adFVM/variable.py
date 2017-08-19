@@ -237,13 +237,11 @@ class Function(object):
     _index = 0
     _module = None
     codeDir = os.path.dirname(__file__) + '/gencode/'
-    gpu = False
-    openmp = False
-    codeFile = 'code.cpp'
+    codeFile = 'code.{}'.format(config.codeExt)
     funcs = []
 
     def __init__(self, name, inputs, outputs, grad=True):
-        if Function.gpu:
+        if config.gpu:
             self.arrType = 'gpuArrType'
         else:
             self.arrType = 'arrType'
@@ -293,7 +291,7 @@ class Function(object):
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
-            if inp.static and self.gpu:
+            if inp.static and config.gpu:
                 codeFile.write('\t{}.staticVariable = true;\n'.format(inp.name))
             codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, "{0}");\n'.format(inp.name))
         codeFile.write('\n')
@@ -324,7 +322,7 @@ class Function(object):
                 #for index, inp in enumerate(op.args[:-len(op.outputs)]):
                 #    if not isinstance(inp.shape[0], int) and op.func._inputsUsed[index]:
                 #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
-                if Function.gpu:
+                if config.gpu:
                     name = _getName(op.indices)
                     codeFile.write('\tif ({} > 0) {{\n'.format(name))
                     codeFile.write('\t\tinteger nBlocks = {}/GPU_THREADS_PER_BLOCK + 1;\n'.format(name))
@@ -400,8 +398,6 @@ class Function(object):
         if config.compile:
             assert not os.path.exists(self.codeDir)
             shutil.copytree(scriptDir + '/gencode', self.codeDir)
-            shutil.copy(scriptDir + '/cpp/mesh.cpp', self.codeDir)
-            shutil.copy(scriptDir + '/cpp/parallel.cpp', self.codeDir)
             Function.clean()
 
     @classmethod
@@ -415,30 +411,22 @@ class Function(object):
     def compile(self):
         if config.compile:
             with open(self.codeDir + self.codeFile, 'a') as f:
-                f.write("""PyMethodDef Methods[] = {
-        {"initialize",  initSolver, METH_VARARGS, "Execute a shell command."},
-        {"damp",  damp, METH_VARARGS, "Execute a shell command."},
-""")
-
+                f.write("PyMethodDef ExtraMethods[] = {\n")
                 for name in Function.funcs:
                     f.write('\t{{"{0}", Function_{0}, METH_VARARGS, "boo"}},\n'.format(name))
-                #f.write('\n\n' + self.extraCode)
-                f.write("""
-                {NULL, NULL, 0, NULL}        /* Sentinel */
-        };
-""")
-            if Function.openmp:
+                f.write("\n\t\t{NULL, NULL, 0, NULL}        /* Sentinel */\n\t};\n")
+            if config.openmp:
                 os.environ['WITH_OPENMP'] = '1'
             if config.matop:
                 os.environ['WITH_MATOP'] = '1'
             if config.py3:
                 subprocess.check_call(['make', 'python3'], cwd=self.codeDir)
-            elif Function.gpu:
+            elif config.gpu:
                 subprocess.check_call(['make', 'gpu'], cwd=self.codeDir)
             else:
                 subprocess.check_call(['make'], cwd=self.codeDir)
         config.parallel.mpi.Barrier()
         sys.path.append(self.codeDir)
-        import interface
-        Function._module = interface
+        import graph
+        Function._module = graph
 
