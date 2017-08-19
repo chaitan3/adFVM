@@ -6,24 +6,8 @@ import os
 from os.path import expanduser
 home = expanduser("~")
 
-os.environ['CC'] = 'ccache mpicc'
-#os.environ['CC'] = 'mpicc'
-os.environ['CXX'] = 'mpicxx'
 #os.environ['CC'] = '/home/talnikar/local/bin/gcc'
 #os.environ['CXX'] = '/home/talnikar/local/bin/gcc'
-
-incdirs = [np.get_include()]
-#incdirs += [os.path.dirname(include.__file__)]
-incdirs += ['include/']
-libdirs = []
-libs = []
-sources = ['mesh.cpp', 'cmesh.cpp']
-
-#compile_args = ['-std=c++11', '-O3']#, '-march=native']
-compile_args = ['-std=c++11', '-O3', '-g']#, '-march=native']
-compile_args += ['-fopenmp']
-link_args = ['-lgomp']
-
 for module, c_args in [['cmesh', []], ['cmesh_gpu', ['-DCPU_FLOAT32']]]:
     mod = Extension(module,
                     sources=sources,
