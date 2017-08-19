@@ -54,7 +54,7 @@ setup(name='adFVM',
       author_email='talnikar@mit.edu',
       packages=['adFVM', 'adFVM.compat'],
       package_data={
-      'adFVM': ['gencode/*', 'cpp/*', 'cpp/include/*'],
+       'adFVM': ['gencode/*', 'cpp/*.cpp', 'cpp/*.py', 'cpp/include/*'],
       },
       include_package_data=True,
       ext_modules = modules,
