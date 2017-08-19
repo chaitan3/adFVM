@@ -20,6 +20,7 @@ sudo apt-get install -y python-h5py
 
 sudo apt-get install -y ccache autoconf
 
+# need ar module
 mkdir -p ~/sources
 cd ~/sources
     #petsc 

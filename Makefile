@@ -6,4 +6,5 @@ buildall:
 install: buildall
 	python2 setup.py install --prefix=~/.local
 clean:
+	rm -rf adFVM/compat/*.so adFVM/cpp/*.so
 	python2 setup.py clean
