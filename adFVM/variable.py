@@ -287,7 +287,7 @@ class Function(object):
             if isinstance(inp, IntegerScalar):
                 codeFile.write('\tinteger {} = (integer) PyInt_AsLong(PyTuple_GetItem(args, {}));\n'.format(inp.name, index))
                 continue
-            initialized[inp] = 1
+            initialized[inp.name] = 1
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
@@ -355,12 +355,10 @@ class Function(object):
                    parent not in outputNames:
                     codeFile.write('\t{}.destroy();\n'.format(parent))
 
-            codeFile.write('\tcout << memUsage << endl;\n')
-
         codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(outputs)))
         for index, out in enumerate(outputs):
             codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}));\n'.format(index, out.name))
-        #codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
+        codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         codeFile.write('\treturn outputs;')
         codeFile.write('\n')
         codeFile.write('}\n\n')
