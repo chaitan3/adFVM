@@ -5,8 +5,6 @@
 #include <Python.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
-#include <string>
-#include <map>
 #include "mpi.h"
 
 #if PY_MAJOR_VERSION >= 3
@@ -17,7 +15,6 @@
 char* PyString_AsString(PyObject* result);
 
 #endif
-
 
 #include "common.hpp"
 
@@ -83,9 +80,7 @@ PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
     return array;
 }
 
-#ifdef GPU
-    #include "gpu_interface.hpp"
-#else
+#ifndef GPU
     void Function_get_max_eigenvalue(std::vector<arrType<scalar, 5, 5>*> phiP);
 #endif
 

@@ -1,17 +1,18 @@
 #ifndef COMMON_HPP
 #define COMMON_HPP
 
-#include <iostream>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <cmath>
-#include <tuple>
-#include <limits>
-#include <iomanip>
-#include <vector>
-#include <map>
 #include <cassert>
+#include <limits>
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <vector>
+#include <tuple>
+#include <map>
 #include <typeinfo>
 
 using namespace std;
@@ -264,16 +265,14 @@ class arrType {
 
 };
 
-#ifdef GPU
-    #include "gpu.hpp"
-#else
+#ifndef GPU
     #define extArrType arrType
+    typedef extArrType<scalar, 1> ext_vec;
 #endif
 
 typedef arrType<scalar> vec;
 typedef arrType<scalar, 3> mat;
 typedef arrType<integer> ivec;
 typedef arrType<integer, 3> imat;
-typedef extArrType<scalar, 1> ext_vec;
 
 #endif

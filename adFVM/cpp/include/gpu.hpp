@@ -1,11 +1,13 @@
 #ifndef GPU_HPP
 #define GPU_HPP
+#ifdef GPU
+#include "common.hpp"
 
 #define GPU_THREADS_PER_BLOCK 256
 #define GPU_MAX_BLOCKS 65536
-//#define GPU_THREADS_PER_BLOCK 512
-//#define GPU_THREADS_PER_BLOCK 1024
+
 #define gpuErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
    if (code != cudaSuccess) 
@@ -136,5 +138,7 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
 };
 
 #define extArrType gpuArrType
+typedef extArrType<scalar, 1> ext_vec;
 
+#endif
 #endif

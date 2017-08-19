@@ -1,4 +1,5 @@
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
 import numpy as np
 import os
 
@@ -12,8 +13,33 @@ codeExt = 'cu' if gpu else 'cpp'
 
 os.environ['CC'] = 'ccache mpicc'
 os.environ['CXX'] = 'mpicxx'
-#os.environ['CC'] = '/home/talnikar/local/bin/gcc'
-#os.environ['CXX'] = '/home/talnikar/local/bin/gcc'
+
+#def customize_compiler_for_nvcc(self):
+#    '''This is a verbatim copy of the NVCC compiler extension from
+#    https://github.com/rmcgibbo/npcuda-example
+#    '''
+#    self.src_extensions.append('.cu')
+#    default_compiler_so = self.compiler_so
+#    super = self._compile
+#
+#    def _compile(obj, src, ext, cc_args, extra_postargs, pp_opts):
+#        if 1:#os.path.splitext(src)[1] == '.cu':
+#            self.set_executable('compiler_so', 'nvcc -x cu')
+#            postargs = extra_postargs + ['-Xcompiler=\"-fPIC\"', nv_arch]
+#        else:
+#            postargs = extra_postargs
+#        super(obj, src, ext, cc_args, postargs, pp_opts)
+#        self.compiler_so = default_compiler_so
+#    self._compile = _compile
+
+# run the customize_compiler
+class custom_build_ext(build_ext):
+    def build_extensions(self):
+        self.compiler.src_extensions.append('.cu')
+        self.compiler.set_executable('compiler_so', 'nvcc -x cu')
+        self.compiler.set_executable('linker_so', 'nvcc --shared')
+        #customize_compiler_for_nvcc(self.compiler)
+        build_ext.build_extensions(self)
 
 home = os.path.expanduser("~")
 incdirs = [np.get_include(), cppDir + '/include']
@@ -24,20 +50,11 @@ sources = [cppDir + x for x in sources]
 sources += ['graph.cpp']
 sources += [x.format(codeExt) for x in ['kernel.{}', 'code.{}']]
 
-#incdirs += [home + '/.local/include']
-#libdirs += [home + '/.local/lib']
-#incdirs += ['/projects/LESOpt/talnikar/local/include']
-#libdirs += ['/projects/LESOpt/talnikar/local/lib/']
-
-module = 'graph'
-#compile_args = ['-std=c++11', '-O3']#, '-march=native']
-
-compile_args = ['-std=c++11', '-O3', '-g', '-march=native']
+compile_args = ['-std=c++11', '-O3', '-g']# '-march=native']
 link_args = []
 if openmp:
     compile_args += ['-fopenmp']
     link_args = ['-lgomp']
-
 if matop:
     sources += ['matop.cpp']
     compile_args += ['-DMATOP']
@@ -45,7 +62,20 @@ if matop:
     incdirs += [home + '/linux-gnu-c-opt/include', home + '/include']
     libdirs += [home + '/linux-gnu-c-opt/lib']
     libs += ['petsc']
+if gpu:
+    cmdclass = {'build_ext': custom_build_ext}
+    #cmdclass = {}
+    nv_arch="-gencode=arch=compute_52,code=\"sm_52,compute_52\""
+    compile_args += [nv_arch, '-Xcompiler=-fPIC']
+    compile_args += ['-DGPU']
+    incdirs += [home + '/.local/include']
+    libdirs += [home + '/.local/lib']
+    libs += ['mpi']
+    os.environ['CXX'] = 'nvcc --shared'
+else:
+    cmdclass = {}
 
+module = 'graph'
 mod = Extension(module,
                 sources=sources,
                 extra_compile_args=compile_args,
@@ -58,6 +88,7 @@ mod = Extension(module,
 setup (name = module,
        version = '0.0.1',
        description = 'This is a demo package',
-       ext_modules = [mod])
+       ext_modules = [mod],
+       cmdclass=cmdclass)
 
 

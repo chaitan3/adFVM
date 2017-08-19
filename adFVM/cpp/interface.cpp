@@ -1,5 +1,6 @@
 #define NO_IMPORT_ARRAY
 #include "interface.hpp"
+#include "gpu_interface.hpp"
 
 char* PyString_AsString(PyObject* result) {
     char *my_result;

@@ -419,12 +419,11 @@ class Function(object):
                 os.environ['WITH_OPENMP'] = '1'
             if config.matop:
                 os.environ['WITH_MATOP'] = '1'
-            if config.py3:
-                subprocess.check_call(['make', 'python3'], cwd=self.codeDir)
-            elif config.gpu:
-                subprocess.check_call(['make', 'gpu'], cwd=self.codeDir)
-            else:
-                subprocess.check_call(['make'], cwd=self.codeDir)
+            if config.gpu:
+                os.environ['WITH_GPU'] = '1'
+            #if config.py3:
+            #    subprocess.check_call(['make', 'python3'], cwd=self.codeDir)
+            subprocess.check_call(['make'], cwd=self.codeDir)
         config.parallel.mpi.Barrier()
         sys.path.append(self.codeDir)
         import graph

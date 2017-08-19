@@ -1,5 +1,8 @@
 #ifndef GPU_INTERFACE_HPP
 #define GPU_INTERFACE_HPP
+#ifdef GPU
+#include "interface.hpp"
+#include "gpu.hpp"
 
 template <typename dtype, integer shape1, integer shape2>
 void getArray(PyArrayObject *array, gpuArrType<dtype, shape1, shape2> & tmp, const string& attr) {
@@ -72,4 +75,5 @@ PyObject* putArray(gpuArrType<dtype, shape1, shape2> &tmp) {
 }
 void Function_get_max_eigenvalue(std::vector<gpuArrType<float, 5, 5>*> phiP);
 
+#endif
 #endif
