@@ -2,6 +2,7 @@
 #include "interface.hpp"
 #include "gpu_interface.hpp"
 
+#ifdef PY3
 char* PyString_AsString(PyObject* result) {
     char *my_result;
     PyObject * temp_bytes = PyUnicode_AsEncodedString(result, "ASCII", "strict"); // Owned reference
@@ -14,6 +15,7 @@ char* PyString_AsString(PyObject* result) {
         return NULL;
     }
 }
+#endif
 
 extern "C"{
 void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
