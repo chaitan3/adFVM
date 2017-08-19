@@ -299,11 +299,11 @@ class Function(object):
         #codeFile.write('\nvoid Function_{}({}) {}\n'.format(self.name, memString[:-2], '{\n'))
 
         sortedOps = graphTopologicalSort(outputs, self._children.copy())
-        visitedOps = {}
+        visited = {}
         for k,v in self._children.items():
-            if k.name not in visitedOps:
-                visitedOps[k.name] = 0
-            visitedOps[k.name] += v
+            if k.name not in visited:
+                visited[k.name] = 0
+            visited[k.name] += v
         outputNames = [out.name for out in outputs]
         def _getName(op):
             if isinstance(op, int):
@@ -348,9 +348,9 @@ class Function(object):
                 raise Exception('op not recognised', op)
             for arg in op.args:
                 parent = arg.name
-                assert visitedOps[parent] > 0
-                visitedOps[parent] -= 1
-                if visitedOps[parent] == 0 and \
+                assert visited[parent] > 0
+                visited[parent] -= 1
+                if visited[parent] == 0 and \
                    isinstance(arg, Variable) and \
                    parent not in outputNames:
                     codeFile.write('\t{}.destroy();\n'.format(parent))
