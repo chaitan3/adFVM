@@ -11,8 +11,8 @@ matop = 'WITH_MATOP' in os.environ
 gpu = 'WITH_GPU' in os.environ
 codeExt = 'cu' if gpu else 'cpp'
 
-#os.environ['CC'] = 'ccache mpicc'
-os.environ['CC'] = 'mpicc'
+os.environ['CC'] = 'ccache mpicc'
+#os.environ['CC'] = 'mpicc'
 os.environ['CXX'] = 'mpicxx'
 
 #def customize_compiler_for_nvcc(self):
