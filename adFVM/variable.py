@@ -396,7 +396,8 @@ class Function(object):
     def createCodeDir(self, case):
         self.codeDir = case + 'gencode/'
         if config.compile:
-            assert not os.path.exists(self.codeDir)
+            if os.path.exists(self.codeDir):
+                shutil.rmtree(self.codeDir)
             shutil.copytree(scriptDir + '/gencode', self.codeDir)
             Function.clean()
 
