@@ -40,9 +40,7 @@ def graphTopologicalSort(outputs, children):
     _sort(output)
     return sortedOps[1:][::-1]
 
-
 class Variable(ArithBase):
-#class Variable(object):
     _index = 0
     def __init__(self, shape, dtype=_dtype):
         index = Variable._index
@@ -281,13 +279,15 @@ class Function(object):
     def _genCode(self, outputs):
         codeFile = open(self.codeDir + self.codeFile, 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args) {{\n'.format(self.name))
-        #codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
+        codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
+        initialized = {}
         for index, inp in enumerate(self._inputs):
             if isinstance(inp, IntegerScalar):
                 codeFile.write('\tinteger {} = (integer) PyInt_AsLong(PyTuple_GetItem(args, {}));\n'.format(inp.name, index))
                 continue
+            initialized[inp] = 1
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
@@ -312,12 +312,18 @@ class Function(object):
                 name = op.name
             return name
         for op in sortedOps:
-            if isinstance(op, Zeros):
-                assert len(op.args) == 0
-                #codeFile.write('\t// init var {}\n'.format(op.name)) 
-                shape = ','.join([str(x) for x in op.shape[1:]])
-                codeFile.write('\t{}<{}, {}> {}({}, true);\n'.format(self.arrType, op.dtype, shape, op.name, _getName(op.shape[0]))) 
-            elif isinstance(op, TensorFunctionOp):
+            for arg in op.args:
+                parent = arg.name
+                if isinstance(arg, Variable) and parent not in initialized:
+                    initialized[parent] = 1
+                    shape = ','.join([str(x) for x in arg.shape[1:]])
+                    codeFile.write('\t{}<{}, {}> {}({}, true);\n'.format(self.arrType, arg.dtype, shape, parent, _getName(arg.shape[0]))) 
+            #if isinstance(op, Zeros):
+            #    assert len(op.args) == 0
+            #    #codeFile.write('\t// init var {}\n'.format(op.name)) 
+            #    shape = ','.join([str(x) for x in op.shape[1:]])
+            #    codeFile.write('\t{}<{}, {}> {}({}, true);\n'.format(self.arrType, op.dtype, shape, op.name, _getName(op.shape[0]))) 
+            if isinstance(op, TensorFunctionOp):
                 codeFile.write('\t/* {} */\n'.format(op.info))
                 #for index, inp in enumerate(op.args[:-len(op.outputs)]):
                 #    if not isinstance(inp.shape[0], int) and op.func._inputsUsed[index]:
@@ -349,7 +355,7 @@ class Function(object):
                    parent not in outputNames:
                     codeFile.write('\t{}.destroy();\n'.format(parent))
 
-            #codeFile.write('\tcout << memUsage << endl;\n')
+            codeFile.write('\tcout << memUsage << endl;\n')
 
         codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(outputs)))
         for index, out in enumerate(outputs):
