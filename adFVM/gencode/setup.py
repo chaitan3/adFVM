@@ -11,7 +11,8 @@ matop = 'WITH_MATOP' in os.environ
 gpu = 'WITH_GPU' in os.environ
 codeExt = 'cu' if gpu else 'cpp'
 
-os.environ['CC'] = 'ccache mpicc'
+#os.environ['CC'] = 'ccache mpicc'
+os.environ['CC'] = 'mpicc'
 os.environ['CXX'] = 'mpicxx'
 
 #def customize_compiler_for_nvcc(self):
@@ -50,7 +51,7 @@ sources = [cppDir + x for x in sources]
 sources += ['graph.cpp']
 sources += [x.format(codeExt) for x in ['kernel.{}', 'code.{}']]
 
-compile_args = ['-std=c++11', '-O3', '-g']# '-march=native']
+compile_args = ['-std=c++11', '-O3', '-g']#, '-Wall']# '-march=native']
 link_args = []
 if openmp:
     compile_args += ['-fopenmp']

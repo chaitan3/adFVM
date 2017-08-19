@@ -203,11 +203,11 @@ class arrType {
     void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
         integer i, j, k;
         #pragma omp parallel for private(i, j, k)
-        for (integer i = 0; i < n; i++) {
+        for (i = 0; i < n; i++) {
             integer p = indices[i];
             integer b = index + i;
-            for (integer j = 0; j < shape1; j++) {
-                for (integer k = 0; k < shape2; k++) {
+            for (j = 0; j < shape1; j++) {
+                for (k = 0; k < shape2; k++) {
                     (*this)(b, j, k) += phiBuf[p*shape1*shape2 + j*shape2 + k];
                 }
             }
