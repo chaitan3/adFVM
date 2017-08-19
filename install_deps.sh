@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+PWD=`pwd`
 sudo apt-get install -y build-essential gfortran
 sudo apt-get install -y python-numpy python-scipy python-matplotlib python-mpi4py 
 sudo apt-get install -y python-nose python-pip
@@ -43,4 +44,4 @@ cd ~/sources
     #python setup.py install --prefix=~/.local && \
     #cd .. && rm -rf h5py
     #
-cd
+cd $PWD
