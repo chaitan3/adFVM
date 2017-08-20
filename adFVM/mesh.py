@@ -904,7 +904,7 @@ class Mesh(object):
             var.static = True
             setattr(self, attr, var)
 
-        for patchID in self.parent.localPatches:
+        for patchID in self.parent.sortedPatches:
             self.boundary[patchID] = {}
             for attr in Mesh.BCFields:
                 self.boundary[patchID][attr] = IntegerScalar()
@@ -917,7 +917,7 @@ class Mesh(object):
         boundary = []
         for attr in Mesh.constants:
             boundary.append(getattr(self, attr))
-        for patchID in self.parent.localPatches:
+        for patchID in self.parent.sortedPatches:
             patch = self.boundary[patchID]
             boundary.extend([patch[attr] for attr in Mesh.BCFields])
         return boundary
@@ -937,7 +937,7 @@ class Mesh(object):
     @config.timeFunction('Time to update mesh')
     def update(self, t, dt):
         logger.info('updating mesh')
-        for patchID in self.localPatches:
+        for patchID in self.sortedPatches:
             if self.boundary[patchID]['type'] == 'slidingPeriodic1D':
                 self.updateSlidingPatch(patchID, t, dt)
 

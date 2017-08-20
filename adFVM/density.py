@@ -326,7 +326,7 @@ class RCF(Solver):
         meshArgs = _meshArgs()
         gradU, gradT, gradp = Zeros((mesh.nCells, 3, 3)), Zeros((mesh.nCells, 1, 3)), Zeros((mesh.nCells, 1, 3))
         outputs = self._grad(mesh.nInternalFaces, (gradU, gradT, gradp))(U, T, p, *meshArgs)
-        for patchID in self.mesh.localPatches:
+        for patchID in self.mesh.sortedPatches:
             startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']
             meshArgs = _meshArgs(startFace)
@@ -352,7 +352,7 @@ class RCF(Solver):
         drho, drhoU, drhoE = Zeros((mesh.nInternalCells, 1)), Zeros((mesh.nInternalCells, 3)), Zeros((mesh.nInternalCells, 1))
         dtc = Zeros((mesh.nInternalCells, 1))
         outputs = self._flux(mesh.nInternalFaces, (drho, drhoU, drhoE, dtc))(U, T, p, gradU, gradT, gradp, *meshArgs)
-        for patchID in self.mesh.localPatches:
+        for patchID in self.mesh.sortedPatches:
             startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
             patchType = self.mesh.boundary[patchID]['type']
             meshArgs = _meshArgs(startFace)

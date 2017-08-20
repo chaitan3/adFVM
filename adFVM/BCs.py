@@ -61,6 +61,7 @@ class BoundaryCondition(object):
         self.patch['_{}'.format(key)] = value
         symbolic = Variable((self.nFaces,) + dimensions)
         symbolic.static = True
+        #print(symbolic.dtype)
         self.inputs.append((symbolic, value))
         return symbolic
 
@@ -73,7 +74,9 @@ class BoundaryCondition(object):
     def update(self, phi):
         inputs = tuple([phi] + [x[0] for x in self.inputs])
         outputs = (phi[self.cellStartFace],)
-        return self._tensorUpdate(self.nFaces, outputs)(*inputs)[0]
+        phi = self._tensorUpdate(self.nFaces, outputs)(*inputs)[0]
+        phi.args[0].info += [self.__class__]
+        return phi
 
 class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):

@@ -279,7 +279,7 @@ class Function(object):
     def _genCode(self, outputs):
         codeFile = open(self.codeDir + self.codeFile, 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args) {{\n'.format(self.name))
-        codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
+        #codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
         initialized = {}
@@ -324,7 +324,8 @@ class Function(object):
             #    shape = ','.join([str(x) for x in op.shape[1:]])
             #    codeFile.write('\t{}<{}, {}> {}({}, true);\n'.format(self.arrType, op.dtype, shape, op.name, _getName(op.shape[0]))) 
             if isinstance(op, TensorFunctionOp):
-                codeFile.write('\t/* {} */\n'.format(op.info))
+                #codeFile.write('\t/* {} */\n'.format(op.info))
+
                 #for index, inp in enumerate(op.args[:-len(op.outputs)]):
                 #    if not isinstance(inp.shape[0], int) and op.func._inputsUsed[index]:
                 #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
@@ -358,7 +359,7 @@ class Function(object):
         codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(outputs)))
         for index, out in enumerate(outputs):
             codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}));\n'.format(index, out.name))
-        codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
+        #codeFile.write('\tprintf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         codeFile.write('\treturn outputs;')
         codeFile.write('\n')
         codeFile.write('}\n\n')

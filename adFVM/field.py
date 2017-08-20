@@ -254,7 +254,7 @@ class CellField(Field):
 
         # CellField does not contain processor patch data, but the size is still full = nCells in original code
         self.BC = {}
-        for patchID in mesh.localPatches:
+        for patchID in mesh.sortedPatches:
             # skip processor patches
             patchType = self.boundary[patchID]['type']
             self.BC[patchID] = getattr(BCs, patchType)(self, patchID)
@@ -262,13 +262,14 @@ class CellField(Field):
     def getTensor(self, index=0):
         mesh = self.mesh
         inputs = []
-        for patchID in mesh.localPatches:
+        for patchID in mesh.sortedPatches:
             inputs.extend([x[index] for x in self.BC[patchID].getInputs()])
         return inputs
 
     def updateGhostCells(self, phi):
         logger.info('updating ghost cells for {0}'.format(self.name))
-        patches = sorted(self.mesh.localPatches, key=lambda x: self.mesh.boundary[x]['startFace'])
+        #patches = sorted(self.mesh.localPatches, key=lambda x: self.mesh.boundary[x]['startFace'])
+        patches = self.mesh.sortedPatches
         #print phi
         for patchID in patches:
             #print patchID, self.BC[patchID]

@@ -380,7 +380,7 @@ def getAdjointViscosityCpp(solver, rho, rhoU, rhoE, scaling):
     meshArgs = _meshArgs()
     gradU, divU, gradp, gradc = Zeros((mesh.nInternalCells, 3, 3)), Zeros((mesh.nInternalCells, 1)), Zeros((mesh.nInternalCells, 3)), Zeros((mesh.nInternalCells, 3))
     outputs = computeGradients(mesh.nInternalFaces, (gradU, divU, gradp, gradc))(U, T, p, *meshArgs)
-    for patchID in solver.mesh.localPatches:
+    for patchID in solver.mesh.sortedPatches:
         startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
         patchType = solver.mesh.boundary[patchID]['type']
         meshArgs = _meshArgs(startFace)
