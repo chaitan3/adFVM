@@ -75,7 +75,12 @@ class BoundaryCondition(object):
         inputs = tuple([phi] + [x[0] for x in self.inputs])
         outputs = (phi[self.cellStartFace],)
         phi = self._tensorUpdate(self.nFaces, outputs)(*inputs)[0]
-        phi.args[0].info += [self.__class__]
+        patch = self.mesh.boundary[self.patchID]
+        info = [self.__class__, self.patchID, patch['startFace'], patch['nFaces'], patch['cellStartFace']]
+        patch = self.mesh.symMesh.boundary[self.patchID]
+        info += [patch['startFace'].name, patch['nFaces'].name, patch['cellStartFace'].name]
+        #print(info)
+        phi.args[0].info += info
         return phi
 
 class calculated(BoundaryCondition):
@@ -171,8 +176,11 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
         else:
             self.inputs.append((self.normals, None))
             self.inputs[-1][0].static = True
+        self.inputs.append((self.owner[self.startFace], None))
+        self.inputs[-1][0].static = True
 
-    def _update(self, U, T, p, Tt, pt, direction):
+    def _update(self, U, T, p, Tt, pt, direction, owner):
+        U, T = U.extract(owner), T.extract(owner)
         Un = U.dot(direction)
         Ub = Un*direction
         Tb = Tt - 0.5*Un*Un/self.Cp

@@ -236,7 +236,10 @@ class arrType {
         }
         return false;
     }
-    void info() const {
+    void info(int s=0, int e=-1) const {
+        cout << setprecision(15) << this->sum(s, e) << endl;
+        return;
+
         scalar minPhi, maxPhi;
         minPhi = 1e100;
         maxPhi = -1e100;
@@ -255,12 +258,19 @@ class arrType {
         cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
         //cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
     } 
-    dtype sum() {
-        dtype s = 0;
-        for (integer i = 0; i < this->size; i++) {
-            s += this->data[i];
+    dtype sum(int s=0,int  e=-1) const {
+        dtype res = 0;
+        if (e == -1) {
+            e = this->shape;
         }
-        return s;
+        for (integer i = s; i < e; i++) {
+            for (integer j = 0; j < shape1; j++) {
+                for (integer k = 0; k < shape2; k++) {
+                    res += (*this)(i, j, k);
+                }
+            }
+        }
+        return res;
     }
 
 };
