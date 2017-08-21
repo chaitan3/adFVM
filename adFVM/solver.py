@@ -322,7 +322,7 @@ class Solver(object):
             objective = objective[0,0]
             local = remote = 0
             #exit(1)
-            print [x.sum() for x in newFields]
+            #print [x.sum() for x in newFields]
 
             fields = self.getFields(newFields, IOField, refFields=fields)
 
