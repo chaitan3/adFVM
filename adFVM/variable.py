@@ -47,9 +47,9 @@ class Variable(ArithBase):
         Variable._index += 1
         self.name = 'Variable_{}'.format(index)
         self.shape = shape
+        self.dtype = dtype
         self.args = ()
         self.index = 0
-        self.dtype = dtype
         self.outputIndex = None
         self.static = False
 
@@ -64,6 +64,7 @@ class Variable(ArithBase):
         var = Variable(self.shape, self.dtype)
         var.args = (self,)
         var.name = self.name
+        var.static = self.static
         return var
 
     def grad(self, grad):
@@ -275,6 +276,13 @@ class Function(object):
         FunctionOp.insert_cache(gradOutputs)
         gradInputs = self._diff(self._outputs, self._inputs, gradients)
         return Function(self.name + '_grad', self._inputs + gradOutputs, gradInputs, grad=False)
+
+    def _getName(self, op):
+        if isinstance(op, int):
+            name = op
+        else:
+            name = op.name
+        return name
         
     def _genCode(self, outputs):
         codeFile = open(self.codeDir + self.codeFile, 'a')
@@ -282,12 +290,13 @@ class Function(object):
         codeFile.write('\t//printf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
-        initialized = {}
+        memoryInit = {}
+        memoryPool = {}
         for index, inp in enumerate(self._inputs):
             if isinstance(inp, IntegerScalar):
                 codeFile.write('\tinteger {} = (integer) PyInt_AsLong(PyTuple_GetItem(args, {}));\n'.format(inp.name, index))
                 continue
-            initialized[inp.name] = 1
+            memoryInit[inp.name] = 1
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
@@ -296,28 +305,48 @@ class Function(object):
             codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, "{0}");\n'.format(inp.name))
         codeFile.write('\n')
 
-        #codeFile.write('\nvoid Function_{}({}) {}\n'.format(self.name, memString[:-2], '{\n'))
+        varChildren = {}
+        for op, off in self._children.items():
+            name = op.name
+            if name not in varChildren:
+                varChildren[name] = 0
+            varChildren[name] += off
+        inputNames = list(memoryInit.keys())
+        outputNames = [out.name for out in outputs]
 
         sortedOps = graphTopologicalSort(outputs, self._children.copy())
-        visited = {}
-        for k,v in self._children.items():
-            if k.name not in visited:
-                visited[k.name] = 0
-            visited[k.name] += v
-        outputNames = [out.name for out in outputs]
-        def _getName(op):
-            if isinstance(op, int):
-                name = op
-            else:
-                name = op.name
-            return name
+        prevOp = Container()
+        prevOp.args = []
         for op in sortedOps:
+
+            for arg in prevOp.args:
+                varName = arg.name
+                assert varChildren[varName] > 0
+                varChildren[varName] -= 1
+                if isinstance(arg, Variable) and varName not in outputNames and varChildren[varName] == 0:
+                    if varName in inputNames and ((not config.gpu) or (config.gpu and arg.static)):
+                        continue
+                    key = (arg.shape, arg.dtype)
+                    memoryPool[key] = arg
+                    # garbage collection?
+                    if config.gc:
+                        pass
+                        #codeFile.write('\t{}.destroy();\n'.format(varName))
+
             for arg in op.args:
-                parent = arg.name
-                if isinstance(arg, Variable) and parent not in initialized:
-                    initialized[parent] = 1
+                varName = arg.name
+                if isinstance(arg, Variable) and varName not in memoryInit:
                     shape = ','.join([str(x) for x in arg.shape[1:]])
-                    codeFile.write('\t{}<{}, {}> {}({}, true);\n'.format(self.arrType, arg.dtype, shape, parent, _getName(arg.shape[0]))) 
+                    arrType = '{}<{}, {}>'.format(self.arrType, arg.dtype, shape)
+                    key = (arg.shape, arg.dtype)
+                    if key in memoryPool:
+                        ref = memoryPool.pop(key)
+                        codeFile.write('\t{}& {} = {};\n'.format(arrType, varName, ref.name))
+                        codeFile.write('\t{}.zero();\n'.format(varName))
+                    else:
+                        codeFile.write('\t{} {}({}, true);\n'.format(arrType, varName, self._getName(arg.shape[0]))) 
+                    memoryInit[varName] = 1
+
             #if isinstance(op, Zeros):
             #    assert len(op.args) == 0
             #    #codeFile.write('\t// init var {}\n'.format(op.name)) 
@@ -330,7 +359,7 @@ class Function(object):
                 #    if not isinstance(inp.shape[0], int) and op.func._inputsUsed[index]:
                 #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
                 if config.gpu:
-                    name = _getName(op.indices)
+                    name = self._getName(op.indices)
                     codeFile.write('\tif ({} > 0) {{\n'.format(name))
                     codeFile.write('\t\tinteger nBlocks = {}/GPU_THREADS_PER_BLOCK + 1;\n'.format(name))
                     codeFile.write('\t\tdim3 blocks(nBlocks / GPU_MAX_BLOCKS + 1, min(nBlocks, GPU_MAX_BLOCKS));\n')
@@ -339,7 +368,7 @@ class Function(object):
                     codeFile.write('\t\tgpuErrorCheck(cudaPeekAtLastError());\n')
                     codeFile.write('\t}\n')
                 else:
-                    codeFile.write('\t{}({}, {});\n'.format(op.name, _getName(op.indices), op.getCallString()))
+                    codeFile.write('\t{}({}, {});\n'.format(op.name, self._getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):
                 op.arrType = self.arrType
                 codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))
@@ -347,15 +376,8 @@ class Function(object):
                 pass
             else:
                 raise Exception('op not recognised', op)
-            for arg in op.args:
-                parent = arg.name
-                assert visited[parent] > 0
-                visited[parent] -= 1
-                if visited[parent] == 0 and \
-                   isinstance(arg, Variable) and \
-                   parent not in outputNames:
-                    codeFile.write('\t{}.destroy();\n'.format(parent))
-
+            prevOp = op
+            
         codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(outputs)))
         for index, out in enumerate(outputs):
             codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}));\n'.format(index, out.name))
