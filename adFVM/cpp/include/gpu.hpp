@@ -5,6 +5,7 @@
 
 #define GPU_THREADS_PER_BLOCK 256
 #define GPU_MAX_BLOCKS 65536
+#define WARP_SIZE 32
 
 #define gpuErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 
@@ -44,41 +45,47 @@ __global__ void _extract2(const integer n, dtype* phi1, const dtype* phi2, const
     }
 }
 
-//template<typename dtype>
-//__inline__ __device__ dtype warpReduceSum(dtype val) {
-//  for (int offset = warpSize/2; offset > 0; offset /= 2)
-//    val += __shfl_down(val, offset);
-//  return val;
-//}
-//
-//template<typename dtype>
-//__inline__ __device__ void reduceSum(int n, const dtype val, dtype* res) {
-//  dtype sum = 0;
-//  for(int i = blockIdx.x * blockDim.x + threadIdx.x; 
-//      i < n; 
-//      i += blockDim.x * gridDim.x) {
-//    sum += in[i];
-//  }
-//  sum = warpReduceSum(sum);
-//  if (threadIdx.x & (warpSize - 1) == 0)
-//    atomicAdd(out, sum);
-//} 
-  
+template<typename dtype>
+__inline__ __device__ dtype warpReduceSum(dtype val) {
+  for (int offset = WARP_SIZE/2; offset > 0; offset /= 2)
+    val += __shfl_down(val, offset);
+  return val;
+}
 
 template<typename dtype>
 __inline__ __device__ void reduceSum(int n, const dtype val, dtype* res) {
-    //int x = threadIdx.x + blockDim.x*blockIdx.x; // gridDim.x*blockDim.x*blockIdx.y;
-    __shared__ dtype sum[GPU_THREADS_PER_BLOCK];
-    sum[threadIdx.x] = val;
-    __syncthreads();
-    for (int i=blockDim.x/2; i > 0; i/=2) {
-        if (threadIdx.x < i)
-            sum[threadIdx.x] += sum[threadIdx.x + i];
-        __syncthreads();
-    }
-    if (threadIdx.x == 0)
-        atomicAdd(&res[0], sum[0]);
-}
+  dtype sum = val;
+  int i = blockIdx.x * blockDim.x + threadIdx.x; 
+  //for(int i = blockIdx.x * blockDim.x + threadIdx.x; 
+  //    i < n; 
+  //    i += blockDim.x * gridDim.x) {
+  //  sum += in[i];
+  //}
+  int nb = n - (n % WARP_SIZE);
+  if (i >= nb) {
+      atomicAdd(res, sum);
+  } else {
+      sum = warpReduceSum<dtype>(sum);
+      if (threadIdx.x & (WARP_SIZE - 1) == 0)
+        atomicAdd(res, sum);
+  }
+} 
+  
+
+//template<typename dtype>
+//__inline__ __device__ void reduceSum(int n, const dtype val, dtype* res) {
+//    //int x = threadIdx.x + blockDim.x*blockIdx.x; // gridDim.x*blockDim.x*blockIdx.y;
+//    __shared__ dtype sum[GPU_THREADS_PER_BLOCK];
+//    sum[threadIdx.x] = val;
+//    __syncthreads();
+//    for (int i=blockDim.x/2; i > 0; i/=2) {
+//        if (threadIdx.x < i)
+//            sum[threadIdx.x] += sum[threadIdx.x + i];
+//        __syncthreads();
+//    }
+//    if (threadIdx.x == 0)
+//        atomicAdd(&res[0], sum[0]);
+//}
 
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
