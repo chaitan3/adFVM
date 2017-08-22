@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import interpolate, spatial, integrate
-import matplotlib
-#matplotlib.use('Agg')
+#import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from cStringIO import StringIO
