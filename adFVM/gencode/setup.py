@@ -1,6 +1,7 @@
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 import numpy as np
+from subprocess import check_output
 import os
 
 from adFVM import cpp
@@ -69,8 +70,10 @@ if gpu:
     nv_arch="-gencode=arch=compute_52,code=\"sm_52,compute_52\""
     compile_args += [nv_arch, '-Xcompiler=-fPIC']
     compile_args += ['-DGPU']
-    incdirs += [home + '/.local/include']
-    libdirs += [home + '/.local/lib']
+    mpi_incdirs = check_output('mpicc --showme | egrep -o -e "-I[a-z\/\.]*"', shell=True)
+    incdirs += [d[2:] for d in mpi_incdirs.split('\n')[:-1]]
+    mpi_libdirs = check_output('mpicc --showme | egrep -o -e "-L[a-z\/\.]*"', shell=True)
+    libdirs += [d[2:] for d in mpi_libdirs.split('\n')[:-1]]
     libs += ['mpi']
     os.environ['CXX'] = 'nvcc --shared'
 else:
