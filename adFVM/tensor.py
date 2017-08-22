@@ -354,7 +354,13 @@ class TensorFunction(object):
                     a, b = op.args[2*i], op.args[2*i+1]
                     assert b.dtype == 'integer'
                     if config.gpu:
-                        code += 'atomicAdd(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
+                        if isinstance(b, ConstantOp):
+                            assert b.constant == 0
+                            assert tensorIndex[2] == 0
+                            code += 'reduceSum<{}>(n, {}, &{}[0]);\n\t\t'.format(dtype, names[a], tensorIndex[0])
+                            #code += 'atomicAdd(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
+                        else:
+                            code += 'atomicAdd(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                     elif config.openmp:
                         #code += '//invalid in openmp;\n\t\t'
                         code += '#pragma omp atomic\n\t\t'
