@@ -109,7 +109,7 @@ def create_displacement(param, base, case):
     x = np.linspace(points[0,0], points[0,-1], 10000)
     y = interpolate.splev(x, t)
     yd = interpolate.splev(x, t, der=1)
-    plt.plot(x, y)
+    #plt.plot(x, y)
     #plt.scatter(points[0], points[1])
     #plt.axis('scaled')
     #plt.show()
@@ -122,12 +122,12 @@ def create_displacement(param, base, case):
         points2 = np.hstack((tpressure[:,-5:-2], per_points.T, tsuction[:,-5:-2][:,::-1]))
         ts.append(interpolate.splrep(points2[0], points2[1], k=4, s=1e-6))
         ys.append(interpolate.splev(x, ts[-1]))
-        plt.plot(x, ys[-1])
+        #plt.plot(x, ys[-1])
         #plt.scatter(points2[0], points2[1])
         #plt.show()
-    plt.axis('scaled')
-    plt.show()
-    exit(0)
+    #plt.axis('scaled')
+    #plt.show()
+    #exit(0)
 
     #ti = interpolate.splrep(x, yd)
     #tn = interpolate.splantider(ti)
@@ -292,10 +292,10 @@ if __name__ == '__main__':
     #extrude_mesh('3d_10/', spawn_job)
     #exit(0)
 
-    #func = locals()[sys.argv[1]]
-    #paramsFile = sys.argv[2]
-    #with open(paramsFile) as f:
-    #    params = pickle.load(f)
-    params = [np.zeros(4), './', 'test/']
-    func = gen_mesh_param
+    func = locals()[sys.argv[1]]
+    paramsFile = sys.argv[2]
+    with open(paramsFile) as f:
+        params = pickle.load(f)
+    #func = gen_mesh_param
+    #params = [np.zeros(4), './', 'test/']
     func(*params)
