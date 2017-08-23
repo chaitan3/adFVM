@@ -88,6 +88,10 @@ class Variable(ArithBase):
 class Zeros(Variable):
     pass
 
+class IntegerVariable(Variable):
+    def __init__(self, shape, dtype='integer'):
+        super(IntegerVariable, self).__init__(shape, dtype)
+
 import inspect
 class FunctionOp(object):
     def _init(self, name, args, outputs):
