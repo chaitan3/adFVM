@@ -58,7 +58,7 @@ if openmp:
     compile_args += ['-fopenmp']
     link_args = ['-lgomp']
 if matop:
-    sources += ['matop.cpp']
+    sources += [cppDir + 'matop.cpp']
     compile_args += ['-DMATOP']
     home = os.path.expanduser('~') + '/sources/petsc/'
     incdirs += [home + '/linux-gnu-c-opt/include', home + '/include']
