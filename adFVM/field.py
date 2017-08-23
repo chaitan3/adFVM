@@ -26,7 +26,7 @@ class Field(object):
     @classmethod
     def setMesh(cls, mesh):
         cls.mesh = mesh
-        if not hasattr(mesh, 'Normals'):
+        if not hasattr(mesh, 'Normals') and hasattr(mesh, 'normals'):
             mesh.Normals = Field('nF', mesh.normals, (3,))
 
     def __init__(self, name, field, dimensions):

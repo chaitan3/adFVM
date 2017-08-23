@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import interpolate, spatial, integrate
-#import matplotlib
+import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 

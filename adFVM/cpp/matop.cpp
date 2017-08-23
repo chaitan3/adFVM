@@ -1,3 +1,4 @@
+#define NO_IMPORT_ARRAY
 #include "matop.hpp"
 #define nrhs 5
 
