@@ -4,6 +4,7 @@
 
 #include <petscksp.h>
 #include "common.hpp"
+#include "mesh.hpp"
 
 class Matop {
     map<string, ivec> boundaryNeighbours;
