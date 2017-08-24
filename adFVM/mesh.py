@@ -10,7 +10,7 @@ from . import config, parallel
 from .compat import decompose
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
-from .tensor import IntegerScalar, Container, Variable
+from .tensor import IntegerScalar, Container, Variable, IntegerVariable
 if config.gpu:
     from .cpp import cmesh_gpu as cmesh
 else:
@@ -900,7 +900,7 @@ class Mesh(object):
 
         for attr in Mesh.intFields:
             value = getattr(self.parent, attr)
-            var = Variable((self.nFaces, 1), dtype='integer')
+            var = IntegerVariable((self.nFaces, 1))
             var.static = True
             setattr(self, attr, var)
 
