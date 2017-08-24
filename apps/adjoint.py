@@ -103,6 +103,8 @@ class Adjoint(Solver):
         startTime = timeSteps[nSteps - firstCheckpoint*writeInterval][0]
         if (firstCheckpoint > 0) or readFields:
             fields = self.readFields(startTime)
+            for phi in fields:
+                phi.field *= mesh.volumes
         else:
             fields = self.fields
 
@@ -133,7 +135,11 @@ class Adjoint(Solver):
                     lastSolution = solutions[-1]
 
                 fieldsCopy = [phi.copy() for phi in fields]
+                for phi in fields:
+                    phi.field /= mesh.volumes
                 self.writeFields(fields, t, skipProcessor=True)
+                for phi in fields:
+                    phi.field *= mesh.volumes
                 fields = fieldsCopy
 
             for step in range(0, writeInterval):
