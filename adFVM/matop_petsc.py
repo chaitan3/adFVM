@@ -318,7 +318,7 @@ if __name__ == "__main__":
     mesh = Mesh.create('cases/cylinder/')
     #mesh = Mesh.create('cases/laplacian/')
     Field.setMesh(mesh)
-    timer = 1.0
+    timer = 3.0
     T = IOField.read('T', mesh, timer)
     T.partialComplete(300.)
     DT = Field('DT', 1., (1,))

@@ -205,6 +205,7 @@ class Adjoint(Solver):
                         pprint('Smoothing adjoint field')
                     stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
                     stackedFields = np.ascontiguousarray(stackedFields)
+                    pprint([(parallel.max(np.abs(phi.field)), parallel.sum(phi.field)) for phi in fields])
 
                     start2 = time.time() 
                     if config.matop:
@@ -227,8 +228,9 @@ class Adjoint(Solver):
                                  newStackedFields[:,[1,2,3]], 
                                  newStackedFields[:,[4]]
                                 ]
-                            
                     fields = self.getFields(newFields, IOField)
+                    pprint([(parallel.max(np.abs(phi.field)), parallel.sum(phi.field)) for phi in fields])
+
                     for phi in fields:
                         phi.field = np.ascontiguousarray(phi.field)
                     for phi in fields:
