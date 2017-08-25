@@ -49,7 +49,11 @@ PyObject* initialize(PyObject *self, PyObject *args) {
 
     #ifdef MATOP
         integer argc = 0;
-        PetscInitialize(&argc, NULL, NULL, NULL);
+        PetscErrorCode error = PetscInitialize(&argc, NULL, NULL, NULL);
+        if (error != 0) {
+            cout << "petsc error" << endl;
+            exit(1);
+        }
         matop = new Matop();
     #endif
 
@@ -71,7 +75,10 @@ PyObject* viscositySolver(PyObject *self, PyObject *args) {
     const Mesh& mesh = *meshp;
     arrType<scalar, 5> un(mesh.nInternalCells, true);
     #ifdef MATOP
-        matop->heat_equation(u, DT, dt, un);
+        int error = matop->heat_equation(u, DT, dt, un);
+        if (error) {
+            cout << "petsc error " << error << endl;
+        }
     #endif
     
     return putArray(un);

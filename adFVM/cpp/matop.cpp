@@ -2,6 +2,17 @@
 #include "matop.hpp"
 #define nrhs 5
 
+#define CHKERRQ(ans) { petscAssert((ans), __FILE__, __LINE__); }
+inline void petscAssert(PetscErrorCode code, const char *file, int line, bool abort=true)
+{
+   if (code != 0) 
+   {
+      fprintf(stderr,"petscAssert: %d %s %d\n", code, file, line);
+      assert(!abort);
+      if (abort) exit(code);
+   }
+}
+
 Matop::Matop() {
     const Mesh& mesh = *meshp;
 
@@ -18,41 +29,40 @@ Matop::Matop() {
     }
 }
 
-void Matop::heat_equation(const arrType<scalar, nrhs>& u, const vec& DT, const scalar dt, arrType<scalar, nrhs>& un) {
+int Matop::heat_equation(const arrType<scalar, nrhs>& u, const vec& DT, const scalar dt, arrType<scalar, nrhs>& un) {
     const Mesh& mesh = *meshp;
     Vec x, b;
     Mat A;
 
-
-    integer n = mesh.nInternalCells;
-    integer il, ih;
-    integer jl, jh;
-
-    MatCreate(PETSC_COMM_WORLD, &A);
-    MatSetSizes(A, n, n, PETSC_DETERMINE, PETSC_DETERMINE);
+    PetscInt n = mesh.nInternalCells;
+    PetscInt il, ih;
+    PetscInt jl, jh;
+    
+    CHKERRQ(MatCreate(PETSC_COMM_WORLD, &A));
+    CHKERRQ(MatSetSizes(A, n, n, PETSC_DETERMINE, PETSC_DETERMINE));
     MatSetType(A, "aij");
     //MatSetFromOptions(A);
     if (mesh.nProcs > 1) {
-        MatMPIAIJSetPreallocation(A, 7, NULL, 6, NULL);
+        CHKERRQ(MatMPIAIJSetPreallocation(A, 7, NULL, 6, NULL));
     } else {
-        MatSeqAIJSetPreallocation(A, 7, NULL);
+        CHKERRQ(MatSeqAIJSetPreallocation(A, 7, NULL));
     }
     //MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
-    MatGetOwnershipRange(A, &il, &ih);
-    MatGetOwnershipRangeColumn(A, &jl, &jh);
+    CHKERRQ(MatGetOwnershipRange(A, &il, &ih));
+    CHKERRQ(MatGetOwnershipRangeColumn(A, &jl, &jh));
 
     vec faceData(mesh.nFaces);
-    for (integer j = 0; j < mesh.nFaces; j++) {
+    for (PetscInt j = 0; j < mesh.nFaces; j++) {
         faceData(j) = mesh.areas(j)*DT(j)/mesh.deltas(j);
     }
 
-    for (integer j = il; j < ih; j++) {
-        integer index = j-il;
+    for (PetscInt j = il; j < ih; j++) {
+        PetscInt index = j-il;
         scalar neighbourData[6];
         scalar cellData = 0;
-        integer cols[6];
-        for (integer k = 0; k < 6; k++) {
-            integer f = mesh.cellFaces(index, k);
+        PetscInt cols[6];
+        for (PetscInt k = 0; k < 6; k++) {
+            PetscInt f = mesh.cellFaces(index, k);
             neighbourData[k] = -faceData(f)/mesh.volumes(index);
             cols[k] = mesh.cellNeighbours(index, k);
             if (cols[k] > -1) {
@@ -62,14 +72,14 @@ void Matop::heat_equation(const arrType<scalar, nrhs>& u, const vec& DT, const s
                 cellData -= neighbourData[k];
             }
         }
-        MatSetValues(A, 1, &j, 6, cols, neighbourData, INSERT_VALUES);
-        MatSetValue(A, j, index + jl, cellData + 1./dt, INSERT_VALUES);
+        CHKERRQ(MatSetValues(A, 1, &j, 6, cols, neighbourData, INSERT_VALUES));
+        CHKERRQ(MatSetValue(A, j, index + jl, cellData + 1./dt, INSERT_VALUES));
     }
 
 
     //const integer* ranges = new integer[mesh.nProcs+1];
-    const integer* ranges;
-    MatGetOwnershipRangesColumn(A, &ranges);
+    const PetscInt* ranges;
+    CHKERRQ(MatGetOwnershipRangesColumn(A, &ranges));
 
     for (auto& patch: boundaryNeighbours) {
         auto& neighbourIndices = patch.second;
@@ -82,56 +92,61 @@ void Matop::heat_equation(const arrType<scalar, nrhs>& u, const vec& DT, const s
             integer index = il + p;
             integer neighbourIndex = ranges[proc] + neighbourIndices(j);
             scalar data = -faceData(f)/mesh.volumes(p);
-            MatSetValue(A, index, neighbourIndex, data, INSERT_VALUES);
+            CHKERRQ(MatSetValue(A, index, neighbourIndex, data, INSERT_VALUES));
         }
     } 
     //delete[] ranges;
 
-    MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
-
+    CHKERRQ(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY)); CHKERRQ(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
     
     KSP ksp;
     PC pc;
-    KSPCreate(PETSC_COMM_WORLD, &(ksp));
-    KSPSetOperators(ksp, A, A);
-    KSPSetType(ksp, KSPGMRES);
-    //KSPSetType(ksp, KSPPREONLY);
-    KSPGetPC(ksp, &(pc));
+    CHKERRQ(KSPCreate(PETSC_COMM_WORLD, &(ksp)));
+    CHKERRQ(KSPSetOperators(ksp, A, A));
+    CHKERRQ(KSPSetType(ksp, KSPGMRES));
+    //CHKERRQ(KSPSetType(ksp, KSPPREONLY));
+    CHKERRQ(KSPGetPC(ksp, &(pc)));
     //double rtol, atol, dtol;
     //int maxit;
     //KSPGetTolerances(ksp, &rtol, &atol, &dtol, &maxit);
     //cout << rtol << " " << atol << " " << dtol << " " << maxit << endl;
     //KSPSetTolerances(ksp, 1e-4, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
     PCSetType(pc, PCHYPRE);
-    //PCSetType(pc, PCLU);
-    //PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST);
+    //CHKERRQ(PCSetType(pc, PCJACOBI));
+    //CHKERRQ(PCSetType(pc, PCLU));
+    //CHKERRQ(PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST));
 
 
     //KSPSetFromOptions(ksp);
-    KSPSetUp(ksp);
+    CHKERRQ(KSPSetUp(ksp));
 
-    MatCreateVecs(A, &x, &b);
-    scalar *data1 = new scalar[n];
-    VecPlaceArray(b, data1);
+    CHKERRQ(MatCreateVecs(A, &x, &b));
+    //scalar *data1 = new scalar[n];
+    //VecPlaceArray(b, data1);
     for (integer i = 0; i < nrhs; i++) {
+        scalar *data1, *data2;
+        VecGetArray(b, &data1);
         for (integer j = 0; j < n; j++) {
             data1[j] = u(j, i)/dt;
+            //VecSetValue(b, j + jl, u(j,i)/dt, INSERT_VALUES);
         }
-        KSPSolve(ksp, b, x);
-        scalar *data2;
+        VecRestoreArray(b, &data1);
+        //VecAssemblyBegin(b);
+        //VecAssemblyEnd(b);
+        CHKERRQ(KSPSolve(ksp, b, x));
         VecGetArray(x, &data2);
         for (integer j = 0; j < n; j++) {
             un(j, i) = data2[j];
         }
         VecRestoreArray(x, &data2);
     }
-    VecResetArray(b);
-    delete[] data1;
+    //VecResetArray(b);
+    //delete[] data1;
 
-    KSPDestroy(&ksp);
-    VecDestroy(&b);
-    VecDestroy(&x);
-    MatDestroy(&A);
+    CHKERRQ(KSPDestroy(&ksp));
+    CHKERRQ(VecDestroy(&b));
+    CHKERRQ(VecDestroy(&x));
+    CHKERRQ(MatDestroy(&A));
+    return 0;
 }
 

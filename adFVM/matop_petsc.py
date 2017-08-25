@@ -130,7 +130,7 @@ def laplacian(phi, DT, correction=True):
     nrhs = phi.dimensions[0]
     n = mesh.nInternalCells
     m = mesh.nInternalFaces
-    o = mesh.nFaces - (mesh.nCells - mesh.nLocalCells)
+    o = mesh.nLocalFaces
 
     M = Matrix.create(n, n, (7, 6), nrhs)
     A, b = M.A, M.b
