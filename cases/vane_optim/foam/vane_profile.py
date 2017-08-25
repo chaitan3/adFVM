@@ -117,14 +117,19 @@ def create_displacement(param, base, case):
 
     ts = []
     ys = []
+    T = []
+    T.append(np.concatenate((x, y), axis=0))
     for i in range(1, 5):
         per_points = np.loadtxt(base + '../vane_coords_l{}.txt'.format(i))
         points2 = np.hstack((tpressure[:,-5:-2], per_points.T, tsuction[:,-5:-2][:,::-1]))
         ts.append(interpolate.splrep(points2[0], points2[1], k=4, s=1e-6))
         ys.append(interpolate.splev(x, ts[-1]))
         #plt.plot(x, ys[-1])
+        T.append(np.concatenate((x, ys[-1]), axis=0))
         #plt.scatter(points2[0], points2[1])
         #plt.show()
+    T = np.hstack([x.reshape(-1,1) for x in T])
+    #print T.shape, np.linalg.matrix_rank(T)
     #plt.axis('scaled')
     #plt.show()
     #exit(0)
