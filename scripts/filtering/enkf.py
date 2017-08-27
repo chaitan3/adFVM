@@ -26,12 +26,12 @@ Xd = np.array(Xd)
 H = np.array([[0., 0., 1.]])
 Y = Xd[:,2] #+ np.random.randn(n)*0.01
 
-N = 200
+N = 2000
 X =  [np.array([[0, 0, 30]]) + 5*np.random.randn(N,3)]
 
-R = 0.1
+R = 1e-2
 ps = p
-#ps = (p[0] + 0.1, p[1], p[2])
+ps = (p[0] + 0.001, p[1], p[2])
 for i in range(0, L):
     Xp = X[-1]
     Xf = func(ps, Xp, dt)

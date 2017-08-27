@@ -128,7 +128,7 @@ def create_displacement(param, base, case):
         T.append(np.concatenate((x, ys[-1]), axis=0))
         #plt.scatter(points2[0], points2[1])
         #plt.show()
-    T = np.hstack([x.reshape(-1,1) for x in T])
+    T = np.hstack([x.copy().reshape(-1,1) for x in T])
     #print T.shape, np.linalg.matrix_rank(T)
     #plt.axis('scaled')
     #plt.show()
