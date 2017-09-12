@@ -286,6 +286,7 @@ class Solver(object):
 
             if report:
                 printMemUsage()
+                #parallel.mpi.Barrier()
                 start = time.time()
                 pprint('Time marching for', ' '.join(self.names))
                 for index in range(0, len(fields)):
