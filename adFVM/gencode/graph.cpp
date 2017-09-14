@@ -44,6 +44,9 @@ PyObject* initialize(PyObject *self, PyObject *args) {
         gpuErrorCheck(cudaGetDeviceCount(&count));
         printf("GPU devices: %d, rank: %d\n", count, meshp->rank);
         cudaSetDevice(0);
+        //int numSMs;
+        //cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, 0);
+        //cout << "num sms: " << numSMs << endl;
         //gpuErrorCheck(cudaSetDevice(meshp->localRank));
     #endif
 

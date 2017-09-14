@@ -376,7 +376,8 @@ class Function(object):
                     codeFile.write('\t\tinteger nBlocks = {}/GPU_THREADS_PER_BLOCK + 1;\n'.format(name))
                     codeFile.write('\t\tdim3 blocks(nBlocks / GPU_MAX_BLOCKS + 1, min(nBlocks, GPU_MAX_BLOCKS));\n')
                     codeFile.write('\t\tdim3 threads(min(GPU_THREADS_PER_BLOCK, {}));\n'.format(name))
-                    codeFile.write('\t\t{}<<<blocks, threads>>>({}, {});\n'.format(op.name, name, op.getCallString()))
+                    #codeFile.write('\t\t{}<<<blocks, threads>>>({}, {});\n'.format(op.name, name, op.getCallString()))
+                    codeFile.write('\t\t{}<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>({}, {});\n'.format(op.name, name, op.getCallString()))
                     codeFile.write('\t\tgpuErrorCheck(cudaPeekAtLastError());\n')
                     codeFile.write('\t}\n')
                 else:

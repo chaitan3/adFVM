@@ -318,8 +318,10 @@ class TensorFunction(object):
         codeFile.write(memString + ' {\n') 
         #codeFile.write('\tlong long start = current_timestamp();\n')
         if config.gpu:
-            codeFile.write('\tinteger i = threadIdx.x + blockDim.x*blockIdx.x + gridDim.x*blockDim.x*blockIdx.y;\n')
-            codeFile.write('\tif (i < n) {\n')
+            #codeFile.write('\tinteger i = threadIdx.x + blockDim.x*blockIdx.x + gridDim.x*blockDim.x*blockIdx.y;\n')
+            #codeFile.write('\tif (i < n) {\n')
+            codeFile.write('\tinteger i = threadIdx.x + blockDim.x*blockIdx.x;\n')
+            codeFile.write('\tfor (; i < n; i += blockDim.x*gridDim.x) {\n')
         else:
             codeFile.write('\tinteger i;\n')
             if config.openmp:
