@@ -138,7 +138,7 @@ class Adjoint(Solver):
                 for phi in fields:
                     phi.field /= mesh.volumes
                 self.writeFields(fields, t, skipProcessor=True)
-                for phi in fields:
+                for phi in fieldsCopy:
                     phi.field *= mesh.volumes
                 fields = fieldsCopy
 
