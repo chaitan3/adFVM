@@ -255,6 +255,7 @@ void Mesh::build() {
     }
     PyObject_SetAttrString(this->mesh, "cellNeighboursMatOp", putArray(this->cellNeighbours));
     PyObject_SetAttrString(this->mesh, "cellNeighbours", putArray(this->cellNeighboursFull));
+    PyObject_SetAttrString(this->mesh, "cellOwner", putArray(this->cellOwner));
 }
 
 struct memory mem = {0, 0};

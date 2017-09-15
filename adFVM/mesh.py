@@ -900,7 +900,10 @@ class Mesh(object):
 
         for attr in Mesh.intFields:
             value = getattr(self.parent, attr)
-            var = IntegerVariable((self.nFaces, value.shape[1]))
+            shape = 1
+            if len(value.shape) > 1:
+                shape = value.shape[1]
+            var = IntegerVariable((self.nFaces, shape))
             var.static = True
             setattr(self, attr, var)
 

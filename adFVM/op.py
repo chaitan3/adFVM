@@ -42,20 +42,21 @@ def grad(phi, mesh, neighbour):
    
 def gradCell(phi, mesh):
     gradPhi = 0
-    nCellFaces = self.mesh.cellFaces.shape[0]
+    nCellFaces = 6
     for i in range(0, nCellFaces):
         P = mesh.cellFaces[i]
         O = mesh.cellOwner[i]
         S = mesh.areas.extract(P)
-        N = mesh.normals.extract(P)*(O-0.5)*2
+        N = mesh.normals.extract(P)
+        N = 2*N*O-N
         w = mesh.weights.extract(P) 
         w = (1-w)*O + w*O
         phiP = phi.extract(mesh.cellNeighbours[i])
         phiF = phi*w + phiP*(1-w)
         if phi.shape == (1,):
-            gradPhi += phiF*S
+            gradPhi += phiF*S*N
         else:
-            gradPhi += phiF.outer(S)
+            gradPhi += phiF.outer(S*N)
     return gradPhi
 
 def snGrad(phiL, phiR, mesh):

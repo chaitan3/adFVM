@@ -412,7 +412,7 @@ def Tensorize(func):
                     if x.dtype == dtype:
                         tensorArgs.append(Tensor(x.shape[1:]))
                     elif x.dtype == 'integer':
-                        tensorArgs.append(Tensor(x.shape[1:], scalars=[IntegerScalar()]))
+                        tensorArgs.append(Tensor(x.shape[1:], scalars=[IntegerScalar() for i in range(0, x.shape[1])]))
                     else:
                         raise Exception(x.dtype)
                 tensorOutputs = func(*tensorArgs, **kwargs)
