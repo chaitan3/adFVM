@@ -882,32 +882,35 @@ class Mesh(object):
         
     def makeTensor(self):
         logger.info('making tensor variables')
+        mesh = self.parent
 
         for attr in Mesh.constants:
-            value = getattr(self.parent, attr)
+            value = getattr(mesh, attr)
             setattr(self, attr, IntegerScalar())
 
+        sizes = {mesh.nFaces: self.nFaces, 
+                 mesh.nInternalFaces: self.nInternalFaces,
+                 mesh.nInternalCells: self.nInternalCells
+                }
+
         for attr in Mesh.gradFields:
-            value = getattr(self.parent, attr)
-            size = self.nFaces
-            if attr == 'volumesR':
-                size = self.nInternalFaces
-            elif attr == 'volumes':
-                size = self.nInternalCells
+            value = getattr(mesh, attr)
+            size = sizes[value.shape[0]]
             var = Variable((size,) + value.shape[1:])
             var.static = True
             setattr(self, attr, var)
 
         for attr in Mesh.intFields:
-            value = getattr(self.parent, attr)
+            value = getattr(mesh, attr)
             shape = 1
+            size = sizes[value.shape[0]]
             if len(value.shape) > 1:
                 shape = value.shape[1]
-            var = IntegerVariable((self.nFaces, shape))
+            var = IntegerVariable((size, shape))
             var.static = True
             setattr(self, attr, var)
 
-        for patchID in self.parent.sortedPatches:
+        for patchID in mesh.sortedPatches:
             self.boundary[patchID] = {}
             for attr in Mesh.BCFields:
                 self.boundary[patchID][attr] = IntegerScalar()

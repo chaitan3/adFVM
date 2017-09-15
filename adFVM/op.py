@@ -45,14 +45,14 @@ def gradCell(phi, mesh):
     nCellFaces = 6
     for i in range(0, nCellFaces):
         P = mesh.cellFaces[i]
-        O = mesh.cellOwner[i]
         S = mesh.areas.extract(P)
         N = mesh.normals.extract(P)
-        N = 2*N*O-N
         w = mesh.weights.extract(P) 
-        w = (1-w)*O + w*O
+        O = mesh.cellOwner[i]
+        N = 2*N*O-N
+        w = w + O - 2*w*O
         phiP = phi.extract(mesh.cellNeighbours[i])
-        phiF = phi*w + phiP*(1-w)
+        phiF = phi.index()*(-w + 1) + phiP*w
         if phi.shape == (1,):
             gradPhi += phiF*S*N
         else:

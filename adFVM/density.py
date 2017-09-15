@@ -2,7 +2,7 @@ from . import config, riemann, interp
 from .tensor import Tensorize, ExternalFunctionOp
 from .variable import Variable, Function, Zeros
 from .field import Field, IOField, CellField
-from .op import  div, absDiv, snGrad, internal_sum, gradCell
+from .op import  div, absDiv, snGrad, internal_sum, grad, gradCell
 from .solver import Solver
 from .interp import central, secondOrder
 from . import BCs
@@ -205,33 +205,33 @@ class RCF(Solver):
 
     #symbolic funcs
 
-    #def gradients(self, U, T, p, *mesh, **options):
-        #mesh = Mesh.container(mesh)
-        #neighbour = options.pop('neighbour', True)
-        #boundary = options.pop('boundary', False)
-        #if boundary:
-            #UF = U.extract(mesh.neighbour)
-            #TF = T.extract(mesh.neighbour)
-            #pF = p.extract(mesh.neighbour)
-        #else:
-            #UF = central(U, mesh)
-            #TF = central(T, mesh)
-            #pF = central(p, mesh)
-
-        #gradU = grad(UF, mesh, neighbour)
-        #gradT = grad(TF, mesh, neighbour)
-        #gradp = grad(pF, mesh, neighbour)
-
-    #    return gradU, gradT, gradp
-
-
-    def gradients(self, U, T, p, *mesh):
+    def gradients(self, U, T, p, *mesh, **options):
         mesh = Mesh.container(mesh)
-        gradU = gradCell(U, mesh)
-        gradT = gradCell(T, mesh)
-        gradp = gradCell(p, mesh)
-        
+        neighbour = options.pop('neighbour', True)
+        boundary = options.pop('boundary', False)
+        if boundary:
+            UF = U.extract(mesh.neighbour)
+            TF = T.extract(mesh.neighbour)
+            pF = p.extract(mesh.neighbour)
+        else:
+            UF = central(U, mesh)
+            TF = central(T, mesh)
+            pF = central(p, mesh)
+
+        gradU = grad(UF, mesh, neighbour)
+        gradT = grad(TF, mesh, neighbour)
+        gradp = grad(pF, mesh, neighbour)
+
         return gradU, gradT, gradp
+
+
+    #def gradients(self, U, T, p, *mesh):
+    #    mesh = Mesh.container(mesh)
+    #    gradU = gradCell(U, mesh)
+    #    gradT = gradCell(T, mesh)
+    #    gradp = gradCell(p, mesh)
+    #    
+    #    return gradU, gradT, gradp
         
     def flux(self, U, T, p, gradU, gradT, gradp, *mesh, **options):
         mesh = Mesh.container(mesh)
@@ -340,6 +340,7 @@ class RCF(Solver):
                 outputs = self._boundaryGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=True, *meshArgs)
         meshArgs = _meshArgs(mesh.nLocalFaces)
         outputs = self._coupledGrad(mesh.nRemoteCells, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
+        #outputs = self._grad(mesh.nInternalCells, (gradU, gradT, gradp))(U, T, p, *meshArgs)
 
         # grad boundary update
         outputs = list(self.boundaryInit(*outputs))

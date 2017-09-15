@@ -161,6 +161,9 @@ class Tensor(ArithBase):
     def scalar(self):
         return self.extract(Tensor((1,), [ConstantOp(0)]))
 
+    def index(self):
+        return self.extract(Tensor((1,), [IndexOp()]))
+
     @classmethod
     def collate(cls, *args):
         n = len(args)//2

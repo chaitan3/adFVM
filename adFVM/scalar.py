@@ -130,6 +130,13 @@ class ConstantOp(OpBase):
     def grad(self, gradient):
         return []
         
+class IndexOp(OpBase):
+    def __init__(self):
+        self.args = tuple()
+        self.dtype = 'integer'
+
+    def c_code(self, names):
+        return '{} {} = i;'.format(self.dtype, names[self])
 
 class BinaryOp(OpBase):
     def __init__(self, op, a, b, comparison=False):
