@@ -30,9 +30,11 @@ class Mesh {
         arrType<scalar, 2, 3> quadraticWeights;
         mat faceCentres;
         mat cellCentres;
-        arrType<integer, 6> cellFaces;
         arrType<integer, 8> cells;
+        arrType<integer, 6> cellFaces;
+        arrType<integer, 6> cellOwner;
         arrType<integer, 6> cellNeighbours;
+        arrType<integer, 6> cellNeighboursFull;
 
         Boundary boundary;
         map<string, pair<integer, integer>> boundaryFaces;

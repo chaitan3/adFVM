@@ -4,7 +4,7 @@
 #include "common.hpp"
 
 #define GPU_THREADS_PER_BLOCK 256
-#define GPU_BLOCKS_PER_GRID 512
+#define GPU_BLOCKS_PER_GRID 1024
 #define GPU_MAX_BLOCKS 65536
 #define WARP_SIZE 32
 

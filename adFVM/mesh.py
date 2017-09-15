@@ -24,7 +24,7 @@ except:
 logger = config.Logger(__name__)
 
 class Mesh(object):
-    intFields = ['owner', 'neighbour']
+    intFields = ['owner', 'neighbour', 'cellFaces', 'cellNeighbours', 'cellOwner']
     gradFields = ['areas', 'volumesL', 'volumesR',
                   'weights', 'deltas', 'normals',
                   'linearWeights', 'quadraticWeights',
@@ -900,7 +900,7 @@ class Mesh(object):
 
         for attr in Mesh.intFields:
             value = getattr(self.parent, attr)
-            var = IntegerVariable((self.nFaces, 1))
+            var = IntegerVariable((self.nFaces, value.shape[1]))
             var.static = True
             setattr(self, attr, var)
 

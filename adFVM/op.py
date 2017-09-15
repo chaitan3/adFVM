@@ -40,6 +40,23 @@ def grad(phi, mesh, neighbour):
         gphi = Tensor.collate(phiN*wp, mesh.owner)
     return gphi
    
+def gradCell(phi, mesh):
+    gradPhi = 0
+    nCellFaces = self.mesh.cellFaces.shape[0]
+    for i in range(0, nCellFaces):
+        P = mesh.cellFaces[i]
+        O = mesh.cellOwner[i]
+        S = mesh.areas.extract(P)
+        N = mesh.normals.extract(P)*(O-0.5)*2
+        w = mesh.weights.extract(P) 
+        w = (1-w)*O + w*O
+        phiP = phi.extract(mesh.cellNeighbours[i])
+        phiF = phi*w + phiP*(1-w)
+        if phi.shape == (1,):
+            gradPhi += phiF*S
+        else:
+            gradPhi += phiF.outer(S)
+    return gradPhi
 
 def snGrad(phiL, phiR, mesh):
     return (phiR - phiL)/mesh.deltas

@@ -50,7 +50,7 @@ parameters = 'mesh'
 #
 #parameters = 'source'
 
-nSteps = 100
+nSteps = 10
 writeInterval = 10
 startTime = 0.0
 dt = 1e-8
