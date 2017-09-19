@@ -48,8 +48,8 @@ void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp, const 
 template <typename dtype, integer shape1>
 PyObject* putArray(arrType<dtype, shape1> &tmp) {
     npy_intp shape[2] = {tmp.shape, shape1};
-    dtype* data = tmp.data;
-    tmp.ownData = false;
+    dtype* data = new dtype[tmp.size];
+    memcpy(data, tmp.data, tmp.bufSize);
     PyObject *array;
     if (typeid(dtype) == typeid(double)) {
         array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
@@ -59,14 +59,13 @@ PyObject* putArray(arrType<dtype, shape1> &tmp) {
         array = PyArray_SimpleNewFromData(2, shape, NPY_INT32, data);
     }
     PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
-    tmp.dec_mem();
     return array;
 }
 template <typename dtype, integer shape1, integer shape2>
 PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
     npy_intp shape[3] = {tmp.shape, shape1, shape2};
-    dtype* data = tmp.data;
-    tmp.ownData = false;
+    dtype* data = new dtype[tmp.size];
+    memcpy(data, tmp.data, tmp.bufSize);
     PyObject *array;
     if (typeid(dtype) == typeid(double)) {
         array = PyArray_SimpleNewFromData(3, shape, NPY_DOUBLE, data);
@@ -76,7 +75,6 @@ PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
         array = PyArray_SimpleNewFromData(3, shape, NPY_INT32, data);
     }
     PyArray_ENABLEFLAGS((PyArrayObject*)array, NPY_ARRAY_OWNDATA);
-    tmp.dec_mem();
     return array;
 }
 

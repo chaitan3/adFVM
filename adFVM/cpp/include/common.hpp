@@ -76,6 +76,7 @@ class arrType {
     integer strides[NDIMS];
     bool ownData;
     bool staticVariable;
+    bool keepMemory;
 
     void initPre() {
         this->shape = 0;
@@ -87,6 +88,7 @@ class arrType {
         this -> data = NULL;
         this -> ownData = false;
         this -> staticVariable = false;
+        this -> keepMemory = false;
     }
 
     void init(const integer shape) {
@@ -102,10 +104,14 @@ class arrType {
         this->bufSize = this->size*sizeof(dtype);
     }
     void destroy() {
-        if (this->ownData && this->data != NULL) {
-            this->dec_mem();
-            this->dealloc();
-            this->data = NULL;
+        if (this->ownData) {
+            if (this->keepMemory) {
+                this->release();
+            } else if (this->data != NULL) {
+                this->dec_mem();
+                this->dealloc();
+                this->data = NULL;
+            }
         }
     }
     void acquire() {
@@ -123,6 +129,7 @@ class arrType {
         this->ownData = true;
     }
     void release() {
+        assert (this->ownData);
         int key = this->bufSize;
         mem.pool[key].push((void *)this->data);
         this->ownData = false;
@@ -130,7 +137,7 @@ class arrType {
     
     void inc_mem() {
         mem.usage += this->bufSize;
-        cout << "alloc: " << mem.usage << endl;
+        cout << "alloc: " << this->bufSize << " " << mem.usage << endl;
         if (mem.usage > mem.maxUsage) {
             mem.maxUsage = mem.usage;
         }
@@ -138,7 +145,7 @@ class arrType {
 
     void dec_mem() {
         mem.usage -= this->bufSize;
-        cout << "dealloc: " << mem.usage << endl;
+        cout << "dealloc: " << this->bufSize << " " << mem.usage << endl;
     }
     void alloc() {
         this -> data = new dtype[this->size];
@@ -151,9 +158,10 @@ class arrType {
         this->initPre();
     }
 
-    arrType(const integer shape, bool zero=false) {
+    arrType(const integer shape, bool zero=false, bool keepMemory=false) {
         this->init(shape);
         this->acquire();
+        this->keepMemory = keepMemory;
         if (zero) 
             this->zero();
     }

@@ -326,18 +326,19 @@ class Function(object):
                 varName = arg.name
                 assert varChildren[varName] > 0
                 varChildren[varName] -= 1
-                #if isinstance(arg, Variable) and varName not in outputNames and varChildren[varName] == 0:
-                if isinstance(arg, Variable) and varName not in outputNames and varName not in inputNames and varChildren[varName] == 0:
-                    #if varName in inputNames and ((not config.gpu) or (config.gpu and arg.static)):
-                    #    continue
-                    codeFile.write('\t{}.release();'.format(varName))
+                if isinstance(arg, Variable) and varName not in outputNames and varChildren[varName] == 0:
+                #if isinstance(arg, Variable) and varName not in outputNames and varName not in inputNames and varChildren[varName] == 0:
+                    if varName in inputNames and ((not config.gpu) or (config.gpu and arg.static)):
+                        continue
+                    codeFile.write('\t{}.release();\n'.format(varName))
             
             for arg in op.args:
                 varName = arg.name
                 if isinstance(arg, Variable) and varName not in memoryInit:
                     shape = ','.join([str(x) for x in arg.shape[1:]])
                     arrType = '{}<{}, {}>'.format(self.arrType, arg.dtype, shape)
-                    codeFile.write('\t{} {}({}, true);\n'.format(arrType, varName, self._getName(arg.shape[0]))) 
+                    #codeFile.write('\t{} {}({}, true);\n'.format(arrType, varName, self._getName(arg.shape[0]))) 
+                    codeFile.write('\t{} {}({}, true, true);\n'.format(arrType, varName, self._getName(arg.shape[0]))) 
                     memoryInit[varName] = 1
 
             # fix garbage collection
