@@ -321,7 +321,6 @@ class Solver(object):
             #print [x.dtype for x in outputs if hasattr(x, 'dtype')]
             newFields, dtc, objective = outputs[:3], outputs[3], outputs[4]
             objective = objective[0,0]
-            local = remote = 0
             #exit(1)
             #print [x.sum() for x in newFields]
 
