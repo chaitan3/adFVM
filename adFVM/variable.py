@@ -305,7 +305,7 @@ class Function(object):
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
             if inp.static and config.gpu:
                 codeFile.write('\t{}.staticVariable = true;\n'.format(inp.name))
-            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, "{1}_{0}");\n'.format(inp.name, self.name))
+            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, "Py_{1}");\n'.format(inp.name, id(inp)))
         codeFile.write('\n')
 
         varChildren = {}

@@ -92,15 +92,16 @@ template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     public:
     void alloc() {
-        gpuErrorCheck(cudaMalloc(&this->data, this->bufSize);
+        cout << this->data << " " << this->bufSize << endl;
+        gpuErrorCheck(cudaMalloc(&this->data, this->bufSize));
     }
     void dealloc() {
         gpuErrorCheck(cudaFree(this->data));
     }
-    gpuArrType(const integer shape, bool zero=false) {
+    gpuArrType(const integer shape, bool zero=false, bool keepMemory=false) {
         this->init(shape);
         this->acquire();
-        this->ownData = true;
+        this->keepMemory = keepMemory;
         if (zero) 
             this->zero();
     }
@@ -109,7 +110,8 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         this -> data = data;
     }
     void zero() {
-        gpuErrorCheck(cudaMemset(this->data, 0, this->size*sizeof(dtype)));
+        cout << this->data << " " << this->bufSize << endl;
+        gpuErrorCheck(cudaMemset(this->data, 0, this->bufSize));
     }
     void copy(integer index, dtype* sdata, integer n) {
         gpuErrorCheck(cudaMemcpy(&(*this)(index), sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice));
@@ -130,14 +132,14 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     
     dtype* toHost() const {
         dtype* hdata = new dtype[this->size];
-        gpuErrorCheck(cudaMemcpy(hdata, this->data, this->size*sizeof(dtype), cudaMemcpyDeviceToHost));
+        gpuErrorCheck(cudaMemcpy(hdata, this->data, this->bufSize, cudaMemcpyDeviceToHost));
         return hdata;
     }
     void toDevice(dtype* data) {
         assert (this->data == NULL);
         this->inc_mem();
-        gpuErrorCheck(cudaMalloc(&this->data, this->size*sizeof(dtype)));
-        gpuErrorCheck(cudaMemcpy(this->data, data, this->size*sizeof(dtype), cudaMemcpyHostToDevice));
+        gpuErrorCheck(cudaMalloc(&this->data, this->bufSize));
+        gpuErrorCheck(cudaMemcpy(this->data, data, this->bufSize, cudaMemcpyHostToDevice));
         this->ownData = true;
     }
     void info() const {
