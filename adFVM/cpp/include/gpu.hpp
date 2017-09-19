@@ -92,7 +92,6 @@ template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     public:
     void alloc() {
-        cout << this->data << " " << this->bufSize << endl;
         gpuErrorCheck(cudaMalloc(&this->data, this->bufSize));
     }
     void dealloc() {
@@ -110,7 +109,6 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         this -> data = data;
     }
     void zero() {
-        cout << this->data << " " << this->bufSize << endl;
         gpuErrorCheck(cudaMemset(this->data, 0, this->bufSize));
     }
     void copy(integer index, dtype* sdata, integer n) {
@@ -137,10 +135,8 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     }
     void toDevice(dtype* data) {
         assert (this->data == NULL);
-        this->inc_mem();
-        gpuErrorCheck(cudaMalloc(&this->data, this->bufSize));
+        this->acquire();
         gpuErrorCheck(cudaMemcpy(this->data, data, this->bufSize, cudaMemcpyHostToDevice));
-        this->ownData = true;
     }
     void info() const {
         dtype minPhi, maxPhi;

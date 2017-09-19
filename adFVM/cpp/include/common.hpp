@@ -147,10 +147,10 @@ class arrType {
         mem.usage -= this->bufSize;
         cout << "dealloc: " << this->bufSize << " " << mem.usage << endl;
     }
-    void alloc() {
+    virtual void alloc() {
         this -> data = new dtype[this->size];
     }
-    void dealloc() {
+    virtual void dealloc() {
         delete[] this -> data; 
     }
 
@@ -232,14 +232,14 @@ class arrType {
         return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1, i2, i3));
     }
 
-    void zero() {
+    virtual void zero() {
         memset(this->data, 0, this->bufSize);
     }
 
-    void copy(const integer index, const dtype* sdata, const integer n) {
+    virtual void copy(const integer index, const dtype* sdata, const integer n) {
         memcpy(&(*this)(index), sdata, n*sizeof(dtype));
     }
-    void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
+    virtual void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
         integer i, j, k;
         #pragma omp parallel for private(i, j, k)
         for (i = 0; i < n; i++) {
@@ -252,7 +252,7 @@ class arrType {
             }
         }
     }
-    void extract(const integer *indices, const dtype* phiBuf, const integer n) {
+    virtual void extract(const integer *indices, const dtype* phiBuf, const integer n) {
         integer i, j, k;
         #pragma omp parallel for private(i, j, k)
         for (i = 0; i < n; i++) {

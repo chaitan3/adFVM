@@ -76,6 +76,7 @@ class RCF(Solver):
 
     def compileSolver(self):
         self._grad = Tensorize(self.gradients)
+        self._gradCell = Tensorize(self.gradientsCell)
         self._coupledGrad = Tensorize(self.gradients)
         self._boundaryGrad = Tensorize(self.gradients)
         self._flux = Tensorize(self.flux)
@@ -94,7 +95,9 @@ class RCF(Solver):
         #self.t = self.t0
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
         rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
-        self.map = Function('primal', [rho, rhoU, rhoE, self.dt] + meshArgs + sourceArgs + BCArgs + extraArgs, [rhoN, rhoUN, rhoEN, self.dtc, self.obj])
+        args = [rho, rhoU, rhoE, self.dt] + meshArgs + sourceArgs + BCArgs + extraArgs
+        outputs = [rhoN, rhoUN, rhoEN, self.dtc, self.obj]
+        self.map = Function('primal', args, outputs)
 
     def compileExtra(self):
         mesh = self.mesh.symMesh
@@ -225,13 +228,13 @@ class RCF(Solver):
         return gradU, gradT, gradp
 
 
-    #def gradients(self, U, T, p, *mesh):
-    #    mesh = Mesh.container(mesh)
-    #    gradU = gradCell(U, mesh)
-    #    gradT = gradCell(T, mesh)
-    #    gradp = gradCell(p, mesh)
-    #    
-    #    return gradU, gradT, gradp
+    def gradientsCell(self, U, T, p, *mesh):
+        mesh = Mesh.container(mesh)
+        gradU = gradCell(U, mesh)
+        gradT = gradCell(T, mesh)
+        gradp = gradCell(p, mesh)
+        
+        return gradU, gradT, gradp
         
     def flux(self, U, T, p, gradU, gradT, gradp, *mesh, **options):
         mesh = Mesh.container(mesh)
@@ -328,19 +331,20 @@ class RCF(Solver):
 
         meshArgs = _meshArgs()
         gradU, gradT, gradp = Zeros((mesh.nCells, 3, 3)), Zeros((mesh.nCells, 1, 3)), Zeros((mesh.nCells, 1, 3))
-        outputs = self._grad(mesh.nInternalFaces, (gradU, gradT, gradp))(U, T, p, *meshArgs)
-        for patchID in self.mesh.sortedPatches:
-            startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
-            patchType = self.mesh.boundary[patchID]['type']
-            meshArgs = _meshArgs(startFace)
-            if patchType in config.coupledPatches:
-                outputs = self._coupledGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
-                outputs[0].args[0].info += [[x.shape for x in self.mesh.getTensor()], patchID, self.mesh.boundary[patchID]['startFace'], self.mesh.boundary[patchID]['nFaces']]
-            else:
-                outputs = self._boundaryGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=True, *meshArgs)
-        meshArgs = _meshArgs(mesh.nLocalFaces)
-        outputs = self._coupledGrad(mesh.nRemoteCells, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
-        #outputs = self._grad(mesh.nInternalCells, (gradU, gradT, gradp))(U, T, p, *meshArgs)
+
+        #outputs = self._grad(mesh.nInternalFaces, (gradU, gradT, gradp))(U, T, p, *meshArgs)
+        #for patchID in self.mesh.sortedPatches:
+        #    startFace, nFaces = mesh.boundary[patchID]['startFace'], mesh.boundary[patchID]['nFaces']
+        #    patchType = self.mesh.boundary[patchID]['type']
+        #    meshArgs = _meshArgs(startFace)
+        #    if patchType in config.coupledPatches:
+        #        outputs = self._coupledGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
+        #        outputs[0].args[0].info += [[x.shape for x in self.mesh.getTensor()], patchID, self.mesh.boundary[patchID]['startFace'], self.mesh.boundary[patchID]['nFaces']]
+        #    else:
+        #        outputs = self._boundaryGrad(nFaces, outputs)(U, T, p, neighbour=False, boundary=True, *meshArgs)
+        #meshArgs = _meshArgs(mesh.nLocalFaces)
+        #outputs = self._coupledGrad(mesh.nRemoteCells, outputs)(U, T, p, neighbour=False, boundary=False, *meshArgs)
+        outputs = self._gradCell(mesh.nInternalCells, (gradU, gradT, gradp))(U, T, p, *meshArgs)
 
         # grad boundary update
         outputs = list(self.boundaryInit(*outputs))
