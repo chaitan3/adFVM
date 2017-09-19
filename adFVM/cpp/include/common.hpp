@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <string>
 #include <vector>
+#include <queue>
 #include <tuple>
 #include <map>
 #include <typeinfo>
@@ -36,6 +37,7 @@ struct memory {
     int usage;
     int maxUsage;
     map<string, void *> refs;
+    map<int, queue<void*>> pool;
 };
 extern struct memory mem;
 
@@ -70,6 +72,7 @@ class arrType {
     //integer dims;
     integer shape;
     integer size;
+    integer bufSize;
     integer strides[NDIMS];
     bool ownData;
     bool staticVariable;
@@ -80,6 +83,7 @@ class arrType {
             this->strides[i] = 0;
         }
         this -> size = 0;
+        this -> bufSize = 0;
         this -> data = NULL;
         this -> ownData = false;
         this -> staticVariable = false;
@@ -94,24 +98,53 @@ class arrType {
         this->strides[1] = shape2*this->strides[2];
         this->strides[0] = shape1*this->strides[1];
         //cout << endl;
-        this -> size = this->strides[0]*shape;
+        this->size = this->strides[0]*shape;
+        this->bufSize = this->size*sizeof(dtype);
     }
     void destroy() {
         if (this->ownData && this->data != NULL) {
             this->dec_mem();
-            delete[] this -> data; 
-            this -> data = NULL;
+            this->dealloc();
+            this->data = NULL;
         }
     }
+    void acquire() {
+        int key = this->bufSize;
+        if (mem.pool.count(key) == 0) {
+            mem.pool[key] = queue<void*>();
+        } 
+        if (mem.pool.at(key).empty()) {
+            this->alloc();  
+            this->inc_mem();
+        } else {
+            this->data = (dtype *) mem.pool[key].front();
+            mem.pool[key].pop();
+        }
+        this->ownData = true;
+    }
+    void release() {
+        int key = this->bufSize;
+        mem.pool[key].push((void *)this->data);
+        this->ownData = false;
+    }
+    
     void inc_mem() {
-        mem.usage += this->size*sizeof(dtype);
+        mem.usage += this->bufSize;
+        cout << "alloc: " << mem.usage << endl;
         if (mem.usage > mem.maxUsage) {
             mem.maxUsage = mem.usage;
         }
     }
 
     void dec_mem() {
-        mem.usage -= this->size*sizeof(dtype);
+        mem.usage -= this->bufSize;
+        cout << "dealloc: " << mem.usage << endl;
+    }
+    void alloc() {
+        this -> data = new dtype[this->size];
+    }
+    void dealloc() {
+        delete[] this -> data; 
     }
 
     arrType () {
@@ -119,12 +152,10 @@ class arrType {
     }
 
     arrType(const integer shape, bool zero=false) {
-        this -> init(shape);
-        this -> data = new dtype[this->size];
-        this -> ownData = true;
+        this->init(shape);
+        this->acquire();
         if (zero) 
-            this -> zero();
-        this->inc_mem();
+            this->zero();
     }
 
     arrType(const integer shape, dtype* data) {
@@ -194,7 +225,7 @@ class arrType {
     }
 
     void zero() {
-        memset(this->data, 0, this->size*sizeof(dtype));
+        memset(this->data, 0, this->bufSize);
     }
 
     void copy(const integer index, const dtype* sdata, const integer n) {

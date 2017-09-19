@@ -91,24 +91,22 @@ __inline__ __device__ void reduceSum(int n, const dtype val, dtype* res) {
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     public:
+    void alloc() {
+        gpuErrorCheck(cudaMalloc(&this->data, this->bufSize);
+    }
+    void dealloc() {
+        gpuErrorCheck(cudaFree(this->data));
+    }
     gpuArrType(const integer shape, bool zero=false) {
-        this -> init(shape);
-        gpuErrorCheck(cudaMalloc(&this->data, this->size*sizeof(dtype)));
-        this->inc_mem();
+        this->init(shape);
+        this->acquire();
         this->ownData = true;
         if (zero) 
-            this -> zero();
+            this->zero();
     }
     gpuArrType(const integer shape, dtype* data) {
         this -> init(shape);
         this -> data = data;
-    }
-    void destroy() {
-        if (this->ownData && this->data != NULL) {
-            this->dec_mem();
-            gpuErrorCheck(cudaFree(this->data));
-            this -> data = NULL;
-        }
     }
     void zero() {
         gpuErrorCheck(cudaMemset(this->data, 0, this->size*sizeof(dtype)));

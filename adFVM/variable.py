@@ -295,7 +295,6 @@ class Function(object):
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
         memoryInit = {}
-        memoryPool = {}
         for index, inp in enumerate(self._inputs):
             if isinstance(inp, IntegerScalar):
                 codeFile.write('\tinteger {} = (integer) PyInt_AsLong(PyTuple_GetItem(args, {}));\n'.format(inp.name, index))
@@ -327,37 +326,24 @@ class Function(object):
                 varName = arg.name
                 assert varChildren[varName] > 0
                 varChildren[varName] -= 1
-                if isinstance(arg, Variable) and varName not in outputNames and varChildren[varName] == 0:
-                    if varName in inputNames and ((not config.gpu) or (config.gpu and arg.static)):
-                        continue
-                    key = (arg.shape, arg.dtype)
-                    if key not in memoryPool:
-                        memoryPool[key] = []
-                    memoryPool[key].append(arg)
-                    # garbage collection?
+                #if isinstance(arg, Variable) and varName not in outputNames and varChildren[varName] == 0:
+                if isinstance(arg, Variable) and varName not in outputNames and varName not in inputNames and varChildren[varName] == 0:
+                    #if varName in inputNames and ((not config.gpu) or (config.gpu and arg.static)):
+                    #    continue
+                    codeFile.write('\t{}.release();'.format(varName))
             
             for arg in op.args:
                 varName = arg.name
                 if isinstance(arg, Variable) and varName not in memoryInit:
                     shape = ','.join([str(x) for x in arg.shape[1:]])
                     arrType = '{}<{}, {}>'.format(self.arrType, arg.dtype, shape)
-                    key = (arg.shape, arg.dtype)
-                    if key in memoryPool:
-                        refs = memoryPool[key]
-                        ref = refs[0]
-                        if len(refs) > 1:
-                            memoryPool[key] = refs[1:]
-                        else:
-                            memoryPool.pop(key)
-                        codeFile.write('\t{}& {} = {};\n'.format(arrType, varName, ref.name))
-                        codeFile.write('\t{}.zero();\n'.format(varName))
-                    else:
-                        codeFile.write('\t{} {}({}, true);\n'.format(arrType, varName, self._getName(arg.shape[0]))) 
+                    codeFile.write('\t{} {}({}, true);\n'.format(arrType, varName, self._getName(arg.shape[0]))) 
                     memoryInit[varName] = 1
 
-            for key, ref in memoryPool.items():
-                if config.gc:
-                    codeFile.write('\t{}.destroy();\n'.format(ref.name))
+            # fix garbage collection
+            #for key, ref in memoryPool.items():
+            #    if config.gc:
+            #        codeFile.write('\t{}.destroy();\n'.format(ref.name))
 
             #if isinstance(op, Zeros):
             #    assert len(op.args) == 0
