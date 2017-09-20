@@ -381,7 +381,7 @@ class Function(object):
             
         codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(outputs)))
         for index, out in enumerate(outputs):
-            codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}));\n'.format(index, out.name))
+            codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}, false));\n'.format(index, out.name))
         codeFile.write('\t//printf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         codeFile.write('\treturn outputs;')
         codeFile.write('\n')

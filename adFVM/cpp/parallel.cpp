@@ -209,7 +209,6 @@ void Function_mpi_allreduce(std::vector<ext_vec*> vals) {
     const Mesh& mesh = *meshp;
     integer n = vals.size()/2;
     ext_vec in(n, true);
-    ext_vec out(n, true);
     for (integer i = 0; i < n; i++) {
         in.copy(i, &(*vals[i])(0), 1);
     }
@@ -218,6 +217,7 @@ void Function_mpi_allreduce(std::vector<ext_vec*> vals) {
             (*vals[i+n]).copy(0, &in(i), 1);
         }
     } else {
+        ext_vec out(n, true);
         MPI_Allreduce(&in(0), &out(0), n, mpi_type<decltype(vals[0]->type)>(), MPI_SUM, MPI_COMM_WORLD);
         for (integer i = 0; i < n; i++) {
             (*vals[i+n]).copy(0, &out(i), 1);

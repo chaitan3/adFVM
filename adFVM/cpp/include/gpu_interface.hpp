@@ -31,7 +31,7 @@ void getArray(PyArrayObject *array, gpuArrType<dtype, shape1, shape2> & tmp, int
 }
 
 template <typename dtype, integer shape1>
-PyObject* putArray(gpuArrType<dtype, shape1> &tmp) {
+PyObject* putArray(gpuArrType<dtype, shape1> &tmp, bool reuseMemory=false) {
     npy_intp shape[2] = {tmp.shape, shape1};
     dtype* data = tmp.toHost();
     PyObject *array;
@@ -46,7 +46,7 @@ PyObject* putArray(gpuArrType<dtype, shape1> &tmp) {
     return array;
 }
 template <typename dtype, integer shape1, integer shape2>
-PyObject* putArray(gpuArrType<dtype, shape1, shape2> &tmp) {
+PyObject* putArray(gpuArrType<dtype, shape1, shape2> &tmp, bool reuseMemory=false) {
     npy_intp shape[3] = {tmp.shape, shape1, shape2};
     dtype* data = tmp.toHost();
 

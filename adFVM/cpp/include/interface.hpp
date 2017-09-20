@@ -41,19 +41,27 @@ void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp, int64_
 
     dtype *data = (dtype *) PyArray_DATA(array);
     arrType<dtype, shape1, shape2> result(dims[0], data);
-    if (id > -1) {
-        result.id = id;
-        result.shared();
-    }
+    // no shared stuff for inputs
+    //if (id > -1) {
+    //    result.id = id;
+    //    result.shared();
+    //}
+    
     //cout << rows << " " << cols << endl;
     //if ((typeid(dtype) != type(uscalar)) && (typeid(dtype) != typeid(integer))) {
     tmp = move(result);
 }
 
 template <typename dtype, integer shape1>
-PyObject* putArray(arrType<dtype, shape1> &tmp) {
+PyObject* putArray(arrType<dtype, shape1> &tmp, bool reuseMemory=true) {
     npy_intp shape[2] = {tmp.shape, shape1};
-    dtype* data = tmp.toHost();
+    dtype* data;
+    if (reuseMemory) {
+        data = tmp.data;
+        tmp.ownData = false;
+    } else {
+        data = tmp.toHost();
+    }
     PyObject *array;
     if (typeid(dtype) == typeid(double)) {
         array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
@@ -66,9 +74,15 @@ PyObject* putArray(arrType<dtype, shape1> &tmp) {
     return array;
 }
 template <typename dtype, integer shape1, integer shape2>
-PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
+PyObject* putArray(arrType<dtype, shape1, shape2> &tmp, bool reuseMemory=true) {
     npy_intp shape[3] = {tmp.shape, shape1, shape2};
-    dtype* data = tmp.toHost();
+    dtype* data;
+    if (reuseMemory) {
+        data = tmp.data;
+        tmp.ownData = false;
+    } else {
+        data = tmp.toHost();
+    }
     PyObject *array;
     if (typeid(dtype) == typeid(double)) {
         array = PyArray_SimpleNewFromData(3, shape, NPY_DOUBLE, data);
