@@ -29,10 +29,8 @@ def getPlane(solver):
     nPlaneCells = interCells.shape[0]
     solver.extraArgs.append((tensor.IntegerScalar(), nPlaneCells))
     nPlaneCells = solver.extraArgs[-1][0]
-    solver.extraArgs.append((tensor.Variable((nPlaneCells, 1), 'integer'), interCells))
-    solver.extraArgs[-1][0].static = True
-    solver.extraArgs.append((tensor.Variable((nPlaneCells, 1)), interArea))
-    solver.extraArgs[-1][0].static = True
+    solver.extraArgs.append((tensor.StaticIntegerVariable((nPlaneCells, 1)), interCells))
+    solver.extraArgs.append((tensor.StaticVariable((nPlaneCells, 1)), interArea))
     return 
 
 def objectivePressureLoss(U, T, p, cells, areas, **options):
@@ -66,8 +64,7 @@ def getWeights(solver):
         else:
             weights = np.logical_and(centres[:,0] >= 0.035241, centres[:, 1] <= 0.044337)
         nFaces = mesh.boundary[patchID]['nFaces']
-        solver.extraArgs.append((tensor.Variable((nFaces, 1)), (weights*1.).astype(config.precision)))
-        solver.extraArgs[-1][0].static = True
+        solver.extraArgs.append((tensor.StaticVariable((nFaces, 1)), (weights*1.).astype(config.precision)))
     
 def objective(fields, solver):
     U, T, p = fields

@@ -91,7 +91,7 @@ class baseArrType {
         this -> ownData = false;
         this -> keepMemory = false;
         this -> sharedMemory = false;
-        this -> id = -1;
+        this -> id = 0;
     }
 
     void init(const integer shape) {
@@ -110,7 +110,7 @@ class baseArrType {
     void init_shape(const integer shape, bool zero, bool keepMemory, int64_t id) {
         this->init(shape);
         this->keepMemory = keepMemory;
-        this->sharedMemory = (this->id > -1);
+        this->sharedMemory = (this->id != 0);
         if (this->sharedMemory) {
             this->shared(zero);
         } else {
@@ -124,7 +124,7 @@ class baseArrType {
         this->set_default_values();
     }
 
-    baseArrType(const integer shape, bool zero=false, bool keepMemory=false, int64_t id=-1) {
+    baseArrType(const integer shape, bool zero=false, bool keepMemory=false, int64_t id=0) {
         this->init_shape(shape, zero, keepMemory, id);
     }
 

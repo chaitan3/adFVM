@@ -6,7 +6,7 @@ import copy
 
 #import adFVMcpp
 from . import config, parallel, timestep
-from .tensor import Variable, ExternalFunctionOp, Function
+from .tensor import StaticVariable, ExternalFunctionOp, Function
 from .parallel import pprint
 from .memory import printMemUsage
 
@@ -112,9 +112,7 @@ class Solver(object):
 
     def initSource(self):
         mesh = self.mesh.symMesh
-        symbolics = [Variable((mesh.nInternalCells,) + dims) for dims in self.dimensions]
-        for sym in symbolics:
-            sym.static = True
+        symbolics = [StaticVariable((mesh.nInternalCells,) + dims) for dims in self.dimensions]
         values = [np.zeros((self.mesh.nInternalCells, dims[0]), config.precision) for dims in self.dimensions]
         self.sourceTerms = zip(symbolics, values)
         return

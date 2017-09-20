@@ -85,12 +85,27 @@ class Variable(ArithBase):
             gradArgs[0].outputIndex = self.outputIndex
         return gradArgs
 
+    def staticId(self):
+        if self.static:
+            return hash(self.name)
+        else:
+            return 0
+
 class Zeros(Variable):
     pass
 
 class IntegerVariable(Variable):
-    def __init__(self, shape, dtype='integer'):
-        super(IntegerVariable, self).__init__(shape, dtype)
+    def __init__(self, shape):
+        super(IntegerVariable, self).__init__(shape, 'integer')
+
+class StaticVariable(Variable):
+    def __init__(self, shape, dtype=_dtype):
+        super(StaticVariable, self).__init__(shape, dtype)
+        self.static = True
+
+class StaticIntegerVariable(StaticVariable):
+    def __init__(self, shape):
+        super(StaticIntegerVariable, self).__init__(shape, 'integer')
 
 import inspect
 class FunctionOp(object):
@@ -309,11 +324,7 @@ class Function(object):
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
-            if inp.static:
-                varId = id(inp)
-            else:
-                varId = '-1'
-            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, {1}L);\n'.format(inp.name, varId))
+            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, {1}L);\n'.format(inp.name, inp.staticId()))
         codeFile.write('\n')
 
         varChildren = {}
@@ -345,11 +356,7 @@ class Function(object):
                     shape = ','.join([str(x) for x in arg.shape[1:]])
                     arrType = '{}<{}, {}>'.format(self.arrType, arg.dtype, shape)
                     #codeFile.write('\t{} {}({}, true);\n'.format(arrType, varName, self._getName(arg.shape[0]))) 
-                    if arg.static:
-                        varId = id(arg)
-                    else:
-                        varId = -1
-                    codeFile.write('\t{} {}({}, true, true, {}L);\n'.format(arrType, varName, self._getName(arg.shape[0]), varId)) 
+                    codeFile.write('\t{} {}({}, true, true, {}L);\n'.format(arrType, varName, self._getName(arg.shape[0]), arg.staticId())) 
                     memoryInit[varName] = 1
 
             # fix garbage collection

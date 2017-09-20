@@ -10,7 +10,7 @@ from . import config, parallel
 from .compat import decompose
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
-from .tensor import IntegerScalar, Container, Variable, IntegerVariable
+from .tensor import IntegerScalar, Container, StaticVariable, StaticIntegerVariable
 if config.gpu:
     from .cpp import cmesh_gpu as cmesh
 else:
@@ -896,8 +896,7 @@ class Mesh(object):
         for attr in Mesh.gradFields:
             value = getattr(mesh, attr)
             size = sizes[value.shape[0]]
-            var = Variable((size,) + value.shape[1:])
-            var.static = True
+            var = StaticVariable((size,) + value.shape[1:])
             setattr(self, attr, var)
 
         for attr in Mesh.intFields:
@@ -906,8 +905,7 @@ class Mesh(object):
             size = sizes[value.shape[0]]
             if len(value.shape) > 1:
                 shape = value.shape[1]
-            var = IntegerVariable((size, shape))
-            var.static = True
+            var = StaticIntegerVariable((size, shape))
             setattr(self, attr, var)
 
         for patchID in mesh.sortedPatches:

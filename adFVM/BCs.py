@@ -1,7 +1,7 @@
 import numpy as np
 
 from . import config
-from .tensor import Tensor, Tensorize, Variable
+from .tensor import Tensor, Tensorize, StaticVariable
 from .mesh import extractField, extractVector
 logger = config.Logger(__name__)
 
@@ -59,8 +59,7 @@ class BoundaryCondition(object):
         nFaces = patch['nFaces']
         value = extractField(self.patch[key], nFaces, dimensions)
         self.patch['_{}'.format(key)] = value
-        symbolic = Variable((self.nFaces,) + dimensions)
-        symbolic.static = True
+        symbolic = StaticVariable((self.nFaces,) + dimensions)
         #print(symbolic.dtype)
         self.inputs.append((symbolic, value))
         return symbolic
@@ -101,7 +100,6 @@ class cyclic(BoundaryCondition):
         neighbourPatch = self.mesh.boundary[patchID]['neighbourPatch']
         neighbourStartFace = self.mesh.symMesh.boundary[neighbourPatch]['startFace']
         self.inputs.append((self.owner[neighbourStartFace], None))
-        self.inputs[-1][0].static = True
 
     def _update(self, phi, neighbourIndices):
         logger.debug('cyclic BC for {0}'.format(self.patchID))
@@ -111,7 +109,6 @@ class zeroGradient(BoundaryCondition):
     def __init__(self, phi, patchID):
         super(self.__class__, self).__init__(phi, patchID)
         self.inputs.append((self.owner[self.startFace], None))
-        self.inputs[-1][0].static = True
 
     def _update(self, phi, owner):
         logger.debug('zeroGradient BC for {0}'.format(self.patchID))
@@ -175,9 +172,7 @@ class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
             self.createInput('direction', (3,))
         else:
             self.inputs.append((self.normals, None))
-            self.inputs[-1][0].static = True
         self.inputs.append((self.owner[self.startFace], None))
-        self.inputs[-1][0].static = True
 
     def _update(self, U, T, p, Tt, pt, direction, owner):
         U, T = U.extract(owner), T.extract(owner)
