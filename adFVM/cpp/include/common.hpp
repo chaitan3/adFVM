@@ -79,7 +79,7 @@ class arrType {
     bool keepMemory;
     int64_t id;
 
-    void initPre() {
+    void set_default_values() {
         this->shape = 0;
         for (integer i = 0; i < NDIMS; i++)  {
             this->strides[i] = 0;
@@ -94,7 +94,7 @@ class arrType {
     }
 
     void init(const integer shape) {
-        this->initPre();
+        this->set_default_values();
         this->shape = shape;
         //integer temp = 1;
         this->strides[3] = 1;
@@ -105,6 +105,65 @@ class arrType {
         this->size = this->strides[0]*shape;
         this->bufSize = this->size*sizeof(dtype);
     }
+
+    void init_shape(const integer shape, bool zero, bool keepMemory, int64_t id) {
+        this->init(shape);
+        this->keepMemory = keepMemory;
+        this->sharedMemory = (this->id > -1);
+        if (this->sharedMemory) {
+            this->shared(zero);
+        } else {
+            this->acquire();
+            if (zero) {
+                this->zero();
+            }
+        }
+    }
+    arrType () {
+        this->set_default_values();
+    }
+
+    arrType(const integer shape, bool zero=false, bool keepMemory=false, int64_t id=-1) {
+        this->init_shape(shape, zero, keepMemory, id);
+    }
+
+    arrType(const integer shape, dtype* data) {
+        this -> init(shape);
+        this -> data = data;
+    }
+
+    arrType(const integer shape, const dtype* data) {
+        this->init(shape);
+        this->data = const_cast<dtype *>(data);
+    }
+
+    arrType(const integer shape, const string& data) {
+        this->init(shape);
+        this->data = const_cast<dtype *>((dtype *)data.data());
+    }
+
+    // copy constructor?
+
+    // move constructor
+    arrType(arrType&& that) {
+        //this->move(that);
+        this->init(that.shape);
+        this->data = that.data;
+        this->ownData = that.ownData;
+        that.ownData = false;
+    }
+    arrType& operator=(arrType&& that) {
+        assert(this != &that);
+        this->destroy();
+        //this->move(that);
+        this->init(that.shape);
+        this->data = that.data;
+        this->ownData = that.ownData;
+        that.ownData = false;
+        return *this;
+
+    }
+
     void destroy() {
         if (this->ownData) {
             if (this->keepMemory) {
@@ -116,6 +175,11 @@ class arrType {
             }
         }
     }
+
+    ~arrType() {
+        this->destroy();
+    };
+
     void acquire() {
         int key = this->bufSize;
         if (mem.pool.count(key) == 0) {
@@ -174,90 +238,6 @@ class arrType {
         delete[] this -> data; 
     }
 
-    arrType () {
-        this->initPre();
-    }
-
-    arrType(const integer shape, bool zero=false, bool keepMemory=false, int64_t id=-1) {
-        this->init(shape);
-        this->keepMemory = keepMemory;
-        this->sharedMemory = (this->id > -1);
-        if (this->sharedMemory) {
-            this->shared(zero);
-        } else {
-            this->acquire();
-            if (zero) {
-                this->zero();
-            }
-        }
-    }
-
-    arrType(const integer shape, dtype* data) {
-        this -> init(shape);
-        this -> data = data;
-    }
-
-    arrType(const integer shape, const dtype* data) {
-        this->init(shape);
-        this->data = const_cast<dtype *>(data);
-    }
-
-    arrType(const integer shape, const string& data) {
-        this->init(shape);
-        this->data = const_cast<dtype *>((dtype *)data.data());
-    }
-
-    // copy constructor?
-
-    // move constructor
-    arrType(arrType&& that) {
-        //this->move(that);
-        this->init(that.shape);
-        this->data = that.data;
-        this->ownData = that.ownData;
-        that.ownData = false;
-    }
-    arrType& operator=(arrType&& that) {
-        assert(this != &that);
-        this->destroy();
-        //this->move(that);
-        this->init(that.shape);
-        this->data = that.data;
-        this->ownData = that.ownData;
-        that.ownData = false;
-        return *this;
-
-    }
-    ~arrType() {
-        this->destroy();
-    };
-    
-    const dtype& operator() (const integer i1) const {
-        return const_cast<const dtype &>(data[i1*this->strides[0]]);
-    }
-
-    const dtype& operator() (const integer i1, const integer i2) const {
-        return const_cast<const dtype &>(data[i1*this->strides[0] + 
-                      i2*this->strides[1]]);
-    }
-    const dtype& operator() (const integer i1, const integer i2, const integer i3) const {
-        return const_cast<const dtype &>(data[i1*this->strides[0] + 
-                      i2*this->strides[1] +
-                      i3*this->strides[2]]);
-    }
-
-
-
-    dtype& operator()(const integer i1) {
-        return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1));
-    }
-    dtype& operator()(const integer i1, const integer i2) {
-        return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1, i2));
-    }
-    dtype& operator()(const integer i1, const integer i2, const integer i3) {
-        return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1, i2, i3));
-    }
-
     virtual void zero() {
         memset(this->data, 0, this->bufSize);
     }
@@ -302,6 +282,33 @@ class arrType {
             }
         }
     }
+
+    const dtype& operator() (const integer i1) const {
+        return const_cast<const dtype &>(data[i1*this->strides[0]]);
+    }
+
+    const dtype& operator() (const integer i1, const integer i2) const {
+        return const_cast<const dtype &>(data[i1*this->strides[0] + 
+                      i2*this->strides[1]]);
+    }
+    const dtype& operator() (const integer i1, const integer i2, const integer i3) const {
+        return const_cast<const dtype &>(data[i1*this->strides[0] + 
+                      i2*this->strides[1] +
+                      i3*this->strides[2]]);
+    }
+
+
+
+    dtype& operator()(const integer i1) {
+        return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1));
+    }
+    dtype& operator()(const integer i1, const integer i2) {
+        return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1, i2));
+    }
+    dtype& operator()(const integer i1, const integer i2, const integer i3) {
+        return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1, i2, i3));
+    }
+
     // not used by default
     bool checkNAN() {
         for (integer i = 0; i < this->size; i++) {
