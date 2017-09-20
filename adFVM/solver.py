@@ -300,7 +300,6 @@ class Solver(object):
                 #        fields[index].write()
                 #    exit(1)
             pprint('Time step', timeIndex)
-            pprint()
 
             inputs = [phi.field for phi in fields] + \
                      [np.array([[dt]], config.precision)] + \

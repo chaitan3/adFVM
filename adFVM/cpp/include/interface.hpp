@@ -22,6 +22,10 @@ char* PyString_AsString(PyObject* result);
 #define _GET_MODULE(name, mod) name##mod
 #define GET_MODULE(name, mod) _GET_MODULE(name, mod)
 
+
+PyObject* PyTuple_CreateNone(int);
+map<string, int> PyOptions_Parse(PyObject*);
+
 scalar getMaxEigenvalue(arrType<scalar, 5, 5>& phi, vec& eigPhi);
 
 template <template<typename, integer, integer, integer> class derivedArrType, typename dtype, integer shape1, integer shape2=1, integer shape3=1>

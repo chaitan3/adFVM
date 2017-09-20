@@ -258,6 +258,9 @@ class Function(object):
     codeDir = os.path.dirname(__file__) + '/gencode/'
     codeFile = 'code.{}'.format(config.codeExt)
     funcs = []
+    defaultOptions = {'return_static': True, 
+                      'zero_static': False
+                     }
 
     def __init__(self, name, inputs, outputs):
         if config.gpu:
@@ -311,8 +314,9 @@ class Function(object):
         
     def _genCode(self, outputs):
         codeFile = open(self.codeDir + self.codeFile, 'a')
-        codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args) {{\n'.format(self.name))
+        codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args, PyObject *kwargs) {{\n'.format(self.name))
         codeFile.write('\t//printf("%d %d\\n", mem.usage, mem.maxUsage);\n')
+        codeFile.write('\tmap<string, int> options = PyOptions_Parse(kwargs);\n')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
         memoryInit = {}
@@ -372,15 +376,13 @@ class Function(object):
                 #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
                 if config.gpu:
                     name = self._getName(op.indices)
-                    codeFile.write('\tif ({} > 0) {{\n'.format(name))
-                    codeFile.write('\t\tinteger nBlocks = {}/GPU_THREADS_PER_BLOCK + 1;\n'.format(name))
-                    codeFile.write('\t\tdim3 blocks(nBlocks / GPU_MAX_BLOCKS + 1, min(nBlocks, GPU_MAX_BLOCKS));\n')
-                    codeFile.write('\t\tdim3 threads(min(GPU_THREADS_PER_BLOCK, {}));\n'.format(name))
+                    #codeFile.write('\tinteger nBlocks = {}/GPU_THREADS_PER_BLOCK + 1;\n'.format(name))
+                    #codeFile.write('\tdim3 blocks(nBlocks / GPU_MAX_BLOCKS + 1, min(nBlocks, GPU_MAX_BLOCKS));\n')
+                    #codeFile.write('\tdim3 threads(min(GPU_THREADS_PER_BLOCK, {}));\n'.format(name))
                     #codeFile.write('\t\t{}<<<blocks, threads>>>({}, {});\n'.format(op.name, name, op.getCallString()))
-                    codeFile.write('\t\t{}<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>({}, {});\n'.format(op.name, name, op.getCallString()))
-                    codeFile.write('\t\tgpuErrorCheck(cudaDeviceSynchronize());\n')
-                    codeFile.write('\t\tgpuErrorCheck(cudaPeekAtLastError());\n')
-                    codeFile.write('\t}\n')
+                    codeFile.write('\t{}<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>({}, {});\n'.format(op.name, name, op.getCallString()))
+                    #codeFile.write('\tgpuErrorCheck(cudaDeviceSynchronize());\n')
+                    codeFile.write('\tgpuErrorCheck(cudaPeekAtLastError());\n')
                 else:
                     codeFile.write('\t{}({}, {});\n'.format(op.name, self._getName(op.indices), op.getCallString()))
             elif isinstance(op, ExternalFunctionOp):
@@ -392,9 +394,17 @@ class Function(object):
                 raise Exception('op not recognised', op)
             prevOp = op
             
-        codeFile.write('\n\tPyObject* outputs = PyTuple_New({});\n'.format(len(outputs)))
+        codeFile.write('\n\tPyObject* outputs = PyTuple_CreateNone({});\n'.format(len(outputs)))
         for index, out in enumerate(outputs):
-            codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}, false));\n'.format(index, out.name))
+            if isinstance(out, Variable) and out.static:
+                codeFile.write('\tif (options["return_static"]) {\n');
+                codeFile.write('\t\tPyTuple_SetItem(outputs, {}, putArray({}, false));\n'.format(index, out.name))
+                codeFile.write('\t}\n');
+                codeFile.write('\tif (options["zero_static"]) {\n');
+                codeFile.write('\t\t{}.zero();\n'.format(out.name))
+                codeFile.write('\t}\n');
+            else:
+                codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}, false));\n'.format(index, out.name))
         codeFile.write('\t//printf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         codeFile.write('\treturn outputs;')
         codeFile.write('\n')
@@ -429,9 +439,12 @@ class Function(object):
         #return [gradients.get(inp, (None,))[-1] for inp in inputs]
         return [gradients.get(inp, (None,))[0] for inp in inputs]
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         func = getattr(Function._module, self.name)
-        return func(*args)
+        options = self.defaultOptions.copy()
+        options.update(kwargs)
+        #print options
+        return func(*args, **options)
 
     @classmethod
     def createCodeDir(self, case):
@@ -455,7 +468,7 @@ class Function(object):
             with open(self.codeDir + self.codeFile, 'a') as f:
                 f.write("PyMethodDef ExtraMethods[] = {\n")
                 for name in Function.funcs:
-                    f.write('\t{{"{0}", Function_{0}, METH_VARARGS, "boo"}},\n'.format(name))
+                    f.write('\t{{"{0}",(PyCFunction)Function_{0}, METH_VARARGS | METH_KEYWORDS, "boo"}},\n'.format(name))
                 f.write("\n\t\t{NULL, NULL, 0, NULL}        /* Sentinel */\n\t};\n")
             if config.openmp:
                 os.environ['WITH_OPENMP'] = '1'

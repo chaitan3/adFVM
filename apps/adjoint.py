@@ -11,7 +11,7 @@ from adFVM.solver import Solver
 from adFVM.tensor import TensorFunction
 from adFVM.variable import Variable, Function, Zeros
 
-from problem import primal, nSteps, writeInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints
+from problem import primal, nSteps, writeInterval, sampleInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints
 
 import numpy as np
 import time
@@ -190,7 +190,7 @@ class Adjoint(Solver):
                      [phi.field for phi in fields] + \
                      [dtca, obja]
 
-                outputs = self.map(*inputs, return_static=sample)
+                outputs = self.map(*inputs, return_static=sample, zero_static=sample)
 
                 #print(sum([(1e-3*phi).sum() for phi in gradient]))
                 #inp1 = inputs[:3] + inputs[-3:-1]
@@ -247,10 +247,10 @@ class Adjoint(Solver):
                     start4 = time.time()
                     pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
+                #print([type(x) for x in outputs])
                 if sample:
                     ms = n + 1
                     me = ms + len(mesh.gradFields)
-                    #zero?
                     meshGradient = outputs[ms:me]
                     #import pdb;pdb.set_trace()
                     ss = n+1+len(mesh.gradFields + mesh.intFields)
