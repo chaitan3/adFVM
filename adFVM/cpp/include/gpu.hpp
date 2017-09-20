@@ -130,20 +130,26 @@ __inline__ __device__ void reduceMax(int n, const dtype val, dtype* res) {
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     public:
-    void alloc() {
+    using arrType<dtype, shape1, shape2, shape3>::arrType;
+
+    virtual void alloc() override {
         gpuErrorCheck(cudaMalloc(&this->data, this->bufSize));
-    }
-    void dealloc() {
+    } 
+    virtual void dealloc() override {
         gpuErrorCheck(cudaFree(this->data));
     }
-    gpuArrType(const integer shape, bool zero=false, bool keepMemory=false, int id=-1):
-    arrType<dtype, shape1, shape2, shape3>(shape, zero, keepMemory, id) {}
-
-    gpuArrType(const integer shape, dtype* data):
-    arrType<dtype, shape1, shape2, shape3>(shape, data) {}
-
-    void zero() {
+    virtual void zero() override {
         gpuErrorCheck(cudaMemset(this->data, 0, this->bufSize));
+    }
+    virtual dtype* toHost() const override {
+        dtype* hdata = new dtype[this->size];
+        cout << "transferring to host: " << this->bufSize << endl;
+        gpuErrorCheck(cudaMemcpy(hdata, this->data, this->bufSize, cudaMemcpyDeviceToHost));
+        return hdata;
+    }
+    virtual void toDevice(dtype* data) override {
+        cout << "transferring to device: " << this->bufSize << endl;
+        gpuErrorCheck(cudaMemcpy(this->data, data, this->bufSize, cudaMemcpyHostToDevice));
     }
     void copy(integer index, dtype* sdata, integer n) {
         gpuErrorCheck(cudaMemcpy(&(*this)(index), sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice));
@@ -161,16 +167,7 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         gpuErrorCheck(cudaPeekAtLastError());
         //gpuErrorCheck(cudaDeviceSynchronize());
     }
-    dtype* toHost() const {
-        dtype* hdata = new dtype[this->size];
-        cout << "transferring to host: " << this->bufSize << endl;
-        gpuErrorCheck(cudaMemcpy(hdata, this->data, this->bufSize, cudaMemcpyDeviceToHost));
-        return hdata;
-    }
-    void toDevice(dtype* data) {
-        cout << "transferring to device: " << this->bufSize << endl;
-        gpuErrorCheck(cudaMemcpy(this->data, data, this->bufSize, cudaMemcpyHostToDevice));
-    }
+    
     void info() const {
         dtype minPhi, maxPhi;
         minPhi = 1e30;
@@ -192,21 +189,6 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
         //cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
     }
-    gpuArrType() : arrType<dtype, shape1, shape2, shape3>() {}
-    gpuArrType& operator=(gpuArrType&& that) {
-        assert(this != &that);
-        this->destroy();
-        //this->move(that);
-        this->init(that.shape);
-        this->data = that.data;
-        this->ownData = that.ownData;
-        that.ownData = false;
-        return *this;
-
-    }
-    ~gpuArrType() {
-        this->destroy();
-    };
 };
 
 #define extArrType gpuArrType

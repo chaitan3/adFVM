@@ -5,7 +5,7 @@
 #include "gpu.hpp"
 
 template <typename dtype, integer shape1, integer shape2>
-void getArray(PyArrayObject *array, gpuArrType<dtype, shape1, shape2> & tmp, int id=-1) {
+void getArray(PyArrayObject *array, gpuArrType<dtype, shape1, shape2> & tmp, int64_t id=-1) {
     assert(array);
     int nDims = PyArray_NDIM(array);
     npy_intp* dims = PyArray_DIMS(array);

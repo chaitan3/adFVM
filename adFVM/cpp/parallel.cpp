@@ -19,8 +19,7 @@ extArrType<integer> owner;
 void parallel_init() {
     Mesh& mesh = *meshp;
     #ifdef GPU 
-        integer* store = NULL;
-        owner = move(extArrType<integer>(mesh.owner.shape, store));
+        owner = move(extArrType<integer>(mesh.owner.shape));
         owner.toDevice(mesh.owner.data);
     #else 
         owner = move(mesh.owner);

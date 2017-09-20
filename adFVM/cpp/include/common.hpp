@@ -77,7 +77,7 @@ class arrType {
     bool ownData;
     bool sharedMemory;
     bool keepMemory;
-    int id;
+    int64_t id;
 
     void initPre() {
         this->shape = 0;
@@ -131,7 +131,7 @@ class arrType {
         this->ownData = true;
     }
     void shared(bool zero=false) {
-        int id = this->id;
+        int64_t id = this->id;
         this->sharedMemory = true;
         if (mem.refs.count(id) > 0) {
             this->data = (dtype *)mem.refs.at(id);
@@ -178,7 +178,7 @@ class arrType {
         this->initPre();
     }
 
-    arrType(const integer shape, bool zero=false, bool keepMemory=false, int id=-1) {
+    arrType(const integer shape, bool zero=false, bool keepMemory=false, int64_t id=-1) {
         this->init(shape);
         this->keepMemory = keepMemory;
         this->sharedMemory = (this->id > -1);
@@ -262,19 +262,20 @@ class arrType {
         memset(this->data, 0, this->bufSize);
     }
 
-    virtual void copy(const integer index, const dtype* sdata, const integer n) {
-        memcpy(&(*this)(index), sdata, n*sizeof(dtype));
-    }
     virtual dtype* toHost() const {
         dtype* hdata = new dtype[this->size];
         memcpy(hdata, this->data, this->bufSize);
         return hdata;
     }
     virtual void toDevice(dtype *data) {
-        this->copy(0, data, this->size);
+        memcpy(this->data, data, this->bufSize);
+        //this->copy(0, data, this->size);
+    }
+    void copy(const integer index, const dtype* sdata, const integer n) {
+        memcpy(&(*this)(index), sdata, n*sizeof(dtype));
     }
 
-    virtual void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
+    void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
         integer i, j, k;
         #pragma omp parallel for private(i, j, k)
         for (i = 0; i < n; i++) {
@@ -287,7 +288,7 @@ class arrType {
             }
         }
     }
-    virtual void extract(const integer *indices, const dtype* phiBuf, const integer n) {
+    void extract(const integer *indices, const dtype* phiBuf, const integer n) {
         integer i, j, k;
         #pragma omp parallel for private(i, j, k)
         for (i = 0; i < n; i++) {

@@ -308,7 +308,7 @@ class Function(object):
                 varId = id(inp)
             else:
                 varId = '-1'
-            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, {1});\n'.format(inp.name, varId))
+            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, {1}L);\n'.format(inp.name, varId))
         codeFile.write('\n')
 
         varChildren = {}
@@ -344,7 +344,7 @@ class Function(object):
                         varId = id(inp)
                     else:
                         varId = -1
-                    codeFile.write('\t{} {}({}, true, true, {});\n'.format(arrType, varName, self._getName(arg.shape[0]), varId)) 
+                    codeFile.write('\t{} {}({}, true, true, {}L);\n'.format(arrType, varName, self._getName(arg.shape[0]), varId)) 
                     memoryInit[varName] = 1
 
             # fix garbage collection
