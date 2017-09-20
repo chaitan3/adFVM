@@ -5,7 +5,7 @@
 #include "gpu.hpp"
 
 template <typename dtype, integer shape1, integer shape2>
-void getArray(PyArrayObject *array, gpuArrType<dtype, shape1, shape2> & tmp, const string& attr) {
+void getArray(PyArrayObject *array, gpuArrType<dtype, shape1, shape2> & tmp, int id=-1) {
     assert(array);
     int nDims = PyArray_NDIM(array);
     npy_intp* dims = PyArray_DIMS(array);
@@ -21,24 +21,12 @@ void getArray(PyArrayObject *array, gpuArrType<dtype, shape1, shape2> & tmp, con
     assert(PyArray_ITEMSIZE(array) == sizeof(dtype));
 
     dtype *data = (dtype *) PyArray_DATA(array);
-
-    //arrType<dtype, shape1, shape2> test(dims[0], data);
-    //test.info();
-
-    dtype *store = NULL;
-    if (tmp.staticVariable && mem.refs.count(attr)) {
-        store = (dtype *)mem.refs.at(attr);
-        gpuArrType<dtype, shape1, shape2> result(dims[0], store);
-        tmp = move(result);
-    } else {
-        gpuArrType<dtype, shape1, shape2> result(dims[0], store);
-        result.toDevice(data);
-        if (tmp.staticVariable) {
-            result.ownData = false;
-            mem.refs[attr] = (void *)result.data;
-        }
-        tmp = move(result);
+    gpuArrType<dtype, shape1, shape2> result(dims[0], data);
+    if (id > -1) {
+        result.id = id;
+        result.shared();
     }
+    tmp = move(result);
     //result.info();
 }
 

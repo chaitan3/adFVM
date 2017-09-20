@@ -98,6 +98,12 @@ class RCF(Solver):
         args = [rho, rhoU, rhoE, self.dt] + meshArgs + sourceArgs + BCArgs + extraArgs
         outputs = [rhoN, rhoUN, rhoEN, self.dtc, self.obj]
         self.map = Function('primal', args, outputs)
+    
+        #gradOutputs, gradInputs = self.map.getAdjoint()
+        #args += gradOutputs
+        #outputs = gradInputs
+        #self.map.adjoint = Function('primal_grad', args, outputs)
+        self.map.adjoint = self.map.getAdjoint()
 
     def compileExtra(self):
         mesh = self.mesh.symMesh
@@ -106,7 +112,7 @@ class RCF(Solver):
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1))
         scaling = Variable((1,1))
         DT = postpro.getAdjointViscosityCpp(self, rho, rhoU, rhoE, scaling)
-        self.viscosity = Function('viscosity', [rho, rhoU, rhoE, scaling] + meshArgs + BCArgs, [DT], grad=False)
+        self.viscosity = Function('viscosity', [rho, rhoU, rhoE, scaling] + meshArgs + BCArgs, [DT])
 
     def getBoundaryTensor(self, index=0):
         return super(RCF, self).getBoundaryTensor(index) + \
@@ -374,8 +380,16 @@ class RCF(Solver):
         meshArgs = _meshArgs(mesh.nLocalFaces)
         outputs = self._coupledFlux(mesh.nRemoteCells, outputs)(U, T, p, gradU, gradT, gradp, neighbour=False, boundary=False, *meshArgs)
         drho, drhoU, drhoE, dtc = outputs
+
+        def _minDtc(dtc):
+            #dtc = (dtc**-1)*(2*self.CFL)
+            #return dtc.reduce_min()
+            return dtc.reduce_max()
+        minDtc = Zeros((1, 1))
+        minDtc = Tensorize(_minDtc)(mesh.nInternalCells, (minDtc,))(dtc)[0]
+
         if self.stage == 1:
-            self.dtc, self.obj = dtc, obj
+            self.dtc, self.obj = minDtc, obj
         return drho, drhoU, drhoE
 
     def boundary(self, U, T, p):

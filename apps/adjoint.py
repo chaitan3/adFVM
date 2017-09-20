@@ -70,7 +70,7 @@ class Adjoint(Solver):
 
     def compileSolver(self):
         primal.compileSolver()
-        self.map = primal.map.grad
+        self.map = primal.map.adjoint
 
     def compileExtra(self):
         primal.compileExtra()
@@ -112,6 +112,17 @@ class Adjoint(Solver):
         pprint('Number of steps:', nSteps)
         pprint('Write interval:', writeInterval)
         pprint()
+
+
+        perturbations = []
+        for index in range(0, len(perturb)):
+            perturbation = perturb[index](None, mesh, 0)
+            if isinstance(perturbation, tuple):
+                perturbation = list(perturbation)
+            if not isinstance(perturbation, list):# or (len(parameters) == 1 and len(perturbation) > 1):
+                perturbation = [perturbation]
+                # complex parameter perturbation not supported
+            perturbations.append(perturbation)
 
         totalCheckpoints = nSteps//writeInterval
         nCheckpoints = min(firstCheckpoint + runCheckpoints, totalCheckpoints)
@@ -161,15 +172,13 @@ class Adjoint(Solver):
                     for phi in fields:
                         phi.info()
                     energyTimeSeries.append(getAdjointEnergy(primal, *fields))
-                    pprint('Time step', adjointIndex)
-                else:
-                    pprint('Time step', adjointIndex)
+                pprint('Time step', adjointIndex)
 
                 n = len(fields)
                 #for index in range(0, n):
                 #    fields[index].field *= mesh.volumes
 
-                dtca = np.zeros((mesh.nInternalCells, 1)).astype(config.precision)
+                dtca = np.zeros((1, 1)).astype(config.precision)
                 obja = np.ones((1, 1)).astype(config.precision)
                 inputs = [phi.field for phi in previousSolution] + \
                      [np.array([[dt]], config.precision)] + \
@@ -192,17 +201,9 @@ class Adjoint(Solver):
 
                 # gradients
                 gradient = outputs[:n]
-                ms = n+1
-                me = ms + len(mesh.gradFields)
-                meshGradient = outputs[ms:me]
-                #import pdb;pdb.set_trace()
-                ss = n+1+len(mesh.gradFields + mesh.intFields)
-                se = ss + n
-                sourceGradient = outputs[ss:se]
                 for index in range(0, n):
                     fields[index].field = gradient[index]
                     #fields[index].field = gradient[index]/mesh.volumes
-                #print(fields[0].field.max())
 
                 if self.scaling:
                     for phi in fields:
@@ -245,15 +246,18 @@ class Adjoint(Solver):
                     start4 = time.time()
                     pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
+                n = len(fields)
+                ms = n + 1
+                me = ms + len(mesh.gradFields)
+                meshGradient = outputs[ms:me]
+                #import pdb;pdb.set_trace()
+                ss = n+1+len(mesh.gradFields + mesh.intFields)
+                se = ss + n
+                sourceGradient = outputs[ss:se]
+
                 # compute sensitivity using adjoint solution
                 sensitivities = []
-                for index in range(0, len(perturb)):
-                    perturbation = perturb[index](None, mesh, t)
-                    if isinstance(perturbation, tuple):
-                        perturbation = list(perturbation)
-                    if not isinstance(perturbation, list):# or (len(parameters) == 1 and len(perturbation) > 1):
-                        perturbation = [perturbation]
-                        # complex parameter perturbation not supported
+                for index, perturbation in enumerate(perturbations):
                     sensitivity = 0.
                     # make efficient cpu implementation
                     param = parameters[0]

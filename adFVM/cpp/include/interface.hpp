@@ -24,7 +24,7 @@ char* PyString_AsString(PyObject* result);
 scalar getMaxEigenvalue(arrType<scalar, 5, 5>& phi, vec& eigPhi);
 
 template <typename dtype, integer shape1, integer shape2>
-void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp, const string& attr="") {
+void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp, int id=-1) {
     assert(array);
     int nDims = PyArray_NDIM(array);
     npy_intp* dims = PyArray_DIMS(array);
@@ -39,7 +39,12 @@ void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp, const 
     assert(PyArray_IS_C_CONTIGUOUS(array));
     assert(PyArray_ITEMSIZE(array) == sizeof(dtype));
 
-    arrType<dtype, shape1, shape2> result(dims[0], (dtype *) PyArray_DATA(array));
+    dtype *data = (dtype *) PyArray_DATA(array);
+    arrType<dtype, shape1, shape2> result(dims[0], data);
+    if (id > -1) {
+        result.id = id;
+        result.shared();
+    }
     //cout << rows << " " << cols << endl;
     //if ((typeid(dtype) != type(uscalar)) && (typeid(dtype) != typeid(integer))) {
     tmp = move(result);
@@ -48,8 +53,7 @@ void getArray(PyArrayObject *array, arrType<dtype, shape1, shape2> & tmp, const 
 template <typename dtype, integer shape1>
 PyObject* putArray(arrType<dtype, shape1> &tmp) {
     npy_intp shape[2] = {tmp.shape, shape1};
-    dtype* data = new dtype[tmp.size];
-    memcpy(data, tmp.data, tmp.bufSize);
+    dtype* data = tmp.toHost();
     PyObject *array;
     if (typeid(dtype) == typeid(double)) {
         array = PyArray_SimpleNewFromData(2, shape, NPY_DOUBLE, data);
@@ -64,8 +68,7 @@ PyObject* putArray(arrType<dtype, shape1> &tmp) {
 template <typename dtype, integer shape1, integer shape2>
 PyObject* putArray(arrType<dtype, shape1, shape2> &tmp) {
     npy_intp shape[3] = {tmp.shape, shape1, shape2};
-    dtype* data = new dtype[tmp.size];
-    memcpy(data, tmp.data, tmp.bufSize);
+    dtype* data = tmp.toHost();
     PyObject *array;
     if (typeid(dtype) == typeid(double)) {
         array = PyArray_SimpleNewFromData(3, shape, NPY_DOUBLE, data);

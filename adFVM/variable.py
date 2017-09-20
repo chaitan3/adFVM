@@ -243,7 +243,7 @@ class Function(object):
     codeFile = 'code.{}'.format(config.codeExt)
     funcs = []
 
-    def __init__(self, name, inputs, outputs, grad=True):
+    def __init__(self, name, inputs, outputs):
         if config.gpu:
             self.arrType = 'gpuArrType'
         else:
@@ -257,12 +257,9 @@ class Function(object):
         if config.compile:
             self._genCode(_outputs)
         FunctionOp.clear_cache()
-        if grad:
-            self.grad = self._getAdjoint()
-
         Function.funcs.append(self.name)
 
-    def _getAdjoint(self):
+    def grad(self):
         #gradOutputs = []
         #for out in self._outputTensors:
         #    gradOutputs.append(Tensor(out.shape))
@@ -279,7 +276,11 @@ class Function(object):
             gradOutputs.append(grad)
         FunctionOp.insert_cache(gradOutputs)
         gradInputs = self._diff(self._outputs, self._inputs, gradients)
-        return Function(self.name + '_grad', self._inputs + gradOutputs, gradInputs, grad=False)
+        return gradOutputs, gradInputs
+
+    def getAdjoint(self):
+        gradOutputs, gradInputs = self.grad()
+        return Function(self.name + '_grad', self._inputs + gradOutputs, gradInputs)
 
     def _getName(self, op):
         if isinstance(op, int):
@@ -303,9 +304,11 @@ class Function(object):
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
-            if inp.static and config.gpu:
-                codeFile.write('\t{}.staticVariable = true;\n'.format(inp.name))
-            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, "Py_{1}");\n'.format(inp.name, id(inp)))
+            if inp.static:
+                varId = id(inp)
+            else:
+                varId = '-1'
+            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, {1});\n'.format(inp.name, varId))
         codeFile.write('\n')
 
         varChildren = {}
@@ -327,8 +330,7 @@ class Function(object):
                 assert varChildren[varName] > 0
                 varChildren[varName] -= 1
                 if isinstance(arg, Variable) and varName not in outputNames and varChildren[varName] == 0:
-                #if isinstance(arg, Variable) and varName not in outputNames and varName not in inputNames and varChildren[varName] == 0:
-                    if varName in inputNames and ((not config.gpu) or (config.gpu and arg.static)):
+                    if varName in inputNames and ((not config.gpu) or arg.static):
                         continue
                     codeFile.write('\t{}.release();\n'.format(varName))
             
@@ -338,7 +340,11 @@ class Function(object):
                     shape = ','.join([str(x) for x in arg.shape[1:]])
                     arrType = '{}<{}, {}>'.format(self.arrType, arg.dtype, shape)
                     #codeFile.write('\t{} {}({}, true);\n'.format(arrType, varName, self._getName(arg.shape[0]))) 
-                    codeFile.write('\t{} {}({}, true, true);\n'.format(arrType, varName, self._getName(arg.shape[0]))) 
+                    if inp.static:
+                        varId = id(inp)
+                    else:
+                        varId = -1
+                    codeFile.write('\t{} {}({}, true, true, {});\n'.format(arrType, varName, self._getName(arg.shape[0]), varId)) 
                     memoryInit[varName] = 1
 
             # fix garbage collection
@@ -346,11 +352,6 @@ class Function(object):
             #    if config.gc:
             #        codeFile.write('\t{}.destroy();\n'.format(ref.name))
 
-            #if isinstance(op, Zeros):
-            #    assert len(op.args) == 0
-            #    #codeFile.write('\t// init var {}\n'.format(op.name)) 
-            #    shape = ','.join([str(x) for x in op.shape[1:]])
-            #    codeFile.write('\t{}<{}, {}> {}({}, true);\n'.format(self.arrType, op.dtype, shape, op.name, _getName(op.shape[0]))) 
             if isinstance(op, TensorFunctionOp):
                 codeFile.write('\t/* {} */\n'.format(op.info))
 

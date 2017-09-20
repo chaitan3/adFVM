@@ -153,13 +153,31 @@ class Tensor(ArithBase):
                 res.append(sum(self.scalars[i*n + k]*b[k*n + j] for k in range(0, n)))
         return Tensor(self.shape, res)
 
-    # reduction operations
+    # reduction
     def sum(self):
         assert self.shape == (1,)
-        return Tensor.collate(self, Tensor((1,), [ConstantOp(0)]))
+        res = Tensor((1,), [Reduce('sum', self.scalars[0])])
+        res.cellTensor = True
+        return res
+
+    def reduce_max(self):
+        assert self.shape == (1,)
+        res = Tensor((1,), [Reduce('max', self.scalars[0])])
+        res.cellTensor = True
+        return res
+
+    def reduce_min(self):
+        assert self.shape == (1,)
+        res = Tensor((1,), [Reduce('min', self.scalars[0])])
+        res.cellTensor = True
+        return res
+
 
     def scalar(self):
-        return self.extract(Tensor((1,), [ConstantOp(0)]))
+        assert self.shape == (1,)
+        self.cellTensor = True
+        res = [Singular(self.scalars[0])]
+        return Tensor((1,), res)
 
     def index(self):
         return self.extract(Tensor((1,), [IndexOp()]))
@@ -196,6 +214,9 @@ class Tensor(ArithBase):
     def max(cls, x1, x2):
         return Tensor.switch(x1 > x2, x1, x2)
 
+    @classmethod
+    def min(cls, x1, x2):
+        return Tensor.switch(x1 < x2, x1, x2)
 
 class TensorFunction(object):
     _index = 0
@@ -359,21 +380,31 @@ class TensorFunction(object):
                     a, b = op.args[2*i], op.args[2*i+1]
                     assert b.dtype == 'integer'
                     if config.gpu:
-                        if isinstance(b, ConstantOp):
-                            assert b.constant == 0
-                            assert tensorIndex[2] == 0
-                            code += 'reduceSum<{}>(n, {}, &{}[0]);\n\t\t'.format(dtype, names[a], tensorIndex[0])
-                            #code += 'atomicAdd(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
-                        else:
-                            code += 'atomicAdd(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
+                        code += 'atomicAdd(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                     elif config.openmp:
                         #code += '//invalid in openmp;\n\t\t'
+                        raise Exception("redo this for max/min")
                         code += '#pragma omp atomic\n\t\t'
                         code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                         #code += '__sync_fetch_and_add(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                     else:
                         code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
-                #print code
+            elif isinstance(op, Reduce):
+                a, = op.args
+                tensorIndex = self._outputTensorIndices[op]
+                assert tensorIndex[3]
+                if config.gpu:
+                    code += 'reduce{}<{}>(n, {}, &{}[0]);\n\t\t'.format(op.opType.capitalize(), dtype, names[a], tensorIndex[0])
+                else:
+                    if op.opType == 'sum':
+                        code += '{}[0] += {};\n\t\t'.format(tensorIndex[0], names[a])
+                    else:
+                        code += '{0}[0] = {2}({1}, {0}[0]);\n\t\t'.format(tensorIndex[0], names[a], op.opType)
+            elif isinstance(op, Singular):
+                a, = op.args
+                tensorIndex = self._inputTensorIndices[a]
+                assert tensorIndex[3]
+                code += '{} {} = {}[0];\n\t\t'.format(dtype, names[op], tensorIndex[0])
             else:
                 code = op.c_code(names)
 

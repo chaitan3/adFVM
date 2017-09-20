@@ -281,3 +281,22 @@ class Collate(OpBase):
             grads.append(None)
         return grads
 
+class Reduce(OpBase):
+    def __init__(self, opType, x):
+        self.opType = opType
+        self.args = (x,)
+
+    def grad(self, gradient):
+        x, = self.args
+        if self.opType == 'sum':
+            return [Singular(gradient)]
+        else:
+            return [None]
+
+class Singular(OpBase):
+    def __init__(self, x):
+        self.args = (x,)
+
+    def grad(self, gradient):
+        x, = self.args
+        return [Reduce('sum', gradient)]

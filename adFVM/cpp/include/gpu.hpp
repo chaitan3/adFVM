@@ -46,10 +46,30 @@ __global__ void _extract2(const integer n, dtype* phi1, const dtype* phi2, const
     }
 }
 
+__device__ static float atomicMax(float* address, float val)
+{
+    int* address_as_i = (int*) address;
+    int old = *address_as_i, assumed;
+    do {
+            assumed = old;
+            old = ::atomicCAS(address_as_i, assumed,
+                                __float_as_int(::fmaxf(val, __int_as_float(assumed))));
+        } while (assumed != old);
+    return __int_as_float(old);
+}
+
 template<typename dtype>
 __inline__ __device__ dtype warpReduceSum(dtype val) {
   for (int offset = WARP_SIZE/2; offset > 0; offset /= 2)
     val += __shfl_down(val, offset);
+  return val;
+}
+
+
+template<typename dtype>
+__inline__ __device__ dtype warpReduceMax(dtype val) {
+  for (int offset = WARP_SIZE/2; offset > 0; offset /= 2)
+    val = max(__shfl_down(val, offset), val);
   return val;
 }
 
@@ -71,6 +91,25 @@ __inline__ __device__ void reduceSum(int n, const dtype val, dtype* res) {
         atomicAdd(res, sum);
   }
 } 
+
+template<typename dtype>
+__inline__ __device__ void reduceMax(int n, const dtype val, dtype* res) {
+  dtype sum = val;
+  int i = blockIdx.x * blockDim.x + threadIdx.x; 
+  //for(int i = blockIdx.x * blockDim.x + threadIdx.x; 
+  //    i < n; 
+  //    i += blockDim.x * gridDim.x) {
+  //  sum += in[i];
+  //}
+  int nb = n - (n % WARP_SIZE);
+  if (i >= nb) {
+      atomicMax(res, sum);
+  } else {
+      sum = warpReduceMax<dtype>(sum);
+      if (threadIdx.x & (WARP_SIZE - 1) == 0)
+        atomicMax(res, sum);
+  }
+}
   
 
 //template<typename dtype>
@@ -97,17 +136,12 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
     void dealloc() {
         gpuErrorCheck(cudaFree(this->data));
     }
-    gpuArrType(const integer shape, bool zero=false, bool keepMemory=false) {
-        this->init(shape);
-        this->acquire();
-        this->keepMemory = keepMemory;
-        if (zero) 
-            this->zero();
-    }
-    gpuArrType(const integer shape, dtype* data) {
-        this -> init(shape);
-        this -> data = data;
-    }
+    gpuArrType(const integer shape, bool zero=false, bool keepMemory=false, int id=-1):
+    arrType<dtype, shape1, shape2, shape3>(shape, zero, keepMemory, id) {}
+
+    gpuArrType(const integer shape, dtype* data):
+    arrType<dtype, shape1, shape2, shape3>(shape, data) {}
+
     void zero() {
         gpuErrorCheck(cudaMemset(this->data, 0, this->bufSize));
     }
@@ -127,15 +161,14 @@ class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
         gpuErrorCheck(cudaPeekAtLastError());
         //gpuErrorCheck(cudaDeviceSynchronize());
     }
-    
     dtype* toHost() const {
         dtype* hdata = new dtype[this->size];
+        cout << "transferring to host: " << this->bufSize << endl;
         gpuErrorCheck(cudaMemcpy(hdata, this->data, this->bufSize, cudaMemcpyDeviceToHost));
         return hdata;
     }
     void toDevice(dtype* data) {
-        assert (this->data == NULL);
-        this->acquire();
+        cout << "transferring to device: " << this->bufSize << endl;
         gpuErrorCheck(cudaMemcpy(this->data, data, this->bufSize, cudaMemcpyHostToDevice));
     }
     void info() const {

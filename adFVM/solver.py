@@ -113,6 +113,8 @@ class Solver(object):
     def initSource(self):
         mesh = self.mesh.symMesh
         symbolics = [Variable((mesh.nInternalCells,) + dims) for dims in self.dimensions]
+        for sym in symbolics:
+            sym.static = True
         values = [np.zeros((self.mesh.nInternalCells, dims[0]), config.precision) for dims in self.dimensions]
         self.sourceTerms = zip(symbolics, values)
         return
@@ -271,6 +273,11 @@ class Solver(object):
                 elif isinstance(param, ad.TensorType):
                     raise NotImplementedError
 
+        # made static
+        self.updateSource(source(fields, mesh, t))
+        if perturbation:
+            doPerturb()
+
         def iterate(t, timeIndex):
             return t < endTime and timeIndex < nSteps
         while iterate(t, timeIndex):
@@ -279,10 +286,7 @@ class Solver(object):
             report = (timeIndex % reportInterval) == 0
 
             # source term update
-            self.updateSource(source(fields, mesh, t))
             # perturbation
-            if perturbation:
-                doPerturb()
 
             if report:
                 printMemUsage()
@@ -291,16 +295,14 @@ class Solver(object):
                 pprint('Time marching for', ' '.join(self.names))
                 for index in range(0, len(fields)):
                     fields[index].info()
-                pprint('Time step', timeIndex)
                 #try:
                 #    fields[index].info()
                 #except:
                 #    with IOField.handle(t):
                 #        fields[index].write()
                 #    exit(1)
-            else:
-                pprint('Time step', timeIndex)
-                pprint()
+            pprint('Time step', timeIndex)
+            pprint()
 
             inputs = [phi.field for phi in fields] + \
                      [np.array([[dt]], config.precision)] + \
@@ -321,6 +323,7 @@ class Solver(object):
             #print [x.dtype for x in outputs if hasattr(x, 'dtype')]
             newFields, dtc, objective = outputs[:3], outputs[3], outputs[4]
             objective = objective[0,0]
+            dtc = dtc[0,0]
             #exit(1)
             #print [x.sum() for x in newFields]
 
@@ -364,9 +367,8 @@ class Solver(object):
             elif isinstance(dts, np.ndarray):
                 dt = dts[timeIndex]
             elif not self.fixedTimeStep:
-            #elif (not self.fixedTimeStep) and report:
-                # make efficient cpu implementation
                 dt = min(parallel.min(2*self.CFL/dtc), dt*self.stepFactor, endTime-t)
+                #dt = min(parallel.min(dtc), dt*self.stepFactor, endTime-t)
             if self.dynamicMesh:
                 mesh.update(t, dt)
 
@@ -406,9 +408,9 @@ class Solver(object):
                 timeSteps = []
                 self.writeStatusFile([timeIndex, t, dt, result])
 
-            if perturbation:
-                doPerturb(revert=True)
-                pprint()
+            #if perturbation:
+            #    doPerturb(revert=True)
+            #    pprint()
 
 
         if mode == 'forward':

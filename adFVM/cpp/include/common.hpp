@@ -36,7 +36,7 @@ typedef int32_t integer;
 struct memory {
     int usage;
     int maxUsage;
-    map<string, void *> refs;
+    map<int, void *> refs;
     map<int, queue<void*>> pool;
 };
 extern struct memory mem;
@@ -75,8 +75,9 @@ class arrType {
     integer bufSize;
     integer strides[NDIMS];
     bool ownData;
-    bool staticVariable;
+    bool sharedMemory;
     bool keepMemory;
+    int id;
 
     void initPre() {
         this->shape = 0;
@@ -87,8 +88,9 @@ class arrType {
         this -> bufSize = 0;
         this -> data = NULL;
         this -> ownData = false;
-        this -> staticVariable = false;
         this -> keepMemory = false;
+        this -> sharedMemory = false;
+        this -> id = -1;
     }
 
     void init(const integer shape) {
@@ -128,6 +130,24 @@ class arrType {
         }
         this->ownData = true;
     }
+    void shared(bool zero=false) {
+        int id = this->id;
+        this->sharedMemory = true;
+        if (mem.refs.count(id) > 0) {
+            this->data = (dtype *)mem.refs.at(id);
+        } else {
+            dtype* data = this->data;
+            this->alloc();
+            if (zero) {
+                this->zero();
+            }
+            this->inc_mem();
+            if (this->data != NULL) {
+                this->toDevice(data);
+            }
+            mem.refs[id] = (void *) this->data;
+        }
+    }
     void release() {
         assert (this->ownData);
         int key = this->bufSize;
@@ -158,12 +178,18 @@ class arrType {
         this->initPre();
     }
 
-    arrType(const integer shape, bool zero=false, bool keepMemory=false) {
+    arrType(const integer shape, bool zero=false, bool keepMemory=false, int id=-1) {
         this->init(shape);
-        this->acquire();
         this->keepMemory = keepMemory;
-        if (zero) 
-            this->zero();
+        this->sharedMemory = (this->id > -1);
+        if (this->sharedMemory) {
+            this->shared(zero);
+        } else {
+            this->acquire();
+            if (zero) {
+                this->zero();
+            }
+        }
     }
 
     arrType(const integer shape, dtype* data) {
@@ -239,6 +265,15 @@ class arrType {
     virtual void copy(const integer index, const dtype* sdata, const integer n) {
         memcpy(&(*this)(index), sdata, n*sizeof(dtype));
     }
+    virtual dtype* toHost() const {
+        dtype* hdata = new dtype[this->size];
+        memcpy(hdata, this->data, this->bufSize);
+        return hdata;
+    }
+    virtual void toDevice(dtype *data) {
+        this->copy(0, data, this->size);
+    }
+
     virtual void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
         integer i, j, k;
         #pragma omp parallel for private(i, j, k)
