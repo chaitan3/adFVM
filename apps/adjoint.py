@@ -155,6 +155,7 @@ class Adjoint(Solver):
 
             for step in range(0, writeInterval):
                 report = (step % reportInterval) == 0
+                sample = ((step + 1) % sampleInterval) == 0
                 
                 adjointIndex = writeInterval-1 - step
                 t, dt = timeSteps[primalIndex + adjointIndex]
@@ -189,7 +190,7 @@ class Adjoint(Solver):
                      [phi.field for phi in fields] + \
                      [dtca, obja]
 
-                outputs = self.map(*inputs)
+                outputs = self.map(*inputs, return_static=sample)
 
                 #print(sum([(1e-3*phi).sum() for phi in gradient]))
                 #inp1 = inputs[:3] + inputs[-3:-1]
@@ -246,35 +247,38 @@ class Adjoint(Solver):
                     start4 = time.time()
                     pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
-                n = len(fields)
-                ms = n + 1
-                me = ms + len(mesh.gradFields)
-                meshGradient = outputs[ms:me]
-                #import pdb;pdb.set_trace()
-                ss = n+1+len(mesh.gradFields + mesh.intFields)
-                se = ss + n
-                sourceGradient = outputs[ss:se]
+                if sample:
+                    ms = n + 1
+                    me = ms + len(mesh.gradFields)
+                    #zero?
+                    meshGradient = outputs[ms:me]
+                    #import pdb;pdb.set_trace()
+                    ss = n+1+len(mesh.gradFields + mesh.intFields)
+                    se = ss + n
+                    sourceGradient = outputs[ss:se]
 
-                # compute sensitivity using adjoint solution
-                sensitivities = []
-                for index, perturbation in enumerate(perturbations):
-                    sensitivity = 0.
-                    # make efficient cpu implementation
-                    param = parameters[0]
-                    if param == 'source':
-                        paramGradient = sourceGradient
-                    elif param == 'mesh':
-                        paramGradient = meshGradient
-                    else:
-                        raise Exception('unrecognized perturbation')
-                    for derivative, delphi in zip(paramGradient, perturbation):
-                        sensitivity += np.sum(derivative * delphi)
-                    sensitivities.append(sensitivity)
-                sensitivities = parallel.sum(sensitivities, allreduce=False)
-                if (nSteps - (primalIndex + adjointIndex)) > avgStart:
-                    for index in range(0, len(perturb)):
-                        result[index] += sensitivities[index]
-                sensTimeSeries.append(sensitivities)
+                    # compute sensitivity using adjoint solution
+                    sensitivities = []
+                    for index, perturbation in enumerate(perturbations):
+                        sensitivity = 0.
+                        # make efficient cpu implementation
+                        param = parameters[0]
+                        if param == 'source':
+                            paramGradient = sourceGradient
+                        elif param == 'mesh':
+                            paramGradient = meshGradient
+                        else:
+                            raise Exception('unrecognized perturbation')
+                        for derivative, delphi in zip(paramGradient, perturbation):
+                            sensitivity += np.sum(derivative * delphi)
+                        sensitivities.append(sensitivity)
+                    sensitivities = parallel.sum(sensitivities, allreduce=False)
+                    if (nSteps - (primalIndex + adjointIndex)) > avgStart:
+                        for index in range(0, len(perturb)):
+                            result[index] += sensitivities[index]
+                    sensitivities = [sens/sampleInterval for sens in sensitivities]
+                    for i in range(0, sampleInterval):
+                        sensTimeSeries.append(sensitivities)
 
                 #parallel.mpi.Barrier()
                 if report:

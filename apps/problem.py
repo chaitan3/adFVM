@@ -26,6 +26,9 @@ config.importModule(locals(), user.caseFile)
 #print(locals().keys())
 #assert all(key in locals() for key in ['primal', 'objective', 'perturb', 'nSteps', 'writeInterval', 'reportInterval', 'startTime', 'dt', 'paramters'])
 assert writeInterval >= reportInterval
+assert (writeInterval % reportInterval) == 0
+assert writeInterval >= sampleInterval
+assert (writeInterval % sampleInterval) == 0
 
 if not isinstance(parameters, list):
     parameters = [parameters]
