@@ -63,9 +63,8 @@ extern struct memory mem;
     #define omp_get_thread_num() 0
 #endif
 
-
-template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
-class arrType {
+template<template<typename, integer, integer, integer> class derivedArrType, typename dtype, integer shape1, integer shape2, integer shape3>
+class baseArrType {
     public:
     dtype type;
     dtype* data;
@@ -78,6 +77,8 @@ class arrType {
     bool sharedMemory;
     bool keepMemory;
     int64_t id;
+
+    derivedArrType<dtype, shape1, shape2, shape3>& self() { return static_cast<derivedArrType<dtype, shape1, shape2, shape3>&>(*this); }
 
     void set_default_values() {
         this->shape = 0;
@@ -115,29 +116,29 @@ class arrType {
         } else {
             this->acquire();
             if (zero) {
-                this->zero();
+                self().zero();
             }
         }
     }
-    arrType () {
+    baseArrType () {
         this->set_default_values();
     }
 
-    arrType(const integer shape, bool zero=false, bool keepMemory=false, int64_t id=-1) {
+    baseArrType(const integer shape, bool zero=false, bool keepMemory=false, int64_t id=-1) {
         this->init_shape(shape, zero, keepMemory, id);
     }
 
-    arrType(const integer shape, dtype* data) {
+    baseArrType(const integer shape, dtype* data) {
         this -> init(shape);
         this -> data = data;
     }
 
-    arrType(const integer shape, const dtype* data) {
+    baseArrType(const integer shape, const dtype* data) {
         this->init(shape);
         this->data = const_cast<dtype *>(data);
     }
 
-    arrType(const integer shape, const string& data) {
+    baseArrType(const integer shape, const string& data) {
         this->init(shape);
         this->data = const_cast<dtype *>((dtype *)data.data());
     }
@@ -145,14 +146,14 @@ class arrType {
     // copy constructor?
 
     // move constructor
-    arrType(arrType&& that) {
+    baseArrType(baseArrType&& that) {
         //this->move(that);
         this->init(that.shape);
         this->data = that.data;
         this->ownData = that.ownData;
         that.ownData = false;
     }
-    arrType& operator=(arrType&& that) {
+    baseArrType& operator=(baseArrType&& that) {
         assert(this != &that);
         this->destroy();
         //this->move(that);
@@ -170,13 +171,13 @@ class arrType {
                 this->release();
             } else if (this->data != NULL) {
                 this->dec_mem();
-                this->dealloc();
+                self().dealloc();
                 this->data = NULL;
             }
         }
     }
 
-    ~arrType() {
+    ~baseArrType() {
         this->destroy();
     };
 
@@ -186,12 +187,13 @@ class arrType {
             mem.pool[key] = queue<void*>();
         } 
         if (mem.pool.at(key).empty()) {
-            this->alloc();  
+            self().alloc();  
             this->inc_mem();
         } else {
             this->data = (dtype *) mem.pool[key].front();
             mem.pool[key].pop();
         }
+        cout << "using " << this->data << endl;
         this->ownData = true;
     }
     void shared(bool zero=false) {
@@ -201,13 +203,13 @@ class arrType {
             this->data = (dtype *)mem.refs.at(id);
         } else {
             dtype* data = this->data;
-            this->alloc();
+            self().alloc();
             if (zero) {
-                this->zero();
+                self().zero();
             }
             this->inc_mem();
             if (this->data != NULL) {
-                this->toDevice(data);
+                self().toDevice(data);
             }
             mem.refs[id] = (void *) this->data;
         }
@@ -221,7 +223,6 @@ class arrType {
     
     void inc_mem() {
         mem.usage += this->bufSize;
-        cout << "alloc: " << this->bufSize << " " << mem.usage << endl;
         if (mem.usage > mem.maxUsage) {
             mem.maxUsage = mem.usage;
         }
@@ -229,28 +230,79 @@ class arrType {
 
     void dec_mem() {
         mem.usage -= this->bufSize;
-        cout << "dealloc: " << this->bufSize << " " << mem.usage << endl;
     }
-    virtual void alloc() {
+
+    const dtype& operator() (const integer i1) const {
+        return const_cast<const dtype &>(data[i1*this->strides[0]]);
+    }
+
+    const dtype& operator() (const integer i1, const integer i2) const {
+        return const_cast<const dtype &>(data[i1*this->strides[0] + 
+                      i2*this->strides[1]]);
+    }
+    const dtype& operator() (const integer i1, const integer i2, const integer i3) const {
+        return const_cast<const dtype &>(data[i1*this->strides[0] + 
+                      i2*this->strides[1] +
+                      i3*this->strides[2]]);
+    }
+
+
+
+    dtype& operator()(const integer i1) {
+        return const_cast<dtype &>(static_cast<const derivedArrType<dtype, shape1, shape2, shape3> &>(*this)(i1));
+    }
+    dtype& operator()(const integer i1, const integer i2) {
+        return const_cast<dtype &>(static_cast<const derivedArrType<dtype, shape1, shape2, shape3> &>(*this)(i1, i2));
+    }
+    dtype& operator()(const integer i1, const integer i2, const integer i3) {
+        return const_cast<dtype &>(static_cast<const derivedArrType<dtype, shape1, shape2, shape3> &>(*this)(i1, i2, i3));
+    }
+
+    void alloc() {
+        throw logic_error("alloc not implemented");
+    }
+    void dealloc() {
+        throw logic_error("dealloc not implemented");
+    }
+    void zero() {
+        throw logic_error("zero not implemented");
+    }
+    dtype* toHost() const {
+        throw logic_error("toHost not implemented");
+    }
+    void toDevice(dtype *data) {
+        throw logic_error("toDevice not implemented");
+    }
+};
+
+template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
+class arrType : public baseArrType<arrType, dtype, shape1, shape2, shape3> {
+    public:
+    using baseArrType<arrType, dtype, shape1, shape2, shape3>::baseArrType;
+
+    void alloc() {
+        cout << "cpu alloc: " << this->bufSize << " " << mem.usage << endl;
         this -> data = new dtype[this->size];
     }
-    virtual void dealloc() {
+    void dealloc() {
+        cout << "cpu dealloc: " << this->bufSize << " " << mem.usage << endl;
         delete[] this -> data; 
     }
 
-    virtual void zero() {
+    void zero() {
         memset(this->data, 0, this->bufSize);
     }
 
-    virtual dtype* toHost() const {
+    dtype* toHost() const {
         dtype* hdata = new dtype[this->size];
         memcpy(hdata, this->data, this->bufSize);
         return hdata;
     }
-    virtual void toDevice(dtype *data) {
+    void toDevice(dtype *data) {
         memcpy(this->data, data, this->bufSize);
         //this->copy(0, data, this->size);
     }
+
     void copy(const integer index, const dtype* sdata, const integer n) {
         memcpy(&(*this)(index), sdata, n*sizeof(dtype));
     }
@@ -282,42 +334,6 @@ class arrType {
             }
         }
     }
-
-    const dtype& operator() (const integer i1) const {
-        return const_cast<const dtype &>(data[i1*this->strides[0]]);
-    }
-
-    const dtype& operator() (const integer i1, const integer i2) const {
-        return const_cast<const dtype &>(data[i1*this->strides[0] + 
-                      i2*this->strides[1]]);
-    }
-    const dtype& operator() (const integer i1, const integer i2, const integer i3) const {
-        return const_cast<const dtype &>(data[i1*this->strides[0] + 
-                      i2*this->strides[1] +
-                      i3*this->strides[2]]);
-    }
-
-
-
-    dtype& operator()(const integer i1) {
-        return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1));
-    }
-    dtype& operator()(const integer i1, const integer i2) {
-        return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1, i2));
-    }
-    dtype& operator()(const integer i1, const integer i2, const integer i3) {
-        return const_cast<dtype &>(static_cast<const arrType &>(*this)(i1, i2, i3));
-    }
-
-    // not used by default
-    bool checkNAN() {
-        for (integer i = 0; i < this->size; i++) {
-            if (std::isnan(this->data[i])) {
-                return true;
-            }
-        }
-        return false;
-    }
     void info(int s=0, int e=-1) const {
         cout << setprecision(15) << this->sum(s, e) << endl;
         return;
@@ -339,7 +355,16 @@ class arrType {
         }
         cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
         //cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
-    } 
+    }
+    bool checkNAN() {
+        for (integer i = 0; i < this->size; i++) {
+            if (std::isnan(this->data[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+     
     dtype sum(int s=0,int  e=-1) const {
         dtype res = 0;
         if (e == -1) {
@@ -354,7 +379,6 @@ class arrType {
         }
         return res;
     }
-
 };
 
 #ifndef GPU

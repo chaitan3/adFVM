@@ -127,42 +127,17 @@ __inline__ __device__ void reduceMax(int n, const dtype val, dtype* res) {
 //        atomicAdd(&res[0], sum[0]);
 //}
 
-// use template instead of virtual
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
-class gpuArrType: public arrType<dtype, shape1, shape2, shape3> {
+class gpuArrType : public baseArrType<gpuArrType, dtype, shape1, shape2, shape3> {
     public:
-    gpuArrType(const integer shape, bool zero=false, bool keepMemory=false, int64_t id=-1) : arrType<dtype, shape1, shape2, shape3>() {
-        this->init_shape(shape, zero, keepMemory, id);
-    }
-
-    gpuArrType(const integer shape, dtype* data) : arrType<dtype, shape1, shape2, shape3>() {
-        this -> init(shape);
-        this -> data = data;
-    }
-
-    gpuArrType() : arrType<dtype, shape1, shape2, shape3>() {
-    }
-
-    ~gpuArrType() {
-        this->destroy();
-    }
-    gpuArrType& operator=(gpuArrType&& that) {
-        assert(this != &that);
-        this->destroy();
-        //this->move(that);
-        this->init(that.shape);
-        this->data = that.data;
-        this->ownData = that.ownData;
-        that.ownData = false;
-        return *this;
-
-    }
+    using baseArrType<gpuArrType, dtype, shape1, shape2, shape3>::baseArrType;
 
     void alloc() {
-        cout << "gpu alloc: " << this->bufSize << endl;
         gpuErrorCheck(cudaMalloc(&this->data, this->bufSize));
+        cout << "gpu alloc: " << this->data << " " << this->bufSize << endl;
     } 
     void dealloc() {
+        cout << "gpu dealloc: " << this->data << " " << this->bufSize << endl;
         gpuErrorCheck(cudaFree(this->data));
     }
     void zero() {
