@@ -25,7 +25,7 @@ char* PyString_AsString(PyObject* result);
 scalar getMaxEigenvalue(arrType<scalar, 5, 5>& phi, vec& eigPhi);
 
 template <template<typename, integer, integer, integer> class derivedArrType, typename dtype, integer shape1, integer shape2=1, integer shape3=1>
-void getArray(PyArrayObject *array, derivedArrType<dtype, shape1, shape2, shape3>& tmp, int64_t id=0) {
+void getArray(PyArrayObject *array, derivedArrType<dtype, shape1, shape2, shape3>& tmp, bool keepMemory=false, int64_t id=0) {
     static_assert(shape3 == 1, "shape3 exceeded");
     assert(array);
     int nDims = PyArray_NDIM(array);
@@ -43,11 +43,9 @@ void getArray(PyArrayObject *array, derivedArrType<dtype, shape1, shape2, shape3
 
     dtype *data = (dtype *) PyArray_DATA(array);
     derivedArrType<dtype, shape1, shape2, shape3> result(dims[0], data);
-    // no shared stuff for inputs?
-    if (id != 0) {
-        result.id = id;
-        result.shared();
-    }
+    result.keepMemory = keepMemory;
+    result.id = id;
+    result.toDevice(result.data);
     
     //cout << rows << " " << cols << endl;
     //if ((typeid(dtype) != type(uscalar)) && (typeid(dtype) != typeid(integer))) {

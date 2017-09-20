@@ -134,10 +134,10 @@ class gpuArrType : public baseArrType<gpuArrType, dtype, shape1, shape2, shape3>
 
     void alloc() {
         gpuErrorCheck(cudaMalloc(&this->data, this->bufSize));
-        cout << "gpu alloc: " << this->data << " " << this->bufSize << endl;
+        //cout << "gpu alloc: " << this->data << " " << this->bufSize << endl;
     } 
     void dealloc() {
-        cout << "gpu dealloc: " << this->data << " " << this->bufSize << endl;
+        //cout << "gpu dealloc: " << this->data << " " << this->bufSize << endl;
         gpuErrorCheck(cudaFree(this->data));
     }
     void zero() {
@@ -145,30 +145,40 @@ class gpuArrType : public baseArrType<gpuArrType, dtype, shape1, shape2, shape3>
     }
     dtype* toHost() const {
         dtype* hdata = new dtype[this->size];
-        cout << "transferring to host: " << this->bufSize << endl;
+        //cout << "transferring to host: " << this->bufSize << endl;
         gpuErrorCheck(cudaMemcpy(hdata, this->data, this->bufSize, cudaMemcpyDeviceToHost));
         return hdata;
     }
     void toDevice(dtype* data) {
-        cout << "transferring to device: " << this->bufSize << endl;
-        gpuErrorCheck(cudaMemcpy(this->data, data, this->bufSize, cudaMemcpyHostToDevice));
+        //cout << "transferring to device: " << this->bufSize << endl;
+        bool transfer = true;
+        if (this->id != 0) {
+            transfer = !this->shared();
+        } else {
+            this->acquire();
+        }
+        if (transfer) {
+            gpuErrorCheck(cudaMemcpy(this->data, data, this->bufSize, cudaMemcpyHostToDevice));
+        }
     }
 
     void copy(integer index, dtype* sdata, integer n) {
         gpuErrorCheck(cudaMemcpy(&(*this)(index), sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice));
+        //cout << "copying: " << &(*this)(index) << " " << sdata << " " << n*sizeof(dtype) << endl;
     }
     void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
         integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
         integer threads = min(GPU_THREADS_PER_BLOCK, n);
         _extract2<dtype, shape1, shape2><<<blocks, threads>>>(n, &(*this)(index), phiBuf, indices);
+        gpuErrorCheck(cudaDeviceSynchronize());
         gpuErrorCheck(cudaPeekAtLastError());
     }
     void extract(const integer *indices, const dtype* phiBuf, const integer n) {
         integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
         integer threads = min(GPU_THREADS_PER_BLOCK, n);
         _extract1<dtype, shape1, shape2><<<blocks, threads>>>(n, this->data, phiBuf, indices);
+        gpuErrorCheck(cudaDeviceSynchronize());
         gpuErrorCheck(cudaPeekAtLastError());
-        //gpuErrorCheck(cudaDeviceSynchronize());
     }
     void info() const {
         dtype minPhi, maxPhi;

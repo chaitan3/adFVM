@@ -324,7 +324,7 @@ class Function(object):
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
-            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, {1}L);\n'.format(inp.name, inp.staticId()))
+            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, true, {1}L);\n'.format(inp.name, inp.staticId()))
         codeFile.write('\n')
 
         varChildren = {}
@@ -378,6 +378,7 @@ class Function(object):
                     codeFile.write('\t\tdim3 threads(min(GPU_THREADS_PER_BLOCK, {}));\n'.format(name))
                     #codeFile.write('\t\t{}<<<blocks, threads>>>({}, {});\n'.format(op.name, name, op.getCallString()))
                     codeFile.write('\t\t{}<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>({}, {});\n'.format(op.name, name, op.getCallString()))
+                    codeFile.write('\t\tgpuErrorCheck(cudaDeviceSynchronize());\n')
                     codeFile.write('\t\tgpuErrorCheck(cudaPeekAtLastError());\n')
                     codeFile.write('\t}\n')
                 else:

@@ -74,7 +74,6 @@ class baseArrType {
     integer bufSize;
     integer strides[NDIMS];
     bool ownData;
-    bool sharedMemory;
     bool keepMemory;
     int64_t id;
 
@@ -90,7 +89,6 @@ class baseArrType {
         this -> data = NULL;
         this -> ownData = false;
         this -> keepMemory = false;
-        this -> sharedMemory = false;
         this -> id = 0;
     }
 
@@ -110,14 +108,14 @@ class baseArrType {
     void init_shape(const integer shape, bool zero, bool keepMemory, int64_t id) {
         this->init(shape);
         this->keepMemory = keepMemory;
-        this->sharedMemory = (this->id != 0);
-        if (this->sharedMemory) {
-            this->shared(zero);
+        this->id = id;
+        if (id != 0) {
+            zero = (!this->shared()) && zero;
         } else {
             this->acquire();
-            if (zero) {
-                self().zero();
-            }
+        }
+        if (zero) {
+            self().zero();
         }
     }
     baseArrType () {
@@ -151,6 +149,8 @@ class baseArrType {
         this->init(that.shape);
         this->data = that.data;
         this->ownData = that.ownData;
+        this->keepMemory = that.keepMemory;
+        this->id = that.id;
         that.ownData = false;
     }
     baseArrType& operator=(baseArrType&& that) {
@@ -160,6 +160,8 @@ class baseArrType {
         this->init(that.shape);
         this->data = that.data;
         this->ownData = that.ownData;
+        this->keepMemory = that.keepMemory;
+        this->id = that.id;
         that.ownData = false;
         return *this;
 
@@ -193,26 +195,20 @@ class baseArrType {
             this->data = (dtype *) mem.pool[key].front();
             mem.pool[key].pop();
         }
-        cout << "using " << this->data << endl;
+        //cout << "using " << this->data << endl;
         this->ownData = true;
     }
-    void shared(bool zero=false) {
+    bool shared() {
         int64_t id = this->id;
-        this->sharedMemory = true;
         if (mem.refs.count(id) > 0) {
             this->data = (dtype *)mem.refs.at(id);
+            return true;
         } else {
-            dtype* data = this->data;
             self().alloc();
-            if (zero) {
-                self().zero();
-            }
             this->inc_mem();
-            if (this->data != NULL) {
-                self().toDevice(data);
-            }
             mem.refs[id] = (void *) this->data;
         }
+        return false;
     }
     void release() {
         assert (this->ownData);
@@ -281,15 +277,16 @@ class arrType : public baseArrType<arrType, dtype, shape1, shape2, shape3> {
     using baseArrType<arrType, dtype, shape1, shape2, shape3>::baseArrType;
 
     void alloc() {
-        cout << "cpu alloc: " << this->bufSize << " " << mem.usage << endl;
+        //cout << "cpu alloc: " << this->bufSize << " " << mem.usage << endl;
         this -> data = new dtype[this->size];
     }
     void dealloc() {
-        cout << "cpu dealloc: " << this->bufSize << " " << mem.usage << endl;
+        //cout << "cpu dealloc: " << this->bufSize << " " << mem.usage << endl;
         delete[] this -> data; 
     }
 
     void zero() {
+        //cout << "cpu zero: " << endl;
         memset(this->data, 0, this->bufSize);
     }
 
@@ -299,11 +296,11 @@ class arrType : public baseArrType<arrType, dtype, shape1, shape2, shape3> {
         return hdata;
     }
     void toDevice(dtype *data) {
-        memcpy(this->data, data, this->bufSize);
-        //this->copy(0, data, this->size);
+        //memcpy(this->data, data, this->bufSize);
     }
 
     void copy(const integer index, const dtype* sdata, const integer n) {
+        //cout << "cpu copy: " << endl;
         memcpy(&(*this)(index), sdata, n*sizeof(dtype));
     }
 
