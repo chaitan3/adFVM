@@ -166,6 +166,7 @@ class FunctionOp(object):
             out = cache[name]
         elif inp:
             out = Zeros(inp.shape, inp.dtype)
+            out.static = inp.static
             out.name = name
         else:
             raise Exception("not found in cache")
@@ -276,6 +277,10 @@ class Function(object):
             gradOutputs.append(grad)
         FunctionOp.insert_cache(gradOutputs)
         gradInputs = self._diff(self._outputs, self._inputs, gradients)
+        assert len(gradInputs) == len(self._inputs)
+        for inp1, inp2 in zip(self._inputs, gradInputs):
+            if isinstance(inp1, Variable):
+                inp2.static = inp1.static
         return gradOutputs, gradInputs
 
     def getAdjoint(self):
@@ -340,8 +345,8 @@ class Function(object):
                     shape = ','.join([str(x) for x in arg.shape[1:]])
                     arrType = '{}<{}, {}>'.format(self.arrType, arg.dtype, shape)
                     #codeFile.write('\t{} {}({}, true);\n'.format(arrType, varName, self._getName(arg.shape[0]))) 
-                    if inp.static:
-                        varId = id(inp)
+                    if arg.static:
+                        varId = id(arg)
                     else:
                         varId = -1
                     codeFile.write('\t{} {}({}, true, true, {}L);\n'.format(arrType, varName, self._getName(arg.shape[0]), varId)) 
