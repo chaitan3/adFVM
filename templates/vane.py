@@ -148,7 +148,7 @@ parameters = 'mesh'
 
 nSteps = 10
 writeInterval = 10
-sampleInterval = 1
+sampleInterval = 2
 #nSteps = 100000
 #writeInterval = 5000
 startTime = 3.0
