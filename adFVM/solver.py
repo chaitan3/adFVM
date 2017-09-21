@@ -318,24 +318,14 @@ class Solver(object):
                        'replace_reusable': replace_reusable
                       }
 
-            #print [x.shape for x in inputs if hasattr(x, 'shape')]
-
-            #print(len(inputs), len(mesh.getTensor()), len(mesh.getScalar()), len(self.extraArgs), len(self.getBoundaryTensor(1)))
-            #inputs = [phi.field for phi in fields] + \
-            #         [phi[1] for phi in self.sourceTerms] + \
-            #         [dt, t]
-            #outputs = self.map(fields)
-
+            #start2 = time.time()
             outputs = self.map(*inputs, **options)
-            #print [x.dtype for x in outputs if hasattr(x, 'dtype')]
+            #pprint(time.time()-start2)
             newFields, dtc, objective = outputs[:3], outputs[3], outputs[4]
             objective = objective[0,0]
             dtc = dtc[0,0]
             #exit(1)
-            #print [x.sum() for x in newFields]
-
             fields = self.getFields(newFields, IOField, refFields=fields)
-            print [x.field for x in fields]
 
             if report:
                 #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()

@@ -224,6 +224,7 @@ class baseArrType {
         void* data = mem.reuse[reuseId];
         this->data = (dtype*) data;
         int key = this->bufSize;
+        this->ownData = true;
     }
     void reuse_release(string reuseId) {
         mem.reuse[reuseId] = this->data;
