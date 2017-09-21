@@ -278,28 +278,35 @@ class Solver(object):
 
         def iterate(t, timeIndex):
             return t < endTime and timeIndex < nSteps
+
+        def updateTime(t0, dt):
+            if self.localTimeStep:
+                t = t0 + 1
+            else:
+                t = round(t0+dt, 12)
+            return t
+
+
+        pprint('Time step', timeIndex)
+        for index in range(0, len(fields)):
+            fields[index].info()
+        pprint()
+
         while iterate(t, timeIndex):
             # add reporting interval
             mesh.reset = True
-            report = (timeIndex % reportInterval) == 0
+            report = ((timeIndex + 1) % reportInterval == 0) 
+            write = ((timeIndex + 1) % writeInterval == 0) or not iterate(updateTime(t, dt), timeIndex+1)
+            return_reusable = report or write or (mode == 'forward')
+            replace_reusable = (timeIndex == startIndex)
 
             # source term update
             # perturbation
 
+            pprint('Time step', timeIndex + 1)
             if report:
-                printMemUsage()
-                #parallel.mpi.Barrier()
-                start = time.time()
                 pprint('Time marching for', ' '.join(self.names))
-                for index in range(0, len(fields)):
-                    fields[index].info()
-                #try:
-                #    fields[index].info()
-                #except:
-                #    with IOField.handle(t):
-                #        fields[index].write()
-                #    exit(1)
-            pprint('Time step', timeIndex)
+                start = time.time()
 
             inputs = [phi.field for phi in fields] + \
                      [np.array([[dt]], config.precision)] + \
@@ -307,6 +314,9 @@ class Solver(object):
                      [x[1] for x in self.sourceTerms] + \
                      self.getBoundaryTensor(1) + \
                      [x[1] for x in self.extraArgs]
+            options = {'return_reusable': return_reusable,
+                       'replace_reusable': replace_reusable
+                      }
 
             #print [x.shape for x in inputs if hasattr(x, 'shape')]
 
@@ -316,7 +326,7 @@ class Solver(object):
             #         [dt, t]
             #outputs = self.map(fields)
 
-            outputs = self.map(*inputs)
+            outputs = self.map(*inputs, **options)
             #print [x.dtype for x in outputs if hasattr(x, 'dtype')]
             newFields, dtc, objective = outputs[:3], outputs[3], outputs[4]
             objective = objective[0,0]
@@ -325,6 +335,7 @@ class Solver(object):
             #print [x.sum() for x in newFields]
 
             fields = self.getFields(newFields, IOField, refFields=fields)
+            print [x.field for x in fields]
 
             if report:
                 #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()
@@ -338,6 +349,9 @@ class Solver(object):
                 #    local.write()
                 #exit(1)
 
+                #parallel.mpi.Barrier()
+                for index in range(0, len(fields)):
+                    fields[index].info()
 
                 #parallel.mpi.Barrier()
                 end = time.time()
@@ -349,15 +363,13 @@ class Solver(object):
                     pprint('Simulation Time:', t, 'Time step: min', parallel.min(dt), 'max', parallel.max(dt))
                 else:
                     pprint('Simulation Time:', t, 'Time step:', dt)
-                pprint()
+            pprint()
 
             # time management
             timeSteps.append([t, dt])
             timeIndex += 1
-            if self.localTimeStep:
-                t += 1
-            else:
-                t = round(t+dt, 12)
+            t = updateTime(t, dt)
+            
             #print(t)
             if self.localTimeStep:
                 dt = dtc
@@ -382,7 +394,7 @@ class Solver(object):
                     solutions.append([instMesh] + fields)
                 else:
                     solutions.append(fields)
-            elif (timeIndex % writeInterval == 0) or not iterate(t, timeIndex):
+            elif write:
                 # write mesh, fields, status
                 if mode == 'orig' or mode == 'simulation':
                     #if len(dtc.shape) == 0:

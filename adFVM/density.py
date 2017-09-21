@@ -97,7 +97,8 @@ class RCF(Solver):
         rhoN, rhoUN, rhoEN = timestep.timeStepper(self.equation, [rho, rhoU, rhoE], self)
         args = [rho, rhoU, rhoE, self.dt] + meshArgs + sourceArgs + BCArgs + extraArgs
         outputs = [rhoN, rhoUN, rhoEN, self.dtc, self.obj]
-        self.map = Function('primal', args, outputs)
+        io_map = {0: 0, 1:1, 2:2}
+        self.map = Function('primal', args, outputs, io_map=io_map)
     
         #gradOutputs, gradInputs = self.map.getAdjoint()
         #args += gradOutputs

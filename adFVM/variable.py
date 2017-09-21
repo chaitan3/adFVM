@@ -336,10 +336,10 @@ class Function(object):
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
             if index in self._io_map.keys():
                 reuseId = self._reuseId(index)
-                codeFile.write('\tif (options["replace_reusable"] || mem.reuse.count("{}") == 0) {\n'.format(reuseId))
+                codeFile.write('\tif (options["replace_reusable"] || mem.reuse.count("{}") == 0) {{\n'.format(reuseId))
                 codeFile.write('\t\tgetArray((PyArrayObject*) Py_{0}, {0}, true, {1}L);\n'.format(inp.name, inp.staticId()))
                 codeFile.write('\t} else {\n')
-                codeFile.write('\t{}.reuse_acquire("{}");'.format(inp.name, reuseId))
+                codeFile.write('\t\t{}.reuse_acquire("{}");\n'.format(inp.name, reuseId))
                 codeFile.write('\t}\n')
             else:
                 codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, true, {1}L);\n'.format(inp.name, inp.staticId()))
