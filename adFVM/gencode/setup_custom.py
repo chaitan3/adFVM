@@ -66,7 +66,7 @@ objects = [os.path.basename(src).split('.')[0] + '.o' for src in sources]
 
 def single_compile(src):
     cmd = compiler + compile_args + incdirs + [src, '-c']
-    print cmd
+    print(' '.join(cmd))
     subprocess.check_call(cmd, stderr=subprocess.STDOUT)
 
 n = len(sources)
@@ -75,5 +75,6 @@ n = len(sources)
 res = list(multiprocessing.pool.ThreadPool(n).imap(single_compile, sources))
 
 cmd = linker + link_args + libdirs + libs + objects + ['-o', module]
-print cmd
+print(' '.join(cmd))
 subprocess.check_call(cmd, stderr=subprocess.STDOUT)
+print()
