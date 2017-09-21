@@ -36,7 +36,11 @@ typedef int32_t integer;
 struct memory {
     int usage;
     int maxUsage;
-    map<int, void *> refs;
+    // id to memory locs
+    map<int, void *> shared;
+    // reuse id to memory locs
+    map<string, void *> reuse;
+    // size to queue of memory locs
     map<int, queue<void*>> pool;
 };
 extern struct memory mem;
@@ -110,9 +114,9 @@ class baseArrType {
         this->keepMemory = keepMemory;
         this->id = id;
         if (id != 0) {
-            zero = (!this->shared()) && zero;
+            zero = (!this->shared_acquire()) && zero;
         } else {
-            this->acquire();
+            this->pool_acquire();
         }
         if (zero) {
             self().zero();
@@ -170,7 +174,7 @@ class baseArrType {
     void destroy() {
         if (this->ownData) {
             if (this->keepMemory) {
-                this->release();
+                this->pool_release();
             } else if (this->data != NULL) {
                 this->dec_mem();
                 self().dealloc();
@@ -183,7 +187,7 @@ class baseArrType {
         this->destroy();
     };
 
-    void acquire() {
+    void pool_acquire() {
         int key = this->bufSize;
         if (mem.pool.count(key) == 0) {
             mem.pool[key] = queue<void*>();
@@ -198,7 +202,13 @@ class baseArrType {
         //cout << "using " << this->data << endl;
         this->ownData = true;
     }
-    bool shared() {
+    void pool_release() {
+        assert (this->ownData);
+        int key = this->bufSize;
+        mem.pool[key].push((void *)this->data);
+        this->ownData = false;
+    }
+    bool shared_acquire() {
         int64_t id = this->id;
         if (mem.refs.count(id) > 0) {
             this->data = (dtype *)mem.refs.at(id);
@@ -210,13 +220,15 @@ class baseArrType {
         }
         return false;
     }
-    void release() {
-        assert (this->ownData);
+    void reuse_acquire(string reuseId) {
+        void* data = mem.reuse[reuseId];
+        this->data = (dtype*) data;
         int key = this->bufSize;
-        mem.pool[key].push((void *)this->data);
+    }
+    void reuse_release(string reuseId) {
+        mem.reuse[reuseId] = this->data;
         this->ownData = false;
     }
-    
     void inc_mem() {
         mem.usage += this->bufSize;
         if (mem.usage > mem.maxUsage) {

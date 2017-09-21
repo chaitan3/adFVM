@@ -259,10 +259,12 @@ class Function(object):
     codeFile = 'code.{}'.format(config.codeExt)
     funcs = []
     defaultOptions = {'return_static': True, 
-                      'zero_static': False
+                      'zero_static': False,
+                      'return_reusable': True,
+                      'replace_reusable': False,
                      }
 
-    def __init__(self, name, inputs, outputs):
+    def __init__(self, name, inputs, outputs, **kwargs):
         if config.gpu:
             self.arrType = 'gpuArrType'
         else:
@@ -277,6 +279,8 @@ class Function(object):
             self._genCode(_outputs)
         FunctionOp.clear_cache()
         Function.funcs.append(self.name)
+
+        self._io_map = kwargs.get('io_map', None)
 
     def grad(self):
         #gradOutputs = []
@@ -311,6 +315,9 @@ class Function(object):
         else:
             name = op.name
         return name
+
+    def _reuseId(self, index):
+        return '{}_{}'.format(self.name, index)
         
     def _genCode(self, outputs):
         codeFile = open(self.codeDir + self.codeFile, 'a')
@@ -328,7 +335,15 @@ class Function(object):
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
             shape = ','.join([str(x) for x in inp.shape[1:]])
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
-            codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, true, {1}L);\n'.format(inp.name, inp.staticId()))
+            if index in self._io_map.keys():
+                reuseId = self._reuseId(index)
+                codeFile.write('\tif (options["replace_reusable"] || mem.reuse.count("{}") == 0) {\n'.format(reuseId))
+                codeFile.write('\t\tgetArray((PyArrayObject*) Py_{0}, {0}, true, {1}L);\n'.format(inp.name, inp.staticId()))
+                codeFile.write('\t} else {\n')
+                codeFile.write('\t{}.reuse_acquire("{}");'.format(inp.name, reuseId))
+                codeFile.write('\t}\n')
+            else:
+                codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, true, {1}L);\n'.format(inp.name, inp.staticId()))
         codeFile.write('\n')
 
         varChildren = {}
@@ -352,7 +367,7 @@ class Function(object):
                 if isinstance(arg, Variable) and varName not in outputNames and varChildren[varName] == 0:
                     if varName in inputNames and ((not config.gpu) or arg.static):
                         continue
-                    codeFile.write('\t{}.release();\n'.format(varName))
+                    codeFile.write('\t{}.pool_release();\n'.format(varName))
             
             for arg in op.args:
                 varName = arg.name
@@ -402,6 +417,11 @@ class Function(object):
                 codeFile.write('\t}\n');
                 codeFile.write('\tif (options["zero_static"]) {\n');
                 codeFile.write('\t\t{}.zero();\n'.format(out.name))
+                codeFile.write('\t}\n');
+            elif index, value in self._io_map.items():
+                codeFile.write('\t{}.reuse_release("{}");\n'.format(out.name, self._reuseId(index)))
+                codeFile.write('\tif (options["return_reusable"]) {\n');
+                codeFile.write('\t\tPyTuple_SetItem(outputs, {}, putArray({}, false));\n'.format(value, out.name))
                 codeFile.write('\t}\n');
             else:
                 codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}, false));\n'.format(index, out.name))

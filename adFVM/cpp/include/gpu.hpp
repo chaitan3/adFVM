@@ -153,9 +153,9 @@ class gpuArrType : public baseArrType<gpuArrType, dtype, shape1, shape2, shape3>
         //cout << "transferring to device: " << this->bufSize << endl;
         bool transfer = true;
         if (this->id != 0) {
-            transfer = !this->shared();
+            transfer = !this->shared_acquire();
         } else {
-            this->acquire();
+            this->pool_acquire();
         }
         if (transfer) {
             gpuErrorCheck(cudaMemcpy(this->data, data, this->bufSize, cudaMemcpyHostToDevice));
