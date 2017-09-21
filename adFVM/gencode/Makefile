@@ -1,4 +1,4 @@
 all:
-	python2 setup.py build_ext --inplace
+	python2 setup_custom.py build_ext --inplace
 clean:
 	rm -rf build *.so

@@ -75,7 +75,7 @@ if gpu:
     mpi_libdirs = check_output('mpicc --showme | egrep -o -e "-L[a-z\/\.]*"', shell=True)
     libdirs += [d[2:] for d in mpi_libdirs.split('\n')[:-1]]
     libs += ['mpi']
-    os.environ['CXX'] = 'nvcc --shared'
+    os.environ['CXX'] = 'ccache nvcc --shared'
 else:
     cmdclass = {}
 
