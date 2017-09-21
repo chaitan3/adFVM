@@ -265,6 +265,7 @@ class Function(object):
                      }
 
     def __init__(self, name, inputs, outputs, **kwargs):
+        self._io_map = kwargs.get('io_map', {})
         if config.gpu:
             self.arrType = 'gpuArrType'
         else:
@@ -279,8 +280,6 @@ class Function(object):
             self._genCode(_outputs)
         FunctionOp.clear_cache()
         Function.funcs.append(self.name)
-
-        self._io_map = kwargs.get('io_map', None)
 
     def grad(self):
         #gradOutputs = []
@@ -418,10 +417,11 @@ class Function(object):
                 codeFile.write('\tif (options["zero_static"]) {\n');
                 codeFile.write('\t\t{}.zero();\n'.format(out.name))
                 codeFile.write('\t}\n');
-            elif index, value in self._io_map.items():
-                codeFile.write('\t{}.reuse_release("{}");\n'.format(out.name, self._reuseId(index)))
+            elif index in self._io_map.values():
+                key =  self._io_map.keys()[self._io_map.values().index(index)]
+                codeFile.write('\t{}.reuse_release("{}");\n'.format(out.name, self._reuseId(key)))
                 codeFile.write('\tif (options["return_reusable"]) {\n');
-                codeFile.write('\t\tPyTuple_SetItem(outputs, {}, putArray({}, false));\n'.format(value, out.name))
+                codeFile.write('\t\tPyTuple_SetItem(outputs, {}, putArray({}, false));\n'.format(index, out.name))
                 codeFile.write('\t}\n');
             else:
                 codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}, false));\n'.format(index, out.name))

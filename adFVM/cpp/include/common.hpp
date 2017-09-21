@@ -210,13 +210,13 @@ class baseArrType {
     }
     bool shared_acquire() {
         int64_t id = this->id;
-        if (mem.refs.count(id) > 0) {
-            this->data = (dtype *)mem.refs.at(id);
+        if (mem.shared.count(id) > 0) {
+            this->data = (dtype *)mem.shared.at(id);
             return true;
         } else {
             self().alloc();
             this->inc_mem();
-            mem.refs[id] = (void *) this->data;
+            mem.shared[id] = (void *) this->data;
         }
         return false;
     }
