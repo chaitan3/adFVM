@@ -306,7 +306,8 @@ class Function(object):
 
     def getAdjoint(self):
         gradOutputs, gradInputs = self.grad()
-        return Function(self.name + '_grad', self._inputs + gradOutputs, gradInputs)
+        adj_io_map = {v + len(self._inputs): k for k, v in self._io_map.items()}
+        return Function(self.name + '_grad', self._inputs + gradOutputs, gradInputs, io_map=adj_io_map)
 
     def _getName(self, op):
         if isinstance(op, int):

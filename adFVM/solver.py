@@ -280,6 +280,7 @@ class Solver(object):
             return t < endTime and timeIndex < nSteps
 
         def updateTime(t0, dt):
+
             if self.localTimeStep:
                 t = t0 + 1
             else:

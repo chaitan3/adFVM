@@ -124,6 +124,7 @@ class Adjoint(Solver):
                 # complex parameter perturbation not supported
             perturbations.append(perturbation)
 
+
         totalCheckpoints = nSteps//writeInterval
         nCheckpoints = min(firstCheckpoint + runCheckpoints, totalCheckpoints)
         for checkpoint in range(firstCheckpoint, nCheckpoints):
@@ -153,8 +154,16 @@ class Adjoint(Solver):
                     phi.field *= mesh.volumes
                 fields = fieldsCopy
 
+            primal.updateSource(source(solutions[-1], mesh, 0))
+
+            pprint('Time step', writeInterval)
+            for phi in fields:
+                phi.info()
+            energyTimeSeries.append(getAdjointEnergy(primal, *fields))
+            pprint()
+
             for step in range(0, writeInterval):
-                report = (step % reportInterval) == 0
+                report = ((step + 1) % reportInterval) == 0
                 sample = ((step + 1) % sampleInterval) == 0
                 
                 adjointIndex = writeInterval-1 - step
@@ -165,17 +174,11 @@ class Adjoint(Solver):
                     mesh.boundary = previousMesh.boundary
                 else:
                     previousSolution = solutions[adjointIndex]
-                primal.updateSource(source(previousSolution, mesh, t))
 
+                pprint('Time step', adjointIndex + 1)
                 if report:
-                    printMemUsage()
+                    pprint('Time marching for', ' '.join(self.names))
                     start = time.time()
-                    for phi in fields:
-                        phi.info()
-                    energyTimeSeries.append(getAdjointEnergy(primal, *fields))
-                pprint('Time step', adjointIndex)
-
-                n = len(fields)
                 #for index in range(0, n):
                 #    fields[index].field *= mesh.volumes
 
@@ -189,8 +192,15 @@ class Adjoint(Solver):
                      [x[1] for x in primal.extraArgs] + \
                      [phi.field for phi in fields] + \
                      [dtca, obja]
+                options = {'return_static': sample,
+                           'zero_static': sample,
+                           'return_reusable': report,
+                           'replace_reusable': False,
+                           }
 
-                outputs = self.map(*inputs, return_static=sample, zero_static=sample)
+                #start10 = time.time()
+                outputs = self.map(*inputs, **options)
+                #pprint(time.time()-start10)
 
                 #print(sum([(1e-3*phi).sum() for phi in gradient]))
                 #inp1 = inputs[:3] + inputs[-3:-1]
@@ -201,6 +211,7 @@ class Adjoint(Solver):
                 #import pdb;pdb.set_trace()
 
                 # gradients
+                n = len(fields)
                 gradient = outputs[:n]
                 for index in range(0, n):
                     fields[index].field = gradient[index]
@@ -247,6 +258,7 @@ class Adjoint(Solver):
                     start4 = time.time()
                     pprint('Timers 1:', start3-start2, '2:', start4-start3)
 
+                
                 #print([type(x) for x in outputs])
                 if sample:
                     ms = n + 1
@@ -280,12 +292,16 @@ class Adjoint(Solver):
                     for i in range(0, sampleInterval):
                         sensTimeSeries.append(sensitivities)
 
-                #parallel.mpi.Barrier()
                 if report:
+                    for phi in fields:
+                        phi.info()
+                    energyTimeSeries.append(getAdjointEnergy(primal, *fields))
                     end = time.time()
                     pprint('Time for adjoint iteration: {0}'.format(end-start))
                     pprint('Time since beginning:', end-config.runtime)
                     pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
+                pprint()
+                #parallel.mpi.Barrier()
 
             #exit(1)
             #print(fields[0].field.max())
