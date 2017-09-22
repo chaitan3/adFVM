@@ -54,6 +54,7 @@ class MemoryBuffer {
     }
     virtual void dealloc(void *data) {
         int size =this->bufSize[data];
+        this->bufSize.erase(data);
         this->dec_mem(size);
     }
 
