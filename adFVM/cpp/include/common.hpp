@@ -33,7 +33,8 @@ typedef int32_t integer;
 
 #define NDIMS 4
 
-typedef struct {
+class MemoryBuffer {
+    public:
     int usage;
     int maxUsage;
     // id to memory locs
@@ -42,15 +43,34 @@ typedef struct {
     map<string, void *> reuse;
     // size to queue of memory locs
     map<int, queue<void*>> pool;
-} memory;
+    MemoryBuffer() {
+    }
+
+    ~MemoryBuffer() {
+        for (auto& kv : this->shared) { 
+            delete[] (char*)kv.second;
+        }
+        for (auto& kv : this->reuse) { 
+            delete[] (char*)kv.second;
+        }
+        for (auto& kv : this->pool) { 
+            queue<void*>& q = kv.second;
+            while(!q.empty()) {
+                delete[] (char*)q.front();
+                q.pop();
+            }
+        }
+    }
+};
 
 template<integer T>
 class Memory {
     public:
-    static memory mem;
+    static MemoryBuffer mem;
+
 };
 template<integer T>
-memory Memory<T>::mem = {0, 0};
+MemoryBuffer Memory<T>::mem = MemoryBuffer();
 
 #ifdef _OPENMP
     #include <omp.h>
@@ -90,7 +110,7 @@ class baseArrType {
 
     derivedArrType<dtype, shape1, shape2, shape3>& self() { return static_cast<derivedArrType<dtype, shape1, shape2, shape3>&>(*this); }
 
-    memory* get_mem() {
+    MemoryBuffer* get_mem() {
         return &(derivedArrType<dtype, shape1, shape2, shape3>::mem);
     }
 
