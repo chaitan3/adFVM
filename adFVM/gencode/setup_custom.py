@@ -54,6 +54,7 @@ if gpu:
     libs += ['mpi']
 else:
     compile_args += ['-fPIC', '-Wall', '-march=native']
+    compile_args += ['-Wfatal-errors']
     link_args += ['-shared']
 
 module = 'graph.so'

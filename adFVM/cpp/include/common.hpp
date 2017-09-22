@@ -33,6 +33,7 @@ typedef int32_t integer;
 
 #define NDIMS 4
 
+
 class MemoryBuffer {
     public:
     int usage;
@@ -45,32 +46,59 @@ class MemoryBuffer {
     map<int, queue<void*>> pool;
     MemoryBuffer() {
     }
+    
+    virtual void alloc(void** data, int size) {
+    }
+    virtual void dealloc(void *data) {
+    }
+
+    void inc_mem(int size) {
+        this->usage += size;
+        if (this->usage > this->maxUsage) {
+            this->maxUsage = this->usage;
+        }
+    }
+
+    void dec_mem(int size) {
+        this->usage -= size;
+    }
 
     ~MemoryBuffer() {
         for (auto& kv : this->shared) { 
-            delete[] (char*)kv.second;
+            this->dealloc(kv.second);
         }
         for (auto& kv : this->reuse) { 
-            delete[] (char*)kv.second;
+            this->dealloc(kv.second);
         }
         for (auto& kv : this->pool) { 
             queue<void*>& q = kv.second;
             while(!q.empty()) {
-                delete[] (char*)q.front();
+                this->dealloc(q.front());
                 q.pop();
             }
         }
     }
 };
 
-template<integer T>
+class CPUMemoryBuffer: public MemoryBuffer {
+    public:
+    void alloc(void **data, int size) {
+        *data = malloc(size);
+    }
+    void dealloc(void* data) {
+        free(data);
+    }
+    
+};
+
+template<typename MemoryBufferType>
 class Memory {
     public:
-    static MemoryBuffer mem;
+    static MemoryBufferType mem;
 
 };
-template<integer T>
-MemoryBuffer Memory<T>::mem = MemoryBuffer();
+template<typename MemoryBufferType>
+MemoryBufferType Memory<MemoryBufferType>::mem = MemoryBufferType();
 
 #ifdef _OPENMP
     #include <omp.h>
@@ -94,7 +122,7 @@ MemoryBuffer Memory<T>::mem = MemoryBuffer();
     #define omp_get_thread_num() 0
 #endif
 
-template<template<typename, integer, integer, integer> class derivedArrType, typename dtype, integer shape1, integer shape2, integer shape3>
+template<template<typename, integer, integer, integer> class derivedArrType, typename MemoryBufferType, typename dtype, integer shape1, integer shape2, integer shape3>
 class baseArrType {
     public:
     dtype type;
@@ -110,7 +138,7 @@ class baseArrType {
 
     derivedArrType<dtype, shape1, shape2, shape3>& self() { return static_cast<derivedArrType<dtype, shape1, shape2, shape3>&>(*this); }
 
-    MemoryBuffer* get_mem() {
+    MemoryBufferType* get_mem() {
         return &(derivedArrType<dtype, shape1, shape2, shape3>::mem);
     }
 
@@ -207,8 +235,8 @@ class baseArrType {
             if (this->keepMemory) {
                 this->pool_release();
             } else if (this->data != NULL) {
-                this->dec_mem();
-                self().dealloc();
+                this->get_mem()->dealloc((void*)this->data);
+
                 this->data = NULL;
             }
         }
@@ -224,8 +252,7 @@ class baseArrType {
             this->get_mem()->pool[key] = queue<void*>();
         } 
         if (this->get_mem()->pool.at(key).empty()) {
-            self().alloc();  
-            this->inc_mem();
+            this->get_mem()->alloc((void**)&this->data, this->bufSize);  
         } else {
             this->data = (dtype *) this->get_mem()->pool[key].front();
             this->get_mem()->pool[key].pop();
@@ -245,8 +272,7 @@ class baseArrType {
             this->data = (dtype *)this->get_mem()->shared.at(id);
             return true;
         } else {
-            self().alloc();
-            this->inc_mem();
+            this->get_mem()->alloc((void**)&this->data, this->bufSize);  
             this->get_mem()->shared[id] = (void *) this->data;
         }
         return false;
@@ -261,16 +287,7 @@ class baseArrType {
         this->get_mem()->reuse[reuseId] = this->data;
         this->ownData = false;
     }
-    void inc_mem() {
-        this->get_mem()->usage += this->bufSize;
-        if (this->get_mem()->usage > this->get_mem()->maxUsage) {
-            this->get_mem()->maxUsage = this->get_mem()->usage;
-        }
-    }
-
-    void dec_mem() {
-        this->get_mem()->usage -= this->bufSize;
-    }
+    
 
     const dtype& operator() (const integer i1) const {
         return const_cast<const dtype &>(data[i1*this->strides[0]]);
@@ -298,12 +315,6 @@ class baseArrType {
         return const_cast<dtype &>(static_cast<const derivedArrType<dtype, shape1, shape2, shape3> &>(*this)(i1, i2, i3));
     }
 
-    void alloc() {
-        throw logic_error("alloc not implemented");
-    }
-    void dealloc() {
-        throw logic_error("dealloc not implemented");
-    }
     void zero() {
         throw logic_error("zero not implemented");
     }
@@ -316,18 +327,9 @@ class baseArrType {
 };
 
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
-class arrType : public baseArrType<arrType, dtype, shape1, shape2, shape3>, public Memory<1> {
+class arrType : public baseArrType<arrType, CPUMemoryBuffer, dtype, shape1, shape2, shape3>, public Memory<CPUMemoryBuffer> {
     public:
-    using baseArrType<arrType, dtype, shape1, shape2, shape3>::baseArrType;
-
-    void alloc() {
-        //cout << "cpu alloc: " << this->bufSize << " " << this->get_mem()->usage << endl;
-        this -> data = new dtype[this->size];
-    }
-    void dealloc() {
-        //cout << "cpu dealloc: " << this->bufSize << " " << this->get_mem()->usage << endl;
-        delete[] this -> data; 
-    }
+    using baseArrType<arrType, CPUMemoryBuffer, dtype, shape1, shape2, shape3>::baseArrType;
 
     void zero() {
         //cout << "cpu zero: " << endl;
