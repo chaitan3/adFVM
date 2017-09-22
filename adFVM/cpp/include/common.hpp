@@ -33,7 +33,7 @@ typedef int32_t integer;
 
 #define NDIMS 4
 
-
+// crtp?
 class MemoryBuffer {
     public:
     int usage;
@@ -44,12 +44,17 @@ class MemoryBuffer {
     map<string, void *> reuse;
     // size to queue of memory locs
     map<int, queue<void*>> pool;
+    map<void*, int> bufSize;
     MemoryBuffer() {
     }
     
     virtual void alloc(void** data, int size) {
+        this->bufSize[*data] = size; 
+        this->inc_mem(size);
     }
     virtual void dealloc(void *data) {
+        int size =this->bufSize[data];
+        this->dec_mem(size);
     }
 
     void inc_mem(int size) {
@@ -84,9 +89,11 @@ class CPUMemoryBuffer: public MemoryBuffer {
     public:
     void alloc(void **data, int size) {
         *data = malloc(size);
+        MemoryBuffer::alloc(data, size);
     }
     void dealloc(void* data) {
         free(data);
+        MemoryBuffer::dealloc(data);
     }
     
 };
@@ -136,11 +143,8 @@ class baseArrType {
     bool keepMemory;
     int64_t id;
 
+    // get object with correct scope
     derivedArrType<dtype, shape1, shape2, shape3>& self() { return static_cast<derivedArrType<dtype, shape1, shape2, shape3>&>(*this); }
-
-    MemoryBufferType* get_mem() {
-        return &(derivedArrType<dtype, shape1, shape2, shape3>::mem);
-    }
 
     void set_default_values() {
         this->shape = 0;
@@ -246,45 +250,56 @@ class baseArrType {
         this->destroy();
     };
 
+
+    // memory handling code
+    MemoryBufferType* get_mem() {
+        return &(derivedArrType<dtype, shape1, shape2, shape3>::mem);
+    }
+
     void pool_acquire() {
+        MemoryBufferType& mem = *(this->get_mem());
         int key = this->bufSize;
-        if (this->get_mem()->pool.count(key) == 0) {
-            this->get_mem()->pool[key] = queue<void*>();
+        if (mem.pool.count(key) == 0) {
+            mem.pool[key] = queue<void*>();
         } 
-        if (this->get_mem()->pool.at(key).empty()) {
-            this->get_mem()->alloc((void**)&this->data, this->bufSize);  
+        if (mem.pool.at(key).empty()) {
+            mem.alloc((void**)&this->data, this->bufSize);  
         } else {
-            this->data = (dtype *) this->get_mem()->pool[key].front();
-            this->get_mem()->pool[key].pop();
+            this->data = (dtype *) mem.pool[key].front();
+            mem.pool[key].pop();
         }
         //cout << "using " << this->data << endl;
         this->ownData = true;
     }
     void pool_release() {
+        MemoryBufferType& mem = *(this->get_mem());
         assert (this->ownData);
         int key = this->bufSize;
-        this->get_mem()->pool[key].push((void *)this->data);
+        mem.pool[key].push((void *)this->data);
         this->ownData = false;
     }
     bool shared_acquire() {
+        MemoryBufferType& mem = *(this->get_mem());
         int64_t id = this->id;
-        if (this->get_mem()->shared.count(id) > 0) {
-            this->data = (dtype *)this->get_mem()->shared.at(id);
+        if (mem.shared.count(id) > 0) {
+            this->data = (dtype *)mem.shared.at(id);
             return true;
         } else {
-            this->get_mem()->alloc((void**)&this->data, this->bufSize);  
-            this->get_mem()->shared[id] = (void *) this->data;
+            mem.alloc((void**)&this->data, this->bufSize);  
+            mem.shared[id] = (void *) this->data;
         }
         return false;
     }
     void reuse_acquire(string reuseId) {
-        void* data = this->get_mem()->reuse[reuseId];
+        MemoryBufferType& mem = *(this->get_mem());
+        void* data = mem.reuse[reuseId];
         this->data = (dtype*) data;
         int key = this->bufSize;
         this->ownData = true;
     }
     void reuse_release(string reuseId) {
-        this->get_mem()->reuse[reuseId] = this->data;
+        MemoryBufferType& mem = *(this->get_mem());
+        mem.reuse[reuseId] = this->data;
         this->ownData = false;
     }
     

@@ -132,9 +132,11 @@ class GPUMemoryBuffer: public MemoryBuffer {
     public:
     void alloc(void **data, int size) {
         gpuErrorCheck(cudaMalloc(data), size));
+        MemoryBuffer::alloc(data, size);
     }
     void dealloc(void* data) {
         gpuErrorCheck(cudaFree(data));
+        MemoryBuffer::dealloc(data);
     }
     
 };
