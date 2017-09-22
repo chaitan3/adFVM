@@ -33,17 +33,24 @@ typedef int32_t integer;
 
 #define NDIMS 4
 
-struct memory {
+typedef struct {
     int usage;
     int maxUsage;
     // id to memory locs
     map<int, void *> shared;
-    // reuse id to memory locs
+    // reuse id to memory locs: uses pool
     map<string, void *> reuse;
     // size to queue of memory locs
     map<int, queue<void*>> pool;
+} memory;
+
+template<integer T>
+class Memory {
+    public:
+    static memory mem;
 };
-extern struct memory mem;
+template<integer T>
+memory Memory<T>::mem = {0, 0};
 
 #ifdef _OPENMP
     #include <omp.h>
@@ -82,6 +89,10 @@ class baseArrType {
     int64_t id;
 
     derivedArrType<dtype, shape1, shape2, shape3>& self() { return static_cast<derivedArrType<dtype, shape1, shape2, shape3>&>(*this); }
+
+    memory* get_mem() {
+        return &(derivedArrType<dtype, shape1, shape2, shape3>::mem);
+    }
 
     void set_default_values() {
         this->shape = 0;
@@ -189,15 +200,15 @@ class baseArrType {
 
     void pool_acquire() {
         int key = this->bufSize;
-        if (mem.pool.count(key) == 0) {
-            mem.pool[key] = queue<void*>();
+        if (this->get_mem()->pool.count(key) == 0) {
+            this->get_mem()->pool[key] = queue<void*>();
         } 
-        if (mem.pool.at(key).empty()) {
+        if (this->get_mem()->pool.at(key).empty()) {
             self().alloc();  
             this->inc_mem();
         } else {
-            this->data = (dtype *) mem.pool[key].front();
-            mem.pool[key].pop();
+            this->data = (dtype *) this->get_mem()->pool[key].front();
+            this->get_mem()->pool[key].pop();
         }
         //cout << "using " << this->data << endl;
         this->ownData = true;
@@ -205,40 +216,40 @@ class baseArrType {
     void pool_release() {
         assert (this->ownData);
         int key = this->bufSize;
-        mem.pool[key].push((void *)this->data);
+        this->get_mem()->pool[key].push((void *)this->data);
         this->ownData = false;
     }
     bool shared_acquire() {
         int64_t id = this->id;
-        if (mem.shared.count(id) > 0) {
-            this->data = (dtype *)mem.shared.at(id);
+        if (this->get_mem()->shared.count(id) > 0) {
+            this->data = (dtype *)this->get_mem()->shared.at(id);
             return true;
         } else {
             self().alloc();
             this->inc_mem();
-            mem.shared[id] = (void *) this->data;
+            this->get_mem()->shared[id] = (void *) this->data;
         }
         return false;
     }
     void reuse_acquire(string reuseId) {
-        void* data = mem.reuse[reuseId];
+        void* data = this->get_mem()->reuse[reuseId];
         this->data = (dtype*) data;
         int key = this->bufSize;
         this->ownData = true;
     }
     void reuse_release(string reuseId) {
-        mem.reuse[reuseId] = this->data;
+        this->get_mem()->reuse[reuseId] = this->data;
         this->ownData = false;
     }
     void inc_mem() {
-        mem.usage += this->bufSize;
-        if (mem.usage > mem.maxUsage) {
-            mem.maxUsage = mem.usage;
+        this->get_mem()->usage += this->bufSize;
+        if (this->get_mem()->usage > this->get_mem()->maxUsage) {
+            this->get_mem()->maxUsage = this->get_mem()->usage;
         }
     }
 
     void dec_mem() {
-        mem.usage -= this->bufSize;
+        this->get_mem()->usage -= this->bufSize;
     }
 
     const dtype& operator() (const integer i1) const {
@@ -285,16 +296,16 @@ class baseArrType {
 };
 
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
-class arrType : public baseArrType<arrType, dtype, shape1, shape2, shape3> {
+class arrType : public baseArrType<arrType, dtype, shape1, shape2, shape3>, public Memory<1> {
     public:
     using baseArrType<arrType, dtype, shape1, shape2, shape3>::baseArrType;
 
     void alloc() {
-        //cout << "cpu alloc: " << this->bufSize << " " << mem.usage << endl;
+        //cout << "cpu alloc: " << this->bufSize << " " << this->get_mem()->usage << endl;
         this -> data = new dtype[this->size];
     }
     void dealloc() {
-        //cout << "cpu dealloc: " << this->bufSize << " " << mem.usage << endl;
+        //cout << "cpu dealloc: " << this->bufSize << " " << this->get_mem()->usage << endl;
         delete[] this -> data; 
     }
 
@@ -390,6 +401,9 @@ class arrType : public baseArrType<arrType, dtype, shape1, shape2, shape3> {
         return res;
     }
 };
+
+//template<typename dtype, integer shaep1, integer shape2, integer shape3>
+
 
 #ifndef GPU
     #define extArrType arrType

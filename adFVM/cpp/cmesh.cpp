@@ -258,7 +258,6 @@ void Mesh::build() {
     PyObject_SetAttrString(this->mesh, "cellOwner", putArray(this->cellOwner));
 }
 
-struct memory mem = {0, 0};
 Mesh *meshp = NULL;
 
 #ifdef CPU_FLOAT32

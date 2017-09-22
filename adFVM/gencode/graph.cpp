@@ -1,8 +1,6 @@
 #include "parallel.hpp"
 #include "mesh.hpp"
 
-struct memory mem = {0, 0};
-
 long long mil = 0;
 long long current_timestamp() {
     struct timeval te; 

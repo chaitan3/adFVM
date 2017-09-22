@@ -322,7 +322,6 @@ class Function(object):
     def _genCode(self, outputs):
         codeFile = open(self.codeDir + self.codeFile, 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args, PyObject *kwargs) {{\n'.format(self.name))
-        codeFile.write('\t//printf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         codeFile.write('\tmap<string, int> options = PyOptions_Parse(kwargs);\n')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
@@ -337,7 +336,7 @@ class Function(object):
             codeFile.write('\t{}<{}, {}> {};\n'.format(self.arrType, inp.dtype, shape, inp.name))
             if index in self._io_map.keys():
                 reuseId = self._reuseId(index)
-                codeFile.write('\tif (options["replace_reusable"] || mem.reuse.count("{}") == 0) {{\n'.format(reuseId))
+                codeFile.write('\tif (options["replace_reusable"] || {}.get_mem()->reuse.count("{}") == 0) {{\n'.format(inp.name, reuseId))
                 codeFile.write('\t\tgetArray((PyArrayObject*) Py_{0}, {0}, true, {1}L);\n'.format(inp.name, inp.staticId()))
                 codeFile.write('\t} else {\n')
                 codeFile.write('\t\t{}.reuse_acquire("{}");\n'.format(inp.name, reuseId))
@@ -426,7 +425,6 @@ class Function(object):
                 codeFile.write('\t}\n');
             else:
                 codeFile.write('\tPyTuple_SetItem(outputs, {}, putArray({}, false));\n'.format(index, out.name))
-        codeFile.write('\t//printf("%d %d\\n", mem.usage, mem.maxUsage);\n')
         codeFile.write('\treturn outputs;')
         codeFile.write('\n')
         codeFile.write('}\n\n')
