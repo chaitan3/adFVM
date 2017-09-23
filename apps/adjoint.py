@@ -10,6 +10,7 @@ from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, getAdjointVisco
 from adFVM.solver import Solver
 from adFVM.tensor import TensorFunction
 from adFVM.variable import Variable, Function, Zeros
+from adFVM.mesh import cmesh
 
 from problem import primal, nSteps, writeInterval, sampleInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints, startTime
 
@@ -184,7 +185,7 @@ class Adjoint(Solver):
                 else:
                     previousSolution = solutions[adjointIndex]
 
-                pprint('Time step', adjointIndex + 1)
+                pprint('Time step', adjointIndex)
                 if report:
                     pprint('Time marching for', ' '.join(self.names))
                     start = time.time()
@@ -240,7 +241,6 @@ class Adjoint(Solver):
                     # compute sensitivity using adjoint solution
                     sensitivities = []
                     for index, perturbation in enumerate(perturbations):
-                        sensitivity = 0.
                         # make efficient cpu implementation
                         param = parameters[0]
                         if param == 'source':
@@ -249,8 +249,11 @@ class Adjoint(Solver):
                             paramGradient = meshGradient
                         else:
                             raise Exception('unrecognized perturbation')
-                        for derivative, delphi in zip(paramGradient, perturbation):
-                            sensitivity += np.sum(derivative * delphi)
+                        paramGradient = list(paramGradient)
+                        #sensitivity = 0.
+                        #for derivative, delphi in zip(paramGradient, perturbation):
+                        #    sensitivity += np.sum(derivative * delphi)
+                        sensitivity = cmesh.computeSensitivity(paramGradient, perturbation)
                         sensitivities.append(sensitivity)
                     sensitivities = parallel.sum(sensitivities, allreduce=False)
                     if (nSteps - (primalIndex + adjointIndex)) > avgStart:

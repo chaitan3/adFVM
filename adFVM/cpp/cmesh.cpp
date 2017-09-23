@@ -296,9 +296,43 @@ PyObject* buildMeshBeforeWrite(PyObject *self, PyObject *args) {
     return Py_None;
 }
 
+PyObject* computeSensitivity(PyObject* self, PyObject* args) {
+    PyObject* gradients;
+    PyObject* perturbation;
+    if (!PyArg_ParseTuple(args, "OO", &gradients, &perturbation)) {
+        cout << "parsing arguments failed" << endl;
+        return NULL;
+    }
+    if (!PyList_Check(gradients) || !PyList_Check(perturbation)) {
+        cout << "arguments not lists" << endl;
+        return NULL;
+    }
+    int i, j;
+    int n = PyList_Size(gradients);
+    scalar sensitivity = 0;
+    for (i = 0; i < n; i++) {
+        PyArrayObject* grad = (PyArrayObject*) PyList_GetItem(gradients, i);
+        PyArrayObject* per = (PyArrayObject*) PyList_GetItem(perturbation, i);
+        assert(PyArray_IS_C_CONTIGUOUS(grad));
+        assert(PyArray_IS_C_CONTIGUOUS(per));
+        assert(PyArray_ITEMSIZE(grad) == sizeof(scalar));
+        assert(PyArray_ITEMSIZE(per) == sizeof(scalar));
+        int m = PyArray_SIZE(grad);
+        assert(PyArray_SIZE(per) == m);
+        scalar* grad_data = (scalar*)PyArray_DATA(grad);
+        scalar* per_data = (scalar*)PyArray_DATA(per);
+        #pragma omp parallel for private(j) reduction(+: sensitivity)
+        for (j = 0; j < m; j++) {
+            sensitivity += grad_data[j]*per_data[j];
+        }
+    }
+    return Py_BuildValue("d", sensitivity);
+}
+
 PyMethodDef Methods[] = {
     {"build",  buildMesh, METH_VARARGS, "Execute a shell command."},
     {"buildBeforeWrite",  buildMeshBeforeWrite, METH_VARARGS, "Execute a shell command."},
+    {"computeSensitivity",  computeSensitivity, METH_VARARGS, "Execute a shell command."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
