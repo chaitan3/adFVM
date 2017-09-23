@@ -39,7 +39,7 @@ Matop::~Matop () {
     PetscFinalize();
 }
 
-int Matop::heat_equation(const arrType<scalar, nrhs>& u, const vec& DT, const scalar dt, arrType<scalar, nrhs>& un) {
+int Matop::heat_equation(vector<const vec*> u, const vec& DT, const scalar dt, vector<vec*> un) {
     const Mesh& mesh = *meshp;
     Vec x, b;
     Mat A;
@@ -137,7 +137,7 @@ int Matop::heat_equation(const arrType<scalar, nrhs>& u, const vec& DT, const sc
         scalar *data1, *data2;
         VecGetArray(b, &data1);
         for (integer j = 0; j < n; j++) {
-            data1[j] = u(j, i)/dt;
+            data1[j] = (*u[i])(j)/dt;
             //VecSetValue(b, j + jl, u(j,i)/dt, INSERT_VALUES);
         }
         VecRestoreArray(b, &data1);
@@ -146,7 +146,7 @@ int Matop::heat_equation(const arrType<scalar, nrhs>& u, const vec& DT, const sc
         CHKERRQ(KSPSolve(ksp, b, x));
         VecGetArray(x, &data2);
         for (integer j = 0; j < n; j++) {
-            un(j, i) = data2[j];
+            (*un[i])(j) = data2[j];
         }
         VecRestoreArray(x, &data2);
     }

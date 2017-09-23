@@ -14,7 +14,7 @@ class Matop {
 
     Matop();    
     ~Matop();    
-    int heat_equation(const arrType<scalar, 5>& u, const vec& DT, const scalar dt, arrType<scalar, 5>& un);
+    int heat_equation(vector<const vec*> u, const vec& DT, const scalar dt, vector<vec*> un);
 };
 
 extern Matop *matop;

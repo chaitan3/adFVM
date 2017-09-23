@@ -480,14 +480,17 @@ def getAdjointViscosityCpp(solver, rho, rhoU, rhoE, scaling):
 def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
     mesh = solver.mesh.symMesh
     def divideVolumes(rhoa, rhoUa, rhoEa, volumes):
-        return rhoa/volumes, rhoUa/volumes, rhoEa/volumes
+        return rhoa/volumes, rhoUa[0]/volumes, rhoUa[1]/volumes, rhoUa[2]/volumes, rhoEa/volumes
     fields = Tensorize(divideVolumes)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes)
 
     inputs = fields + (DT, solver.dt)
     outputs = tuple([Zeros(x.shape) for x in fields])
-    rhoa, rhoUa, rhoEa = ExternalFunctionOp('apply_adjoint_viscosity', inputs, outputs).outputs
+    fields = ExternalFunctionOp('apply_adjoint_viscosity', inputs, outputs).outputs
 
-    def multiplyVolumes(rhoa, rhoUa, rhoEa, volumes):
-        return rhoa*volumes, rhoUa*volumes, rhoEa*volumes
-    return Tensorize(multiplyVolumes)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes)
+    def multiplyVolumes(phi1, phi2, phi3, phi4, phi5, volumes):
+        rhoa = phi1*volumes
+        rhoUa = Tensor((3,), [phi2*volumes, phi3*volumes, phi4*volumes])
+        rhoEa = phi5*volumes
+        return rhoa, rhoUa, rhoEa
+    return Tensorize(multiplyVolumes)(mesh.nInternalCells)(*(fields + (mesh.volumes,)))
 
