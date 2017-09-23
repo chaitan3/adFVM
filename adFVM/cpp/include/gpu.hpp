@@ -131,7 +131,7 @@ __inline__ __device__ void reduceMax(int n, const dtype val, dtype* res) {
 class GPUMemoryBuffer: public MemoryBuffer {
     public:
     void alloc(void **data, int size) {
-        gpuErrorCheck(cudaMalloc(data), size));
+        gpuErrorCheck(cudaMalloc(data, size));
         MemoryBuffer::alloc(data, size);
     }
     void dealloc(void* data) {
@@ -144,7 +144,7 @@ class GPUMemoryBuffer: public MemoryBuffer {
 template <typename dtype, integer shape1=1, integer shape2=1, integer shape3=1>
 class gpuArrType : public baseArrType<gpuArrType, GPUMemoryBuffer, dtype, shape1, shape2, shape3>, public Memory<GPUMemoryBuffer> {
     public:
-    using baseArrType<gpuArrType, dtype, shape1, shape2, shape3>::baseArrType;
+    using baseArrType<gpuArrType, GPUMemoryBuffer, dtype, shape1, shape2, shape3>::baseArrType;
 
     void zero() {
         gpuErrorCheck(cudaMemset(this->data, 0, this->bufSize));
