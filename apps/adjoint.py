@@ -6,12 +6,12 @@ from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
 from adFVM import interp
 from adFVM.memory import printMemUsage
-from adFVM.postpro import getAdjointViscosity, getAdjointEnergy
+from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, getAdjointViscosityCpp, viscositySolver
 from adFVM.solver import Solver
 from adFVM.tensor import TensorFunction
 from adFVM.variable import Variable, Function, Zeros
 
-from problem import primal, nSteps, writeInterval, sampleInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints
+from problem import primal, nSteps, writeInterval, sampleInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints, startTime
 
 import numpy as np
 import time
@@ -70,11 +70,20 @@ class Adjoint(Solver):
 
     def compileSolver(self):
         primal.compileSolver()
-        self.map = primal.map.adjoint
 
-    def compileExtra(self):
-        primal.compileExtra()
-    
+        n = len(self.fields)
+        scaling = Variable((1, 1))
+        gradOutputs, gradInputs = primal.map.grad()
+        fields = gradInputs[:n]
+        if config.scaling:
+            primalFields = primal.map._inputs[:n]
+            DT = getAdjointViscosityCpp(*([primal] + primalFields + [scaling]))
+            fields = viscositySolver(*([primal] + fields + [DT]))
+        args = primal.map._inputs + gradOutputs + [scaling]
+        outputs = list(fields) + gradInputs[n:]
+        self.map = Function('primal_grad', args, outputs)
+        #self.map self.map.getAdjoint()
+
     def initPrimalData(self):
         if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
             self.firstCheckpoint, self.result  = primal.readStatusFile()
@@ -191,7 +200,8 @@ class Adjoint(Solver):
                      primal.getBoundaryTensor(1) + \
                      [x[1] for x in primal.extraArgs] + \
                      [phi.field for phi in fields] + \
-                     [dtca, obja]
+                     [dtca, obja] + \
+                     [np.array([[self.scaling]], config.precision)]
                 options = {'return_static': sample,
                            'zero_static': sample,
                            'return_reusable': report,
@@ -217,48 +227,6 @@ class Adjoint(Solver):
                     fields[index].field = gradient[index]
                     #fields[index].field = gradient[index]/mesh.volumes
 
-                if self.scaling:
-                    for phi in fields:
-                        phi.field /= mesh.volumes
-                    if report:
-                        pprint('Smoothing adjoint field')
-                    stackedFields = np.concatenate([phi.field for phi in fields], axis=1)
-                    stackedFields = np.ascontiguousarray(stackedFields)
-                    pprint([(parallel.max(np.abs(phi.field)), parallel.sum(phi.field)) for phi in fields])
-
-                    start2 = time.time() 
-                    if config.matop:
-                        scaling = np.array([[self.scaling]]).astype(config.precision)
-                        inputs = [phi.field for phi in previousSolution] + [scaling] + mesh.getTensor() + mesh.getScalar() + primal.getBoundaryTensor(1)
-                        (DT,) = Function._module.viscosity(*inputs)
-                        newStackedFields = Function._module.viscositySolver(stackedFields, DT, dt)
-                        start3 = time.time()
-                    else:
-                        inputs = previousSolution + [self.scaling]
-                        kwargs = {'visc': self.viscosityType, 'scale': self.viscosityScaler, 'report':report}
-                        weight = interp.centralOld(getAdjointViscosity(*inputs, **kwargs), mesh)
-                        start3 = time.time()
-                        stackedPhi = Field('a', stackedFields, (5,))
-                        stackedPhi.old = stackedFields
-                        newStackedFields = (matop_petsc.ddt(stackedPhi, dt) - matop_petsc.laplacian(stackedPhi, weight, correction=False)).solve()
-                        #newStackedFields = stackedFields/(1 + weight*dt)
-
-                    newFields = [newStackedFields[:,[0]], 
-                                 newStackedFields[:,[1,2,3]], 
-                                 newStackedFields[:,[4]]
-                                ]
-                    fields = self.getFields(newFields, IOField)
-                    pprint([(parallel.max(np.abs(phi.field)), parallel.sum(phi.field)) for phi in fields])
-
-                    for phi in fields:
-                        phi.field = np.ascontiguousarray(phi.field)
-                    for phi in fields:
-                        phi.field *= mesh.volumes
-
-                    start4 = time.time()
-                    pprint('Timers 1:', start3-start2, '2:', start4-start3)
-
-                
                 #print([type(x) for x in outputs])
                 if sample:
                     ms = n + 1
@@ -335,14 +303,15 @@ def main():
     user, args = parser.parse_known_args()
 
     adjoint = Adjoint(primal)
+
+    primal.readFields(startTime)
+    adjoint.createFields()
+    adjoint.compile()
+
     adjoint.initPrimalData()
     if not config.matop:
         global matop_petsc
         from adFVM import matop_petsc
-
-    primal.readFields(adjoint.timeSteps[nSteps-writeInterval][0])
-    adjoint.createFields()
-    adjoint.compile()
 
     adjoint.run(user.readFields)
 

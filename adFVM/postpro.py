@@ -476,3 +476,18 @@ def getAdjointViscosityCpp(solver, rho, rhoU, rhoE, scaling):
     DT = Zeros((mesh.nFaces, 1))
     (DT,) = Tensorize(interpolate)(mesh.nFaces, (DT,))(M_2norm, *meshArgs)
     return DT
+
+def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
+    mesh = solver.mesh.symMesh
+    def divideVolumes(rhoa, rhoUa, rhoEa, volumes):
+        return rhoa/volumes, rhoUa/volumes, rhoEa/volumes
+    fields = Tensorize(divideVolumes)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes)
+
+    inputs = fields + (DT, solver.dt)
+    outputs = tuple([Zeros(x.shape) for x in fields])
+    rhoa, rhoUa, rhoEa = ExternalFunctionOp('apply_adjoint_viscosity', inputs, outputs).outputs
+
+    def multiplyVolumes(rhoa, rhoUa, rhoEa, volumes):
+        return rhoa*volumes, rhoUa*volumes, rhoEa*volumes
+    return Tensorize(multiplyVolumes)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes)
+

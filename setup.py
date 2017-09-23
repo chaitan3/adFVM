@@ -30,7 +30,7 @@ incdirs = [np.get_include()]
 incdirs += [cppDir + 'include/']
 libdirs = []
 libs = []
-sources = ['mesh.cpp', 'cmesh.cpp']
+sources = ['mesh.cpp', 'cmesh.cpp', 'interface.cpp']
 sources = [cppDir + f for f in sources]
 
 #compile_args = ['-std=c++11', '-O3']#, '-march=native']

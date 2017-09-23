@@ -25,7 +25,7 @@ home = os.path.expanduser("~")
 incdirs = [get_python_inc(), np.get_include(), cppDir + '/include']
 libdirs = []
 libs = ['lapack']
-sources = ['interface.cpp', 'mesh.cpp', 'parallel.cpp']
+sources = ['interface.cpp', 'mesh.cpp', 'parallel.cpp', 'scaling.cpp']
 sources = [cppDir + x for x in sources]
 sources += ['graph.cpp']
 sources += [x.format(codeExt) for x in ['kernel.{}', 'code.{}']]
@@ -72,7 +72,7 @@ def single_compile(src):
 
 n = len(sources)
 #n = 4
-#n = 1
+n = 1
 res = list(multiprocessing.pool.ThreadPool(n).imap(single_compile, sources))
 
 cmd = linker + link_args + libdirs + libs + objects + ['-o', module]

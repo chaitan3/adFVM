@@ -46,6 +46,7 @@ def stacksize(since=0.0):
 import resource
 from . import parallel, config
 def printMemUsage():
+    return
     if not config.user.profile_mem:
         return
     mem_max = resource.getrusage(resource.RUSAGE_SELF)[2]*resource.getpagesize()/(1024*1024.)

@@ -18,7 +18,7 @@ perturb = []
 reportInterval = 1
 sampleInterval = 1
 parameters = []
-adjParams = [None, None, None]
+adjParams = [0.0, None, None]
 avgStart = 0
 runCheckpoints = 2**30
 

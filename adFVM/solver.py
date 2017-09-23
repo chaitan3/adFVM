@@ -62,8 +62,9 @@ class Solver(object):
         Function.createCodeDir(self.mesh.caseDir)
         self.compileInit()
         self.compileSolver()
-        self.compileExtra()
         Function.compile()
+        if config.compile_exit:
+            exit(0)
         Function._module.initialize(self.mesh, parallel.localRank)
         return
         
