@@ -15,6 +15,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-g', '--gpu', action='store_true', dest='use_gpu')
 parser.add_argument('-m', '--omp', action='store_true', dest='use_openmp')
+parser.add_argument('-p', '--matop', action='store_true', dest='use_matop')
 parser.add_argument('-s', '--scaling', action='store_true', dest='use_scaling')
 parser.add_argument('-d', '--hdf5', action='store_true')
 parser.add_argument('--gc', action='store_true', dest='use_gc')
@@ -52,6 +53,7 @@ else:
     codeExt = 'cpp'
 openmp = user.use_openmp
 scaling = user.use_scaling
+matop = user.use_matop
 gc = user.use_gc
 hdf5 = user.hdf5
 
