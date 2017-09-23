@@ -15,6 +15,12 @@ inline void petscAssert(PetscErrorCode code, const char *file, int line, bool ab
 
 Matop::Matop() {
     const Mesh& mesh = *meshp;
+    integer argc = 0;
+    PetscErrorCode error = PetscInitialize(&argc, NULL, NULL, NULL);
+    if (error != 0) {
+        cout << "petsc error" << endl;
+        exit(1);
+    }
 
     for (auto& patch: mesh.boundary) {
         auto& patchInfo = patch.second;
@@ -27,6 +33,10 @@ Matop::Matop() {
             boundaryProcs[patch.first] = stoi(patchInfo.at("neighbProcNo"));
         }
     }
+}
+
+Matop::~Matop () {
+    PetscFinalize();
 }
 
 int Matop::heat_equation(const arrType<scalar, nrhs>& u, const vec& DT, const scalar dt, arrType<scalar, nrhs>& un) {

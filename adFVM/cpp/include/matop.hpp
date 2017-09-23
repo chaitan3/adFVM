@@ -1,4 +1,3 @@
-
 #ifndef MATOP_HPP
 #define MATOP_HPP
 
@@ -14,6 +13,7 @@ class Matop {
     public:
 
     Matop();    
+    ~Matop();    
     int heat_equation(const arrType<scalar, 5>& u, const vec& DT, const scalar dt, arrType<scalar, 5>& un);
 };
 

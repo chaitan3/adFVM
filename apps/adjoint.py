@@ -309,9 +309,6 @@ def main():
     adjoint.compile()
 
     adjoint.initPrimalData()
-    if not config.matop:
-        global matop_petsc
-        from adFVM import matop_petsc
 
     adjoint.run(user.readFields)
 

@@ -1,5 +1,5 @@
-#include "parallel.hpp"
 #include "mesh.hpp"
+#include "parallel.hpp"
 
 long long mil = 0;
 long long current_timestamp() {
@@ -49,12 +49,6 @@ PyObject* initialize(PyObject *self, PyObject *args) {
     #endif
 
     #ifdef MATOP
-        integer argc = 0;
-        PetscErrorCode error = PetscInitialize(&argc, NULL, NULL, NULL);
-        if (error != 0) {
-            cout << "petsc error" << endl;
-            exit(1);
-        }
         matop = new Matop();
     #endif
 
@@ -71,7 +65,6 @@ void interface_exit() {
     parallel_exit();
     delete meshp;
     #ifdef MATOP
-        PetscFinalize();
         delete matop;
     #endif
     free(Methods);
