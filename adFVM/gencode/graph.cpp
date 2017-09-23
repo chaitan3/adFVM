@@ -61,35 +61,8 @@ PyObject* initialize(PyObject *self, PyObject *args) {
     return Py_None;
 }
 
-PyObject* viscositySolver(PyObject *self, PyObject *args) {
-
-    //cout << "forward 1" << endl;
-    PyObject *uObject, *DTObject;
-    scalar dt;
-    PyArg_ParseTuple(args, "OOd", &uObject, &DTObject, &dt);
-
-    arrType<scalar, 5> u;
-    vec DT;
-    getArray((PyArrayObject *)uObject, u);
-    getArray((PyArrayObject *)DTObject, DT);
-
-    const Mesh& mesh = *meshp;
-    arrType<scalar, 5> un(mesh.nInternalCells, true);
-    #ifdef MATOP
-        int error = matop->heat_equation(u, DT, dt, un);
-        if (error) {
-            cout << "petsc error " << error << endl;
-        }
-    #endif
-    
-    return putArray(un);
-}
-
-
-
 PyMethodDef StaticMethods[] = {
     {"initialize",  initialize, METH_VARARGS, "Execute a shell command."},
-    {"viscositySolver",  viscositySolver, METH_VARARGS, "Execute a shell command."},
 };
 extern PyMethodDef ExtraMethods[];
 static PyMethodDef* Methods;
