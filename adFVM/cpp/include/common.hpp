@@ -173,7 +173,11 @@ class baseArrType {
         this->bufSize = this->size*sizeof(dtype);
     }
 
-    void init_shape(const integer shape, bool zero, bool keepMemory, int64_t id) {
+    baseArrType () {
+        this->set_default_values();
+    }
+
+    baseArrType(const integer shape, bool zero=false, bool keepMemory=false, int64_t id=0) {
         this->init(shape);
         this->keepMemory = keepMemory;
         this->id = id;
@@ -186,17 +190,15 @@ class baseArrType {
             self().zero();
         }
     }
-    baseArrType () {
-        this->set_default_values();
-    }
 
-    baseArrType(const integer shape, bool zero=false, bool keepMemory=false, int64_t id=0) {
-        this->init_shape(shape, zero, keepMemory, id);
-    }
-
-    baseArrType(const integer shape, dtype* data) {
+    baseArrType(const integer shape, dtype* data, bool keepMemory=false, int64_t id=0) {
         this -> init(shape);
-        this -> data = data;
+        this -> keepMemory = keepMemory;
+        this -> id = id;
+        bool transfer = self().toDeviceMemory();
+        if(transfer) {
+            self().toDevice(data);
+        } 
     }
 
     baseArrType(const integer shape, const dtype* data) {
@@ -268,6 +270,7 @@ class baseArrType {
         } else {
             this->data = (dtype *) mem.pool[key].front();
             mem.pool[key].pop();
+            this->keepMemory = true;
         }
         //cout << "using " << this->data << endl;
         this->ownData = true;
@@ -337,6 +340,9 @@ class baseArrType {
     dtype* toHost() const {
         throw logic_error("toHost not implemented");
     }
+    bool toDeviceMemory() {
+        throw logic_error("toDevice not implemented");
+    }
     void toDevice(dtype *data) {
         throw logic_error("toDevice not implemented");
     }
@@ -357,8 +363,11 @@ class arrType : public baseArrType<arrType, CPUMemoryBuffer, dtype, shape1, shap
         memcpy(hdata, this->data, this->bufSize);
         return hdata;
     }
+    bool toDeviceMemory() {
+        return true;
+    }
     void toDevice(dtype *data) {
-        //memcpy(this->data, data, this->bufSize);
+        this->data = data;
     }
 
     void copy(const integer index, const dtype* sdata, const integer n) {

@@ -44,10 +44,7 @@ void getArray(PyArrayObject *array, derivedArrType<dtype, shape1, shape2, shape3
     assert(PyArray_ITEMSIZE(array) == sizeof(dtype));
 
     dtype *data = (dtype *) PyArray_DATA(array);
-    derivedArrType<dtype, shape1, shape2, shape3> result(dims[0], data);
-    result.keepMemory = keepMemory;
-    result.id = id;
-    result.toDevice(result.data);
+    derivedArrType<dtype, shape1, shape2, shape3> result(dims[0], data, keepMemory, id);
     
     //cout << rows << " " << cols << endl;
     //if ((typeid(dtype) != type(uscalar)) && (typeid(dtype) != typeid(integer))) {

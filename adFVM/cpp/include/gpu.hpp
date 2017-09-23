@@ -155,17 +155,18 @@ class gpuArrType : public baseArrType<gpuArrType, GPUMemoryBuffer, dtype, shape1
         gpuErrorCheck(cudaMemcpy(hdata, this->data, this->bufSize, cudaMemcpyDeviceToHost));
         return hdata;
     }
-    void toDevice(dtype* data) {
-        //cout << "transferring to device: " << this->bufSize << endl;
+    bool toDeviceMemory() {
         bool transfer = true;
         if (this->id != 0) {
             transfer = !this->shared_acquire();
         } else {
             this->pool_acquire();
         }
-        if (transfer) {
-            gpuErrorCheck(cudaMemcpy(this->data, data, this->bufSize, cudaMemcpyHostToDevice));
-        }
+        return transfer;
+    }
+    void toDevice(dtype* data) {
+        //cout << "transferring to device: " << this->bufSize << endl;
+        gpuErrorCheck(cudaMemcpy(this->data, data, this->bufSize, cudaMemcpyHostToDevice));
     }
 
     void copy(integer index, dtype* sdata, integer n) {
