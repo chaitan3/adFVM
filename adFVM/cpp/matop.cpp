@@ -39,7 +39,7 @@ Matop::~Matop () {
     PetscFinalize();
 }
 
-int Matop::heat_equation(vector<const vec*> u, const vec& DT, const scalar dt, vector<vec*> un) {
+int Matop::heat_equation(vector<vec*> u, const vec& DT, const scalar dt, vector<vec*> un) {
     const Mesh& mesh = *meshp;
     Vec x, b;
     Mat A;
@@ -121,9 +121,9 @@ int Matop::heat_equation(vector<const vec*> u, const vec& DT, const scalar dt, v
     //KSPGetTolerances(ksp, &rtol, &atol, &dtol, &maxit);
     //cout << rtol << " " << atol << " " << dtol << " " << maxit << endl;
     //KSPSetTolerances(ksp, 1e-4, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
-    PCSetType(pc, PCHYPRE);
+    //PCSetType(pc, PCHYPRE);
     //CHKERRQ(PCSetType(pc, PCJACOBI));
-    //CHKERRQ(PCSetType(pc, PCLU));
+    CHKERRQ(PCSetType(pc, PCLU));
     //CHKERRQ(PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST));
 
 

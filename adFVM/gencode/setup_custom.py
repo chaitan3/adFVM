@@ -40,8 +40,13 @@ if openmp:
 if matop:
     sources += [cppDir + 'matop.cpp']
     compile_args += ['-DMATOP']
-    home = os.path.expanduser('~') + '/sources/petsc/'
+    if gpu:
+        compile_args += ['-DPETSC_USE_REAL_SINGLE']
+        home = os.path.expanduser('~') + '/sources/petsc_single/'
+    else:
+        home = os.path.expanduser('~') + '/sources/petsc/'
     incdirs += [home + '/linux-gnu-c-opt/include', home + '/include']
+    #incdirs += [home + '/linux-gnu-c-opt/include']
     libdirs += [home + '/linux-gnu-c-opt/lib']
     libs += ['petsc']
 if gpu:
@@ -74,10 +79,10 @@ def single_compile(src):
 
 n = len(sources)
 #n = 4
-n = 1
+#n = 1
 res = list(multiprocessing.pool.ThreadPool(n).imap(single_compile, sources))
 
-cmd = linker + link_args + libdirs + libs + objects + ['-o', module]
+cmd = linker + link_args + objects + libdirs + libs + ['-o', module]
 print(' '.join(cmd))
 subprocess.check_call(cmd, stderr=subprocess.STDOUT)
 print()

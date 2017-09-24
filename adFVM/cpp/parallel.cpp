@@ -3,10 +3,10 @@
 #include "mesh.hpp"
 
 #define MPI_SPECIALIZE(func) \
-template void func<>(std::vector<extArrType<scalar, 1, 1>*> phiP); \
-template void func<>(std::vector<extArrType<scalar, 1, 3>*> phiP); \
-template void func<>(std::vector<extArrType<scalar, 3, 1>*> phiP); \
-template void func<>(std::vector<extArrType<scalar, 3, 3>*> phiP);
+template void func<>(vector<extArrType<scalar, 1, 1>*> phiP); \
+template void func<>(vector<extArrType<scalar, 1, 3>*> phiP); \
+template void func<>(vector<extArrType<scalar, 3, 1>*> phiP); \
+template void func<>(vector<extArrType<scalar, 3, 3>*> phiP);
 
 static MPI_Request* mpi_req;
 static integer mpi_reqIndex;
@@ -26,7 +26,7 @@ void parallel_exit() {
 }
 
 template <typename dtype, integer shape1, integer shape2>
-void Function_mpi(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
+void Function_mpi(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     extArrType<dtype, shape1, shape2>& phi = *(phiP[1]);
     const Mesh& mesh = *meshp;
     //MPI_Barrier(MPI_COMM_WORLD);
@@ -59,7 +59,7 @@ void Function_mpi(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
     mpi_reqField = (mpi_reqField + 1) % 100;
 }
 template <typename dtype, integer shape1, integer shape2>
-void Function_mpi_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
+void Function_mpi_grad(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     extArrType<dtype, shape1, shape2>& phi = *(phiP[1]);
     const Mesh& mesh = *meshp;
     //MPI_Barrier(MPI_COMM_WORLD);
@@ -94,7 +94,7 @@ MPI_SPECIALIZE(Function_mpi)
 MPI_SPECIALIZE(Function_mpi_grad)
 
 template <typename dtype, integer shape1, integer shape2>
-void Function_mpi_init(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
+void Function_mpi_init(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     const Mesh& mesh = *meshp;
     if (mesh.nProcs == 1) return;
 
@@ -129,7 +129,7 @@ void Function_mpi_init(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
 }
 
 template <typename dtype, integer shape1, integer shape2>
-void Function_mpi_init_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
+void Function_mpi_init_grad(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     const Mesh& mesh = *meshp;
     if (mesh.nProcs == 1) return;
 
@@ -165,7 +165,7 @@ MPI_SPECIALIZE(Function_mpi_init)
 MPI_SPECIALIZE(Function_mpi_init_grad)
 
 template <typename dtype, integer shape1, integer shape2>
-void Function_mpi_end(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
+void Function_mpi_end(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     const Mesh& mesh = *meshp;
     if (mesh.nProcs == 1) return;
         // run once
@@ -181,7 +181,7 @@ void Function_mpi_end(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
 }
 
 template <typename dtype, integer shape1, integer shape2>
-void Function_mpi_end_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP) {
+void Function_mpi_end_grad(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     const Mesh& mesh = *meshp;
     if (mesh.nProcs == 1) return;
     // run once
@@ -200,7 +200,7 @@ void Function_mpi_end_grad(std::vector<extArrType<dtype, shape1, shape2>*> phiP)
 MPI_SPECIALIZE(Function_mpi_end)
 MPI_SPECIALIZE(Function_mpi_end_grad)
 
-void Function_mpi_allreduce(std::vector<ext_vec*> vals) {
+void Function_mpi_allreduce(vector<ext_vec*> vals) {
     const Mesh& mesh = *meshp;
     integer n = vals.size()/2;
     ext_vec in(n, true);
@@ -220,7 +220,7 @@ void Function_mpi_allreduce(std::vector<ext_vec*> vals) {
     }
 }
 
-void Function_mpi_allreduce_grad(std::vector<ext_vec*> vals) {
+void Function_mpi_allreduce_grad(vector<ext_vec*> vals) {
     integer n = vals.size()/3;
     for (integer i = 0; i < n; i++) {
         (*vals[i+2*n]).copy(0, &(*vals[i+n])(0), 1);

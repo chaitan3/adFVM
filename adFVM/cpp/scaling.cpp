@@ -24,9 +24,9 @@ double* w, double* work, int* lwork, int* info ) {
 }
 
 
-void Function_get_max_eigenvalue(std::vector<extArrType<scalar, 5, 5>*> phiP) {
+void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
     extArrType<scalar, 5, 5>& phi = *phiP[0];
-    extArrType<scalar>& eigPhi = *((extArrType<scalar>*) phiP[1]);
+    ext_vec& eigPhi = *((ext_vec*) phiP[1]);
     char jobz = 'N';
     char uplo = 'U';
     int n = 5;
@@ -72,15 +72,15 @@ void Function_apply_adjoint_viscosity(vector<ext_vec*> phiP) {
             DTWork.ownData = true;
             vector<vec*> uWork, unWork;
             for (int i = 0; i < 5; i++) {
-                uWork.push_back(new vec(u[i]->shape, u[i]->data))
+                uWork.push_back(new vec(u[i]->shape, u[i]->toHost()));
                 uWork[i]->ownData = true;
-                unWork.push_back(new vec(un[i]->shape, un[i]->data))
+                unWork.push_back(new vec(un[i]->shape, un[i]->toHost()));
                 unWork[i]->ownData = true;
             }
         #else
             scalar dt = dt_vec(0);
-            vector<vec*>& uWork = u;
-            vector<vec*>& unWork = un;
+            vector<vec*> uWork = u;
+            vector<vec*> unWork = un;
             vec& DTWork = DT;
         #endif
         int error = matop->heat_equation(uWork, DTWork, dt, unWork);
