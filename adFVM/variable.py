@@ -329,6 +329,9 @@ class Function(object):
         for index, inp in enumerate(self._inputs):
             if isinstance(inp, IntegerScalar):
                 codeFile.write('\tinteger {} = (integer) PyInt_AsLong(PyTuple_GetItem(args, {}));\n'.format(inp.name, index))
+
+        for index, inp in enumerate(self._inputs):
+            if isinstance(inp, IntegerScalar):
                 continue
             memoryInit[inp.name] = 1
             codeFile.write('\tPyObject* Py_{} = PyTuple_GetItem(args, {});\n'.format(inp.name, index))
@@ -339,7 +342,7 @@ class Function(object):
                 codeFile.write('\tif (options["replace_reusable"] || {}.get_mem()->reuse.count("{}") == 0) {{\n'.format(inp.name, reuseId))
                 codeFile.write('\t\tgetArray((PyArrayObject*) Py_{0}, {0}, true, {1}L);\n'.format(inp.name, inp.staticId()))
                 codeFile.write('\t} else {\n')
-                codeFile.write('\t\t{}.reuse_acquire("{}");\n'.format(inp.name, reuseId))
+                codeFile.write('\t\t{}.reuse_acquire("{}", {}, true);\n'.format(inp.name, reuseId, self._getName(inp.shape[0])))
                 codeFile.write('\t}\n')
             else:
                 codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, true, {1}L);\n'.format(inp.name, inp.staticId()))

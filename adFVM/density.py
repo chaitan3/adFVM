@@ -98,6 +98,7 @@ class RCF(Solver):
         args = [rho, rhoU, rhoE, self.dt] + meshArgs + sourceArgs + BCArgs + extraArgs
         outputs = [rhoN, rhoUN, rhoEN, self.dtc, self.obj]
         io_map = {0: 0, 1:1, 2:2}
+        #io_map = {}
         self.map = Function('primal', args, outputs, io_map=io_map)
     
         

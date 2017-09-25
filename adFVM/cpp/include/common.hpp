@@ -46,17 +46,22 @@ class MemoryBuffer {
     // size to queue of memory locs
     map<bigInteger, queue<void*>> pool;
     map<void*, bigInteger> bufSize;
+    map<void*, integer> track;
+
+
     MemoryBuffer() {
     }
     
     virtual void alloc(void** data, bigInteger size) {
         this->bufSize[*data] = size; 
         this->inc_mem(size);
+        //cout << "alloc: " << size << " usage: " << this->usage << endl;
     }
     virtual void dealloc(void *data) {
         bigInteger size =this->bufSize[data];
         this->bufSize.erase(data);
         this->dec_mem(size);
+        //cout << "dealloc: " << size << " usage: " << this->usage << endl;
     }
 
     void inc_mem(bigInteger size) {
@@ -68,6 +73,13 @@ class MemoryBuffer {
 
     void dec_mem(bigInteger size) {
         this->usage -= size;
+    }
+
+    void print() {
+        //for(auto& elem: this->track) {
+        //    cout << elem.first << " ";
+        //}
+        //cout << endl;
     }
 
     ~MemoryBuffer() {
@@ -185,6 +197,7 @@ class baseArrType {
     baseArrType(const integer shape, bool zero=false, bool keepMemory=false, bigInteger id=0) {
         this->init(shape);
         this->keepMemory = keepMemory;
+        //cout << "shape: " << keepMemory << endl;
         this->id = id;
         if (id != 0) {
             zero = (!this->shared_acquire()) && zero;
@@ -198,7 +211,7 @@ class baseArrType {
 
     baseArrType(const integer shape, dtype* data, bool keepMemory=false, bigInteger id=0) {
         this -> init(shape);
-        this -> keepMemory = keepMemory;
+        //cout << "data: " << keepMemory << endl;
         this -> id = id;
         bool transfer = self().toDeviceMemory();
         if(transfer) {
@@ -247,8 +260,11 @@ class baseArrType {
             if (this->keepMemory) {
                 this->pool_release();
             } else if (this->data != NULL) {
-                this->get_mem()->dealloc((void*)this->data);
-
+                MemoryBufferType& mem = *(this->get_mem());
+                mem.dealloc((void*)this->data);
+                assert(mem.track.erase(this->data));
+                mem.print();
+                this->ownData = false;
                 this->data = NULL;
             }
         }
@@ -272,6 +288,7 @@ class baseArrType {
         } 
         if (mem.pool.at(key).empty()) {
             mem.alloc((void**)&this->data, this->bufSize);  
+            //cout << "pool alloc: " << this->data << endl;
         } else {
             this->data = (dtype *) mem.pool[key].front();
             mem.pool[key].pop();
@@ -279,13 +296,19 @@ class baseArrType {
         }
         //cout << "using " << this->data << endl;
         this->ownData = true;
+        assert(mem.track.count(this->data) == 0);
+        mem.track[this->data] = 1;
+        mem.print();
     }
     void pool_release() {
-        MemoryBufferType& mem = *(this->get_mem());
         assert (this->ownData);
+        MemoryBufferType& mem = *(this->get_mem());
         bigInteger key = this->bufSize;
         mem.pool[key].push((void *)this->data);
         this->ownData = false;
+        //cout << "pool release: " << this->data << endl;
+        assert(mem.track.erase(this->data));
+        mem.print();
     }
     bool shared_acquire() {
         MemoryBufferType& mem = *(this->get_mem());
@@ -296,22 +319,31 @@ class baseArrType {
         } else {
             mem.alloc((void**)&this->data, this->bufSize);  
             mem.shared[id] = (void *) this->data;
+            //cout << "shared alloc" << endl;
         }
         return false;
     }
-    void reuse_acquire(string reuseId) {
+    void reuse_acquire(string reuseId, integer shape, bool keepMemory) {
         MemoryBufferType& mem = *(this->get_mem());
+        this->init(shape);
         void* data = mem.reuse[reuseId];
         this->data = (dtype*) data;
-        bigInteger key = this->bufSize;
         this->ownData = true;
+        this->keepMemory = keepMemory;
+        //cout << "reuse acquire: " << this->data << endl;
+        assert(mem.track.count(this->data) == 0);
+        mem.track[this->data] = 1;
+        mem.print();
     }
     void reuse_release(string reuseId) {
+        assert(this->ownData);
         MemoryBufferType& mem = *(this->get_mem());
-        mem.reuse[reuseId] = this->data;
+        mem.reuse[reuseId] = (void *)this->data;
         this->ownData = false;
+        //cout << "reuse release: " << this->data << endl;
+        assert(mem.track.erase(this->data));
+        mem.print();
     }
-    
 
     const dtype& operator() (const integer i1) const {
         return const_cast<const dtype &>(data[i1*this->strides[0]]);
@@ -326,8 +358,6 @@ class baseArrType {
                       i2*this->strides[1] +
                       i3*this->strides[2]]);
     }
-
-
 
     dtype& operator()(const integer i1) {
         return const_cast<dtype &>(static_cast<const derivedArrType<dtype, shape1, shape2, shape3> &>(*this)(i1));
