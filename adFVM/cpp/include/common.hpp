@@ -30,42 +30,43 @@ using namespace std;
     typedef double scalar;
 #endif
 typedef int32_t integer;
+typedef int64_t bigInteger;
 
 #define NDIMS 4
 
 // crtp?
 class MemoryBuffer {
     public:
-    int usage;
-    int maxUsage;
+    bigInteger usage;
+    bigInteger maxUsage;
     // id to memory locs
-    map<int, void *> shared;
+    map<bigInteger, void *> shared;
     // reuse id to memory locs: uses pool
     map<string, void *> reuse;
     // size to queue of memory locs
-    map<int, queue<void*>> pool;
-    map<void*, int> bufSize;
+    map<bigInteger, queue<void*>> pool;
+    map<void*, bigInteger> bufSize;
     MemoryBuffer() {
     }
     
-    virtual void alloc(void** data, int size) {
+    virtual void alloc(void** data, bigInteger size) {
         this->bufSize[*data] = size; 
         this->inc_mem(size);
     }
     virtual void dealloc(void *data) {
-        int size =this->bufSize[data];
+        bigInteger size =this->bufSize[data];
         this->bufSize.erase(data);
         this->dec_mem(size);
     }
 
-    void inc_mem(int size) {
+    void inc_mem(bigInteger size) {
         this->usage += size;
         if (this->usage > this->maxUsage) {
             this->maxUsage = this->usage;
         }
     }
 
-    void dec_mem(int size) {
+    void dec_mem(bigInteger size) {
         this->usage -= size;
     }
 
@@ -88,8 +89,12 @@ class MemoryBuffer {
 
 class CPUMemoryBuffer: public MemoryBuffer {
     public:
-    void alloc(void **data, int size) {
+    void alloc(void **data, bigInteger size) {
         *data = malloc(size);
+        if (*data == NULL) {
+            cout << size << " alloc failed" << endl;
+            exit(1);
+        }
         MemoryBuffer::alloc(data, size);
     }
     void dealloc(void* data) {
@@ -137,19 +142,19 @@ class baseArrType {
     dtype* data;
     //integer dims;
     integer shape;
-    integer size;
-    integer bufSize;
-    integer strides[NDIMS];
+    bigInteger size;
+    bigInteger bufSize;
+    int strides[NDIMS];
     bool ownData;
     bool keepMemory;
-    int64_t id;
+    bigInteger id;
 
     // get object with correct scope
     derivedArrType<dtype, shape1, shape2, shape3>& self() { return static_cast<derivedArrType<dtype, shape1, shape2, shape3>&>(*this); }
 
     void set_default_values() {
         this->shape = 0;
-        for (integer i = 0; i < NDIMS; i++)  {
+        for (int i = 0; i < NDIMS; i++)  {
             this->strides[i] = 0;
         }
         this -> size = 0;
@@ -169,7 +174,7 @@ class baseArrType {
         this->strides[1] = shape2*this->strides[2];
         this->strides[0] = shape1*this->strides[1];
         //cout << endl;
-        this->size = this->strides[0]*shape;
+        this->size = this->strides[0]*((bigInteger)shape);
         this->bufSize = this->size*sizeof(dtype);
     }
 
@@ -177,7 +182,7 @@ class baseArrType {
         this->set_default_values();
     }
 
-    baseArrType(const integer shape, bool zero=false, bool keepMemory=false, int64_t id=0) {
+    baseArrType(const integer shape, bool zero=false, bool keepMemory=false, bigInteger id=0) {
         this->init(shape);
         this->keepMemory = keepMemory;
         this->id = id;
@@ -191,7 +196,7 @@ class baseArrType {
         }
     }
 
-    baseArrType(const integer shape, dtype* data, bool keepMemory=false, int64_t id=0) {
+    baseArrType(const integer shape, dtype* data, bool keepMemory=false, bigInteger id=0) {
         this -> init(shape);
         this -> keepMemory = keepMemory;
         this -> id = id;
@@ -261,7 +266,7 @@ class baseArrType {
 
     void pool_acquire() {
         MemoryBufferType& mem = *(this->get_mem());
-        int key = this->bufSize;
+        bigInteger key = this->bufSize;
         if (mem.pool.count(key) == 0) {
             mem.pool[key] = queue<void*>();
         } 
@@ -278,13 +283,13 @@ class baseArrType {
     void pool_release() {
         MemoryBufferType& mem = *(this->get_mem());
         assert (this->ownData);
-        int key = this->bufSize;
+        bigInteger key = this->bufSize;
         mem.pool[key].push((void *)this->data);
         this->ownData = false;
     }
     bool shared_acquire() {
         MemoryBufferType& mem = *(this->get_mem());
-        int64_t id = this->id;
+        bigInteger id = this->id;
         if (mem.shared.count(id) > 0) {
             this->data = (dtype *)mem.shared.at(id);
             return true;
@@ -298,7 +303,7 @@ class baseArrType {
         MemoryBufferType& mem = *(this->get_mem());
         void* data = mem.reuse[reuseId];
         this->data = (dtype*) data;
-        int key = this->bufSize;
+        bigInteger key = this->bufSize;
         this->ownData = true;
     }
     void reuse_release(string reuseId) {
@@ -370,12 +375,12 @@ class arrType : public baseArrType<arrType, CPUMemoryBuffer, dtype, shape1, shap
         this->data = data;
     }
 
-    void copy(const integer index, const dtype* sdata, const integer n) {
+    void copy(const integer index, const dtype* sdata, const bigInteger n) {
         //cout << "cpu copy: " << endl;
         memcpy(&(*this)(index), sdata, n*sizeof(dtype));
     }
 
-    void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
+    void extract(const integer index, const integer* indices, const dtype* phiBuf, const bigInteger n) {
         integer i, j, k;
         #pragma omp parallel for private(i, j, k)
         for (i = 0; i < n; i++) {
@@ -388,7 +393,7 @@ class arrType : public baseArrType<arrType, CPUMemoryBuffer, dtype, shape1, shap
             }
         }
     }
-    void extract(const integer *indices, const dtype* phiBuf, const integer n) {
+    void extract(const integer *indices, const dtype* phiBuf, const bigInteger n) {
         integer i, j, k;
         #pragma omp parallel for private(i, j, k)
         for (i = 0; i < n; i++) {

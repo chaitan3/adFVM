@@ -320,7 +320,10 @@ class RCF(Solver):
         outputs = self.boundary(*outputs)
         outputs = self.boundaryEnd(*outputs)
         U, T, p = outputs
-        obj = self.objective([U, T, p], self)
+        if self.objective is not None:
+            obj = self.objective([U, T, p], self)
+        else:
+            obj = Zeros((1,1))
 
         meshArgs = _meshArgs()
         gradU, gradT, gradp = Zeros((mesh.nCells, 3, 3)), Zeros((mesh.nCells, 1, 3)), Zeros((mesh.nCells, 1, 3))

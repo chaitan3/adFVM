@@ -23,7 +23,18 @@ double* w, double* work, int* lwork, int* info ) {
     dsyev_(jobz, uplo, n, a, lda, w, work, lwork, info);
 }
 
-
+#ifdef GPU
+void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
+    gpuArrType<scalar, 5, 5>& phi = *phiP[0];
+    gvec& eigPhi = *((gvec*) phiP[1]);
+    int n = phi.shape;
+    for (int i = 0; i < 10; i++) {
+        int info;
+        cublasSgeqrfBatched(handle, 5, 5, phi.data, 5, &info, n);
+        
+    }
+}
+#else
 void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
     extArrType<scalar, 5, 5>& phi = *phiP[0];
     ext_vec& eigPhi = *((ext_vec*) phiP[1]);
@@ -52,6 +63,7 @@ void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
     }
     eigPhi.toDevice(eigPhiWork.data);
 }
+#endif
 
 void Function_apply_adjoint_viscosity(vector<ext_vec*> phiP) {
     // inputs

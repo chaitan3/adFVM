@@ -96,6 +96,12 @@ def getIsentropicMa(p, p0, patches):
         Ma[patchID] = (2.0/(g-1)*((1./p0*pw)**((1-g)/g)-1))**0.5
     return Ma
 
+def getRe(U, T, p, rho, D):
+    solver = T.solver
+    mu = solver.mu(T)
+    Re = U.mag()*rho*D/mu
+    return Re
+
 def getTotalPressureAndEntropy(U, T, p, solver):
     g = solver.gamma
     c = (g*solver.R*T).sqrt()

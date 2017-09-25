@@ -68,11 +68,11 @@ if __name__ == '__main__':
     solver.compile()
 
     # average
-    time = times[0]
-    postprocess(solver, time, suffix='_avg')
-    pprint()
+    #time = times[0]
+    #postprocess(solver, time, suffix='_avg')
+    #pprint()
 
     # instantaneous
-    #for index, time in enumerate(times):
-    #    postprocess(solver, time)
-    #    pprint()
+    for index, time in enumerate(times):
+        postprocess(solver, time)
+        pprint()

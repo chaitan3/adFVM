@@ -2,6 +2,7 @@
 #define GPU_HPP
 #ifdef GPU
 #include "common.hpp"
+#include <cublas_v2.h>
 
 #define GPU_THREADS_PER_BLOCK 256
 #define GPU_BLOCKS_PER_GRID 1024
@@ -22,7 +23,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 
 template<typename dtype, integer shape1, integer shape2>
 __global__ void _extract1(const integer n, dtype* phi1, const dtype* phi2, const integer* indices) {
-    integer i = threadIdx.x + blockDim.x*blockIdx.x;
+    int i = threadIdx.x + blockDim.x*blockIdx.x;
     if (i < n) {
         integer p = indices[i];
         for (integer j = 0; j < shape1; j++) {
@@ -35,7 +36,7 @@ __global__ void _extract1(const integer n, dtype* phi1, const dtype* phi2, const
 
 template<typename dtype, integer shape1, integer shape2>
 __global__ void _extract2(const integer n, dtype* phi1, const dtype* phi2, const integer* indices) {
-    integer i = threadIdx.x + blockDim.x*blockIdx.x;
+    int i = threadIdx.x + blockDim.x*blockIdx.x;
     if (i < n) {
         integer p = indices[i];
         for (integer j = 0; j < shape1; j++) {
@@ -130,7 +131,7 @@ __inline__ __device__ void reduceMax(int n, const dtype val, dtype* res) {
 
 class GPUMemoryBuffer: public MemoryBuffer {
     public:
-    void alloc(void **data, int size) {
+    void alloc(void **data, bigInteger size) {
         gpuErrorCheck(cudaMalloc(data, size));
         MemoryBuffer::alloc(data, size);
     }
@@ -169,20 +170,20 @@ class gpuArrType : public baseArrType<gpuArrType, GPUMemoryBuffer, dtype, shape1
         gpuErrorCheck(cudaMemcpy(this->data, data, this->bufSize, cudaMemcpyHostToDevice));
     }
 
-    void copy(integer index, dtype* sdata, integer n) {
+    void copy(integer index, dtype* sdata, bigInteger n) {
         gpuErrorCheck(cudaMemcpy(&(*this)(index), sdata, n*sizeof(dtype), cudaMemcpyDeviceToDevice));
         //cout << "copying: " << &(*this)(index) << " " << sdata << " " << n*sizeof(dtype) << endl;
     }
-    void extract(const integer index, const integer* indices, const dtype* phiBuf, const integer n) {
-        integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
-        integer threads = min(GPU_THREADS_PER_BLOCK, n);
+    void extract(const integer index, const integer* indices, const dtype* phiBuf, const bigInteger n) {
+        int blocks = n/GPU_THREADS_PER_BLOCK + 1;
+        int threads = min(GPU_THREADS_PER_BLOCK, n);
         _extract2<dtype, shape1, shape2><<<blocks, threads>>>(n, &(*this)(index), phiBuf, indices);
         gpuErrorCheck(cudaDeviceSynchronize());
         gpuErrorCheck(cudaPeekAtLastError());
     }
-    void extract(const integer *indices, const dtype* phiBuf, const integer n) {
-        integer blocks = n/GPU_THREADS_PER_BLOCK + 1;
-        integer threads = min(GPU_THREADS_PER_BLOCK, n);
+    void extract(const integer *indices, const dtype* phiBuf, const bigInteger n) {
+        int blocks = n/GPU_THREADS_PER_BLOCK + 1;
+        int threads = min(GPU_THREADS_PER_BLOCK, n);
         _extract1<dtype, shape1, shape2><<<blocks, threads>>>(n, this->data, phiBuf, indices);
         gpuErrorCheck(cudaDeviceSynchronize());
         gpuErrorCheck(cudaPeekAtLastError());
@@ -212,6 +213,8 @@ class gpuArrType : public baseArrType<gpuArrType, GPUMemoryBuffer, dtype, shape1
 
 #define extArrType gpuArrType
 typedef extArrType<scalar, 1> ext_vec;
+typedef gpuArrType<scalar> gvec;
+typedef gpuArrType<scalar, 3> gmat;
 
 #endif
 #endif

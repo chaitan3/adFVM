@@ -122,8 +122,8 @@ int Matop::heat_equation(vector<vec*> u, const vec& DT, const scalar dt, vector<
     //cout << rtol << " " << atol << " " << dtol << " " << maxit << endl;
     //KSPSetTolerances(ksp, 1e-4, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
     //PCSetType(pc, PCHYPRE);
-    //CHKERRQ(PCSetType(pc, PCJACOBI));
-    CHKERRQ(PCSetType(pc, PCLU));
+    CHKERRQ(PCSetType(pc, PCJACOBI));
+    //CHKERRQ(PCSetType(pc, PCLU));
     //CHKERRQ(PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST));
 
 
