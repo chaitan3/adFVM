@@ -19,6 +19,7 @@ char* PyString_AsString(PyObject* result) {
 PyObject* PyTuple_CreateNone(int n) {
     PyObject* outputs = PyTuple_New(n);
     for (int i = 0; i < n; i++) {
+        Py_INCREF(Py_None);
         PyTuple_SetItem(outputs, i, Py_None);
     }
     return outputs;

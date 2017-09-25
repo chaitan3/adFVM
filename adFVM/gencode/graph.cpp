@@ -52,6 +52,7 @@ PyObject* initialize(PyObject *self, PyObject *args) {
         matop = new Matop();
     #endif
 
+    Py_INCREF(Py_None);
     return Py_None;
 }
 
