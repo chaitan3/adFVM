@@ -30,7 +30,7 @@ void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     int n = phi.shape;
     for (int i = 0; i < 10; i++) {
         int info;
-        cublasSgeqrfBatched(handle, 5, 5, phi.data, 5, &info, n);
+        //cublasSgeqrfBatched(handle, 5, 5, phi.data, 5, &info, n);
         
     }
 }

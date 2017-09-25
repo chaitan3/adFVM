@@ -2,7 +2,7 @@
 #define GPU_HPP
 #ifdef GPU
 #include "common.hpp"
-#include <cublas_v2.h>
+//#include <cublas_v2.h>
 
 #define GPU_THREADS_PER_BLOCK 256
 #define GPU_BLOCKS_PER_GRID 1024
@@ -176,14 +176,14 @@ class gpuArrType : public baseArrType<gpuArrType, GPUMemoryBuffer, dtype, shape1
     }
     void extract(const integer index, const integer* indices, const dtype* phiBuf, const bigInteger n) {
         int blocks = n/GPU_THREADS_PER_BLOCK + 1;
-        int threads = min(GPU_THREADS_PER_BLOCK, n);
+        int threads = min(GPU_THREADS_PER_BLOCK, (int)n);
         _extract2<dtype, shape1, shape2><<<blocks, threads>>>(n, &(*this)(index), phiBuf, indices);
         gpuErrorCheck(cudaDeviceSynchronize());
         gpuErrorCheck(cudaPeekAtLastError());
     }
     void extract(const integer *indices, const dtype* phiBuf, const bigInteger n) {
         int blocks = n/GPU_THREADS_PER_BLOCK + 1;
-        int threads = min(GPU_THREADS_PER_BLOCK, n);
+        int threads = min(GPU_THREADS_PER_BLOCK, (int)n);
         _extract1<dtype, shape1, shape2><<<blocks, threads>>>(n, this->data, phiBuf, indices);
         gpuErrorCheck(cudaDeviceSynchronize());
         gpuErrorCheck(cudaPeekAtLastError());
