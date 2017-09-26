@@ -14,6 +14,10 @@ void Mesh::build() {}
 void Mesh::buildBeforeWrite() {}
 
 Mesh *meshp = NULL;
+#ifdef GPU
+    cusolverDnHandle_t cusolver_handle;
+    cublasHandle_t cublas_handle;
+#endif
 #ifdef MATOP
     #include "matop.hpp"
     Matop *matop;
@@ -40,6 +44,11 @@ PyObject* initialize(PyObject *self, PyObject *args) {
     #ifdef GPU
         int count;
         gpuErrorCheck(cudaGetDeviceCount(&count));
+        auto status1 = cusolverDnCreate(&cusolver_handle);
+        assert(status1 == CUSOLVER_STATUS_SUCCESS);
+        auto status2 = cublasCreate(&cublas_handle);
+        assert(status2 == CUBLAS_STATUS_SUCCESS);
+
         printf("GPU devices: %d, rank: %d\n", count, meshp->rank);
         //cudaSetDevice(0);
         //int numSMs;

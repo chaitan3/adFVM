@@ -2,7 +2,8 @@
 #define GPU_HPP
 #ifdef GPU
 #include "common.hpp"
-//#include <cublas_v2.h>
+#include <cublas_v2.h>
+#include <cusolverDn.h>
 
 #define GPU_THREADS_PER_BLOCK 256
 #define GPU_BLOCKS_PER_GRID 1024
@@ -215,6 +216,9 @@ class gpuArrType : public baseArrType<gpuArrType, GPUMemoryBuffer, dtype, shape1
 typedef extArrType<scalar, 1> ext_vec;
 typedef gpuArrType<scalar> gvec;
 typedef gpuArrType<scalar, 3> gmat;
+
+extern cusolverDnHandle_t cusolver_handle;
+extern cublasHandle_t cublas_handle;
 
 #endif
 #endif

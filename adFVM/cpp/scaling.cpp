@@ -27,12 +27,28 @@ double* w, double* work, int* lwork, int* info ) {
 void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     gpuArrType<scalar, 5, 5>& phi = *phiP[0];
     gvec& eigPhi = *((gvec*) phiP[1]);
+    syevjInfo_t params;
     int n = phi.shape;
-    for (int i = 0; i < 10; i++) {
-        int info;
-        //cublasSgeqrfBatched(handle, 5, 5, phi.data, 5, &info, n);
-        
-    }
+    int* info;
+    int lwork = 0;
+    int size = sizeof(scalar);
+    scalar* W, *work;
+    gpuErrorCheck(cudaMalloc(&W, size*5*n));
+    gpuErrorCheck(cudaMalloc(&info, sizeof(int)*n));
+
+    cusolverStatus_t status;
+    status = cusolverDnCreateSyevjInfo(&params);
+    assert(status == CUSOLVER_STATUS_SUCCESS);
+    status = cusolverDnSsyevjBatched_bufferSize(cusolver_handle, CUSOLVER_EIG_MODE_NOVECTOR, CUBLAS_FILL_MODE_UPPER, 5, phi.data, 5, W, &lwork, params, n);
+    gpuErrorCheck(cudaMalloc(&work, size*lwork));
+    status = cusolverDnSsyevjBatched(cusolver_handle, CUSOLVER_EIG_MODE_NOVECTOR, CUBLAS_FILL_MODE_UPPER, 5, phi.data, 5, W, work, lwork, info, params, n);
+    gpuErrorCheck(cudaDeviceSynchronize());
+    assert(status == CUSOLVER_STATUS_SUCCESS);
+
+    gpuErrorCheck(cudaMemcpy2D(eigPhi.data, size, W + 4, 5*size, size, n, cudaMemcpyDeviceToDevice));
+    gpuErrorCheck(cudaFree(work));
+    gpuErrorCheck(cudaFree(W));
+    gpuErrorCheck(cudaFree(info));
 }
 #else
 void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {

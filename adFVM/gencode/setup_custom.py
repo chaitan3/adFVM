@@ -58,7 +58,7 @@ if gpu:
     incdirs += [d[2:] for d in mpi_incdirs.split('\n')[:-1]]
     mpi_libdirs = subprocess.check_output('mpicc --showme | egrep -o -e "-L[a-z\/\.]*"', shell=True)
     libdirs += [d[2:] for d in mpi_libdirs.split('\n')[:-1]]
-    libs += ['mpi']
+    libs += ['mpi', 'cublas', 'cusolver', 'gomp']
 else:
     compile_args += ['-fPIC', '-Wall', '-march=native']
     compile_args += ['-Wfatal-errors']

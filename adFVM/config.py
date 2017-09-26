@@ -46,6 +46,8 @@ def stop():
 # compute type
 gpu = user.use_gpu
 if user.use_gpu:
+    import ctypes
+    ctypes.CDLL('libgomp.so.1', mode=ctypes.RTLD_GLOBAL)
     precision = np.float32
     codeExt = 'cu'
 else:
