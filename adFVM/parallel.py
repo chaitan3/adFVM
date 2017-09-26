@@ -21,7 +21,6 @@ def getLocalRank(mpi, name, rank):
             names[n].append(r)
         for n in names:
             names[n].sort()
-        names[n].index(rank)
     names = mpi.bcast(names, root=0)
     return names[name].index(rank), len(names[name])
 
