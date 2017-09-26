@@ -438,8 +438,8 @@ class arrType : public baseArrType<arrType, CPUMemoryBuffer, dtype, shape1, shap
         }
     }
     void info(int s=0, int e=-1) const {
-        cout << setprecision(15) << this->sum(s, e) << endl;
-        return;
+        //cout << setprecision(15) << this->sum(s, e) << endl;
+        //return;
 
         scalar minPhi, maxPhi;
         minPhi = 1e100;
@@ -457,7 +457,7 @@ class arrType : public baseArrType<arrType, CPUMemoryBuffer, dtype, shape1, shap
 
         }
         cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
-        //cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
+        cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
     }
     bool checkNAN() {
         for (integer i = 0; i < this->size; i++) {

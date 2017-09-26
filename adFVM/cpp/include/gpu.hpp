@@ -207,7 +207,7 @@ class gpuArrType : public baseArrType<gpuArrType, GPUMemoryBuffer, dtype, shape1
         }
         delete[] hdata;
         cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
-        //cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
+        cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
     }
 };
 
