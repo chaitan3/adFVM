@@ -16,7 +16,7 @@ def read_data(name):
     return expe
 
 def match_htc(hp, coordsp, hs, coordss, saveFile):
-    print hp, hs
+    #print hp, hs
 
     sp = -get_length(pressure, coordsp)/c
     indices = sp > -0.9
@@ -123,7 +123,6 @@ if __name__ == '__main__':
         nLayers = 200
         #nLayers = 1
 
-        mesh = mesh.origMesh
         for patchID in patches:
             delta = -mesh.nInternalFaces + mesh.nInternalCells
             startFace = mesh.boundary[patchID]['startFace']
@@ -133,9 +132,10 @@ if __name__ == '__main__':
             cellEndFace = endFace + delta
             nFacesPerLayer = nFaces/nLayers
 
-            #spanwise_average = lambda x: x.reshape((nLayers, nFacesPerLayer)).sum(axis=0)/nLayers
             spanwise_average = lambda x: x.reshape((nFacesPerLayer, nLayers))[:,0]
-            x = spanwise_average(mesh.faceCentres[startFace:endFace, 0])
+            x1 = spanwise_average(mesh.faceCentres[startFace:endFace, 0])
+            x2 = spanwise_average(mesh.faceCentres[startFace:endFace, 1])
+            x = (x1, x2)
 
             y = spanwise_average(htc.field[cellStartFace:cellEndFace])
             htc_args.extend([y, x])

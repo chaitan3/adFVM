@@ -11,7 +11,7 @@ from .compat import decompose
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
 from .tensor import IntegerScalar, Container, StaticVariable, StaticIntegerVariable
-if config.gpu:
+if config.gpu and not config.gpu_double:
     from .cpp import cmesh_gpu as cmesh
 else:
     from .cpp import cmesh

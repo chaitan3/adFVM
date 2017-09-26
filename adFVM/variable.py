@@ -498,6 +498,8 @@ class Function(object):
                 os.environ['WITH_MATOP'] = '1'
             if config.gpu:
                 os.environ['WITH_GPU'] = '1'
+            if config.gpu_double:
+                os.environ['WITH_GPU_DOUBLE'] = '1'
             #if config.py3:
             #    subprocess.check_call(['make', 'python3'], cwd=self.codeDir)
             subprocess.check_call(['make'], cwd=self.codeDir)

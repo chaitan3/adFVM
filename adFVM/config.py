@@ -14,6 +14,7 @@ py3 = not (sys.version_info[0] < 3)
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-g', '--gpu', action='store_true', dest='use_gpu')
+parser.add_argument('--gpu_double', action='store_true', dest='use_gpu_double')
 parser.add_argument('-m', '--omp', action='store_true', dest='use_openmp')
 parser.add_argument('-p', '--matop', action='store_true', dest='use_matop')
 parser.add_argument('-s', '--scaling', action='store_true', dest='use_scaling')
@@ -45,10 +46,14 @@ def stop():
 
 # compute type
 gpu = user.use_gpu
+gpu_double = user.use_gpu_double
 if user.use_gpu:
     import ctypes
     ctypes.CDLL('libgomp.so.1', mode=ctypes.RTLD_GLOBAL)
-    precision = np.float32
+    if user.use_gpu_double:
+        precision = np.float64
+    else:
+        precision = np.float32
     codeExt = 'cu'
 else:
     precision = np.float64

@@ -23,7 +23,7 @@ double* w, double* work, int* lwork, int* info ) {
     dsyev_(jobz, uplo, n, a, lda, w, work, lwork, info);
 }
 
-#ifdef GPU
+#if (defined(GPU) && !defined(GPU_DOUBLE))
 void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     gpuArrType<scalar, 5, 5>& phi = *phiP[0];
     gvec& eigPhi = *((gvec*) phiP[1]);

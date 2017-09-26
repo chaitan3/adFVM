@@ -15,6 +15,7 @@ cppDir = os.path.dirname(cpp.__file__) + '/'
 openmp = 'WITH_OPENMP' in os.environ
 matop = 'WITH_MATOP' in os.environ
 gpu = 'WITH_GPU' in os.environ
+gpu_double = 'WITH_GPU_DOUBLE' in os.environ
 codeExt = 'cu' if gpu else 'cpp'
 
 compiler = 'ccache mpicc'
@@ -27,7 +28,7 @@ home = os.path.expanduser("~")
 incdirs = [get_python_inc(), np.get_include(), cppDir + '/include']
 libdirs = []
 libs = ['lapack']
-sources = ['interface.cpp', 'mesh.cpp', 'parallel.cpp', 'scaling.cpp']
+sources = ['interface.cpp', 'mesh.cpp', 'parallel.cpp', 'scaling.cpp', 'gpu.cpp']
 sources = [cppDir + x for x in sources]
 sources += ['graph.cpp']
 sources += [x.format(codeExt) for x in ['kernel.{}', 'code.{}']]
@@ -52,8 +53,11 @@ if matop:
 if gpu:
     #cmdclass = {}
     nv_arch="-gencode=arch=compute_52,code=\"sm_52,compute_52\""
-    compile_args += [nv_arch, '-Xcompiler=-fPIC']
-    compile_args += ['-DGPU']
+    #compile_args += [nv_arch, '-Xcompiler=-fPIC']
+    compile_args += ['-Xcompiler=-fPIC']
+    compile_args += ['-DGPU', '-dc']
+    if gpu_double:
+        compile_args += ['-DGPU_DOUBLE']
     mpi_incdirs = subprocess.check_output('mpicc --showme | egrep -o -e "-I[a-z\/\.]*"', shell=True)
     incdirs += [d[2:] for d in mpi_incdirs.split('\n')[:-1]]
     mpi_libdirs = subprocess.check_output('mpicc --showme | egrep -o -e "-L[a-z\/\.]*"', shell=True)

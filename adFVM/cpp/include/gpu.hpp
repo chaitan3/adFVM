@@ -22,6 +22,60 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
+//__device__ static float atomicMax(float* address, float val);
+//__device__ static double atomicMax(double* address, double val);
+//#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+//#else
+//__device__ double atomicAdd(double* address, const double val);
+//#endif
+
+__inline__ __device__ static float atomicMax(float* address, float val)
+{
+    int* address_as_i = (int*) address;
+    int old = *address_as_i, assumed;
+    do {
+            assumed = old;
+            old = ::atomicCAS(address_as_i, assumed,
+                                __float_as_int(::fmaxf(val, __int_as_float(assumed))));
+        } while (assumed != old);
+    return __int_as_float(old);
+}
+
+__inline__ __device__ static double atomicMax(double* address, double val)
+{
+    unsigned long long int* address_as_i = (unsigned long long int*) address;
+    unsigned long long int old = *address_as_i, assumed;
+    do {
+            assumed = old;
+            old = ::atomicCAS(address_as_i, assumed,
+                                __double_as_longlong(::fmax(val, __longlong_as_double(assumed))));
+        } while (assumed != old);
+    return __longlong_as_double(old);
+}
+
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
+__inline__ __device__ double atomicAdd(double* address, const double val)
+{
+    unsigned long long int* address_as_ull =
+                              (unsigned long long int*)address;
+    unsigned long long int old = *address_as_ull, assumed;
+
+    do {
+        assumed = old;
+        old = atomicCAS(address_as_ull, assumed,
+                        __double_as_longlong(val +
+                               __longlong_as_double(assumed)));
+
+    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+    } while (assumed != old);
+
+    return __longlong_as_double(old);
+}
+#endif
+
+
+
 template<typename dtype, integer shape1, integer shape2>
 __global__ void _extract1(const integer n, dtype* phi1, const dtype* phi2, const integer* indices) {
     int i = threadIdx.x + blockDim.x*blockIdx.x;
@@ -46,18 +100,6 @@ __global__ void _extract2(const integer n, dtype* phi1, const dtype* phi2, const
             }
         }
     }
-}
-
-__device__ static float atomicMax(float* address, float val)
-{
-    int* address_as_i = (int*) address;
-    int old = *address_as_i, assumed;
-    do {
-            assumed = old;
-            old = ::atomicCAS(address_as_i, assumed,
-                                __float_as_int(::fmaxf(val, __int_as_float(assumed))));
-        } while (assumed != old);
-    return __int_as_float(old);
 }
 
 template<typename dtype>
@@ -113,7 +155,6 @@ __inline__ __device__ void reduceMax(int n, const dtype val, dtype* res) {
   }
 }
   
-
 //template<typename dtype>
 //__inline__ __device__ void reduceSum(int n, const dtype val, dtype* res) {
 //    //int x = threadIdx.x + blockDim.x*blockIdx.x; // gridDim.x*blockDim.x*blockIdx.y;

@@ -24,7 +24,7 @@ using namespace std;
 #define VALUE(x) STRING(x)
 #define PRINT(var) #var "="  VALUE(var)
 
-#if defined(GPU) || defined(CPU_FLOAT32)
+#if (defined(GPU) && !defined(GPU_DOUBLE)) || defined(CPU_FLOAT32)
     typedef float scalar;
 #else
     typedef double scalar;
