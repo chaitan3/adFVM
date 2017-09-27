@@ -54,8 +54,8 @@ def match_htc(hp, coordsp, hs, coordss, saveFile):
 
 def match_velocity(Map, coordsp, Mas, coordss, saveFile):
 
-    sp = get_length(pressure, coordsp)/c
-    ss = get_length(suction, coordss)/c
+    sp = get_length(pressure, coordsp)[0]/c
+    ss = get_length(suction, coordss)[0]/c
     indices = ss < 1.1
     ss = ss[indices]
     Mas = Mas[indices]
