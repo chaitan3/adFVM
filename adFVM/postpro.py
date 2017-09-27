@@ -75,7 +75,9 @@ def getHTC(T, T0, patches):
     for patchID in patches:
         startFace, endFace, _ = mesh.getPatchFaceRange(patchID)
         internalIndices = mesh.owner[startFace:endFace]
-        deltas = mesh.deltas[startFace:endFace]
+        N = mesh.normals[startFace:endFace]
+        Deltas = mesh.deltas[startFace:endFace]*mesh.deltasUnit[startFace:endFace]
+        deltas = -(Deltas*N).sum(axis=1, keepdims=1)
 
         Ti = T.field[internalIndices] 
         Tw = T.field[mesh.neighbour[startFace:endFace]]

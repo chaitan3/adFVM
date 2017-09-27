@@ -50,6 +50,7 @@ for index, time in enumerate(times):
 
         Re = getRe(U, T, p, rho, 0.067)
         Re.write(name='Re')
+        pprint(Re.getPatch('outlet').mean())
 
         #enstrophy, Q = getEnstrophyAndQ(outputsF[1])
         #enstrophy.write(name='enstrophy') 

@@ -463,6 +463,10 @@ class IOField(Field):
     def getInternal(self):
         return self.__class__(self.name, self.getInternalField(), self.dimensions, self.boundary)
 
+    def getPatch(self, patchID):
+        cellStartFace, cellEndFace, _ = self.mesh.getPatchCellRange(patchID)
+        return self.field[cellStartFace:cellEndFace]
+
     def defaultComplete(self):
         mesh = self.mesh
         field = np.zeros((mesh.nCells,) + self.dimensions)

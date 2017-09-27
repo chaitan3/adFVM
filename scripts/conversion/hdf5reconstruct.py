@@ -9,12 +9,22 @@ import copy
 from adFVM import config
 config.hdf5 = True
 
-#delta = 14
-delta = 5
 case = sys.argv[1]
 times = [float(x) for x in sys.argv[2:]]
+
+def getTimeDir(time, case):
+    if time.is_integer():
+        time = int(time)
+        timeDir = '{0}/{1}'.format(case, time)
+    else:
+        timeDir = '{0}/{1:.11f}'.format(case, time)
+    return timeDir
+
+delta = 14
+#delta = 5
 if len(times) == 0:
-    times = [float(x[:-delta]) for x in os.listdir(case) if config.isfloat(x[:-delta]) and x.endswith('.hdf5')]
+    #times = [float(x[:-delta]) for x in os.listdir(case) if config.isfloat(x[:-delta]) and x.endswith('.hdf5')]
+    times = [float(x[:-delta]) for x in os.listdir(case) if config.isfloat(x[:-delta]) and x.endswith('_parallel.hdf5')]
 for index, time in enumerate(times):
     if time.is_integer():
         times[index] = int(time)
@@ -26,8 +36,8 @@ try:
         os.rename(path, parallel_path)
     #os.rename(parallel_path, path)
     for time in times:
-        path = case + '/{}.hdf5'.format(time)
-        parallel_path = case + '/{}_parallel.hdf5'.format(time)
+        path = getTimeDir(time, case) + '.hdf5'
+        parallel_path = getTimeDir(time, case) + '_parallel.hdf5'
         if not os.path.exists(parallel_path):
             os.rename(path, parallel_path)
         #os.rename(parallel_path, path)
@@ -161,12 +171,13 @@ if not os.path.exists(path):
 
 #exit(1)
 for time in times:
-    time = str(time)
-    print 'reading hdf5 fields ' + time
-    path = case + '/{}.hdf5'.format(time)
+    timeDir = getTimeDir(time, case)
+    path = timeDir + '.hdf5'
     if os.path.exists(path):
         continue
-    field = h5py.File(case + '/{}_parallel.hdf5'.format(time), 'r')
+    field = h5py.File(timeDir + '_parallel.hdf5', 'r')
+    time = str(time)
+    print 'reading hdf5 fields ' + time
     fieldSerial = h5py.File(path, 'w')
     for name in field.keys():
         if name == 'mesh':
@@ -214,4 +225,4 @@ for time in times:
         parallelGroup.create_dataset('end', data=np.array([[dataSerial.shape[0],len(boundary)]], np.int64))
 
     fieldSerial.close()
-    os.remove(case + '/{}_parallel.hdf5'.format(time))
+    os.remove(timeDir + '_parallel.hdf5')

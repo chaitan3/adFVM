@@ -8,18 +8,21 @@ def get_length(pat, coords):
     t, u = interpolate.splprep(pat, s=0)
     tev = linspace(0, 1, 10000)
     x = interpolate.splev(tev, t)
-    coords = array(coords).T
     #print array(x).T.shape, coords.shape
-    dist = spatial.distance.cdist(array(x).T, coords)
+    dist = spatial.distance.cdist(array(x).T, array(coords).T)
     indices = dist.argmin(axis=0)
     tn = tev[indices]
+
+    indices = tn.argsort()
+    #tn = tn[indices]
+
     def integrand(tx):
         d = interpolate.splev(tx, t, der=1)
         return sqrt(d[0]**2 + d[1]**2)
     s = []
     for i in tn:
         s.append(integrate.quad(integrand, 0, i)[0])
-    return array(s)
+    return array(s), indices
 
 f = open('/home/talnikar/adFVM/cases/vane/mesh/coords.txt', 'r')
 v1 = []

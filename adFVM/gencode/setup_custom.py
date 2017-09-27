@@ -53,9 +53,8 @@ if matop:
 if gpu:
     #cmdclass = {}
     nv_arch="-gencode=arch=compute_52,code=\"sm_52,compute_52\""
-    #compile_args += [nv_arch, '-Xcompiler=-fPIC']
-    compile_args += ['-Xcompiler=-fPIC']
-    compile_args += ['-DGPU', '-dc']
+    compile_args += [nv_arch, '-Xcompiler=-fPIC']
+    compile_args += ['-DGPU']
     if gpu_double:
         compile_args += ['-DGPU_DOUBLE']
     mpi_incdirs = subprocess.check_output('mpicc --showme | egrep -o -e "-I[a-z\/\.]*"', shell=True)
