@@ -86,9 +86,10 @@ class Solver(object):
         return sum([phi.getTensor(index) for phi in self.fields], [])
 
     def boundaryInit(self, *fields):
+        mesh = self.mesh.symMesh
         fields = list(fields)
         for index, phi in enumerate(fields):
-            phi = ExternalFunctionOp('mpi_init', (phi,), (phi,)).outputs[0]
+            phi = ExternalFunctionOp('mpi_init', (phi, mesh.owner), (phi,)).outputs[0]
             fields[index] = phi
         fields = tuple(fields)
         fields = ExternalFunctionOp('mpi_dummy', fields, fields, empty=True).outputs

@@ -14,15 +14,15 @@ static integer mpi_reqField = 0;
 static bool mpi_init = false;
 static bool mpi_init_grad = false;
 static map<void *, void *> mpi_reqBuf;
-extArrType<integer> owner;
+//extArrType<integer> owner;
 
 void parallel_init() {
-    Mesh& mesh = *meshp;
-    owner = move(extArrType<integer>(mesh.owner.shape, mesh.owner.data));
+    //Mesh& mesh = *meshp;
+    //owner = move(extArrType<integer>(mesh.owner.shape, mesh.owner.data));
 }
 
 void parallel_exit() {
-    owner.destroy();
+    //owner.destroy();
 }
 
 template <typename dtype, integer shape1, integer shape2>
@@ -106,10 +106,11 @@ void Function_mpi_init(vector<extArrType<dtype, shape1, shape2>*> phiP) {
         mpi_init = true;
     }
 
-    extArrType<dtype, shape1, shape2>& phi = *(phiP[1]);
+    extArrType<dtype, shape1, shape2>& phi = *(phiP[2]);
     extArrType<dtype, shape1, shape2>* phiBuf;
     phiBuf = new extArrType<dtype, shape1, shape2>(mesh.nCells-mesh.nLocalCells, true);
-    mpi_reqBuf[phiP[1]] = (void *) phiBuf;
+    mpi_reqBuf[phiP[2]] = (void *) phiBuf;
+    extArrType<integer>& owner = *((extArrType<integer>*)phiP[1]);
 
     //MPI_Barrier(MPI_COMM_WORLD);
     for (auto& patch: mesh.boundary) {
@@ -133,15 +134,16 @@ void Function_mpi_init_grad(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     const Mesh& mesh = *meshp;
     if (mesh.nProcs == 1) return;
 
-    extArrType<dtype, shape1, shape2>& phi = *(phiP[1]);
+    extArrType<dtype, shape1, shape2>& phi = *(phiP[2]);
     extArrType<dtype, shape1, shape2>* phiBuf;
+    extArrType<integer>& owner = *((extArrType<integer>*)phiP[1]);
         // run once
     if (mpi_init_grad) {
         MPI_Waitall(mpi_reqIndex, (mpi_req), MPI_STATUSES_IGNORE);
         delete[] mpi_req;
         mpi_init_grad = false;
     }
-    phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf[phiP[1]];
+    phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf[phiP[2]];
     
     //MPI_Barrier(MPI_COMM_WORLD);
     for (auto& patch: mesh.boundary) {

@@ -212,8 +212,10 @@ class baseArrType {
     baseArrType(const integer shape, dtype* data, bool keepMemory=false, bigInteger id=0) {
         this -> init(shape);
         //cout << "data: " << keepMemory << endl;
+        this->keepMemory = keepMemory;
         this -> id = id;
         bool transfer = self().toDeviceMemory();
+        //printf("data: %d %lld %d\n", keepMemory, id, transfer);
         if(transfer) {
             self().toDevice(data);
         } 
