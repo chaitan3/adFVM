@@ -13,8 +13,6 @@ from adFVM.density import RCF
 def postprocess(solver, time, suffix=''):
     mesh = solver.mesh
 
-    T0 = 420.
-    p0 = 175158.
     point = np.array([0.052641,-0.1,0.005])
     normal = np.array([1.,0.,0.])
     patches = ['pressure', 'suction']
@@ -22,9 +20,13 @@ def postprocess(solver, time, suffix=''):
     pprint('postprocessing', time)
     rho, rhoU, rhoE = solver.initFields(solver.readFields(time, suffix=suffix))
     U, T, p = solver.primitive(rho, rhoU, rhoE)
+    T0 = 420.
+    p0 = solver.p.phi.BC['inlet'].patch['_pt'][0,0]
+    print p0
     
     htc = getHTC(T, T0, patches)
     Ma = getIsentropicMa(p, p0, patches)
+    print Ma
     wakeCells, pl = getPressureLoss(p, T, U, p0, point, normal)
     uplus, yplus, ustar, yplus1 = getYPlus(U, T, rho, patches)
 

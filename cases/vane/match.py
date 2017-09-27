@@ -11,6 +11,7 @@ currdir = os.path.dirname(os.path.realpath(__file__))
 import pickle as pkl
 from smooth import smooth
 
+#config.hdf5 = True
 
 def read_data(name):
     with open(currdir + '/' + name) as f: 
@@ -60,10 +61,15 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
     ss = ss[indices]
     Mas = Mas[indices]
 
-    #expp = read_data('data/Ma_pressure_0.875.csv')
-    #exps = read_data('data/Ma_suction_0.875.csv')
-    expp = read_data('data/Ma_pressure_1.02.csv')
-    exps = read_data('data/Ma_suction_1.02.csv')
+    indices = logical_not(isnan(Mas))
+    ss, Mas = ss[indices], Mas[indices]
+    indices = logical_not(isnan(Map))
+    sp, Map = sp[indices], Map[indices]
+
+    expp = read_data('data/Ma_pressure_0.875.csv')
+    exps = read_data('data/Ma_suction_0.875.csv')
+    #expp = read_data('data/Ma_pressure_1.02.csv')
+    #exps = read_data('data/Ma_suction_1.02.csv')
 
     fill=1
 
@@ -104,23 +110,22 @@ def match_wakes(pl, coords, p0, saveFile):
 
 pklFile = 'match_args.pkl'
 if __name__ == '__main__':
-    if os.path.exists(pklFile):
+    if 0:#os.path.exists(pklFile):
         htc_args, Ma_args = pkl.load(open(pklFile))
     else:
         from adFVM import config
         from adFVM.mesh import Mesh
         from adFVM.field import Field, IOField
-        config.hdf5 = True
         case, time = sys.argv[1:3]
         time = float(time)
         mesh = Mesh.create(case)
         Field.setMesh(mesh)
 
         with IOField.handle(time):
-            htc = IOField.read('htc_avg')
-            Ma = IOField.read('Ma_avg')
-            #htc = IOField.read('htc')
-            #Ma = IOField.read('Ma')
+            #htc = IOField.read('htc_avg')
+            #Ma = IOField.read('Ma_avg')
+            htc = IOField.read('htc')
+            Ma = IOField.read('Ma')
 
             htc.partialComplete()
             Ma.partialComplete()
@@ -163,7 +168,7 @@ if __name__ == '__main__':
         with open(pklFile, 'w') as f:
             pkl.dump([htc_args, Ma_args], f)
 
-    match_htc(*htc_args)
+    #match_htc(*htc_args)
     match_velocity(*Ma_args)
 
     #p0 = 175158.

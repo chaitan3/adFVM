@@ -231,25 +231,10 @@ class gpuArrType : public baseArrType<gpuArrType, GPUMemoryBuffer, dtype, shape1
         gpuErrorCheck(cudaPeekAtLastError());
     }
     void info() const {
-        dtype minPhi, maxPhi;
-        minPhi = 1e30;
-        maxPhi = -1e30;
-        integer minLoc = -1, maxLoc = -1;
         dtype* hdata = this->toHost();
-        for (integer i = 0; i < this->size; i++) {
-            if (hdata[i] < minPhi) {
-                minPhi = hdata[i];
-                minLoc = i;
-            }
-            if (hdata[i] > maxPhi) {
-                maxPhi = hdata[i];
-                maxLoc = i;
-            }
-
-        }
+        arrType<dtype, shape1, shape2, shape3> phi(this->shape, hdata);
+        phi.info();
         delete[] hdata;
-        cout << "phi min/max:" << minPhi << " " << maxPhi << endl;
-        cout << "loc min/max:" << minLoc << " " << maxLoc << endl;
     }
 };
 
