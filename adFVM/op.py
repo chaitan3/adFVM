@@ -57,6 +57,7 @@ def gradCell(phi, mesh):
             gradPhi += phiF*S*N
         else:
             gradPhi += phiF.outer(S*N)
+    gradPhi = gradPhi/mesh.volumes
     return gradPhi
 
 def snGrad(phiL, phiR, mesh):
