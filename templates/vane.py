@@ -200,8 +200,10 @@ void objective_grad(const mat& U, const vec& T, const vec& p, mat& Ua, vec& Ta, 
 }}
 """
 
-primal = RCF('/home/talnikar/adFVM/cases/vane/laminar_gpu/', objective=[objectivePressureLoss, objectiveHeatTransfer], objectivePLInfo={}, \
-             objectiveString = objectiveString)
+#primal = RCF('/home/talnikar/adFVM/cases/vane/laminar_gpu/', objective=[objectivePressureLoss, objectiveHeatTransfer], objectivePLInfo={}, \
+#             objectiveString = objectiveString)
+primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=[objectivePressureLoss, objectiveHeatTransfer], objectivePLInfo={}, \
+             objectiveString = objectiveString, fixedTimeStep=True)
 primal.defaultConfig["objectivePLInfo"] = getPlane(primal)
 a = 0.4
 #a = 0.
@@ -242,8 +244,8 @@ parameters = 'mesh'
 
 #nSteps = 10
 #writeInterval = 5
-nSteps = 100
-writeInterval = 100
+nSteps = 10
+writeInterval = 10
 #nSteps = 100000
 #writeInterval = 5000
 startTime = 3.0

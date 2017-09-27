@@ -65,9 +65,9 @@ void RCF::equation(const vec& rho, const mat& rhoU, const vec& rhoE, vec& drho, 
     this->boundary(this->boundaries[1], T);
     this->boundary(this->boundaries[2], p);
     //this->boundaryEnd();    
-    //U.info();
-    //T.info();
-    //p.info();
+    U.info();
+    T.info();
+    p.info();
 
     arrType<scalar, 3, 3> gradU(mesh.nCells);
     arrType<scalar, 1, 3> gradT(mesh.nCells);

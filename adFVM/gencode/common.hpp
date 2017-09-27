@@ -151,6 +151,8 @@ class arrType {
         return false;
     }
     void info() const {
+        cout << setprecision(15) << this->sum() << endl;
+        return;
         scalar minPhi, maxPhi;
         minPhi = 1e100;
         maxPhi = -1e100;
@@ -173,7 +175,7 @@ class arrType {
     void zero() {
         memset(this->data, 0, this->size*sizeof(dtype));
     }
-    dtype sum() {
+    dtype sum() const {
         dtype s = 0;
         for (integer i = 0; i < this->size; i++) {
             s += this->data[i];
