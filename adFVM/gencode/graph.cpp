@@ -43,18 +43,18 @@ PyObject* initialize(PyObject *self, PyObject *args) {
 
     #ifdef GPU
         int count;
+        gpuErrorCheck(cudaSetDevice(meshp->localRank));
         gpuErrorCheck(cudaGetDeviceCount(&count));
         auto status1 = cusolverDnCreate(&cusolver_handle);
         assert(status1 == CUSOLVER_STATUS_SUCCESS);
         auto status2 = cublasCreate(&cublas_handle);
         assert(status2 == CUBLAS_STATUS_SUCCESS);
 
-        printf("GPU devices: %d, rank: %d\n", count, meshp->rank);
+        printf("GPU devices: %d, rank: %d\n", count, meshp->localRank);
         //cudaSetDevice(0);
         //int numSMs;
         //cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, 0);
         //cout << "num sms: " << numSMs << endl;
-        gpuErrorCheck(cudaSetDevice(meshp->localRank));
     #endif
 
     #ifdef MATOP
