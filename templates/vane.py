@@ -108,9 +108,9 @@ def objective(fields, solver):
         return a*obj + b*obj2
     return tensor.Tensorize(_combine)(1)(pl, w, ht, w2)[0]
 
-#primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective, fixedTimeStep=True)
+primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/orig/', objective=objective, fixedTimeStep=True)
 #primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective, fixedTimeStep=True)
-primal = RCF('/home/talnikar/adFVM/cases/vane/les/', objective=objective, fixedTimeStep=True)
+#primal = RCF('/home/talnikar/adFVM/cases/vane/les/', objective=objective, fixedTimeStep=True)
 getPlane(primal)
 getWeights(primal)
 
@@ -147,8 +147,8 @@ parameters = 'mesh'
 #parameters = 'source'
 
 nSteps = 10
-writeInterval = 10
-sampleInterval = 2
+writeInterval = 2
+sampleInterval = 1
 reportInterval = 1
 #nSteps = 100000
 #writeInterval = 5000
@@ -156,3 +156,4 @@ startTime = 3.0
 dt = 1e-8
 
 #adjParams = [1e-3, 'abarbanel', None]
+adjParams = [1e-3, 'entropy_jameson', None]

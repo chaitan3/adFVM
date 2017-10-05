@@ -351,7 +351,7 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True, **kwa
     return viscosity
 
 from adFVM.tensor import *
-def getAdjointViscosityCpp(solver, rho, rhoU, rhoE, scaling):
+def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
     g = solver.gamma
     mesh = solver.mesh.symMesh
 
@@ -427,32 +427,53 @@ def getAdjointViscosityCpp(solver, rho, rhoU, rhoE, scaling):
         Us = U.magSqr()
         c2 = c*c
 
-        M1 = Tensor((5, 5), [divU, gradb[0], gradb[1], gradb[2], Z,
-                             gradb[0], divU, Z, Z, grada[0],
-                             gradb[1], Z, divU, Z, grada[1],
-                             gradb[2], Z, Z, divU, grada[2],
-                             Z, grada[0], grada[1], grada[2], divU])
-        tmp1 = b*gradrho/rho
-        tmp2 = a*gradp/(2*p)
-        tmp3 = 2*grada/g1
+        if viscosityType == 'abarbanel':
+            M1 = Tensor((5, 5), [divU, gradb[0], gradb[1], gradb[2], Z,
+                                 gradb[0], divU, Z, Z, grada[0],
+                                 gradb[1], Z, divU, Z, grada[1],
+                                 gradb[2], Z, Z, divU, grada[2],
+                                 Z, grada[0], grada[1], grada[2], divU])
+            tmp1 = b*gradrho/rho
+            tmp2 = a*gradp/(2*p)
+            tmp3 = 2*grada/g1
 
-        M2 = Tensor((5, 5), [Z, tmp1[0], tmp1[1], tmp1[2], sg1*divU/2,
-                             Z, gradU[0,0], gradU[0,1], gradU[0,2], tmp2[0],
-                             Z, gradU[1,0], gradU[1,1], gradU[1,2], tmp2[1],
-                             Z, gradU[2,0], gradU[2,1], gradU[2,2], tmp2[2],
-                             Z, tmp3[0], tmp3[1], tmp3[2], g1*divU/2])
+            M2 = Tensor((5, 5), [Z, tmp1[0], tmp1[1], tmp1[2], sg1*divU/2,
+                                 Z, gradU[0,0], gradU[0,1], gradU[0,2], tmp2[0],
+                                 Z, gradU[1,0], gradU[1,1], gradU[1,2], tmp2[1],
+                                 Z, gradU[2,0], gradU[2,1], gradU[2,2], tmp2[2],
+                                 Z, tmp3[0], tmp3[1], tmp3[2], g1*divU/2])
+        elif viscosityType == 'entropy_jameson':
+            M1 = Tensor((5, 5), [divU, gradc[0], gradc[1], gradc[2], Z,
+                                 gradc[0], divU, Z, Z, Z,
+                                 gradc[1], Z, divU, Z, Z,
+                                 gradc[2], Z, Z, divU, Z,
+                                 Z, Z, Z, Z, divU])
+            tmp1 = gradp/(rho*c)
+            tmp2 = g1*gradp/(2*rho*c)
+            tmp3 = gradp*pref/(2*g*p*rho*Uref)
+            tmp4 = (gradp-c*c*gradrho)*Uref/pref
+
+            M2 = Tensor((5, 5), [g1*divU/2, tmp1[0], tmp1[1], tmp1[2], divU*pref/(2*rho*c*Uref),
+                                 tmp2[0], gradU[0,0], gradU[0,1], gradU[0,2], tmp3[0],
+                                 tmp2[1], gradU[1,0], gradU[1,1], gradU[1,2], tmp3[1],
+                                 tmp2[2], gradU[2,0], gradU[2,1], gradU[2,2], tmp3[2],
+                                 Z, tmp4[0], tmp4[1], tmp4[2], g1*divU/2])
+        else:
+            raise Exception('symmetrizer not recognized')
+
         
-        Ti = Tensor((5, 5), [rho/b, Z, Z, Z, Z,
-                             rho*U1/b, rho, Z, Z, Z,
-                             rho*U2/b, Z, rho, Z, Z,
-                             rho*U3/b, Z, Z, rho, Z,
-                             rho*(c2*2/(g1*g)+Us)/(2*b), rho*U1, rho*U2, rho*U3, c*rho/sge])
-        Ti = Ti.transpose()
+        #Ti = Tensor((5, 5), [rho/b, Z, Z, Z, Z,
+        #                     rho*U1/b, rho, Z, Z, Z,
+        #                     rho*U2/b, Z, rho, Z, Z,
+        #                     rho*U3/b, Z, Z, rho, Z,
+        #                     rho*(c2*2/(g1*g)+Us)/(2*b), rho*U1, rho*U2, rho*U3, c*rho/sge])
+        #Ti = Ti.transpose()
+        #X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref])
+        #TiX = Ti.matmul(X)
 
         M = M1/2-M2
-        X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref])
-        TiX = Ti.matmul(X)
-        Mc = TiX.transpose().matmul(M.matmul(TiX))
+        #Mc = TiX.transpose().matmul(M.matmul(TiX))
+        Mc = M
         MS = (Mc + Mc.transpose())/2
         return MS
 

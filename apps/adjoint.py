@@ -76,9 +76,9 @@ class Adjoint(Solver):
         scaling = Variable((1, 1))
         gradOutputs, gradInputs = primal.map.grad()
         fields = gradInputs[:n]
-        if config.scaling:
+        if self.viscosityType:
             primalFields = primal.map._inputs[:n]
-            DT = getAdjointViscosityCpp(*([primal] + primalFields + [scaling]))
+            DT = getAdjointViscosityCpp(*([primal, self.viscosityType] + primalFields + [scaling]))
             fields = viscositySolver(*([primal] + fields + [DT]))
         args = primal.map._inputs + gradOutputs + [scaling]
         outputs = list(fields) + gradInputs[n:]
