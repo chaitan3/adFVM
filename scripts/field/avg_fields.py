@@ -8,14 +8,14 @@ from adFVM.field import Field, IOField
 from adFVM.mesh import Mesh
 from adFVM.parallel import pprint
 
-config.hdf5 = True
+#config.hdf5 = True
 case = sys.argv[1]
 fields = sys.argv[2:]
 mesh = Mesh.create(case)
 Field.setMesh(mesh)
 
 times = mesh.getTimes()
-#times = filter(lambda x: x > 1.002, times)
+times = filter(lambda x: x > 3.00049, times)
 pprint(times)
 
 nLayers = 200

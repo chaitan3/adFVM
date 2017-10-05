@@ -66,10 +66,10 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
     indices = logical_not(isnan(Map))
     sp, Map = sp[indices], Map[indices]
 
-    expp = read_data('data/Ma_pressure_0.875.csv')
-    exps = read_data('data/Ma_suction_0.875.csv')
-    #expp = read_data('data/Ma_pressure_1.02.csv')
-    #exps = read_data('data/Ma_suction_1.02.csv')
+    #expp = read_data('data/Ma_pressure_0.875.csv')
+    #exps = read_data('data/Ma_suction_0.875.csv')
+    expp = read_data('data/Ma_pressure_1.02.csv')
+    exps = read_data('data/Ma_suction_1.02.csv')
 
     fill=1
 
@@ -122,10 +122,10 @@ if __name__ == '__main__':
         Field.setMesh(mesh)
 
         with IOField.handle(time):
-            #htc = IOField.read('htc_avg')
-            #Ma = IOField.read('Ma_avg')
-            htc = IOField.read('htc')
-            Ma = IOField.read('Ma')
+            htc = IOField.read('htc_avg')
+            Ma = IOField.read('Ma_avg')
+            #htc = IOField.read('htc')
+            #Ma = IOField.read('Ma')
 
             htc.partialComplete()
             Ma.partialComplete()
@@ -168,8 +168,8 @@ if __name__ == '__main__':
         with open(pklFile, 'w') as f:
             pkl.dump([htc_args, Ma_args], f)
 
-    #match_htc(*htc_args)
     match_velocity(*Ma_args)
+    match_htc(*htc_args)
 
     #p0 = 175158.
     #nCellsPerLayer = len(wakeCells)/nLayers

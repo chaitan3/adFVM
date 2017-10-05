@@ -21,7 +21,8 @@ def postprocess(solver, time, suffix=''):
     rho, rhoU, rhoE = solver.initFields(solver.readFields(time, suffix=suffix))
     U, T, p = solver.primitive(rho, rhoU, rhoE)
     T0 = 420.
-    p0 = solver.p.phi.BC['inlet'].patch['_pt'][0,0]
+    #p0 = solver.p.phi.BC['inlet'].patch['_pt'][0,0]
+    p0 = 177000.
     print p0
     
     htc = getHTC(T, T0, patches)

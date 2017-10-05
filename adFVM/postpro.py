@@ -151,12 +151,7 @@ def getAdjointEnergy(solver, rhoa, rhoUa, rhoEa):
 def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs, **kwargs):
     mesh = rho.mesh
     solver = rho.solver
-    Uref, Tref, pref = solver.Uref, solver.Tref, solver.pref
-    g = solver.gamma
-    sg = np.sqrt(g)
-    g1 = g-1
-    sg1 = np.sqrt(g1)
-    sge = sg1*sg
+    
     energy = None
     diss = None
 
@@ -173,6 +168,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     if 'scale' in kwargs:
         suffix += '_factor'
 
+    Uref, Tref, pref = solver.Uref, solver.Tref, solver.pref
     gradrho, gradU, gradp, gradc, divU = outputs
     U = U.getInternal()
     T = T.getInternal()
@@ -181,16 +177,21 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     rho = rho.field
     p = p.field
     U = U.field
+    U1 = U[:,[0]]
+    U2 = U[:,[1]]
+    U3 = U[:,[2]]
+
+    g = solver.gamma
+    sg = np.sqrt(g)
+    g1 = g-1
+    sg1 = np.sqrt(g1)
+    sge = sg1*sg
     c = np.sqrt(g*p/rho)
     b = c/sg
     a = sg1*c/sg
     gradb = gradc/sg
     grada = gradc*sg1/sg
     Z = np.zeros_like(divU)
-
-    U1 = U[:,[0]]
-    U2 = U[:,[1]]
-    U3 = U[:,[2]]
     c2 = c*c
     Us = (U*U).sum(axis=1,keepdims=1)
     
@@ -221,29 +222,32 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
             ), axis=2)
 
     # Entropy
-    elif visc == 'entropy' or visc == 'uniform':
+    elif visc == 'entropy_hughes':
         M1 = np.stack((np.hstack((divU, gradc, Z)),
                    np.hstack((gradc[:,[0]], divU, Z, Z, Z)),
                    np.hstack((gradc[:,[1]], Z, divU, Z, Z)),
                    np.hstack((gradc[:,[2]], Z, Z, divU, Z)),
                    np.hstack((Z, Z, Z, Z, divU))),
                    axis=1)
-        #M2 = np.concatenate((np.hstack((g1*divU/2, gradp/(rho*c), divU/(2*rho*c))).reshape(-1,1,5),
-        #                np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp/(2*g*rho*c)).reshape((-1, 3, 1)))),
-        #                np.hstack((Z, gradp-c*c*gradrho, Z)).reshape(-1,1,5)),
-        #                axis=1)
-        #T = np.stack((
-        #        np.hstack((b/rho, -g1*U/(c*rho), g1/(c*rho))),
-        #        np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
-        #        np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
-        #        np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
-        #        np.hstack((-c*c+g1/2*(U*U).sum(axis=1,keepdims=1), -g1*U, (g-1)*np.ones_like(Z))),
-        #    ), axis=2)
-
+        
         M2 = np.concatenate((np.hstack((g1*divU/2, gradp/(rho*c), divU*pref/(2*rho*c*Uref))).reshape(-1,1,5),
                         np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp*pref/(2*g*rho*c*Uref)).reshape((-1, 3, 1)))),
                         np.hstack((Z, (gradp-c*c*gradrho)*Uref/pref, Z)).reshape(-1,1,5)),
                         axis=1)
+        
+    elif visc == 'entropy_jameson' or visc == 'uniform':
+        M1 = np.stack((np.hstack((divU, gradc, Z)),
+                   np.hstack((gradc[:,[0]], divU, Z, Z, Z)),
+                   np.hstack((gradc[:,[1]], Z, divU, Z, Z)),
+                   np.hstack((gradc[:,[2]], Z, Z, divU, Z)),
+                   np.hstack((Z, Z, Z, Z, divU))),
+                   axis=1)
+
+        M2 = np.concatenate((np.hstack((g1*divU/2, gradp/(rho*c), divU*pref/(2*rho*c*Uref))).reshape(-1,1,5),
+                        np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp*pref/(2*g*p*rho*Uref)).reshape((-1, 3, 1)))),
+                        np.hstack((Z, (gradp-c*c*gradrho)*Uref/pref, Z)).reshape(-1,1,5)),
+                        axis=1)
+
         #T = np.stack((
         #        np.hstack((g1*U2/(2*c*rho*Uref), -g1*U/(c*rho*Uref), g1/(c*rho*Uref))),
         #        np.hstack((-U[:,[0]]/(rho*Uref), 1/(rho*Uref), Z, Z, Z)),
@@ -258,6 +262,8 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
             np.hstack((rho*U3*Uref/c, Z, Z, rho*Uref, -pref*U3/c2)),                                    #suffix += '_factor'
             np.hstack((c*rho*Uref/g1 + rho*Us*Uref/(2*c), rho*U1*Uref, rho*U2*Uref, rho*U3*Uref, -pref*Us/(2*c2))),    #MS = (M + M.transpose((0, 2, 1)))/2
         ), axis=2)                                                                                   #M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
+    else:
+        raise Exception('factor not recognized')
     M = M1/2-M2
     #M_2norm = IOField('M_2norm_old' + suffix, M_2norm, (1,), boundary=mesh.calculatedBoundary)
     #M_2norm.write()
@@ -265,9 +271,10 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     def dot(a, b):
         return np.sum(a*b.reshape(-1,1,5), axis=-1)
 
-    X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref]).reshape(1,5,5)
-    TiX = np.matmul(Ti, X)
-    Mc = np.matmul(TiX.transpose(0, 2, 1), np.matmul(M, TiX))
+    #X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref]).reshape(1,5,5)
+    #TiX = np.matmul(Ti, X)
+    #Mc = np.matmul(TiX.transpose(0, 2, 1), np.matmul(M, TiX))
+    Mc = M
     MS = (Mc + Mc.transpose((0, 2, 1)))/2
     M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
     #print MS.sum()
