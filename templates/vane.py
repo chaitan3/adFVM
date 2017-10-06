@@ -146,13 +146,16 @@ parameters = 'mesh'
 #
 #parameters = 'source'
 
-nSteps = 10
-writeInterval = 2
-sampleInterval = 1
-reportInterval = 1
+#nSteps = 10
+#writeInterval = 2
+#sampleInterval = 1
+#reportInterval = 1
 #nSteps = 100000
 #writeInterval = 5000
-startTime = 3.0
+#startTime = 3.0
+nSteps = 20000
+writeInterval = 1000
+startTime = 4.0
 dt = 1e-8
 
 #adjParams = [1e-3, 'abarbanel', None]

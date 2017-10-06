@@ -18,6 +18,7 @@ parser.add_argument('--gpu_double', action='store_true', dest='use_gpu_double')
 parser.add_argument('-m', '--omp', action='store_true', dest='use_openmp')
 parser.add_argument('-p', '--matop', action='store_true', dest='use_matop')
 parser.add_argument('-d', '--hdf5', action='store_true')
+parser.add_argument('-o', '--profile', action='store_true', dest='profile')
 parser.add_argument('--gc', action='store_true', dest='use_gc')
 parser.add_argument('--temp', action='store_true', dest='use_temp')
 
@@ -61,6 +62,7 @@ openmp = user.use_openmp
 matop = user.use_matop
 gc = user.use_gc
 hdf5 = user.hdf5
+profile = user.profile
 
 compile = (user.compile or user.compile_exit) and (parallel.rank == 0)
 compile_exit = user.compile_exit

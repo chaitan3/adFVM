@@ -4,6 +4,8 @@ scriptDir = os.path.dirname(os.path.realpath(__file__))
 
 from . import config
 from .scalar import *
+import numpy as np
+
 _dtype = dtype
 
 def graphGetChildren(outputs):
@@ -323,6 +325,7 @@ class Function(object):
         codeFile = open(self.codeDir + self.codeFile, 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args, PyObject *kwargs) {{\n'.format(self.name))
         codeFile.write('\tmap<string, int> options = PyOptions_Parse(kwargs);\n')
+        codeFile.write('\tlong long start, end;\n')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
         memoryInit = {}
@@ -391,8 +394,10 @@ class Function(object):
                 #for index, inp in enumerate(op.args[:-len(op.outputs)]):
                 #    if not isinstance(inp.shape[0], int) and op.func._inputsUsed[index]:
                 #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
+                name = self._getName(op.indices)
+                if config.profile:
+                    codeFile.write('\tstart = current_timestamp();\n')
                 if config.gpu:
-                    name = self._getName(op.indices)
                     #codeFile.write('\tinteger nBlocks = {}/GPU_THREADS_PER_BLOCK + 1;\n'.format(name))
                     #codeFile.write('\tdim3 blocks(nBlocks / GPU_MAX_BLOCKS + 1, min(nBlocks, GPU_MAX_BLOCKS));\n')
                     #codeFile.write('\tdim3 threads(min(GPU_THREADS_PER_BLOCK, {}));\n'.format(name))
@@ -401,7 +406,14 @@ class Function(object):
                     #codeFile.write('\tgpuErrorCheck(cudaDeviceSynchronize());\n')
                     codeFile.write('\tgpuErrorCheck(cudaPeekAtLastError());\n')
                 else:
-                    codeFile.write('\t{}({}, {});\n'.format(op.name, self._getName(op.indices), op.getCallString()))
+                    codeFile.write('\t{}({}, {});\n'.format(op.name, name, op.getCallString()))
+                if config.profile:
+                    codeFile.write('\tend = current_timestamp();\n')
+                    rate = '\tcout << "{} {}: " << ((double){}*{})/(end-start) << endl;\n'
+                    size = np.dtype(config.precision).itemsize
+                    codeFile.write(rate.format(op.name, 'Mload bandwidth', name, op.func._loads*size))
+                    codeFile.write(rate.format(op.name, 'Mstores bandwidth', name, op.func._stores*size))
+                    codeFile.write(rate.format(op.name, 'Mflops', name, op.func._stores + op.func._flops))
             elif isinstance(op, ExternalFunctionOp):
                 op.arrType = self.arrType
                 codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))

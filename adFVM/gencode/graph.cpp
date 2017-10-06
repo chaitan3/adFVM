@@ -1,14 +1,7 @@
 #include "mesh.hpp"
 #include "parallel.hpp"
 
-long long mil = 0;
-long long current_timestamp() {
-    struct timeval te; 
-    gettimeofday(&te, NULL); // get current time
-    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // caculate milliseconds
-    //printf("milliseconds: %lld\n", milliseconds);
-    return milliseconds;
-}
+
 
 void Mesh::build() {}
 void Mesh::buildBeforeWrite() {}

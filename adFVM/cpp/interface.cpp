@@ -36,4 +36,10 @@ map<string, int> PyOptions_Parse(PyObject* dict) {
     return options;
 }
 
-
+long long mil = 0;
+long long current_timestamp() {
+    struct timeval te; 
+    gettimeofday(&te, NULL); // get current time
+    long long curr_time = te.tv_sec*1000000LL + te.tv_usec; // caculate microseconds
+    return curr_time;
+}

@@ -25,6 +25,7 @@ char* PyString_AsString(PyObject* result);
 
 PyObject* PyTuple_CreateNone(int);
 map<string, int> PyOptions_Parse(PyObject*);
+long long current_timestamp();
 
 template <template<typename, integer, integer, integer> class derivedArrType, typename dtype, integer shape1, integer shape2=1, integer shape3=1>
 void getArray(PyArrayObject *array, derivedArrType<dtype, shape1, shape2, shape3>& tmp, bool keepMemory=false, int64_t id=0) {

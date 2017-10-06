@@ -16,7 +16,7 @@ def objective(fields, solver):
     return tensor.Tensorize(_combine)(mesh.nInternalCells)(T)[0]
 
 #primal = RCF('./', objective=objective, fixedTimeStep=True)
-primal = RCF('/home/talnikar/adFVM/cases/box/box_10/', objective=objective, fixedTimeStep=True)
+primal = RCF('/home/talnikar/adFVM/cases/box/box_1/', objective=objective, fixedTimeStep=True)
 
 def makePerturb(param, eps=1e-6):
     def perturbMesh(fields, mesh, t):
