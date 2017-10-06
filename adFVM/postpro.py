@@ -427,7 +427,7 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
         Us = U.magSqr()
         c2 = c*c
 
-        if viscosityType == 'abarbanel':
+        if viscosityType == 'abarbanel' or viscosityType == 'uniform':
             M1 = Tensor((5, 5), [divU, gradb[0], gradb[1], gradb[2], Z,
                                  gradb[0], divU, Z, Z, grada[0],
                                  gradb[1], Z, divU, Z, grada[1],
@@ -477,11 +477,16 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
         MS = (Mc + Mc.transpose())/2
         return MS
 
-    MS = Zeros((mesh.nInternalCells, 5, 5))
-    (MS,) = Tensorize(getMaxEigenvalue)(mesh.nInternalCells, (MS,))(U, T, p, gradU, divU, gradp, gradc)
+    def constant(M_2norm):
+        return M_2norm + 1
 
     M_2norm = Zeros((mesh.nInternalCells, 1))
-    M_2norm = ExternalFunctionOp('get_max_eigenvalue', (MS,), (M_2norm,)).outputs[0]
+    if viscosityType == 'uniform':
+        (M_2norm,) = Tensorize(constant)(mesh.nInternalCells)(M_2norm)
+    else:
+        MS = Zeros((mesh.nInternalCells, 5, 5))
+        (MS,) = Tensorize(getMaxEigenvalue)(mesh.nInternalCells, (MS,))(U, T, p, gradU, divU, gradp, gradc)
+        (M_2norm,) = ExternalFunctionOp('get_max_eigenvalue', (MS,), (M_2norm,))
 
     def computeNorm(M_2norm, volumes):
         N = (M_2norm*M_2norm*volumes).sum()
