@@ -486,7 +486,7 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
     else:
         MS = Zeros((mesh.nInternalCells, 5, 5))
         (MS,) = Tensorize(getMaxEigenvalue)(mesh.nInternalCells, (MS,))(U, T, p, gradU, divU, gradp, gradc)
-        (M_2norm,) = ExternalFunctionOp('get_max_eigenvalue', (MS,), (M_2norm,))
+        (M_2norm,) = ExternalFunctionOp('get_max_eigenvalue', (MS,), (M_2norm,)).outputs
 
     def computeNorm(M_2norm, volumes):
         N = (M_2norm*M_2norm*volumes).sum()
