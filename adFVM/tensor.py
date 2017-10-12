@@ -356,6 +356,8 @@ class TensorFunction(object):
                 codeFile.write('\t#pragma omp parallel for private(i)\n')
             codeFile.write('\tfor (i = 0; i < n; i++) {\n')
         names = {}
+        int_size = 4
+        float_size = 8
         for index, op in enumerate(sortedOps):
             if op in names:
                 continue
@@ -366,24 +368,24 @@ class TensorFunction(object):
                 tensorIndex = self._inputTensorIndices[op]
                 if not tensorIndex[3]:
                     code = '{} {} = {}[i*{} + {}];'.format(dtype, names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
-                self._loads += 1
+                self._loads += float_size
             elif isinstance(op, IntegerScalar) and not isinstance(op, OpBase):
                 tensorIndex = self._inputTensorIndices[op]
                 code = '{} {} = {}[i*{} + {}];'.format('integer', names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
-                self._loads += 1
+                self._loads += int_size
             elif isinstance(op, Extract):
                 a, b = op.args
                 assert b.dtype == 'integer'
                 tensorIndex = self._inputTensorIndices[a]
                 assert tensorIndex[3]
                 code = '{} {} = {}[{}*{} + {}];'.format(dtype, names[op], tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2])
-                self._loads += 1
+                self._loads += float_size
             elif isinstance(op, Singular):
                 a, = op.args
                 tensorIndex = self._inputTensorIndices[a]
                 assert tensorIndex[3]
                 code += '{} {} = {}[0];\n\t\t'.format(dtype, names[op], tensorIndex[0])
-                self._loads += 1
+                #self._loads += float_size
             elif isinstance(op, Collate):
                 #print len(op.args)
                 tensorIndex = self._outputTensorIndices[op]
@@ -402,7 +404,9 @@ class TensorFunction(object):
                         #code += '__sync_fetch_and_add(&{}[{}*{} + {}], {});\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
                     else:
                         code += '{}[{}*{} + {}] += {};\n\t\t'.format(tensorIndex[0], names[b], tensorIndex[1], tensorIndex[2], names[a])
-                    self._stores += 1
+                    self._stores += float_size
+                    self._loads += float_size
+                    self._flops += 1
             elif isinstance(op, Reduce):
                 a, = op.args
                 tensorIndex = self._outputTensorIndices[op]
@@ -414,16 +418,20 @@ class TensorFunction(object):
                         code += '{}[0] += {};\n\t\t'.format(tensorIndex[0], names[a])
                     else:
                         code += '{0}[0] = {2}({1}, {0}[0]);\n\t\t'.format(tensorIndex[0], names[a], op.opType)
-                self._stores += 1
+                #self._stores += float_size
+                self._flops += 1
             else:
                 code = op.c_code(names)
-                self._flops += 1
+                if isinstance(op, UnaryOp) or isinstance(op, BinaryOp):
+                    self._flops += 1
 
             if op in self._outputTensorIndices:
                 tensorIndex = self._outputTensorIndices[op]
                 if not tensorIndex[3]:
                     code += '\n\t\t{}[i*{} + {}] += {};'.format(tensorIndex[0], tensorIndex[1], tensorIndex[2], names[op])
-                self._stores += 1
+                self._stores += float_size
+                self._loads += float_size
+                self._flops += 1
 
             codeFile.write('\t\t' + code + '\n')
         codeFile.write('\t}\n')
@@ -447,7 +455,7 @@ def randomName(N):
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N))
 
 
-def Tensorize(func):
+def Kernel(func):
     def ParamFunc(indices=None, outputs=None):
         def Func(*args, **kwargs):
             if not hasattr(ParamFunc, 'tensorFunc'):

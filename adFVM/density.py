@@ -1,5 +1,5 @@
 from . import config, riemann, interp
-from .tensor import Tensorize, ExternalFunctionOp
+from .tensor import Kernel, ExternalFunctionOp
 from .variable import Variable, Function, Zeros
 from .field import Field, IOField, CellField
 from .op import  div, absDiv, snGrad, internal_sum, grad, gradCell
@@ -60,8 +60,8 @@ class RCF(Solver):
 
     def compileInit(self):
         mesh = self.mesh.symMesh
-        self._primitive = Tensorize(self.primitive)
-        self._conservative = Tensorize(self.conservative)
+        self._primitive = Kernel(self.primitive)
+        self._conservative = Kernel(self.conservative)
         meshArgs = mesh.getTensor() + mesh.getScalar()
         BCArgs = self.getBoundaryTensor(0)
         rho, rhoU, rhoE = Variable((mesh.nInternalCells, 1)), Variable((mesh.nInternalCells, 3)), Variable((mesh.nInternalCells, 1)),
@@ -75,14 +75,14 @@ class RCF(Solver):
         self.mapBoundary = Function('init', [rho, rhoU, rhoE] + meshArgs + BCArgs, [rhoN, rhoUN, rhoEN])
 
     def compileSolver(self):
-        self._grad = Tensorize(self.gradients)
-        self._gradCell = Tensorize(self.gradientsCell)
-        self._coupledGrad = Tensorize(self.gradients)
-        self._boundaryGrad = Tensorize(self.gradients)
-        self._flux = Tensorize(self.flux)
-        self._coupledFlux = Tensorize(self.flux)
-        self._characteristicFlux = Tensorize(self.flux)
-        self._boundaryFlux = Tensorize(self.boundaryFlux)
+        self._grad = Kernel(self.gradients)
+        self._gradCell = Kernel(self.gradientsCell)
+        self._coupledGrad = Kernel(self.gradients)
+        self._boundaryGrad = Kernel(self.gradients)
+        self._flux = Kernel(self.flux)
+        self._coupledFlux = Kernel(self.flux)
+        self._characteristicFlux = Kernel(self.flux)
+        self._boundaryFlux = Kernel(self.boundaryFlux)
         mesh = self.mesh.symMesh
         meshArgs = mesh.getTensor() + mesh.getScalar()
         sourceArgs = [x[0] for x in self.sourceTerms]
@@ -377,7 +377,7 @@ class RCF(Solver):
             #return dtc.reduce_min()
             return dtc.reduce_max()
         minDtc = Zeros((1, 1))
-        minDtc = Tensorize(_minDtc)(mesh.nInternalCells, (minDtc,))(dtc)[0]
+        minDtc = Kernel(_minDtc)(mesh.nInternalCells, (minDtc,))(dtc)[0]
 
         if self.stage == 1:
             self.dtc, self.obj = minDtc, obj

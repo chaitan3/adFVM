@@ -1,7 +1,7 @@
 import numpy as np
 
 from . import config
-from .tensor import Tensor, Tensorize, StaticVariable
+from .tensor import Tensor, Kernel, StaticVariable
 from .mesh import extractField, extractVector
 logger = config.Logger(__name__)
 
@@ -52,7 +52,7 @@ class BoundaryCondition(object):
         # used by field writer
         self.keys = []
         self.inputs = []
-        self._tensorUpdate = Tensorize(self._update)
+        self._tensorUpdate = Kernel(self._update)
 
     def createInput(self, key, dimensions):
         patch = self.mesh.boundary[self.patchID]
@@ -146,7 +146,7 @@ class CharacteristicBoundaryCondition(BoundaryCondition):
         U, T, p = args
         inputs = tuple([U, T, p] + [x[0] for x in self.inputs])
         outputs = (U[self.cellStartFace],T[self.cellStartFace], p[self.cellStartFace])
-        return Tensorize(self._update)(self.nFaces, outputs)(*inputs)
+        return Kernel(self._update)(self.nFaces, outputs)(*inputs)
 
 class CBC_UPT(CharacteristicBoundaryCondition):
     def __init__(self, phi, patchID):

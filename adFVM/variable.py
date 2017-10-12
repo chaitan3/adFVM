@@ -325,7 +325,8 @@ class Function(object):
         codeFile = open(self.codeDir + self.codeFile, 'a')
         codeFile.write('\nstatic PyObject* Function_{}(PyObject *self, PyObject *args, PyObject *kwargs) {{\n'.format(self.name))
         codeFile.write('\tmap<string, int> options = PyOptions_Parse(kwargs);\n')
-        codeFile.write('\tlong long start, end;\n')
+        if config.profile:
+            codeFile.write('\tlong long start, end;\n')
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
         memoryInit = {}
@@ -396,6 +397,7 @@ class Function(object):
                 #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
                 name = self._getName(op.indices)
                 if config.profile:
+                    codeFile.write('\tMPI_Barrier(MPI_COMM_WORLD);\n')
                     codeFile.write('\tstart = current_timestamp();\n')
                 if config.gpu:
                     #codeFile.write('\tinteger nBlocks = {}/GPU_THREADS_PER_BLOCK + 1;\n'.format(name))
@@ -408,12 +410,19 @@ class Function(object):
                 else:
                     codeFile.write('\t{}({}, {});\n'.format(op.name, name, op.getCallString()))
                 if config.profile:
+                    codeFile.write('\tMPI_Barrier(MPI_COMM_WORLD);\n')
                     codeFile.write('\tend = current_timestamp();\n')
-                    rate = '\tcout << "{} {}: " << ((double){}*{})/(end-start) << endl;\n'
-                    size = np.dtype(config.precision).itemsize
-                    codeFile.write(rate.format(op.name, 'Mload bandwidth', name, op.func._loads*size))
-                    codeFile.write(rate.format(op.name, 'Mstores bandwidth', name, op.func._stores*size))
-                    codeFile.write(rate.format(op.name, 'Mflops', name, op.func._stores + op.func._flops))
+                    codeFile.write('\tif (meshp->rank == 0) cout << "{} Kernel time: " << end-start << "us" << endl;\n'.format(op.name))
+                    
+                    codeFile.write('\t{\n')
+                    codeFile.write('\t\tdouble global, local;\n')
+                    rate = '\t\tcout << "{} {}: " << ((double)global)/(end-start) << endl;\n'
+                    for msg, nops in zip(['Mload bandwidth', 'Mstore bandwidth', 'Mflops'], [op.func._loads, op.func._stores, op.func._flops]):
+                        codeFile.write('\t\tglobal = 0;\n'.format(name, nops))
+                        codeFile.write('\t\tlocal = {}*{};\n'.format(name, nops))
+                        codeFile.write('\t\tMPI_Reduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);\n')
+                        codeFile.write('\t\tif (meshp->rank == 0) ' +  rate.format(op.name, msg))
+                    codeFile.write('\t}\n')
             elif isinstance(op, ExternalFunctionOp):
                 op.arrType = self.arrType
                 codeFile.write('\t{}({});\n'.format(op.name, op.getCallString()))

@@ -220,6 +220,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
                 np.hstack((rho*U3/b, Z, Z, rho, Z)),
                 np.hstack((rho*(2*c2/(g1*g)+Us)/(2*b), rho*U1, rho*U2, rho*U3, c*rho/sge)),
             ), axis=2)
+        M = M1/2-M2
 
     # Entropy
     elif visc == 'entropy_hughes':
@@ -234,6 +235,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
                         np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp*pref/(2*g*rho*c*Uref)).reshape((-1, 3, 1)))),
                         np.hstack((Z, (gradp-c*c*gradrho)*Uref/pref, Z)).reshape(-1,1,5)),
                         axis=1)
+        M = -(M1 + M2)
         
     elif visc == 'entropy_jameson' or visc == 'uniform':
         M1 = np.stack((np.hstack((divU, gradc, Z)),
@@ -247,6 +249,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
                         np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp*pref/(2*g*p*rho*Uref)).reshape((-1, 3, 1)))),
                         np.hstack((Z, (gradp-c*c*gradrho)*Uref/pref, Z)).reshape(-1,1,5)),
                         axis=1)
+        M = M1/2-M2
 
         #T = np.stack((
         #        np.hstack((g1*U2/(2*c*rho*Uref), -g1*U/(c*rho*Uref), g1/(c*rho*Uref))),
@@ -264,7 +267,6 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         ), axis=2)                                                                                   #M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
     else:
         raise Exception('factor not recognized')
-    M = M1/2-M2
     #M_2norm = IOField('M_2norm_old' + suffix, M_2norm, (1,), boundary=mesh.calculatedBoundary)
     #M_2norm.write()
     
@@ -380,9 +382,9 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
         gradp = op.grad(pF, mesh, neighbour)
         gradc = op.grad(cF, mesh, neighbour)
         return gradU, divU, gradp, gradc
-    computeGradients = Tensorize(gradients)
-    boundaryComputeGradients = Tensorize(gradients)
-    coupledComputeGradients = Tensorize(gradients)
+    computeGradients = Kernel(gradients)
+    boundaryComputeGradients = Kernel(gradients)
+    coupledComputeGradients = Kernel(gradients)
 
     U, T, p = Zeros((mesh.nCells, 3)), Zeros((mesh.nCells, 1)), Zeros((mesh.nCells, 1))
     outputs = solver._primitive(mesh.nInternalCells, (U, T, p))(rho, rhoU, rhoE)
@@ -482,10 +484,10 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
 
     M_2norm = Zeros((mesh.nInternalCells, 1))
     if viscosityType == 'uniform':
-        (M_2norm,) = Tensorize(constant)(mesh.nInternalCells)(M_2norm)
+        (M_2norm,) = Kernel(constant)(mesh.nInternalCells)(M_2norm)
     else:
         MS = Zeros((mesh.nInternalCells, 5, 5))
-        (MS,) = Tensorize(getMaxEigenvalue)(mesh.nInternalCells, (MS,))(U, T, p, gradU, divU, gradp, gradc)
+        (MS,) = Kernel(getMaxEigenvalue)(mesh.nInternalCells, (MS,))(U, T, p, gradU, divU, gradp, gradc)
         (M_2norm,) = ExternalFunctionOp('get_max_eigenvalue', (MS,), (M_2norm,)).outputs
 
     def computeNorm(M_2norm, volumes):
@@ -493,7 +495,7 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
         V = volumes.sum()
         return N, V
     N, V = Zeros((1,1)), Zeros((1,1))
-    inputs = Tensorize(computeNorm)(mesh.nInternalCells, (N, V))(M_2norm, mesh.volumes)
+    inputs = Kernel(computeNorm)(mesh.nInternalCells, (N, V))(M_2norm, mesh.volumes)
     outputs = tuple([Zeros(x.shape) for x in inputs])
     N, V = ExternalFunctionOp('mpi_allreduce', inputs, outputs).outputs
 
@@ -501,7 +503,7 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
         N, V, scaling = N.scalar(), V.scalar(), scaling.scalar()
         return M_2norm*scaling*(V/N).sqrt()
     M_2norm_out = Zeros((mesh.nCells, 1))
-    (M_2norm,) = Tensorize(scaleM)(mesh.nInternalCells, (M_2norm_out,))(M_2norm, N, V, scaling)
+    (M_2norm,) = Kernel(scaleM)(mesh.nInternalCells, (M_2norm_out,))(M_2norm, N, V, scaling)
 
     (phi,) = solver.boundaryInit(M_2norm)
     phi = CellField('M_2norm', None, (1,)).updateGhostCells(phi)
@@ -515,14 +517,14 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
         return M_2norm
     meshArgs = _meshArgs()
     DT = Zeros((mesh.nFaces, 1))
-    (DT,) = Tensorize(interpolate)(mesh.nFaces, (DT,))(M_2norm, *meshArgs)
+    (DT,) = Kernel(interpolate)(mesh.nFaces, (DT,))(M_2norm, *meshArgs)
     return DT
 
 def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
     mesh = solver.mesh.symMesh
     def divideVolumes(rhoa, rhoUa, rhoEa, volumes):
         return rhoa/volumes, rhoUa[0]/volumes, rhoUa[1]/volumes, rhoUa[2]/volumes, rhoEa/volumes
-    fields = Tensorize(divideVolumes)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes)
+    fields = Kernel(divideVolumes)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes)
 
     inputs = fields + (DT, solver.dt)
     outputs = tuple([Zeros(x.shape) for x in fields])
@@ -533,5 +535,5 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
         rhoUa = Tensor((3,), [phi2*volumes, phi3*volumes, phi4*volumes])
         rhoEa = phi5*volumes
         return rhoa, rhoUa, rhoEa
-    return Tensorize(multiplyVolumes)(mesh.nInternalCells)(*(fields + (mesh.volumes,)))
+    return Kernel(multiplyVolumes)(mesh.nInternalCells)(*(fields + (mesh.volumes,)))
 

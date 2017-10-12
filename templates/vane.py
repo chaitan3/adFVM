@@ -74,9 +74,9 @@ def objective(fields, solver):
 
     nPlaneCells, cells, areas = [x[0] for x in solver.extraArgs[:3]]
     pl, w = tensor.Zeros((1, 1)), tensor.Zeros((1, 1))
-    pl, w = tensor.Tensorize(objectivePressureLoss)(nPlaneCells, (pl, w))(U, T, p, cells, areas, solver=solver)
+    pl, w = tensor.Kernel(objectivePressureLoss)(nPlaneCells, (pl, w))(U, T, p, cells, areas, solver=solver)
 
-    _heatTransfer = tensor.Tensorize(objectiveHeatTransfer)
+    _heatTransfer = tensor.Kernel(objectiveHeatTransfer)
     weights = [x[0] for x in solver.extraArgs[3:]]
     ht, w2 = tensor.Zeros((1, 1)), tensor.Zeros((1, 1))
     for index, patchID in enumerate(patches):
@@ -106,7 +106,7 @@ def objective(fields, solver):
         obj = pl/w
         obj2 = ht/w2
         return a*obj + b*obj2
-    return tensor.Tensorize(_combine)(1)(pl, w, ht, w2)[0]
+    return tensor.Kernel(_combine)(1)(pl, w, ht, w2)[0]
 
 primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/orig/', objective=objective, fixedTimeStep=True)
 #primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective, fixedTimeStep=True)

@@ -2,7 +2,7 @@ import numpy as np
 
 from . import config
 from .field import Field
-from .tensor import Tensorize
+from .tensor import Kernel
 
 createFields = lambda internalFields, solver : [Field(solver.names[index], phi, solver.dimensions[index]) for index, phi in enumerate(internalFields)]
 
@@ -61,7 +61,7 @@ def timeStepper(equation, initFields, solver):
         S = [x[0] for x in solver.sourceTerms]
         #args = list(LHS) + sum(fields, []) + [solver.dt]
         args = list(LHS) + S + sum(fields, []) + [solver.dt]
-        currFields = Tensorize(update)(mesh.nInternalCells)(*args, i=i)
+        currFields = Kernel(update)(mesh.nInternalCells)(*args, i=i)
         solver.stage += 1
         fields.append(list(currFields))
     return fields[-1]

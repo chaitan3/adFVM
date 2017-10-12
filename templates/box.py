@@ -13,10 +13,10 @@ def objective(fields, solver):
     # then elemwise
     def _combine(T):
         return (T*1).sum()
-    return tensor.Tensorize(_combine)(mesh.nInternalCells)(T)[0]
+    return tensor.Kernel(_combine)(mesh.nInternalCells)(T)[0]
 
 #primal = RCF('./', objective=objective, fixedTimeStep=True)
-primal = RCF('/home/talnikar/adFVM/cases/box/box_1/', objective=objective, fixedTimeStep=True)
+primal = RCF('/home/talnikar/adFVM/cases/box/box_100/', objective=objective, fixedTimeStep=True)
 
 def makePerturb(param, eps=1e-6):
     def perturbMesh(fields, mesh, t):
@@ -52,6 +52,7 @@ parameters = 'mesh'
 
 nSteps = 10
 writeInterval = 10
+reportInterval = 10
 startTime = 0.0
 dt = 1e-8
 

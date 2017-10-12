@@ -39,14 +39,14 @@ for index, time in enumerate(times):
 
     with IOField.handle(time):
 
-        outputs = computeGradients(solver, U, T, p)
-        outputsF = []
-        for field, name, dim in zip(outputs, names, dimensions):
-            outputsF.append(IOField(name, field, dim))
-            if len(dim) != 2:
-                outputsF[-1].defaultComplete()
-                outputsF[-1].write()
-        pprint()
+        #outputs = computeGradients(solver, U, T, p)
+        #outputsF = []
+        #for field, name, dim in zip(outputs, names, dimensions):
+        #    outputsF.append(IOField(name, field, dim))
+        #    if len(dim) != 2:
+        #        outputsF[-1].defaultComplete()
+        #        outputsF[-1].write()
+        #pprint()
 
         #Re = getRe(U, T, p, rho, 0.067)
         #Re.write(name='Re')
