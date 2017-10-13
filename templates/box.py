@@ -16,7 +16,7 @@ def objective(fields, solver):
     return tensor.Kernel(_combine)(mesh.nInternalCells)(T)[0]
 
 #primal = RCF('./', objective=objective, fixedTimeStep=True)
-primal = RCF('/home/talnikar/adFVM/cases/box/box_100/', objective=objective, fixedTimeStep=True)
+primal = RCF('/home/talnikar/adFVM/cases/box/box_4/', objective=objective, fixedTimeStep=True)
 
 def makePerturb(param, eps=1e-6):
     def perturbMesh(fields, mesh, t):
@@ -50,8 +50,8 @@ parameters = 'mesh'
 #
 #parameters = 'source'
 
-nSteps = 10
-writeInterval = 10
+nSteps = 100
+writeInterval = 100
 reportInterval = 10
 startTime = 0.0
 dt = 1e-8

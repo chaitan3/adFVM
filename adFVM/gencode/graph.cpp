@@ -44,8 +44,6 @@ PyObject* initialize(PyObject *self, PyObject *args) {
         assert(status2 == CUBLAS_STATUS_SUCCESS);
 
         printf("GPU devices: %d, rank: %d\n", count, meshp->localRank);
-        //cudaSetDevice(0);
-        //int numSMs;
         //cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, 0);
         //cout << "num sms: " << numSMs << endl;
     #endif

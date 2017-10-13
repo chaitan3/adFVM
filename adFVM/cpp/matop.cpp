@@ -39,18 +39,39 @@ Matop::~Matop () {
     PetscFinalize();
 }
 
-int Matop::heat_equation(vector<vec*> u, const vec& DT, const scalar dt, vector<vec*> un) {
+int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& dt_vec, vector<ext_vec*> un) {
     const Mesh& mesh = *meshp;
     Vec x, b;
     Mat A;
+    long long start = current_timestamp();
 
     PetscInt n = mesh.nInternalCells;
     PetscInt il, ih;
     PetscInt jl, jh;
+
+    #ifdef GPU
+        const scalar* faceData = DTF.toHost();
+        const scalar* dt_data = dt_vec.toHost();
+        const scalar dt = dt_data[0];
+        #define VecCreateMPITypeWithArray VecCreateMPICUDAWithArray
+        #define VecCreateTypeWithArray VecCreateSeqCUDAWithArray
+        #define VecPlaceType VecCUDAPlaceArray
+        #define VecResetType VecCUDAResetArray
+        #define SparseType "aijcusparse"
+        //#define SparseType "aijcusp"
+    #else
+        const scalar* faceData = DTF.data;
+        const scalar dt = dt_vec(0);
+        #define VecCreateMPITypeWithArray VecCreateMPIWithArray
+        #define VecCreateTypeWithArray VecCreateSeqWithArray
+        #define VecPlaceType VecPlaceArray
+        #define VecResetType VecResetArray
+        #define SparseType "aij"
+    #endif
     
     CHKERRQ(MatCreate(PETSC_COMM_WORLD, &A));
     CHKERRQ(MatSetSizes(A, n, n, PETSC_DETERMINE, PETSC_DETERMINE));
-    MatSetType(A, "aij");
+    MatSetType(A, SparseType);
     //MatSetFromOptions(A);
     if (mesh.nProcs > 1) {
         CHKERRQ(MatMPIAIJSetPreallocation(A, 7, NULL, 6, NULL));
@@ -60,11 +81,8 @@ int Matop::heat_equation(vector<vec*> u, const vec& DT, const scalar dt, vector<
     //MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
     CHKERRQ(MatGetOwnershipRange(A, &il, &ih));
     CHKERRQ(MatGetOwnershipRangeColumn(A, &jl, &jh));
-
-    vec faceData(mesh.nFaces);
-    for (PetscInt j = 0; j < mesh.nFaces; j++) {
-        faceData(j) = mesh.areas(j)*DT(j)/mesh.deltas(j);
-    }
+    long long start4 = current_timestamp();
+    cout << start4-start << endl;
 
     for (PetscInt j = il; j < ih; j++) {
         PetscInt index = j-il;
@@ -73,7 +91,7 @@ int Matop::heat_equation(vector<vec*> u, const vec& DT, const scalar dt, vector<
         PetscInt cols[6];
         for (PetscInt k = 0; k < 6; k++) {
             PetscInt f = mesh.cellFaces(index, k);
-            neighbourData[k] = -faceData(f)/mesh.volumes(index);
+            neighbourData[k] = -faceData[f]/mesh.volumes(index);
             cols[k] = mesh.cellNeighbours(index, k);
             if (cols[k] > -1) {
                 cols[k] += jl;
@@ -101,13 +119,16 @@ int Matop::heat_equation(vector<vec*> u, const vec& DT, const scalar dt, vector<
             integer p = mesh.owner(f);
             integer index = il + p;
             integer neighbourIndex = ranges[proc] + neighbourIndices(j);
-            scalar data = -faceData(f)/mesh.volumes(p);
+            scalar data = -faceData[f]/mesh.volumes(p);
             CHKERRQ(MatSetValue(A, index, neighbourIndex, data, INSERT_VALUES));
         }
     } 
     //delete[] ranges;
 
     CHKERRQ(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY)); CHKERRQ(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
+    long long start2 = current_timestamp();
+    cout << start2-start << endl;
+        
     
     KSP ksp;
     PC pc;
@@ -130,33 +151,37 @@ int Matop::heat_equation(vector<vec*> u, const vec& DT, const scalar dt, vector<
     //KSPSetFromOptions(ksp);
     CHKERRQ(KSPSetUp(ksp));
 
-    CHKERRQ(MatCreateVecs(A, &x, &b));
     //scalar *data1 = new scalar[n];
     //VecPlaceArray(b, data1);
+    if (mesh.nProcs > 1) {
+        CHKERRQ(VecCreateMPITypeWithArray(PETSC_COMM_WORLD, 1, n, PETSC_DECIDE, NULL, &b));
+        CHKERRQ(VecCreateMPITypeWithArray(PETSC_COMM_WORLD, 1, n, PETSC_DECIDE, NULL, &x));
+    } else {
+        CHKERRQ(VecCreateTypeWithArray(PETSC_COMM_WORLD, 1, n, NULL, &b));
+        CHKERRQ(VecCreateTypeWithArray(PETSC_COMM_WORLD, 1, n, NULL, &x));
+    }
     for (integer i = 0; i < nrhs; i++) {
-        scalar *data1, *data2;
-        VecGetArray(b, &data1);
-        for (integer j = 0; j < n; j++) {
-            data1[j] = (*u[i])(j)/dt;
-            //VecSetValue(b, j + jl, u(j,i)/dt, INSERT_VALUES);
-        }
-        VecRestoreArray(b, &data1);
-        //VecAssemblyBegin(b);
-        //VecAssemblyEnd(b);
+        CHKERRQ(VecPlaceType(b, u[i]->data));
+        CHKERRQ(VecPlaceType(x, un[i]->data));
+        
         CHKERRQ(KSPSolve(ksp, b, x));
-        VecGetArray(x, &data2);
-        for (integer j = 0; j < n; j++) {
-            (*un[i])(j) = data2[j];
-        }
-        VecRestoreArray(x, &data2);
+        
+        CHKERRQ(VecResetType(b));
+        CHKERRQ(VecResetType(x));
+        long long start3 = current_timestamp();
+        cout << start3-start << endl;
     }
     //VecResetArray(b);
     //delete[] data1;
+    #ifdef GPU
+        delete[] dt_data;
+        delete[] faceData;
+    #endif
 
     CHKERRQ(KSPDestroy(&ksp));
+    CHKERRQ(MatDestroy(&A));
     CHKERRQ(VecDestroy(&b));
     CHKERRQ(VecDestroy(&x));
-    CHKERRQ(MatDestroy(&A));
     return 0;
 }
 

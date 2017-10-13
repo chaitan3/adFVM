@@ -522,11 +522,17 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
 
 def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
     mesh = solver.mesh.symMesh
-    def divideVolumes(rhoa, rhoUa, rhoEa, volumes):
+    def divideVolumes(rhoa, rhoUa, rhoEa, volumes, dt):
+        dt = dt.scalar()
+        volumes = volumes*dt
         return rhoa/volumes, rhoUa[0]/volumes, rhoUa[1]/volumes, rhoUa[2]/volumes, rhoEa/volumes
-    fields = Kernel(divideVolumes)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes)
+    fields = Kernel(divideVolumes)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes, solver.dt)
 
-    inputs = fields + (DT, solver.dt)
+    def faceData(DT, areas, deltas):
+        return areas*DT/deltas
+    (DTF,) = Kernel(faceData)(mesh.nFaces)(DT, mesh.areas, mesh.deltas)
+
+    inputs = fields + (DTF, solver.dt)
     outputs = tuple([Zeros(x.shape) for x in fields])
     fields = ExternalFunctionOp('apply_adjoint_viscosity', inputs, outputs).outputs
 

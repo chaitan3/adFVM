@@ -44,11 +44,13 @@ if matop:
     if gpu:
         compile_args += ['-DPETSC_USE_REAL_SINGLE']
         home = os.path.expanduser('~') + '/sources/petsc_single/'
+        build = 'arch-linux2-c-debug'
     else:
         home = os.path.expanduser('~') + '/sources/petsc/'
-    incdirs += [home + '/linux-gnu-c-opt/include', home + '/include']
+        build = 'linux-gnu-c-opt'
+    incdirs += ['{}/{}/include'.format(home, build), home + '/include']
     #incdirs += [home + '/linux-gnu-c-opt/include']
-    libdirs += [home + '/linux-gnu-c-opt/lib']
+    libdirs += ['{}/{}/lib'.format(home, build)]
     libs += ['petsc']
 if gpu:
     #cmdclass = {}

@@ -320,9 +320,9 @@ class Solver(object):
                        'replace_reusable': replace_reusable
                       }
 
-            #start2 = time.time()
+            start2 = time.time()
             outputs = self.map(*inputs, **options)
-            #pprint(time.time()-start2)
+            pprint(time.time()-start2)
             newFields, dtc, objective = outputs[:3], outputs[3], outputs[4]
             objective = objective[0,0]
             dtc = dtc[0,0]

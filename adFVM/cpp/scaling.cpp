@@ -92,35 +92,9 @@ void Function_apply_adjoint_viscosity(vector<ext_vec*> phiP) {
     ext_vec& dt_vec = *phiP[6];
 
     #ifdef MATOP
-        #ifdef GPU
-            scalar* dt_vec_data = dt_vec.toHost();
-            scalar dt = dt_vec_data[0];
-            delete[] dt_vec_data;
-            vec DTWork(DT.shape, DT.toHost());
-            DTWork.ownData = true;
-            vector<vec*> uWork, unWork;
-            for (int i = 0; i < 5; i++) {
-                uWork.push_back(new vec(u[i]->shape, u[i]->toHost()));
-                uWork[i]->ownData = true;
-                unWork.push_back(new vec(un[i]->shape, un[i]->toHost()));
-                unWork[i]->ownData = true;
-            }
-        #else
-            scalar dt = dt_vec(0);
-            vector<vec*> uWork = u;
-            vector<vec*> unWork = un;
-            vec& DTWork = DT;
-        #endif
-        int error = matop->heat_equation(uWork, DTWork, dt, unWork);
+        int error = matop->heat_equation(u, DT, dt_vec, un);
         if (error) {
             cout << "petsc error " << error << endl;
-        }
-        for (int i = 0; i < 5; i++) {
-            un[i]->toDevice(unWork[i]->data);
-            #ifdef GPU
-                delete uWork[i];
-                delete unWork[i];
-            #endif
         }
     #else
         cout << "matop not available" << endl;

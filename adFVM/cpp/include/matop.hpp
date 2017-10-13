@@ -2,6 +2,9 @@
 #define MATOP_HPP
 
 #include <petscksp.h>
+#ifdef GPU
+    #include <petsccuda.h>
+#endif
 #include "common.hpp"
 #include "mesh.hpp"
 
@@ -14,7 +17,7 @@ class Matop {
 
     Matop();    
     ~Matop();    
-    int heat_equation(vector<vec*> u, const vec& DT, const scalar dt, vector<vec*> un);
+    int heat_equation(vector<ext_vec*> u, const ext_vec& DT, const ext_vec& dt, vector<ext_vec*> un);
 };
 
 extern Matop *matop;
