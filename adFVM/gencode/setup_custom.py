@@ -28,7 +28,7 @@ if gpu:
 home = os.path.expanduser("~")
 incdirs = [get_python_inc(), np.get_include(), cppDir + '/include']
 libdirs = []
-libs = ['lapack']
+libs = []
 sources = ['interface.cpp', 'mesh.cpp', 'parallel.cpp', 'scaling.cpp']
 sources = [cppDir + x for x in sources]
 sources += ['graph.cpp']
@@ -65,6 +65,7 @@ if gpu:
     libdirs += [d[2:] for d in mpi_libdirs.split('\n')[:-1]]
     libs += ['mpi', 'cublas', 'cusolver', 'gomp']
 else:
+    libs += ['lapack']
     compile_args += ['-fPIC', '-Wall', '-march=native']
     compile_args += ['-Wfatal-errors']
     link_args += ['-shared']
