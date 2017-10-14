@@ -37,6 +37,7 @@ PyObject* initialize(PyObject *self, PyObject *args) {
     #ifdef GPU
         int count;
         gpuErrorCheck(cudaSetDevice(meshp->localRank));
+        gpuErrorCheck(cudaSetDeviceFlags(cudaDeviceMapHost));
         gpuErrorCheck(cudaGetDeviceCount(&count));
         auto status1 = cusolverDnCreate(&cusolver_handle);
         assert(status1 == CUSOLVER_STATUS_SUCCESS);

@@ -101,7 +101,8 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
             }
         }
         CHKERRQ(MatSetValues(A, 1, &j, 6, cols, neighbourData, INSERT_VALUES));
-        CHKERRQ(MatSetValue(A, j, index + jl, cellData + 1./dt, INSERT_VALUES));
+        //CHKERRQ(MatSetValue(A, j, index + jl, cellData + 1./dt, INSERT_VALUES));
+        //CHKERRQ(MatSetValue(A, j, index + jl, 1./dt, INSERT_VALUES));
     }
 
 
@@ -123,7 +124,6 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
             CHKERRQ(MatSetValue(A, index, neighbourIndex, data, INSERT_VALUES));
         }
     } 
-    //delete[] ranges;
 
     CHKERRQ(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY)); CHKERRQ(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
     long long start2 = current_timestamp();
@@ -144,8 +144,10 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     //KSPSetTolerances(ksp, 1e-4, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
     //PCSetType(pc, PCHYPRE);
     CHKERRQ(PCSetType(pc, PCJACOBI));
+    //CHKERRQ(PCSetType(pc, PCSACUSP));
     //CHKERRQ(PCSetType(pc, PCLU));
     //CHKERRQ(PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST));
+    //CHKERRQ(PCFactorSetMatSolverPackage(pc,MATSOLVERCUSPARSE));
 
 
     //KSPSetFromOptions(ksp);

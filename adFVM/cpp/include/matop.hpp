@@ -2,6 +2,7 @@
 #define MATOP_HPP
 
 #include <petscksp.h>
+#include <petscvec.h>
 #ifdef GPU
     #include <petsccuda.h>
 #endif
