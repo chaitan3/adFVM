@@ -4,26 +4,16 @@
     #include "matop.hpp"
 #endif
 
-extern "C"{
-void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
-    double* w, double* work, int* lwork, int* info );
-void ssyev_( char* jobz, char* uplo, int* n, float* a, int* lda,
-    float* w, float* work, int* lwork, int* info );
-}
+#ifdef GPU
 
-template<typename dtype> void eigenvalue_solver (char* jobz, char* uplo, int* n, dtype* a, int* lda,
-dtype* w, dtype* work, int* lwork, int* info );
+#ifdef GPU_DOUBLE
+    #define gpu_eigenvalue_solver_buffer cusolverDnDsyevjBatched_bufferSize
+    #define gpu_eigenvalue_solver cusolverDnDsyevjBatched
+#else
+    #define gpu_eigenvalue_solver_buffer cusolverDnSsyevjBatched_bufferSize
+    #define gpu_eigenvalue_solver cusolverDnSsyevjBatched
+#endif
 
-template<> void eigenvalue_solver (char* jobz, char* uplo, int* n, float* a, int* lda,
-float* w, float* work, int* lwork, int* info ) {
-    ssyev_(jobz, uplo, n, a, lda, w, work, lwork, info);
-}
-template<> void eigenvalue_solver (char* jobz, char* uplo, int* n, double* a, int* lda,
-double* w, double* work, int* lwork, int* info ) {
-    dsyev_(jobz, uplo, n, a, lda, w, work, lwork, info);
-}
-
-#if (defined(GPU) && !defined(GPU_DOUBLE))
 void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     gpuArrType<scalar, 5, 5>& phi = *phiP[0];
     gvec& eigPhi = *((gvec*) phiP[1]);
@@ -39,9 +29,9 @@ void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     cusolverStatus_t status;
     status = cusolverDnCreateSyevjInfo(&params);
     assert(status == CUSOLVER_STATUS_SUCCESS);
-    status = cusolverDnSsyevjBatched_bufferSize(cusolver_handle, CUSOLVER_EIG_MODE_NOVECTOR, CUBLAS_FILL_MODE_UPPER, 5, phi.data, 5, W, &lwork, params, n);
+    status = gpu_eigenvalue_solver_buffer(cusolver_handle, CUSOLVER_EIG_MODE_NOVECTOR, CUBLAS_FILL_MODE_UPPER, 5, phi.data, 5, W, &lwork, params, n);
     gpuErrorCheck(cudaMalloc(&work, size*lwork));
-    status = cusolverDnSsyevjBatched(cusolver_handle, CUSOLVER_EIG_MODE_NOVECTOR, CUBLAS_FILL_MODE_UPPER, 5, phi.data, 5, W, work, lwork, info, params, n);
+    status = gpu_eigenvalue_solver(cusolver_handle, CUSOLVER_EIG_MODE_NOVECTOR, CUBLAS_FILL_MODE_UPPER, 5, phi.data, 5, W, work, lwork, info, params, n);
     gpuErrorCheck(cudaDeviceSynchronize());
     assert(status == CUSOLVER_STATUS_SUCCESS);
 
@@ -50,7 +40,21 @@ void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     gpuErrorCheck(cudaFree(W));
     gpuErrorCheck(cudaFree(info));
 }
+
 #else
+
+extern "C"{
+#ifdef CPU_FLOAT32
+void ssyev_( char* jobz, char* uplo, int* n, float* a, int* lda,
+    float* w, float* work, int* lwork, int* info );
+#define eigenvalue_solver ssyev_
+#else
+void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
+    double* w, double* work, int* lwork, int* info );
+#define eigenvalue_solver dsyev_
+#endif
+}
+
 void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
     extArrType<scalar, 5, 5>& phi = *phiP[0];
     ext_vec& eigPhi = *((ext_vec*) phiP[1]);
@@ -63,22 +67,13 @@ void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
     int info;
     scalar w[5];
 
-    #ifdef GPU
-        arrType<scalar, 5, 5> phiWork(phi.shape, phi.toHost());
-        phiWork.ownData = true;
-        arrType<scalar, 1> eigPhiWork(phi.shape);
-    #else
-        arrType<scalar, 5, 5>& phiWork = phi;
-        arrType<scalar, 1>& eigPhiWork = eigPhi;
-    #endif
-
     for (int i = 0; i < phi.shape; i++) {
-        eigenvalue_solver<scalar>(&jobz, &uplo, &n, &phiWork(i), &lda, w, work, &lwork, &info);
+        eigenvalue_solver(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
         assert(info == 0);
-        eigPhiWork(i) = w[4];
+        eigPhi(i) = w[4];
     }
-    eigPhi.toDevice(eigPhiWork.data);
 }
+
 #endif
 
 void Function_apply_adjoint_viscosity(vector<ext_vec*> phiP) {
@@ -95,6 +90,7 @@ void Function_apply_adjoint_viscosity(vector<ext_vec*> phiP) {
         int error = matop->heat_equation(u, DT, dt_vec, un);
         if (error) {
             cout << "petsc error " << error << endl;
+            exit(1);
         }
     #else
         cout << "matop not available" << endl;

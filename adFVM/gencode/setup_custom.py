@@ -21,6 +21,7 @@ codeExt = 'cu' if gpu else 'cpp'
 compiler = 'ccache mpicc'
 linker = 'mpicxx'
 if gpu:
+    #compiler = 'ccache nvcc -x cu'
     compiler = 'nvcc -x cu'
     linker = 'nvcc --shared'
 
@@ -41,13 +42,12 @@ if openmp:
 if matop:
     sources += [cppDir + 'matop.cpp']
     compile_args += ['-DMATOP']
-    if gpu:
+    if gpu and not gpu_double:
         compile_args += ['-DPETSC_USE_REAL_SINGLE']
         home = os.path.expanduser('~') + '/sources/petsc_single/'
-        build = 'arch-linux2-c-debug'
     else:
         home = os.path.expanduser('~') + '/sources/petsc/'
-        build = 'linux-gnu-c-opt'
+    build = 'arch-linux2-c-debug'
     incdirs += ['{}/{}/include'.format(home, build), home + '/include']
     #incdirs += [home + '/linux-gnu-c-opt/include']
     libdirs += ['{}/{}/lib'.format(home, build)]

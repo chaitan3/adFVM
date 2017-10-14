@@ -165,7 +165,13 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
         CHKERRQ(VecPlaceType(x, un[i]->data));
         
         CHKERRQ(KSPSolve(ksp, b, x));
-        
+        KSPConvergedReason reason;
+        KSPGetConvergedReason(ksp, &reason);
+        PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %D\n", reason);
+        if (reason < 0)  {
+            return 1;
+        }
+
         CHKERRQ(VecResetType(b));
         CHKERRQ(VecResetType(x));
         long long start3 = current_timestamp();
