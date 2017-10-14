@@ -374,8 +374,7 @@ class Function(object):
                 if isinstance(arg, Variable) and varName not in outputNames and varChildren[varName] == 0:
                     if varName in inputNames and ((not config.gpu) or arg.static):
                         continue
-                    if not config.gc:
-                        codeFile.write('\t{}.pool_release();\n'.format(varName))
+                    codeFile.write('\t{}.destroy();\n'.format(varName))
             
             for arg in op.args:
                 varName = arg.name
