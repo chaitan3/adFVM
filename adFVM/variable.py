@@ -330,6 +330,7 @@ class Function(object):
         #for out in self._outputs:
         #    memString += '{}* {}, '.format(out.dtype, out.name)
         memoryInit = {}
+        keepMemory = {True: 'true', False: 'false'}[not config.gc]
         for index, inp in enumerate(self._inputs):
             if isinstance(inp, IntegerScalar):
                 codeFile.write('\tinteger {} = (integer) PyInt_AsLong(PyTuple_GetItem(args, {}));\n'.format(inp.name, index))
@@ -344,12 +345,12 @@ class Function(object):
             if index in self._io_map.keys():
                 reuseId = self._reuseId(index)
                 codeFile.write('\tif (options["replace_reusable"] || {}.get_mem()->reuse.count("{}") == 0) {{\n'.format(inp.name, reuseId))
-                codeFile.write('\t\tgetArray((PyArrayObject*) Py_{0}, {0}, true, {1}L);\n'.format(inp.name, inp.staticId()))
+                codeFile.write('\t\tgetArray((PyArrayObject*) Py_{0}, {0}, {2}, {1}L);\n'.format(inp.name, inp.staticId(), keepMemory))
                 codeFile.write('\t} else {\n')
-                codeFile.write('\t\t{}.reuse_acquire("{}", {}, true);\n'.format(inp.name, reuseId, self._getName(inp.shape[0])))
+                codeFile.write('\t\t{}.reuse_acquire("{}", {}, {});\n'.format(inp.name, reuseId, self._getName(inp.shape[0]), keepMemory))
                 codeFile.write('\t}\n')
             else:
-                codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, true, {1}L);\n'.format(inp.name, inp.staticId()))
+                codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, {2}, {1}L);\n'.format(inp.name, inp.staticId(), keepMemory))
         codeFile.write('\n')
 
         varChildren = {}
@@ -373,7 +374,8 @@ class Function(object):
                 if isinstance(arg, Variable) and varName not in outputNames and varChildren[varName] == 0:
                     if varName in inputNames and ((not config.gpu) or arg.static):
                         continue
-                    codeFile.write('\t{}.pool_release();\n'.format(varName))
+                    if not config.gc:
+                        codeFile.write('\t{}.pool_release();\n'.format(varName))
             
             for arg in op.args:
                 varName = arg.name
@@ -381,7 +383,7 @@ class Function(object):
                     shape = ','.join([str(x) for x in arg.shape[1:]])
                     arrType = '{}<{}, {}>'.format(self.arrType, arg.dtype, shape)
                     #codeFile.write('\t{} {}({}, true);\n'.format(arrType, varName, self._getName(arg.shape[0]))) 
-                    codeFile.write('\t{} {}({}, true, true, {}L);\n'.format(arrType, varName, self._getName(arg.shape[0]), arg.staticId())) 
+                    codeFile.write('\t{} {}({}, true, {}, {}L);\n'.format(arrType, varName, self._getName(arg.shape[0]), keepMemory, arg.staticId())) 
                     memoryInit[varName] = 1
 
             # fix garbage collection
