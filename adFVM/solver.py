@@ -88,7 +88,7 @@ class Solver(object):
         mesh = self.mesh.symMesh
         fields = list(fields)
         for index, phi in enumerate(fields):
-            phi = ExternalFunctionOp('mpi_init', (phi, mesh.owner), (phi,)).outputs[0]
+            (phi,) = ExternalFunctionOp('mpi_init', (phi, mesh.owner), (phi,)).outputs
             fields[index] = phi
         fields = tuple(fields)
         fields = ExternalFunctionOp('mpi_dummy', fields, fields, empty=True).outputs
@@ -98,7 +98,7 @@ class Solver(object):
         fields = ExternalFunctionOp('mpi_dummy', fields, fields, empty=True).outputs
         fields = list(fields)
         for index, phi in enumerate(fields):
-            phi = ExternalFunctionOp('mpi_end', (phi,), (phi,)).outputs[0]
+            (phi,) = ExternalFunctionOp('mpi_end', (phi,), (phi,)).outputs
             fields[index] = phi
         fields = tuple(fields)
         return fields
@@ -107,7 +107,7 @@ class Solver(object):
         fields = list(fields)
         for index, phi in enumerate(fields):
             phi = self.fields[index].completeField(phi)
-            phi = ExternalFunctionOp('mpi', (phi,), (phi,)).outputs[0]
+            (phi,) = ExternalFunctionOp('mpi', (phi,), (phi,)).outputs
             fields[index] = phi
         return tuple(fields)
 

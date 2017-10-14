@@ -39,6 +39,7 @@ void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     gpuErrorCheck(cudaFree(work));
     gpuErrorCheck(cudaFree(W));
     gpuErrorCheck(cudaFree(info));
+    eigPhi.info();
 }
 
 #else
@@ -71,7 +72,9 @@ void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
         eigenvalue_solver(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
         assert(info == 0);
         eigPhi(i) = w[4];
+        assert(std::isfinite(w[4]));
     }
+    //eigPhi.info();
 }
 
 #endif

@@ -126,14 +126,16 @@ __inline__ __device__ void reduceSum(int n, const dtype val, dtype* res) {
   //    i += blockDim.x * gridDim.x) {
   //  sum += in[i];
   //}
-  int nb = n - (n % WARP_SIZE);
-  if (i >= nb) {
-      atomicAdd(res, sum);
-  } else {
-      sum = warpReduceSum<dtype>(sum);
-      if (threadIdx.x & (WARP_SIZE - 1) == 0)
-        atomicAdd(res, sum);
-  }
+  
+  atomicAdd(res, sum);
+  //int nb = n - (n % WARP_SIZE);
+  //if (i >= nb) {
+  //    atomicAdd(res, sum);
+  //} else {
+  //    sum = warpReduceSum<dtype>(sum);
+  //    if (threadIdx.x & (WARP_SIZE - 1) == 0)
+  //      atomicAdd(res, sum);
+  //}
 } 
 
 template<typename dtype>

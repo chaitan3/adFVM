@@ -68,6 +68,8 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
         #define VecResetType VecResetArray
         #define SparseType "aij"
     #endif
+
+    // assembly time less than 10% on CPU
     
     CHKERRQ(MatCreate(PETSC_COMM_WORLD, &A));
     CHKERRQ(MatSetSizes(A, n, n, PETSC_DETERMINE, PETSC_DETERMINE));
@@ -99,10 +101,12 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
             if ((cols[k] > -1) || (f >= mesh.nLocalFaces)) {
                 cellData -= neighbourData[k];
             }
+            assert(std::isfinite(faceData[f]));
+            assert(std::isfinite(neighbourData[k]));
         }
+        assert(std::isfinite(cellData));
         CHKERRQ(MatSetValues(A, 1, &j, 6, cols, neighbourData, INSERT_VALUES));
-        //CHKERRQ(MatSetValue(A, j, index + jl, cellData + 1./dt, INSERT_VALUES));
-        //CHKERRQ(MatSetValue(A, j, index + jl, 1./dt, INSERT_VALUES));
+        CHKERRQ(MatSetValue(A, j, index + jl, cellData + 1./dt, INSERT_VALUES));
     }
 
 
@@ -135,6 +139,7 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     CHKERRQ(KSPCreate(PETSC_COMM_WORLD, &(ksp)));
     CHKERRQ(KSPSetOperators(ksp, A, A));
     CHKERRQ(KSPSetType(ksp, KSPGMRES));
+    //CHKERRQ(KSPSetType(ksp, KSPTFQMR));
     //CHKERRQ(KSPSetType(ksp, KSPPREONLY));
     CHKERRQ(KSPGetPC(ksp, &(pc)));
     //double rtol, atol, dtol;
@@ -161,6 +166,7 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     } else {
         CHKERRQ(VecCreateTypeWithArray(PETSC_COMM_WORLD, 1, n, NULL, &b));
         CHKERRQ(VecCreateTypeWithArray(PETSC_COMM_WORLD, 1, n, NULL, &x));
+        //CHKERRQ(MatCreateVecs(A, &x, &b));
     }
     for (integer i = 0; i < nrhs; i++) {
         CHKERRQ(VecPlaceType(b, u[i]->data));

@@ -448,6 +448,7 @@ class arrType : public baseArrType<arrType, CPUMemoryBuffer, dtype, shape1, shap
         maxPhi = -1e100;
         integer minLoc = -1, maxLoc = -1;
         for (integer i = 0; i < this->size; i++) {
+            assert(std::isfinite(this->data[i]));
             if (this->data[i] < minPhi) {
                 minPhi = this->data[i];
                 minLoc = i;
