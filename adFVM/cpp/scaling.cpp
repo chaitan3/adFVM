@@ -39,7 +39,7 @@ void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     gpuErrorCheck(cudaFree(work));
     gpuErrorCheck(cudaFree(W));
     gpuErrorCheck(cudaFree(info));
-    eigPhi.info();
+    //eigPhi.info();
 }
 
 #else
