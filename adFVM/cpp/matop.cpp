@@ -138,21 +138,27 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     PC pc;
     CHKERRQ(KSPCreate(PETSC_COMM_WORLD, &(ksp)));
     CHKERRQ(KSPSetOperators(ksp, A, A));
-    CHKERRQ(KSPSetType(ksp, KSPGMRES));
+    //CHKERRQ(KSPSetType(ksp, KSPGMRES));
+    //CHKERRQ(KSPSetType(ksp, KSPGCR));
+    CHKERRQ(KSPSetType(ksp, KSPBCGS));
     //CHKERRQ(KSPSetType(ksp, KSPTFQMR));
     //CHKERRQ(KSPSetType(ksp, KSPPREONLY));
-    CHKERRQ(KSPGetPC(ksp, &(pc)));
+
     //double rtol, atol, dtol;
     //int maxit;
     //KSPGetTolerances(ksp, &rtol, &atol, &dtol, &maxit);
     //cout << rtol << " " << atol << " " << dtol << " " << maxit << endl;
     //KSPSetTolerances(ksp, 1e-4, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
-    //PCSetType(pc, PCHYPRE);
+
+    CHKERRQ(KSPGetPC(ksp, &(pc)));
     CHKERRQ(PCSetType(pc, PCJACOBI));
-    //CHKERRQ(PCSetType(pc, PCSACUSP));
+    //CHKERRQ(PCSetType(pc, PCASM));
+    //CHKERRQ(PCSetType(pc, PCMG));
+    //CHKERRQ(PCSetType(pc, PCGAMG));
+    //CHKERRQ(PCSetType(pc, PCHYPRE));
+
     //CHKERRQ(PCSetType(pc, PCLU));
     //CHKERRQ(PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST));
-    //CHKERRQ(PCFactorSetMatSolverPackage(pc,MATSOLVERCUSPARSE));
 
 
     //KSPSetFromOptions(ksp);
