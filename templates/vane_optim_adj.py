@@ -37,17 +37,17 @@ for index in range(0, nParam):
 
 parameters = 'mesh'
 reportInterval = 1
+sampleInterval = 20
 nSteps = 20000
-writeInterval = 1000
+writeInterval = 500
 avgStart = 4000
 #nSteps = 18000
 #writeInterval = 1000
 #avgStart = 3000
-sampleInterval = 20
 startTime = 3.001
 dt = 2e-8
-adjParams = [1e-3, 'abarbanel', None]
-runCheckpoints = 10
+adjParams = [1e-3, 'entropy_jameson', None]
+#runCheckpoints = 10
 
 # definition of 1 flow through time
 # 4e-4s = (0.08m)/(200m/s)

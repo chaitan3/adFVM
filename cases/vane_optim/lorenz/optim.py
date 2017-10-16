@@ -10,7 +10,7 @@ import client
 import gp as GP
 
 homeDir = '/home/talnikar/adFVM/'
-workDir = '/projects/LESOpt/talnikar/vane_optim/doe/'
+workDir = homeDir + 'cases/vane_optim/optim/'
 #workDir = '/projects/LESOpt/talnikar/vane_optim/optim/'
 appsDir = homeDir + 'apps/'
 codeDir = workDir + 'gencode/'
@@ -38,19 +38,15 @@ def update_state(state, value, index=-1):
 def get_state(state, index=-1):
     return state['state'][index]
 
-def spawnJob(args, output, error, cwd='.', block='BLOCK1'):
-    nProcs = 8192
-    nProcsPerNode = 16
-    return subprocess.Popen(['runjob', 
-                         '-n', str(nProcs), 
-                         '-p', str(nProcsPerNode),
-                         '--block', os.environ[block],
-                         '--exp-env', 'BGLOCKLESSMPIO_F_TYPE', 
-                         '--exp-env', 'PYTHONPATH',
-                         '--exp-env', 'LD_LIBRARY_PATH',
-                         '--verbose', 'INFO',
-                         ':'] 
-                        + args, cwd=cwd, stdout=output, stderr=error)
+def spawnJob1(args, output, error, cwd):
+    nProcs = 2
+    return subprocess.Popen(['mpirun', '-np', str(nProcs)]
+                        + args + ['-g'], cwd=cwd, stdout=output, stderr=error)
+
+def spawnJob2(args, output, error, cwd):
+    return subprocess.Popen(['mpirun', '-np', str(nProcs)]
+                        + args + ['-g'], cwd=cwd, stdout=output, stderr=error)
+
 
 def readObjectiveFile(objectiveFile, gradEps):
     objective = []
@@ -124,8 +120,9 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
     initFile = paramDir + os.path.basename(initCaseFile)
     shutil.copy(primCaseFile, paramDir)
     primalFile = paramDir + os.path.basename(primCaseFile)
-    shutil.copy(adjCaseFile, paramDir)
-    adjointFile = paramDir + os.path.basename(adjCaseFile)
+    for d in glob.glob(paramDir + 'par-2/processor*'):
+        shutil.move(d, paramDir)
+    shutil.copy(adjCaseFile, paramDir + 'par-64')
 
     #shutil.copy(workDir + 'rerun/job.sh', paramDir)
     #shutil.copy(workDir + 'rerun/run.sh', paramDir)
@@ -133,33 +130,22 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
     if runSimulation:
         if stateIndex <= 1:
             with open(paramDir + 'init_output.log', 'w') as f, open(paramDir + 'init_error.log', 'w') as fe:
-                p1 = spawnJob([sys.executable, primal, initFile], f, fe, cwd=paramDir)
+                p1 = spawnJob1([sys.executable, primal, initFile], f, fe, cwd=paramDir)
                 ret = p1.wait()
                 assert ret == 0
             update_state(state, 'PRIMAL1', currIndex)
         if stateIndex <= 2:
             with open(paramDir + 'primal_output.log', 'w') as f, open(paramDir + 'primal_error.log', 'w') as fe, \
                     open(paramDir + 'adjoint_output.log', 'w') as f2, open(paramDir + 'adjoint_error.log', 'w') as fe2:
-                p1 = spawnJob([sys.executable, primal, primalFile], f, fe, cwd=paramDir)
-                p2 = spawnJob([sys.executable, primal, adjointFile], f2, fe2, cwd=paramDir, block='BLOCK2')
-                assert p2.wait() == 0
-                for i in range(0, 4-1):
-                    p2 = spawnJob([sys.executable, adjoint, adjointFile, '--matop'], f2, fe2, cwd=paramDir, block='BLOCK2')
-                    assert p2.wait() == 0
+                p1 = spawnJob1([sys.executable, primal, primalFile], f, fe, cwd=paramDir)
+                #p2 = spawnJob2([sys.executable, primal, adjointFile], f2, fe2, cwd=paramDir)
+                #assert p2.wait() == 0
+                #p2 = spawnJob2([sys.executable, adjoint, adjointFile, '--matop'], f2, fe2, cwd=paramDir)
+                #assert p2.wait() == 0
                 assert p1.wait() == 0
-                exit(0)
             update_state(state, 'PRIMADJ', currIndex)
-        ##if stateIndex <= 1:
-        ##    spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
-        ##    update_state(state, 'PRIMAL1')
-        #if stateIndex <= 2:
-        #    spawnJob([sys.executable, primal, adjointFile], cwd=paramDir)
-        #    update_state(state, 'PRIMAL2', currIndex)
-
-        #if stateIndex <= 3:
-        #    spawnJob([sys.executable, adjoint, adjointFile], cwd=paramDir)
-        #    update_state(state, 'ADJOINT', currIndex)
-
+            exit(0)
+        
         return readObjectiveFile(os.path.join(paramDir, 'objective.txt'), gradEps)
     return
 

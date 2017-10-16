@@ -15,7 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-numberOfSubdomains 8192;
+numberOfSubdomains 2;
 //numberOfSubdomains 16;
 
 method          structured;
