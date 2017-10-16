@@ -10,8 +10,8 @@ import client
 import gp as GP
 
 homeDir = '/home/talnikar/adFVM/'
-#workDir = '/home/talnikar/adFVM/cases/vane_optim/test/'
-workDir = '/projects/LESOpt/talnikar/vane_optim/optim/'
+workDir = '/projects/LESOpt/talnikar/vane_optim/doe/'
+#workDir = '/projects/LESOpt/talnikar/vane_optim/optim/'
 appsDir = homeDir + 'apps/'
 codeDir = workDir + 'gencode/'
 initCaseFile = homeDir + 'templates/vane_optim.py'
@@ -127,6 +127,9 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
     shutil.copy(adjCaseFile, paramDir)
     adjointFile = paramDir + os.path.basename(adjCaseFile)
 
+    #shutil.copy(workDir + 'rerun/job.sh', paramDir)
+    #shutil.copy(workDir + 'rerun/run.sh', paramDir)
+
     if runSimulation:
         if stateIndex <= 1:
             with open(paramDir + 'init_output.log', 'w') as f, open(paramDir + 'init_error.log', 'w') as fe:
@@ -140,10 +143,11 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
                 p1 = spawnJob([sys.executable, primal, primalFile], f, fe, cwd=paramDir)
                 p2 = spawnJob([sys.executable, primal, adjointFile], f2, fe2, cwd=paramDir, block='BLOCK2')
                 assert p2.wait() == 0
-                for i in range(0, 2):
+                for i in range(0, 4-1):
                     p2 = spawnJob([sys.executable, adjoint, adjointFile, '--matop'], f2, fe2, cwd=paramDir, block='BLOCK2')
                     assert p2.wait() == 0
                 assert p1.wait() == 0
+                exit(0)
             update_state(state, 'PRIMADJ', currIndex)
         ##if stateIndex <= 1:
         ##    spawnJob([sys.executable, adjoint, problemFile], cwd=paramDir)
@@ -176,11 +180,12 @@ def doe():
     if os.path.exists(stateFile):
         state = load_state()
         for index in range(0, len(state['state'])):
-            if get_state(state, index) != 'MESH':
+            if get_state(state, index) != 'DONE':
                 x = state['points'][index]
-                res = evaluate(x, state, index, runSimulation=False)
-                #state['evals'].append(res)
-                #update_state(state, 'DONE', index)
+                res = evaluate(x, state, index)
+                state['evals'].append(res)
+                update_state(state, 'DONE', index)
+                exit(0)
 
     else:
         state = {'points':[], 'evals':[], 'state': []}
@@ -189,17 +194,18 @@ def doe():
         state['points'].append(x)
         state['state'].append('BEGIN')
         save_state(state)
-        res = evaluate(x, state, runSimulation=False)
-        #res = evaluate(x, state)
-        #state['evals'].append(res)
-        #update_state(state, 'DONE')
+        #res = evaluate(x, state, runSimulation=False)
+        res = evaluate(x, state)
+        state['evals'].append(res)
+        update_state(state, 'DONE')
+        exit(0)
 
 def optim():
     
     orig_bounds = np.array([[0.,1.], [0,1], [0,1], [0,1]])
     L, sigma = 0.5, 0.001
     #L, sigma = 0.3, 0.003
-    mean = 0.01
+    mean = 0.0092
     kernel = GP.SquaredExponentialKernel([L, L, L, L], sigma)
     gp = GP.GaussianProcess(kernel, orig_bounds, noise=[5e-9, [1e-9, 1e-7, 1e-8, 1e-7]], noiseGP=True, cons=constraint)
     ei = GP.ExpectedImprovement(gp)
