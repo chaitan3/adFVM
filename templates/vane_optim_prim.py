@@ -6,7 +6,7 @@ from adFVM.density import RCF
 from adFVM import tensor
 from adFVM.mesh import Mesh
 
-config.hdf5 = True
+#config.hdf5 = True
 nParam = 4
 
 # heat transfer
