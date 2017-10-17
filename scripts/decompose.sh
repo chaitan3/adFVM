@@ -1,8 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 CASE=$1
 NP=$2
+ARGS="${@:3}"
 echo $CASE $NP
 sed -i "s/numberOfSubdomains[[:space:]]\+[0-9]\+;/numberOfSubdomains $NP;/g" $CASE/system/decomposeParDict
-decomposePar -case $1 ${*:3}
-mkdir $CASE/par-$2
-mv $CASE/processor* $CASE/par-$2
+decomposePar -case $CASE $ARGS
+mkdir $CASE/par-$NP
+mv $CASE/processor* $CASE/par-$NP
