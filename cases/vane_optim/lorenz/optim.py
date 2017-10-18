@@ -146,7 +146,7 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
             update_state(state, 'PRIMADJ', currIndex)
             exit(0)
         
-        return readObjectiveFile(os.path.join(paramDir, 'objective.txt'), gradEps)
+        return readObjectiveFile(os.path.join(paramDir, 'processor0', 'objective.txt'), gradEps)
     return
 
 def constraint(x):

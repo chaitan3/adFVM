@@ -1,30 +1,21 @@
-import numpy as np
-import sys, os
-
-from adFVM import config
-from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
+import sys
+sys.path.append(os.path.expanduser('~/adFVM/templates'))
+from vane_obj import objective, getPlane, getWeights
 
 #config.hdf5 = True
 caseDir = './'
+nParam = 4
 #primal = RCF(caseDir, objective='pressureLoss', objectivePLInfo={})
 #primal = RCF(caseDir, objective='heatTransfer', objectiveDragInfo="pressure|suction")
 primal = RCF(caseDir, timeSeriesAppend='2', fixedTimeStep=True, objective='optim', objectivePLInfo={})
-nParam = 4
 
-# pressure loss
-def getPlane(solver):
-    point = np.array([0.052641,-0.1,0.005])
-    normal = np.array([1.,0.,0.])
-    ptin = 175158.
-    interCells, interArea = intersectPlane(solver.mesh, point, normal)
-    return {'cells':interCells.astype(np.int32), 
-            'areas': interArea, 
-            'normal': normal, 
-            'ptin': ptin
-           }
-primal.defaultConfig["objectivePLInfo"] = getPlane(primal)
-    
+#primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective)
+#primal = RCF('/home/talnikar/adFVM/cases/vane/les/', objective=objective)
+getPlane(primal)
+getWeights(primal)
+
+
 def makePerturb(index):
     def perturbMesh(fields, mesh, t):
         if not hasattr(perturbMesh, 'perturbation'):
