@@ -27,9 +27,9 @@ def dfdu_lorenz(u, rho, per=0.0):
     return dfdu
 
 def obj(u, r):
-    return u[:,2]
+    return u[:,2]**2
 
-rhos = linspace(25, 34, 10)
+rhos = linspace(28, 34, 10)
 dt = 0.01
 
 tangent = []
@@ -61,8 +61,14 @@ for rho in rhos:
             err = np.abs(dJds2-dJds1)/dJds1
             errs.append(err)
             print per, err
-        plt.loglog(pers, errs, 'o')
-        plt.show()
+        r = errs[0]/pers[0]
+        errs_line = [r*x for x in pers]
+        plt.loglog(pers, errs, 'o', label='error in sensitivity')
+        plt.loglog(pers, errs_line, label='error bound')
+        plt.legend(loc='upper left')
+        plt.xlabel('perturbation size')
+        print([x-y for x,y in zip(errs_line, errs)])
+        plt.savefig('tangent_error.pdf')
         exit(1)
 
         #J = tan.evaluate(obj)
