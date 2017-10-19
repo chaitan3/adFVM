@@ -336,9 +336,7 @@ class TensorFunction(object):
         memString = '' 
         for inp in self._inputTensors:
             memString += 'const {}* __restrict__ {}, '.format(inp.dtype, inp.name)
-            #memString += 'const {}* {}, '.format(inp.dtype, inp.name)
         for out in self._outputTensors:
-            #memString += '{}* {}, '.format(out.dtype, out.name)
             memString += '{}* __restrict__ {}, '.format(out.dtype, out.name)
         if config.gpu:
             memString = '__global__ void {}(int n, {})'.format(self.name, memString[:-2])
