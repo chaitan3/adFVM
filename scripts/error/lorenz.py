@@ -20,9 +20,9 @@ def dfdu_lorenz(u, rho, per=0.0):
     shp = u.shape
     x, y, z = u.reshape([-1, 3]).T
     one = np.ones_like(x)
-    f1 = np.stack((-sigma*one + per, sigma*one, 0*one), axis=1)
-    f2 = np.stack((rho-z, -one + per, -x), axis=1)
-    f3 = np.stack((y, x, -beta*one + per), axis=1)
+    f1 = np.stack((-sigma*one - per, sigma*one, 0*one), axis=1)
+    f2 = np.stack((rho-z, -one - per, -x), axis=1)
+    f3 = np.stack((y, x, -beta*one - per), axis=1)
     dfdu = np.stack((f1, f2, f3), axis=1)
     return dfdu
 
@@ -68,7 +68,7 @@ for rho in rhos:
         plt.legend(loc='upper left')
         plt.xlabel('perturbation size')
         print([x-y for x,y in zip(errs_line, errs)])
-        plt.savefig('tangent_error.pdf')
+        plt.savefig('tangent_error.png')
         exit(1)
 
         #J = tan.evaluate(obj)
