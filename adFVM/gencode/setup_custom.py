@@ -47,7 +47,7 @@ if matop:
         home = os.path.expanduser('~') + '/sources/petsc_single/'
     else:
         home = os.path.expanduser('~') + '/sources/petsc/'
-    build = 'arch-linux2-c-debug'
+    build = 'arch-linux2-c-opt'
     incdirs += ['{}/{}/include'.format(home, build), home + '/include', os.path.expanduser('~') + '/sources/cusp/']
     #incdirs += [home + '/linux-gnu-c-opt/include']
     libdirs += ['{}/{}/lib'.format(home, build)]

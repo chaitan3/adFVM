@@ -9,7 +9,7 @@ from adFVM.mesh import Mesh
 from vane_obj import objective, getPlane, getWeights
 
 # heat transfer
-primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective, fixedTimeStep=True)
+primal = RCF('/home/talnikar/adFVM/cases/vane/les/test_mps/', objective=objective, fixedTimeStep=True)
 #primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective, fixedTimeStep=True)
 #primal = RCF('/home/talnikar/adFVM/cases/vane/les/', objective=objective, fixedTimeStep=True)
 getPlane(primal)
@@ -47,10 +47,10 @@ parameters = 'mesh'
 #
 #parameters = 'source'
 
-nSteps = 10
-writeInterval = 5
-sampleInterval = 5
-reportInterval = 5
+nSteps = 20000
+writeInterval = 50
+sampleInterval = 25
+reportInterval = 50
 #nSteps = 100000
 #writeInterval = 5000
 #startTime = 3.0
