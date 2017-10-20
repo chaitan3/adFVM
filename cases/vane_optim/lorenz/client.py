@@ -28,11 +28,7 @@ def get_mesh(param, work_dir, work_dir_base, fields=True):
     
     #copy the mesh
     try:
-        f = 'mesh.hdf5'
-        check_output(['scp', '{0}:{1}'.format(server, case + f), work_dir + f])
-        if fields:
-            f = '3.hdf5'
-            check_output(['scp', '{0}:{1}'.format(server, case + f), work_dir + f])
+        check_output(['rsync', '-aRv', '{0}:{1}/./par-*'.format(server, case), work_dir])
     except:
         raise Exception('Could not copy mesh from server')
     #delete mesh for future runs

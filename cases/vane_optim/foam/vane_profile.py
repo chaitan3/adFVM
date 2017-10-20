@@ -242,18 +242,13 @@ def perturb_mesh(base, case, fields=True, extrude=True):
     if extrude:
         extrude_mesh(case, spawn_job)
         mapBase += '3d_baseline/'
-        shutil.copyfile(base + 'system/decomposeParDict.extrude', case + 'system/decomposeParDict')
+
     if fields:
         spawn_job([scripts_dir + 'field/map_fields.py', mapBase, case, time, time])
-        spawn_job([foam_dir + 'decomposePar', '-time', time, '-case', case], shell=True)
-        spawn_job([scripts_dir + 'conversion/hdf5serial.py', case, time])
-        spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5', case + '3.hdf5'])
     else:
-        spawn_job([foam_dir + 'decomposePar', '-time', 'constant', '-case', case], shell=True)
-        spawn_job([scripts_dir + 'conversion/hdf5serial.py', case])
-        spawn_job([scripts_dir + 'conversion/hdf5swap.py', case + 'mesh.hdf5'])
-    for folder in glob.glob(case + 'processor*'):
-        shutil.rmtree(folder)
+        time = 'constant'
+    spawn_job([scripts_dir + 'decompose.sh', case, '2', '-time', time], shell=True)
+    spawn_job([scripts_dir + 'decompose.sh', case, '64', '-time', time], shell=True)
 
     # if done this way, no mapping and hdf5 conversion needed
     # serial for laminar
