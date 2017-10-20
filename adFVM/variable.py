@@ -262,6 +262,7 @@ class Function(object):
     funcs = []
     defaultOptions = {'return_static': True, 
                       'zero_static': False,
+                      'replace_static': False,
                       'return_reusable': True,
                       'replace_reusable': False,
                      }
@@ -348,7 +349,7 @@ class Function(object):
                 codeFile.write('\t\tgetArray((PyArrayObject*) Py_{0}, {0}, {2}, {1}L);\n'.format(inp.name, inp.staticId(), keepMemory))
                 codeFile.write('\t} else {\n')
                 codeFile.write('\t\t{}.reuse_acquire("{}", {}, {});\n'.format(inp.name, reuseId, self._getName(inp.shape[0]), keepMemory))
-                codeFile.write('\t}\n')
+                codeFile.write('\t}\n') 
             else:
                 codeFile.write('\tgetArray((PyArrayObject*) Py_{0}, {0}, {2}, {1}L);\n'.format(inp.name, inp.staticId(), keepMemory))
         codeFile.write('\n')

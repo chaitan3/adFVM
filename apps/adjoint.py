@@ -19,6 +19,11 @@ import time
 import os
 import argparse
 
+#matop_python = True
+matop_python = False
+if matop_python:
+    from adFVM import matop_petsc
+
 class Adjoint(Solver):
     def __init__(self, primal):
         self.scaling = adjParams[0]
@@ -76,7 +81,7 @@ class Adjoint(Solver):
         scaling = Variable((1, 1))
         gradOutputs, gradInputs = primal.map.grad()
         fields = gradInputs[:n]
-        if self.viscosityType:
+        if self.viscosityType and not matop_python:
             primalFields = primal.map._inputs[:n]
             DT = getAdjointViscosityCpp(*([primal, self.viscosityType] + primalFields + [scaling]))
             fields = viscositySolver(*([primal] + fields + [DT]))
@@ -117,7 +122,6 @@ class Adjoint(Solver):
                 phi.field *= mesh.volumes
         else:
             fields = self.fields
-
         pprint('STARTING ADJOINT')
         pprint('Number of steps:', nSteps)
         pprint('Write interval:', writeInterval)
@@ -160,8 +164,6 @@ class Adjoint(Solver):
                 for phi in fields:
                     phi.field /= mesh.volumes
                 self.writeFields(fields, t, skipProcessor=True)
-                for phi in fieldsCopy:
-                    phi.field *= mesh.volumes
                 fields = fieldsCopy
 
             primal.updateSource(source(solutions[-1], mesh, 0))
@@ -228,6 +230,27 @@ class Adjoint(Solver):
                     fields[index].field = gradient[index]
                     #fields[index].field = gradient[index]/mesh.volumes
 
+                if matop_python:
+                    stackedFields = np.concatenate([phi.field/mesh.volumes for phi in fields], axis=1)
+                    stackedFields = np.ascontiguousarray(stackedFields)
+
+                    inputs = previousSolution + [self.scaling]
+                    kwargs = {'visc': self.viscosityType, 'scale': self.viscosityScaler, 'report':report}
+                    weight = interp.centralOld(getAdjointViscosity(*inputs, **kwargs), mesh)
+                    stackedPhi = Field('a', stackedFields, (5,))
+                    stackedPhi.old = stackedFields
+                    newStackedFields = (matop_petsc.ddt(stackedPhi, dt) - matop_petsc.laplacian(stackedPhi, weight, correction=False)).solve()
+                        #newStackedFields = stackedFields/(1 + weight*dt)
+
+                    newFields = [newStackedFields[:,[0]], 
+                                 newStackedFields[:,[1,2,3]], 
+                                 newStackedFields[:,[4]]
+                                ]
+                            
+                    fields = self.getFields(newFields, IOField)
+                    for phi in fields:
+                        phi.field = np.ascontiguousarray(phi.field)*mesh.volumes
+
                 #print([type(x) for x in outputs])
                 if sample:
                     ms = n + 1
@@ -276,11 +299,18 @@ class Adjoint(Solver):
 
             #exit(1)
             #print(fields[0].field.max())
+            fieldsCopy = [phi.copy() for phi in fields]
             for phi in fields:
                 phi.field /= mesh.volumes
             self.writeFields(fields, t, skipProcessor=True)
-            for phi in fields:
-                phi.field *= mesh.volumes
+            fields = fieldsCopy
+
+            #for phi in fields:
+            #    phi.field /= mesh.volumes
+            #self.writeFields(fields, t, skipProcessor=True)
+            #for phi in fields:
+            #    phi.field *= mesh.volumes
+
             #print(fields[0].field.max())
             self.writeStatusFile([checkpoint + 1, result])
             #energyTimeSeries = mpi.gather(timeSeries, root=0)

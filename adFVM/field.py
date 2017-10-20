@@ -120,7 +120,7 @@ class Field(object):
         pprint(' min:', fieldMin, 'max:', fieldMax)
 
     def copy(self):
-        return self.__class__(self.name, self.field[:], self.dimensions)
+        return self.__class__(self.name, self.field.copy(), self.dimensions)
 
     def cross(self, phi):
         assert self.dimensions == (3,)

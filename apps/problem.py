@@ -51,7 +51,7 @@ def writeResult(option, result, info='-', timeSeriesFile=None):
         noise = [0. for res in result]
         if timeSeriesFile:
             import ar
-            timeSeries = np.loadtxt(timeSeriesFile)[avgStart::sampleInterval]
+            timeSeries = np.loadtxt(timeSeriesFile,ndmin=1)[avgStart::sampleInterval]
             if len(timeSeries.shape) == 1:
                 timeSeries = timeSeries.reshape(-1,1)
             for index in range(0, len(result)):
@@ -99,6 +99,8 @@ if __name__ == "__main__":
     # restarting perturb not fully supported
     for sim in range(0, nSims):
         if user.option == 'perturb':
+            if config.gpu:
+                pprint('On GPU for multiple perturbations will give wrong results')
             # single set of parameters, but can have multiple sets of perturbation
             if len(parameters) == 0:
                 raise Exception('parameter not given')
