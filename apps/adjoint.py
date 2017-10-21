@@ -211,9 +211,9 @@ class Adjoint(Solver):
                            'replace_reusable': False,
                            }
 
-                #start10 = time.time()
+                start10 = time.time()
                 outputs = self.map(*inputs, **options)
-                #pprint(time.time()-start10)
+                pprint(time.time()-start10)
 
                 #print(sum([(1e-3*phi).sum() for phi in gradient]))
                 #inp1 = inputs[:3] + inputs[-3:-1]

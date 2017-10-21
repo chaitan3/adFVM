@@ -31,6 +31,10 @@ try:
     name = MPI.Get_processor_name()
     rank = mpi.Get_rank()
     localRank, nRanksPerNode = getLocalRank(mpi, name, rank)
+    mpsRank = localRank % 2
+    localRank = 0
+    os.environ['CUDA_MPS_PIPE_DIRECTORY'] = '/tmp/nvidia-pipe-{}'.format(mpsRank)
+    os.environ['CUDA_MPS_LOG_DIRECTORY'] = '/tmp/nvidia-log-{}'.format(mpsRank)
 except:
     print('mpi4py NOT LOADED: YOU SHOULD BE RUNNING ON A SINGLE CORE')
     class Container(object):

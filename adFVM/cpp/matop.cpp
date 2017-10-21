@@ -84,7 +84,7 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     CHKERRQ(MatGetOwnershipRange(A, &il, &ih));
     CHKERRQ(MatGetOwnershipRangeColumn(A, &jl, &jh));
     long long start4 = current_timestamp();
-    cout << start4-start << endl;
+    if (mesh.rank == 0) cout << start4-start << endl;
 
     for (PetscInt j = il; j < ih; j++) {
         PetscInt index = j-il;
@@ -131,7 +131,7 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
 
     CHKERRQ(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY)); CHKERRQ(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
     long long start2 = current_timestamp();
-    cout << start2-start << endl;
+    if (mesh.rank == 0) cout << start2-start << endl;
         
     
     KSP ksp;
@@ -181,7 +181,9 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
         CHKERRQ(KSPSolve(ksp, b, x));
         KSPConvergedReason reason;
         KSPGetConvergedReason(ksp, &reason);
-        PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %D\n", reason);
+	if (mesh.rank == 0) {
+	    PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %D\n", reason);
+        }
         if (reason < 0)  {
             return 1;
         }
@@ -189,7 +191,7 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
         CHKERRQ(VecResetType(b));
         CHKERRQ(VecResetType(x));
         long long start3 = current_timestamp();
-        cout << start3-start << endl;
+        if (mesh.rank == 0) cout << start3-start << endl;
     }
     //VecResetArray(b);
     //delete[] data1;
