@@ -399,7 +399,7 @@ class Function(object):
                 #        codeFile.write('\tassert({}.shape >= ({} + {}));\n'.format(inp.name, _getName(op.indices), _getName(inp.index)))
                 name = self._getName(op.indices)
                 if config.profile:
-                    codeFile.write('\tMPI_Barrier(MPI_COMM_WORLD);\n')
+                    #codeFile.write('\tMPI_Barrier(MPI_COMM_WORLD);\n')
                     codeFile.write('\tstart = current_timestamp();\n')
                 if config.gpu:
                     #codeFile.write('\tinteger nBlocks = {}/GPU_THREADS_PER_BLOCK + 1;\n'.format(name))
@@ -412,16 +412,19 @@ class Function(object):
                 else:
                     codeFile.write('\t{}({}, {});\n'.format(op.name, name, op.getCallString()))
                 if config.profile:
-                    codeFile.write('\tMPI_Barrier(MPI_COMM_WORLD);\n')
+                    #codeFile.write('\tMPI_Barrier(MPI_COMM_WORLD);\n')
                     codeFile.write('\tend = current_timestamp();\n')
                     codeFile.write('\tif (meshp->rank == 0) cout << "{} Kernel time: " << end-start << "us" << endl;\n'.format(op.name))
                     
                     codeFile.write('\t{\n')
                     codeFile.write('\t\tdouble global, local;\n')
-                    rate = '\t\tcout << "{} {}: " << ((double)global)/(end-start) << endl;\n'
+                    codeFile.write('\t\tdouble local_time;\n')
+                    codeFile.write('\t\tlocal_time = (double)(end-start);\n')
+
+                    rate = '\t\tcout << "{} {}: " << global << endl;\n'
                     for msg, nops in zip(['Mload bandwidth', 'Mstore bandwidth', 'Mflops'], [op.func._loads, op.func._stores, op.func._flops]):
                         codeFile.write('\t\tglobal = 0;\n'.format(name, nops))
-                        codeFile.write('\t\tlocal = {}*{};\n'.format(name, nops))
+                        codeFile.write('\t\tlocal = {}*{}/local_time;\n'.format(name, nops))
                         codeFile.write('\t\tMPI_Reduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);\n')
                         codeFile.write('\t\tif (meshp->rank == 0) ' +  rate.format(op.name, msg))
                     codeFile.write('\t}\n')

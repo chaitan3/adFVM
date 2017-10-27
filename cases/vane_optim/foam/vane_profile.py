@@ -247,6 +247,7 @@ def perturb_mesh(base, case, fields=True, extrude=True):
         spawn_job([scripts_dir + 'field/map_fields.py', mapBase, case, time, time])
     else:
         time = 'constant'
+    exit(1)
     spawn_job([scripts_dir + 'decompose.sh', case, '2', '-time', time], shell=True)
     spawn_job([scripts_dir + 'decompose.sh', case, '64', '-time', time], shell=True)
 
@@ -292,10 +293,10 @@ if __name__ == '__main__':
     #extrude_mesh('3d_10/', spawn_job)
     #exit(0)
 
-    func = locals()[sys.argv[1]]
-    paramsFile = sys.argv[2]
-    with open(paramsFile) as f:
-        params = pickle.load(f)
-    #func = gen_mesh_param
-    #params = [np.zeros(4), './', 'test/']
+    #func = locals()[sys.argv[1]]
+    #paramsFile = sys.argv[2]
+    #with open(paramsFile) as f:
+    #    params = pickle.load(f)
+    func = gen_mesh_param
+    params = [np.zeros(4), './', 'test/']
     func(*params)
