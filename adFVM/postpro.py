@@ -527,19 +527,63 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
 
 def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
     mesh = solver.mesh.symMesh
-    def divideFields(rhoa, rhoUa, rhoEa, volumes, dt):
-        dt = dt.scalar()
-        #volumes = volumes*dt
+    def divideFields(rhoa, rhoUa, rhoEa, volumes):
         return rhoa/volumes, rhoUa[0]/volumes, rhoUa[1]/volumes, rhoUa[2]/volumes, rhoEa/volumes
-    fields = Kernel(divideFields)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes, solver.dt)
+    fields = Kernel(divideFields)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes)
 
-    def getFaceData(DT, areas, deltas):
-        return areas*DT/deltas
-    (DTF,) = Kernel(getFaceData)(mesh.nFaces)(DT, mesh.areas, mesh.deltas)
+    #def getFaceData(DT, areas, deltas):
+    #    return areas*DT/deltas
+    #(DTF,) = Kernel(getFaceData)(mesh.nFaces)(DT, mesh.areas, mesh.deltas)
 
-    inputs = fields + (DTF, solver.dt)
-    outputs = tuple([Zeros(x.shape) for x in fields])
-    fields = ExternalFunctionOp('apply_adjoint_viscosity', inputs, outputs).outputs
+    #inputs = fields + (DTF, solver.dt)
+    #outputs = tuple([Zeros(x.shape) for x in fields])
+    #fields = ExternalFunctionOp('apply_adjoint_viscosity', inputs, outputs).outputs
+
+    def laplacian(phi, DT, dt, *meshArgs, **options):
+        neighbour = options.pop('neighbour', True)
+        mesh = Mesh.container(meshArgs) 
+        dt = dt.scalar()
+        VP = mesh.volumes.extract(mesh.owner)
+        VN = mesh.volumes.extract(mesh.neighbour)
+        data = -mesh.areas*DT*dt/mesh.deltas
+        cP = data/VP
+        cN = data/VN
+        if neighbour:
+            lapPhi = Tensor.collate(phi.extract(mesh.owner)*cP, mesh.owner, phi.extract(mesh.neighbour)*cN, mesh.neighbour)
+            cellData = Tensor.collate(-cP, mesh.owner, -cN, mesh.neighbour)
+        else:
+            lapPhi = Tensor.collate(phi.extract(mesh.owner)*cP, mesh.owner)
+            cellData = Tensor.collate(-cP, mesh.owner)
+        return lapPhi, cellData
+
+    def jacobi(phi, lapPhi, cellData):
+        return (phi-lapPhi)/(cellData + 1.)
+
+    def copy(phi):
+        return phi*1
+            
+    def _meshArgs(start=0):
+        return [x[start] for x in mesh.getTensor()]
+    shape = fields[0].shape
+
+    _laplacianInternal = Kernel(laplacian)
+    _laplacianRemote = Kernel(laplacian)
+    _jacobi = Kernel(jacobi)
+    _copy = Kernel(copy)
+    fields = list(fields)
+    for j in range(0, len(fields)):
+        phi = fields[j]
+        (phiN,) = _copy(mesh.nInternalCells)(phi)
+        for i in range (0, 5):
+            lapPhi = Zeros(shape)
+            cellData = Zeros(shape)
+            meshArgs = _meshArgs()
+            lapPhi, cellData = _laplacianInternal(mesh.nInternalCells, (lapPhi, cellData))(phiN, DT, solver.dt, *meshArgs)
+            meshArgs = _meshArgs(mesh.nLocalFaces)
+            lapPhi, cellData = _laplacianInternal(mesh.nRemoteCells, (lapPhi, cellData))(phiN, DT[mesh.nLocalFaces], solver.dt, *meshArgs, neighbour=False)
+            (phiN,) = _jacobi(mesh.nInternalCells)(phi, lapPhi, cellData)
+        fields[j] = phiN
+    fields = tuple(fields)
 
     def multiplyFields(phi1, phi2, phi3, phi4, phi5, volumes):
         rhoa = phi1*volumes

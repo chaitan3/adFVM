@@ -70,7 +70,6 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     #endif
 
     // assembly time less than 10% on CPU
-    
     CHKERRQ(MatCreate(PETSC_COMM_WORLD, &A));
     CHKERRQ(MatSetSizes(A, n, n, PETSC_DETERMINE, PETSC_DETERMINE));
     MatSetType(A, SparseType);
@@ -141,9 +140,9 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     PC pc;
     CHKERRQ(KSPCreate(PETSC_COMM_WORLD, &(ksp)));
     CHKERRQ(KSPSetOperators(ksp, A, A));
-    CHKERRQ(KSPSetType(ksp, KSPGMRES));
+    //CHKERRQ(KSPSetType(ksp, KSPGMRES));
     //CHKERRQ(KSPSetType(ksp, KSPGCR));
-    //CHKERRQ(KSPSetType(ksp, KSPBCGS));
+    CHKERRQ(KSPSetType(ksp, KSPBCGS));
     //CHKERRQ(KSPSetType(ksp, KSPTFQMR));
     //CHKERRQ(KSPSetType(ksp, KSPPREONLY));
 
@@ -214,4 +213,6 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     CHKERRQ(VecDestroy(&x));
     return 0;
 }
+
+
 
