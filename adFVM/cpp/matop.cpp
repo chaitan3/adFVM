@@ -93,7 +93,8 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
         PetscInt cols[6];
         for (PetscInt k = 0; k < 6; k++) {
             PetscInt f = mesh.cellFaces(index, k);
-            neighbourData[k] = -faceData[f]/mesh.volumes(index);
+            //neighbourData[k] = -faceData[f]/mesh.volumes(index);
+            neighbourData[k] = -faceData[f]/mesh.volumes(index)*dt;
             cols[k] = mesh.cellNeighbours(index, k);
             if (cols[k] > -1) {
                 cols[k] += jl;
@@ -106,7 +107,8 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
         }
         assert(std::isfinite(cellData));
         CHKERRQ(MatSetValues(A, 1, &j, 6, cols, neighbourData, INSERT_VALUES));
-        CHKERRQ(MatSetValue(A, j, index + jl, cellData + 1./dt, INSERT_VALUES));
+        //CHKERRQ(MatSetValue(A, j, index + jl, cellData + 1./dt, INSERT_VALUES));
+        CHKERRQ(MatSetValue(A, j, index + jl, cellData + 1., INSERT_VALUES));
     }
 
 
@@ -124,7 +126,8 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
             integer p = mesh.owner(f);
             integer index = il + p;
             integer neighbourIndex = ranges[proc] + neighbourIndices(j);
-            scalar data = -faceData[f]/mesh.volumes(p);
+            //scalar data = -faceData[f]/mesh.volumes(p);
+            scalar data = -faceData[f]/mesh.volumes(p)*dt;
             CHKERRQ(MatSetValue(A, index, neighbourIndex, data, INSERT_VALUES));
         }
     } 
@@ -138,17 +141,18 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     PC pc;
     CHKERRQ(KSPCreate(PETSC_COMM_WORLD, &(ksp)));
     CHKERRQ(KSPSetOperators(ksp, A, A));
-    //CHKERRQ(KSPSetType(ksp, KSPGMRES));
+    CHKERRQ(KSPSetType(ksp, KSPGMRES));
     //CHKERRQ(KSPSetType(ksp, KSPGCR));
-    CHKERRQ(KSPSetType(ksp, KSPBCGS));
+    //CHKERRQ(KSPSetType(ksp, KSPBCGS));
     //CHKERRQ(KSPSetType(ksp, KSPTFQMR));
     //CHKERRQ(KSPSetType(ksp, KSPPREONLY));
 
-    //double rtol, atol, dtol;
-    //int maxit;
-    //KSPGetTolerances(ksp, &rtol, &atol, &dtol, &maxit);
-    //cout << rtol << " " << atol << " " << dtol << " " << maxit << endl;
-    //KSPSetTolerances(ksp, 1e-4, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
+    double rtol, atol, dtol;
+    int maxit;
+    KSPGetTolerances(ksp, &rtol, &atol, &dtol, &maxit);
+    cout << rtol << " " << atol << " " << dtol << " " << maxit << endl;
+    KSPSetTolerances(ksp, 1e-4, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
+    KSPSetInitialGuessNonzero(ksp, PETSC_TRUE);
 
     CHKERRQ(KSPGetPC(ksp, &(pc)));
     CHKERRQ(PCSetType(pc, PCJACOBI));
@@ -175,14 +179,18 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
         //CHKERRQ(MatCreateVecs(A, &x, &b));
     }
     for (integer i = 0; i < nrhs; i++) {
+        un[i]->copy(0, u[i]->data, n);
         CHKERRQ(VecPlaceType(b, u[i]->data));
         CHKERRQ(VecPlaceType(x, un[i]->data));
         
         CHKERRQ(KSPSolve(ksp, b, x));
         KSPConvergedReason reason;
         KSPGetConvergedReason(ksp, &reason);
+        PetscInt its;
+        KSPGetIterationNumber(ksp, &its);
 	if (mesh.rank == 0) {
 	    PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %D\n", reason);
+	    PetscPrintf(PETSC_COMM_WORLD,"KSPIterations: %d\n", its);
         }
         if (reason < 0)  {
             return 1;

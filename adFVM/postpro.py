@@ -529,7 +529,7 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
     mesh = solver.mesh.symMesh
     def divideFields(rhoa, rhoUa, rhoEa, volumes, dt):
         dt = dt.scalar()
-        volumes = volumes*dt
+        #volumes = volumes*dt
         return rhoa/volumes, rhoUa[0]/volumes, rhoUa[1]/volumes, rhoUa[2]/volumes, rhoEa/volumes
     fields = Kernel(divideFields)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes, solver.dt)
 
