@@ -12,7 +12,7 @@ from adFVM.tensor import TensorFunction
 from adFVM.variable import Variable, Function, Zeros
 from adFVM.mesh import cmesh
 
-from problem import primal, nSteps, writeInterval, sampleInterval, reportInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints, startTime
+from problem import primal, nSteps, writeInterval, sampleInterval, reportInterval, viscousInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints, startTime
 
 import numpy as np
 import time
@@ -81,13 +81,15 @@ class Adjoint(Solver):
         scaling = Variable((1, 1))
         gradOutputs, gradInputs = primal.map.grad()
         fields = gradInputs[:n]
+        args = primal.map._inputs + gradOutputs + [scaling]
+        outputs = list(fields) + gradInputs[n:]
+        self.map = Function('primal_grad', args, outputs)
         if self.viscosityType and not matop_python:
             primalFields = primal.map._inputs[:n]
             DT = getAdjointViscosityCpp(*([primal, self.viscosityType] + primalFields + [scaling]))
             fields = viscositySolver(*([primal] + fields + [DT]))
-        args = primal.map._inputs + gradOutputs + [scaling]
-        outputs = list(fields) + gradInputs[n:]
-        self.map = Function('primal_grad', args, outputs)
+            outputs = list(fields) + gradInputs[n:]
+            self.viscousMap = Function('primal_grad_viscous', args, outputs)
         #self.map self.map.getAdjoint()
 
     def initPrimalData(self):
@@ -177,6 +179,7 @@ class Adjoint(Solver):
             for step in range(0, writeInterval):
                 report = ((step + 1) % reportInterval) == 0
                 sample = ((step + 1) % sampleInterval) == 0
+                viscous = ((step + 1) % viscousInterval) == 0
                 
                 adjointIndex = writeInterval-1 - step
                 t, dt = timeSteps[primalIndex + adjointIndex]
@@ -212,7 +215,10 @@ class Adjoint(Solver):
                            }
 
                 start10 = time.time()
-                outputs = self.map(*inputs, **options)
+                if self.viscosityType and not matop_python and viscous:
+                    outputs = self.viscousMap(*inputs, **options)
+                else:
+                    outputs = self.map(*inputs, **options)
                 pprint(time.time()-start10)
 
                 #print(sum([(1e-3*phi).sum() for phi in gradient]))

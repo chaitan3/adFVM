@@ -318,6 +318,7 @@ class RCF(Solver):
         outputs = self._primitive(mesh.nInternalCells, (U, T, p))(rho, rhoU, rhoE)
         # boundary update
         outputs = self.boundaryInit(*outputs)
+        #is this right?
         outputs = self.boundary(*outputs)
         outputs = self.boundaryEnd(*outputs)
         U, T, p = outputs

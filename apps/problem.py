@@ -17,6 +17,7 @@ source = lambda *args: [0.]*len(args[0])
 perturb = []
 reportInterval = 1
 sampleInterval = 1
+viscousInterval = 1
 parameters = []
 adjParams = [0.0, None, None]
 avgStart = 0
@@ -29,6 +30,8 @@ assert writeInterval >= reportInterval
 assert (writeInterval % reportInterval) == 0
 assert writeInterval >= sampleInterval
 assert (writeInterval % sampleInterval) == 0
+assert writeInterval >= viscousInterval
+assert (writeInterval % viscousInterval) == 0
 
 if not isinstance(parameters, list):
     parameters = [parameters]

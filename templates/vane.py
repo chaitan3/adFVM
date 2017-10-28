@@ -52,6 +52,7 @@ parameters = 'source'
 #reportInterval = 50
 nSteps = 10
 writeInterval = 5
+viscousInterval = 5
 sampleInterval = 5
 reportInterval = 5
 startTime = 3.0

@@ -230,3 +230,10 @@ void Function_mpi_allreduce_grad(vector<ext_vec*> vals) {
 }
 
 void Function_mpi_dummy () {};
+
+void Function_print_info(vector<ext_vec*> res) {
+    integer n = res.size()/2;
+    for (integer i = 0; i < n; i++) {
+        res[i]->info();
+    }
+}
