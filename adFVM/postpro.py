@@ -592,13 +592,13 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
         cellData, cP, cN = Kernel(getData)(mesh.nInternalFaces, (cellData, cP, cN))(DT, solver.dt, mesh.volumes, *meshArgs)
         meshArgs = _meshArgs(mesh.nLocalFaces)
         cellData, cP = Kernel(getData)(mesh.nRemoteCells, (cellData, cP[mesh.nLocalFaces]))(DT[mesh.nLocalFaces], solver.dt, mesh.volumes, *meshArgs, neighbour=False)
+        iterations = 100
         for j in range(0, len(fields)):
             phi = fields[j]
             phiN = Zeros((mesh.nCells, 1))
-            #phiN = Zeros((mesh.nInternalCells, 1))
             (phiN,) = _copy(mesh.nInternalCells, (phiN,))(phi)
             #phiN = Zeros(shape)
-            for i in range (0, 15):
+            for i in range (0, iterations):
                 (phiN,) = solver.boundaryInit(phiN)
                 (phiN,) = super(solver.__class__, solver).boundary(phiN, boundary=None)
                 (phiN,) = solver.boundaryEnd(phiN)
@@ -608,13 +608,16 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
                 (lapPhi,) = _laplacianInternal(mesh.nInternalFaces, (lapPhi,))(phiN, cP, cN, *meshArgs)
                 meshArgs = _meshArgs(mesh.nLocalFaces)
                 (lapPhi,) = _laplacianRemote(mesh.nRemoteCells, (lapPhi,))(phiN, cP[mesh.nLocalFaces], cN[mesh.nLocalFaces], *meshArgs)
-                #res = Zeros((1,1))
-                #(res,) = _residual(mesh.nInternalCells, (res,))(phi, phiN, lapPhi, cellData)
-                #(res,) = ExternalFunctionOp('print_info', (res,), (res,)).outputs
-                #(phiN,) = _jacobi(mesh.nInternalCells)(phi, lapPhi, cellData, res)
-                #phiN = Zeros((mesh.nCells, 1))
-                phiN = Zeros((mesh.nInternalCells, 1))
-                (phiN,) = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData)
+                res = Zeros((1,1))
+                (res,) = _residual(mesh.nInternalCells, (res,))(phi, phiN, lapPhi, cellData)
+                (res,) = ExternalFunctionOp('print_info', (res,), (res,)).outputs
+
+                if i + 1 == iterations:
+                    phiN = Zeros((mesh.nInternalCells, 1))
+                else:
+                    phiN = Zeros((mesh.nCells, 1))
+                #(phiN,) = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData)
+                (phiN,) = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData, res)
             fields[j] = phiN
         fields = tuple(fields)
 
