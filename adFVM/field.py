@@ -487,13 +487,10 @@ class IOField(Field):
         self.field = parallel.getRemoteCells([field], self.mesh)[0]
         return
 
-    def completeField(self, phi=None):
+    def completeField(self):
         logger.debug('completing field {0}'.format(self.name))
         #return phiI
-        if self.phi is None:
-            self.phi = CellField(self.name, phi, self.dimensions, self.boundary)
-        if phi is not None:
-            return self.phi.updateGhostCells(phi)
+        self.phi = CellField(self.name, None, self.dimensions, self.boundary)
     
     def getTensor(self, *args, **kwargs):
         return self.phi.getTensor(*args, **kwargs)

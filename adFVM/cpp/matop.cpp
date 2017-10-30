@@ -146,11 +146,11 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     //CHKERRQ(KSPSetType(ksp, KSPTFQMR));
     //CHKERRQ(KSPSetType(ksp, KSPPREONLY));
 
-    double rtol, atol, dtol;
-    int maxit;
-    KSPGetTolerances(ksp, &rtol, &atol, &dtol, &maxit);
-    cout << rtol << " " << atol << " " << dtol << " " << maxit << endl;
-    KSPSetTolerances(ksp, 1e-4, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
+    //double rtol, atol, dtol;
+    //int maxit;
+    //KSPGetTolerances(ksp, &rtol, &atol, &dtol, &maxit);
+    //cout << rtol << " " << atol << " " << dtol << " " << maxit << endl;
+    //KSPSetTolerances(ksp, 1e-4, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
     KSPSetInitialGuessNonzero(ksp, PETSC_TRUE);
 
     CHKERRQ(KSPGetPC(ksp, &(pc)));

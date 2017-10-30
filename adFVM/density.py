@@ -385,5 +385,5 @@ class RCF(Solver):
         return drho, drhoU, drhoE
 
     def boundary(self, U, T, p):
-        outputs = super(RCF, self).boundary(U, T, p)
+        outputs = super(RCF, self).boundary(U, T, p, boundary=[phi.phi for phi in self.fields])
         return self.characteristicBoundary(*outputs)

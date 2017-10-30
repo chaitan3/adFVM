@@ -103,10 +103,11 @@ class Solver(object):
         fields = tuple(fields)
         return fields
 
-    def boundary(self, *fields):
+    def boundary(self, *fields, **kwargs):
+        boundaryFields = kwargs['boundary']
         fields = list(fields)
         for index, phi in enumerate(fields):
-            phi = self.fields[index].completeField(phi)
+            phi = boundaryFields[index].updateGhostCells(phi)
             (phi,) = ExternalFunctionOp('mpi', (phi,), (phi,)).outputs
             fields[index] = phi
         return tuple(fields)
