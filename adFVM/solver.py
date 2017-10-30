@@ -107,7 +107,8 @@ class Solver(object):
         boundaryFields = kwargs['boundary']
         fields = list(fields)
         for index, phi in enumerate(fields):
-            phi = boundaryFields[index].updateGhostCells(phi)
+            if boundaryFields is not None:
+                phi = boundaryFields[index].updateGhostCells(phi)
             (phi,) = ExternalFunctionOp('mpi', (phi,), (phi,)).outputs
             fields[index] = phi
         return tuple(fields)

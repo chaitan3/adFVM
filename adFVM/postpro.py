@@ -591,17 +591,15 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
     cellData, cP, cN = Kernel(getData)(mesh.nInternalFaces, (cellData, cP, cN))(DT, solver.dt, mesh.volumes, *meshArgs)
     meshArgs = _meshArgs(mesh.nLocalFaces)
     cellData, cP = Kernel(getData)(mesh.nRemoteCells, (cellData, cP[mesh.nLocalFaces]))(DT[mesh.nLocalFaces], solver.dt, mesh.volumes, *meshArgs, neighbour=False)
-    boundaryFields = [CellField('phi', None, (1,)) for j in range(0, len(fields))]
     for j in range(0, len(fields)):
         phi = fields[j]
-        #phiN = Zeros((mesh.nCells, 1))
-        phiN = Zeros((mesh.nInternalCells, 1))
+        phiN = Zeros((mesh.nCells, 1))
+        #phiN = Zeros((mesh.nInternalCells, 1))
         (phiN,) = _copy(mesh.nInternalCells, (phiN,))(phi)
         #phiN = Zeros(shape)
         for i in range (0, 15):
             (phiN,) = solver.boundaryInit(phiN)
-            # bug in this
-            (phiN,) = super(solver.__class__, solver).boundary(phiN, boundary=[boundaryFields[j]])
+            (phiN,) = super(solver.__class__, solver).boundary(phiN, boundary=None)
             (phiN,) = solver.boundaryEnd(phiN)
 
             lapPhi = Zeros((mesh.nInternalCells, 1))
