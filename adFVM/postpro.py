@@ -608,16 +608,16 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
                 (lapPhi,) = _laplacianInternal(mesh.nInternalFaces, (lapPhi,))(phiN, cP, cN, *meshArgs)
                 meshArgs = _meshArgs(mesh.nLocalFaces)
                 (lapPhi,) = _laplacianRemote(mesh.nRemoteCells, (lapPhi,))(phiN, cP[mesh.nLocalFaces], cN[mesh.nLocalFaces], *meshArgs)
-                res = Zeros((1,1))
-                (res,) = _residual(mesh.nInternalCells, (res,))(phi, phiN, lapPhi, cellData)
-                (res,) = ExternalFunctionOp('print_info', (res,), (res,)).outputs
+                #res = Zeros((1,1))
+                #(res,) = _residual(mesh.nInternalCells, (res,))(phi, phiN, lapPhi, cellData)
+                #(res,) = ExternalFunctionOp('print_info', (res,), (res,)).outputs
 
                 if i + 1 == iterations:
                     phiN = Zeros((mesh.nInternalCells, 1))
                 else:
                     phiN = Zeros((mesh.nCells, 1))
-                #(phiN,) = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData)
-                (phiN,) = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData, res)
+                (phiN,) = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData)
+                #(phiN,) = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData, res)
             fields[j] = phiN
         fields = tuple(fields)
 
