@@ -1,5 +1,6 @@
 from adFVM.density import RCF 
 import sys
+import os
 sys.path.append(os.path.expanduser('~/adFVM/templates'))
 from vane_obj import objective, getPlane, getWeights
 

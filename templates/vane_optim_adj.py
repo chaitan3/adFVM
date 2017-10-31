@@ -1,5 +1,6 @@
 from adFVM.density import RCF 
 import sys
+import os
 sys.path.append(os.path.expanduser('~/adFVM/templates'))
 from vane_obj import objective, getPlane, getWeights
 
@@ -8,7 +9,7 @@ caseDir = './'
 nParam = 4
 #primal = RCF(caseDir, objective='pressureLoss', objectivePLInfo={})
 #primal = RCF(caseDir, objective='heatTransfer', objectiveDragInfo="pressure|suction")
-primal = RCF(caseDir, timeSeriesAppend='2', fixedTimeStep=True, objective='optim', objectivePLInfo={})
+primal = RCF(caseDir, timeSeriesAppend='2', fixedTimeStep=True, objective=objective)
 
 #primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective)
 #primal = RCF('/home/talnikar/adFVM/cases/vane/les/', objective=objective)
@@ -27,7 +28,7 @@ for index in range(0, nParam):
     perturb.append(makePerturb(index))
 
 parameters = 'mesh'
-reportInterval = 1
+reportInterval = 100
 sampleInterval = 20
 nSteps = 20000
 writeInterval = 500

@@ -232,7 +232,7 @@ def extrude_mesh(case, spawn_job):
     except:
         pass
         
-def perturb_mesh(base, case, fields=True, extrude=True):
+def perturb_mesh(base, case, procs, fields=True, extrude=True):
 #def perturb_mesh(base, case, fields=True, extrude=False):
     # serial 
     spawn_job([foam_dir + 'moveMesh', '-case', case], shell=True)
@@ -247,9 +247,8 @@ def perturb_mesh(base, case, fields=True, extrude=True):
         spawn_job([scripts_dir + 'field/map_fields.py', mapBase, case, time, time])
     else:
         time = 'constant'
+    spawn_job([scripts_dir + 'decompose.sh', case, '{}'.format(procs), '-time', time], shell=True)
     exit(1)
-    spawn_job([scripts_dir + 'decompose.sh', case, '2', '-time', time], shell=True)
-    spawn_job([scripts_dir + 'decompose.sh', case, '64', '-time', time], shell=True)
 
     # if done this way, no mapping and hdf5 conversion needed
     # serial for laminar
@@ -268,7 +267,7 @@ def spawn_job(args, cwd='.', shell=False):
         subprocess.check_call(args,
                 stdout=sys.stdout, stderr=sys.stderr, cwd=cwd)
 
-def gen_mesh_param(param, base, case, fields=True, perturb=True):
+def gen_mesh_param(param, base, case, procs, fields=True, perturb=True):
 #def gen_mesh_param(param, base, case, fields=True, perturb=False):
     sys.stdout = open(case + 'mesh_output.log', 'a')
     sys.stderr = open(case + 'mesh_error.log', 'a')
@@ -285,7 +284,7 @@ def gen_mesh_param(param, base, case, fields=True, perturb=True):
     #    pickle.dump([param, base, case], f)
     #spawn_job([sys.executable, __file__, 'create_displacement', 'params.pkl'])
     if perturb:
-        perturb_mesh(base, case, fields)
+        perturb_mesh(base, case, fields, procs)
 
     return
 
@@ -293,10 +292,10 @@ if __name__ == '__main__':
     #extrude_mesh('3d_10/', spawn_job)
     #exit(0)
 
-    #func = locals()[sys.argv[1]]
-    #paramsFile = sys.argv[2]
-    #with open(paramsFile) as f:
-    #    params = pickle.load(f)
-    func = gen_mesh_param
-    params = [np.zeros(4), './', 'test/']
-    func(*params)
+    func = locals()[sys.argv[1]]
+    paramsFile = sys.argv[2]
+    with open(paramsFile) as f:
+        params = pickle.load(f)
+    #func = gen_mesh_param
+    #params = [np.zeros(4), './', 'test/']
+    #func(*params)

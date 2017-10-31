@@ -13,7 +13,7 @@ homeDir = '/home/talnikar/adFVM/'
 workDir = homeDir + 'cases/vane_optim/optim/'
 #workDir = '/projects/LESOpt/talnikar/vane_optim/optim/'
 appsDir = homeDir + 'apps/'
-codeDir = workDir + 'gencode/'
+
 initCaseFile = homeDir + 'templates/vane_optim.py'
 primCaseFile = homeDir + 'templates/vane_optim_prim.py'
 adjCaseFile = homeDir + 'templates/vane_optim_adj.py'
@@ -83,7 +83,7 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
     paramDir = os.path.join(workDir, base)
 
     # get mesh from remote server
-    args = [(param, paramDir, base, True)]
+    args = [(param, paramDir, base, 2, True)]
     gradEps = []
 
     if not os.path.exists(paramDir):
@@ -104,7 +104,7 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
             gradDir = os.path.join(workDir, base2)
             if not os.path.exists(gradDir):
                 os.makedirs(gradDir)
-            args.append((perturbedParam, gradDir, base2, False))
+            args.append((perturbedParam, gradDir, base2, 64, False))
             #get_mesh(args[-1])
 
     if stateIndex == 0:
@@ -114,6 +114,11 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
 
     # copy caseFile
     paramCodeDir = paramDir + 'gencode'
+    codeDir = workDir + 'gencode/'
+    if not os.path.exists(paramCodeDir):
+        shutil.copytree(codeDir, paramCodeDir)
+    paramCodeDir = paramDir + 'par-64/gencode'
+    codeDir = workDir + 'voyager/gencode/'
     if not os.path.exists(paramCodeDir):
         shutil.copytree(codeDir, paramDir + 'gencode')
     shutil.copy(initCaseFile, paramDir)

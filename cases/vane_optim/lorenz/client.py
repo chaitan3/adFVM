@@ -3,13 +3,13 @@ from subprocess import check_output
 import os
 import pickle
 
-def get_mesh(param, work_dir, work_dir_base, fields=True):
+def get_mesh(param, work_dir, work_dir_base, procs, fields=True):
     server = 'kolmogorov.mit.edu'
     base = '/home/talnikar/adFVM/cases/vane_optim/foam/laminar/'
     case = base + work_dir_base + '/'
     mesh_log = work_dir + 'mesh.log'
     with open(work_dir + 'params.pkl', 'w') as f:
-        pickle.dump([param, base, case, fields], f)
+        pickle.dump([param, base, case, procs, fields], f)
     #configure timeouts
     #copy profile to server
     try:
