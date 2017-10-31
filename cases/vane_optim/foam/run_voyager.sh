@@ -1,9 +1,11 @@
 #!/bin/sh
 CASE=$1
 CASEDIR=$(readlink -f $CASE/par-64)
-SERVER=voyager.mit.edu
+SERVERDIR=/master/$CASEDIR
+SERVER=voyager
 cp ~/adFVM/templates/vane_optim_adj.py $CASEDIR
-rsync -aRv $CASEDIR/./* $SERVER:$CASEDIR
-rsync -aRv job.sh $SERVER:$CASEDIR
-ssh $SERVER "cd $CASEDIR && ./job.sh"
+ssh $SERVER mkdir -p $SERVERDIR
+rsync -aRv $CASEDIR/./* $SERVER:$SERVERDIR
+rsync -aRv job.sh $SERVER:$SERVERDIR
+ssh $SERVER "cd $SERVERDIR && sbatch ./job.sh"
 
