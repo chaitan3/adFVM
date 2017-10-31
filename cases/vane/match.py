@@ -34,11 +34,11 @@ def match_htc(hp, coordsp, hs, coordss, saveFile):
     indices = ss < 1.25
     ss, hs = ss[indices], hs[indices]
     
-    hs = smooth(hs, 5)
-    hp = smooth(hp, 5)
+    hs = smooth(hs, 9)
+    hp = smooth(hp, 9)
 
-    expe = read_data('data/htc_0.9_1e6.csv')
-    #expe = read_data('data/htc_1.07_1e6.csv')
+    #expe = read_data('data/htc_0.9_1e6.csv')
+    expe = read_data('data/htc_1.07_1e6.csv')
 
     fill = 1
     plt.scatter(expe[:,0]/(c*1000), expe[:,1], c='k', alpha=fill,marker='o', label='Experiment')
@@ -66,10 +66,10 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
     indices = logical_not(isnan(Map))
     sp, Map = sp[indices], Map[indices]
 
-    expp = read_data('data/Ma_pressure_0.875.csv')
-    exps = read_data('data/Ma_suction_0.875.csv')
-    #expp = read_data('data/Ma_pressure_1.02.csv')
-    #exps = read_data('data/Ma_suction_1.02.csv')
+    #expp = read_data('data/Ma_pressure_0.875.csv')
+    #exps = read_data('data/Ma_suction_0.875.csv')
+    expp = read_data('data/Ma_pressure_1.02.csv')
+    exps = read_data('data/Ma_suction_1.02.csv')
 
     fill=1
 
@@ -168,7 +168,7 @@ if __name__ == '__main__':
         with open(pklFile, 'w') as f:
             pkl.dump([htc_args, Ma_args], f)
 
-    match_velocity(*Ma_args)
+    #match_velocity(*Ma_args)
     match_htc(*htc_args)
 
     #p0 = 175158.
