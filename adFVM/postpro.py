@@ -224,17 +224,8 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
 
     # Entropy
     elif visc == 'entropy_hughes':
-        M1 = np.stack((np.hstack((divU, gradc, Z)),
-                   np.hstack((gradc[:,[0]], divU, Z, Z, Z)),
-                   np.hstack((gradc[:,[1]], Z, divU, Z, Z)),
-                   np.hstack((gradc[:,[2]], Z, Z, divU, Z)),
-                   np.hstack((Z, Z, Z, Z, divU))),
-                   axis=1)
-        
-        M2 = np.concatenate((np.hstack((g1*divU/2, gradp/(rho*c), divU*pref/(2*rho*c*Uref))).reshape(-1,1,5),
-                        np.dstack(((g1*gradp/(2*rho*c)).reshape(-1,3,1), gradU, (gradp*pref/(2*g*rho*c*Uref)).reshape((-1, 3, 1)))),
-                        np.hstack((Z, (gradp-c*c*gradrho)*Uref/pref, Z)).reshape(-1,1,5)),
-                        axis=1)
+        from .symmetrizations.entropy_hughes_gen import expression
+        M1, M2 = expression(g, rho, U, p, gradrho, gradU, gradp)
         M = -(M1 + M2)
         
     elif visc == 'entropy_jameson' or visc == 'uniform':
