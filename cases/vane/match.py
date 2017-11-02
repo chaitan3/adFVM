@@ -37,8 +37,8 @@ def match_htc(hp, coordsp, hs, coordss, saveFile):
     hs = smooth(hs, 9)
     hp = smooth(hp, 9)
 
-    #expe = read_data('data/htc_0.9_1e6.csv')
-    expe = read_data('data/htc_1.07_1e6.csv')
+    expe = read_data('data/htc_0.9_1e6.csv')
+    #expe = read_data('data/htc_1.07_1e6.csv')
 
     fill = 1
     plt.scatter(expe[:,0]/(c*1000), expe[:,1], c='k', alpha=fill,marker='o', label='Experiment')

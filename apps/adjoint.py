@@ -21,6 +21,7 @@ import argparse
 
 #matop_python = True
 matop_python = False
+write_M_2norm = False
 if matop_python:
     from adFVM import matop_petsc
 
@@ -86,9 +87,12 @@ class Adjoint(Solver):
         self.map = Function('primal_grad', args, outputs)
         if self.viscosityType and not matop_python:
             primalFields = primal.map._inputs[:n]
-            DT = getAdjointViscosityCpp(*([primal, self.viscosityType] + primalFields + [scaling]))
+            M_2norm, DT = getAdjointViscosityCpp(*([primal, self.viscosityType] + primalFields + [scaling]))
             fields = viscositySolver(*([primal] + fields + [DT]))
-            outputs = list(fields) + gradInputs[n:]
+            if write_M_2norm:
+                outputs = list(fields) + gradInputs[n:] + [M_2norm]
+            else:
+                outputs = list(fields) + gradInputs[n:]
             self.viscousMap = Function('primal_grad_viscous', args, outputs)
         #self.map self.map.getAdjoint()
 
@@ -310,6 +314,11 @@ class Adjoint(Solver):
                 phi.field /= mesh.volumes
             self.writeFields(fields, t, skipProcessor=True)
             fields = fieldsCopy
+
+            # write M_2norm
+            if write_M_2norm:
+                with IOField.handle(t):
+                    IOField('M_2norm', outputs[-1], (1,)).write()
 
             #for phi in fields:
             #    phi.field /= mesh.volumes

@@ -451,6 +451,13 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
                                  tmp2[1], gradU[1,0], gradU[1,1], gradU[1,2], tmp3[1],
                                  tmp2[2], gradU[2,0], gradU[2,1], gradU[2,2], tmp3[2],
                                  Z, tmp4[0], tmp4[1], tmp4[2], g1*divU/2])
+        elif viscosityType == 'entropy_hughes':
+            from .symmetrizations.entropy_hughes_gen_code import expression
+            M1, M2 = expression(g, rho, U, p, gradrho, gradU, gradp)
+            M1 = Tensor((5,5), M1)
+            M2 = Tensor((5,5), M2)
+            M = -(M1 + M2)
+
         else:
             raise Exception('symmetrizer not recognized')
 
@@ -514,7 +521,7 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
     meshArgs = _meshArgs()
     DT = Zeros((mesh.nFaces, 1))
     (DT,) = Kernel(interpolate)(mesh.nFaces, (DT,))(M_2norm, *meshArgs)
-    return DT
+    return M_2norm, DT
 
 def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
     mesh = solver.mesh.symMesh
