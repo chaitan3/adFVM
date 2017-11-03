@@ -248,7 +248,7 @@ def perturb_mesh(base, case, procs, fields=True, extrude=True):
     else:
         time = 'constant'
     spawn_job([scripts_dir + 'decompose.sh', case, '{}'.format(procs), '-time', time], shell=True)
-    exit(1)
+    exit(0)
 
     # if done this way, no mapping and hdf5 conversion needed
     # serial for laminar
@@ -284,7 +284,7 @@ def gen_mesh_param(param, base, case, procs, fields=True, perturb=True):
     #    pickle.dump([param, base, case], f)
     #spawn_job([sys.executable, __file__, 'create_displacement', 'params.pkl'])
     if perturb:
-        perturb_mesh(base, case, fields, procs)
+        perturb_mesh(base, case, procs, fields)
 
     return
 
@@ -296,6 +296,7 @@ if __name__ == '__main__':
     paramsFile = sys.argv[2]
     with open(paramsFile) as f:
         params = pickle.load(f)
+    func(*params)
     #func = gen_mesh_param
     #params = [np.zeros(4), './', 'test/']
     #func(*params)

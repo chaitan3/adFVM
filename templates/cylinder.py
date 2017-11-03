@@ -95,6 +95,9 @@ reportInterval = 100
 sampleInterval = 50
 startTime = 3.0
 dt = 2e-7
-#viscousInterval = 1
+
+viscousInterval = 1
+adjParams = [1e-2, 'uniform', None]
 #adjParams = [1e-3, 'abarbanel', None]
+#adjParams = [1e-3, 'entropy_jameson', None]
 #runCheckpoints = 3

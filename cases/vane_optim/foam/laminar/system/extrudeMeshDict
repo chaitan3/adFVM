@@ -52,8 +52,8 @@ extrudeModel        linearDirection;
 //- Extrudes into sphere with grading according to pressure (atmospherics)
 //extrudeModel        sigmaRadial;
 
-//nLayers             200;
-nLayers             150;
+nLayers             200;
+//nLayers             150;
 
 expansionRatio      1.0;    //0.9;
 
