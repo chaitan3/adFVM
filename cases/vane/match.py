@@ -168,8 +168,8 @@ if __name__ == '__main__':
         with open(pklFile, 'w') as f:
             pkl.dump([htc_args, Ma_args], f)
 
-    #match_velocity(*Ma_args)
-    match_htc(*htc_args)
+    match_velocity(*Ma_args)
+    #match_htc(*htc_args)
 
     #p0 = 175158.
     #nCellsPerLayer = len(wakeCells)/nLayers

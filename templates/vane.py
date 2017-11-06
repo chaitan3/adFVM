@@ -8,10 +8,10 @@ from adFVM.mesh import Mesh
 
 from vane_obj import objective, getPlane, getWeights
 
-primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective, fixedTimeStep=True)
+#primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/', objective=objective, fixedTimeStep=True)
 #primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective, fixedTimeStep=True)
 #primal = RCF('/home/talnikar/adFVM/cases/vane/les/test_mps2/', objective=objective, fixedTimeStep=True)
-#primal = RCF('/home/talnikar/adFVM/cases/vane/les/', objective=objective, fixedTimeStep=True)
+primal = RCF('/home/talnikar/adFVM/cases/vane/les_1.02/', objective=objective, fixedTimeStep=True)
 getPlane(primal)
 getWeights(primal)
 

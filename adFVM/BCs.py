@@ -157,7 +157,7 @@ class CBC_UPT(CharacteristicBoundaryCondition):
         self.createInput('p0', (1,))
 
     def _update(self, U, T, p, U0, T0, p0):
-        return U0, T0, p0
+        return U0*1, T0*1, p0*1
 
 # implement support for characteristic time travel
 class CBC_TOTAL_PT(CharacteristicBoundaryCondition):
