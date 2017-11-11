@@ -105,7 +105,7 @@ class Field(object):
         pprint(self.name + ':', end='')
         # mesh values required outside theano
         field = self.field[:mesh.nLocalCells]
-        nanCheck = np.isnan(field)
+        nanCheck = np.logical_not(np.isfinite(field))
         if nanCheck.any():
             indices = np.where(nanCheck)[0]
             #indices += -mesh.nInternalCells + mesh.nInternalFaces
@@ -114,6 +114,8 @@ class Field(object):
                   'local cells:', mesh.nLocalCells, 
                   'indices', indices)
             print('FloatingPointException: NAN FOUND')
+            with IOField.handle(10.0):
+                IOField(self.name + '_nan', self.field, self.dimensions).write()
             parallel.mpi.Abort()
         fieldMin = parallel.min(field, allreduce=False)
         fieldMax = parallel.max(field, allreduce=False)

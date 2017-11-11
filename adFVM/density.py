@@ -2,7 +2,7 @@ from . import config, riemann, interp
 from .tensor import Kernel, ExternalFunctionOp
 from .variable import Variable, Function, Zeros
 from .field import Field, IOField, CellField
-from .op import  div, absDiv, snGrad, internal_sum, grad, gradCell
+from .op import  div, absDiv, snGrad, grad, gradCell
 from .solver import Solver
 from .interp import central, secondOrder
 from . import BCs
@@ -42,6 +42,7 @@ class RCF(Solver):
         self.Cv = self.Cp/self.gamma
         self.R = self.Cp - self.Cv
         self.kappa = lambda mu, T: mu*(self.Cp/self.Pr)
+        #self.kappa = lambda mu, T: 0.
         self.riemannSolver = getattr(riemann, self.riemannSolver)
         self.boundaryRiemannSolver = getattr(riemann, self.boundaryRiemannSolver)
         self.faceReconstructor = getattr(interp, self.faceReconstructor)
@@ -187,17 +188,26 @@ class RCF(Solver):
         rhoEFlux = (rhoE + p)*Un
         return rhoFlux, rhoUFlux, rhoEFlux
 
-    def viscousFlux(self, TL, TR, UF, TF, gradUF, gradTF, mesh):
+    def viscousFlux(self, TL, TR, UL, UR, TF, UF, gradTF, gradUF, mesh):
         mu = self.mu(TF)
         kappa = self.kappa(mu, TF)
+        D = mesh.deltasUnit
+        N = mesh.normals
 
-        qF = kappa*snGrad(TL, TR, mesh);
-        tmp2 = (gradUF + gradUF.transpose()).tensordot(mesh.normals)
+        ##qF = kappa*snGrad(TL, TR, mesh)
+        #qF = kappa*gradTF[0].dot(mesh.normals)
+        gradTF = gradTF[0] + snGrad(TL, TR, mesh)*D - gradTF[0].dot(D)*D
+        gradUF =  gradUF + snGrad(UL, UR, mesh).outer(D) - gradUF.tensordot(D).outer(D)
+        #gradTF = gradTF[0]
+        #gradUF = gradUF 
+        qF = kappa*gradTF.dot(N)
+
+        tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
         tmp3 = gradUF.trace()
+        sigmaF = mu*(tmp2-2./3*tmp3*N)
 
-        sigmaF = mu*(tmp2-2./3*tmp3*mesh.normals)
         rhoUFlux = -sigmaF
-        rhoEFlux = -(qF + sigmaF.dot(UF));
+        rhoEFlux = -(qF + sigmaF.dot(UF))
         return rhoUFlux, rhoEFlux
 
     #symbolic funcs
@@ -240,16 +250,18 @@ class RCF(Solver):
         TLF = secondOrder(T, gradT, mesh, 0)
         pLF = secondOrder(p, gradp, mesh, 0)
         rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
+        TL, TR = T.extract(P), T.extract(N)
+        UL, UR = U.extract(P), U.extract(N)
 
         if characteristic:
             URF, TRF, pRF = U.extract(N), T.extract(N), p.extract(N)
             rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
             rhoFlux, rhoUFlux, rhoEFlux = self.boundaryRiemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
             rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
-            UF = URF
-            TF = TRF
-            gradUF = gradU.extract(N)
+            TF = TR
+            UF = UR
             gradTF = gradT.extract(N)
+            gradUF = gradU.extract(N)
         else:
             URF = secondOrder(U, gradU, mesh, 1)
             TRF = secondOrder(T, gradT,  mesh, 1)
@@ -257,12 +269,16 @@ class RCF(Solver):
             rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
             rhoFlux, rhoUFlux, rhoEFlux = self.riemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
             rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
-            UF = 0.5*(ULF + URF)
-            TF = 0.5*(TLF + TRF)
+            #UF = 0.5*(ULF + URF)
+            #TF = 0.5*(TLF + TRF)
+            #gradUF = central(gradU, mesh)
+            #gradTF = central(gradT, mesh)
+            TF = 0.5*(TL + TR)
+            UF = 0.5*(UL + UR)
             gradTF = 0.5*(gradT.extract(P) + gradT.extract(N))
             gradUF = 0.5*(gradU.extract(P) + gradU.extract(N))
 
-        ret = self.viscousFlux(T.extract(P), T.extract(N), UF, TF, gradUF, gradTF, mesh)
+        ret = self.viscousFlux(TL, TR, UL, UR, TF, UF, gradTF, gradUF, mesh)
         rhoUFlux += ret[0]
         rhoEFlux += ret[1]
 
@@ -285,9 +301,10 @@ class RCF(Solver):
         #UR, TR, pR = U, T, p
         gradUR, gradTR = gradU.extract(N), gradT.extract(N)
         TL = T.extract(P)
+        UL = U.extract(P)
 
         rhoFlux, rhoUFlux, rhoEFlux = self.getFlux(UR, TR, pR, mesh.normals)
-        ret = self.viscousFlux(TL, TR, UR, TR, gradUR, gradTR, mesh)
+        ret = self.viscousFlux(TL, TR, UL, UR, TR, UR, gradTR, gradUR, mesh)
         rhoUFlux += ret[0]
         rhoEFlux += ret[1]
 

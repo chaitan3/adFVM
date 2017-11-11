@@ -26,7 +26,7 @@ logger = config.Logger(__name__)
 class Mesh(object):
     intFields = ['owner', 'neighbour', 'cellFaces', 'cellNeighbours', 'cellOwner']
     gradFields = ['areas', 'volumesL', 'volumesR',
-                  'weights', 'deltas', 'normals',
+                  'weights', 'deltas', 'normals', 'deltasUnit',
                   'linearWeights', 'quadraticWeights',
                   'volumes'
                   #'cellCentres', 'faceCentres', 
@@ -629,7 +629,7 @@ class Mesh(object):
         logger.info('generated deltas')
         P = self.cellCentres[self.owner]
         N = self.cellCentres[self.neighbour]
-        deltas = P-N
+        deltas = N-P
         deltasNorm = norm(deltas, axis=1, keepdims=True)
         deltasUnit = deltas/deltasNorm
         return deltasNorm, deltasUnit

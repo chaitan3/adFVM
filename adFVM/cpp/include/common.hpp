@@ -464,7 +464,11 @@ class arrType : public baseArrType<arrType, CPUMemoryBuffer, dtype, shape1, shap
     }
     bool checkNAN() {
         for (integer i = 0; i < this->size; i++) {
-            if (std::isnan(this->data[i])) {
+            if (!std::isfinite(this->data[i])) {
+                cout << "nan/inf found at " << i << endl;
+                cout << "data i " << this->data[i] << endl;
+                cout << "data i+1 " << this->data[i+1] << endl;
+                cout << "data i-1 " << this->data[i-1] << endl;
                 return true;
             }
         }

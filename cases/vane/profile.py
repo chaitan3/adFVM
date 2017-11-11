@@ -22,6 +22,7 @@ def get_length(pat, coords):
     s = []
     for i in tn:
         s.append(integrate.quad(integrand, 0, i)[0])
+    #import pdb;pdb.set_trace()
     return array(s), indices
 
 f = open('/home/talnikar/adFVM/cases/vane/mesh/coords.txt', 'r')
@@ -39,4 +40,5 @@ suction = [v1[:n], v2[:n]]
 pressure = [v1[n:], v2[n:]]
 
 if __name__ == '__main__':
-    get_length(pressure, pressure)
+    print 'pressure', get_length(pressure, pressure)[0]/c
+    print 'suction', get_length(suction, suction)[0]/c

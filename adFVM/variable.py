@@ -435,6 +435,11 @@ class Function(object):
                 pass
             else:
                 raise Exception('op not recognised', op)
+
+            #if hasattr(op, 'outputs'):
+            #    for arg in op.outputs:
+            #        if isinstance(arg, Variable):
+            #            codeFile.write('\tif ({}.checkNAN()) throw 20;\n'.format(arg.name))
             prevOp = op
             
         codeFile.write('\n\tPyObject* outputs = PyTuple_CreateNone({});\n'.format(len(outputs)))

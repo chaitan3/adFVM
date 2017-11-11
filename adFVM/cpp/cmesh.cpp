@@ -183,7 +183,7 @@ void Mesh::build() {
         scalar* N = &this->cellCentres(n);
         scalar delta[3];
         for (i = 0; i < 3; i++) {
-            delta[i] = P[i]-N[i];
+            delta[i] = N[i]-P[i];
         }
         scalar d = sqrt(delta[0]*delta[0] + delta[1]*delta[1] + delta[2]*delta[2]);
         this->deltas(f) = d;

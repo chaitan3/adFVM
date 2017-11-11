@@ -39,7 +39,7 @@ def grad(phi, mesh, neighbour):
     else:
         gphi = Tensor.collate(phiN*wp, mesh.owner)
     return gphi
-   
+
 def gradCell(phi, mesh):
     gradPhi = 0
     nCellFaces = 6
@@ -60,9 +60,12 @@ def gradCell(phi, mesh):
     gradPhi = gradPhi/mesh.volumes
     return gradPhi
 
+
 def snGrad(phiL, phiR, mesh):
     return (phiR - phiL)/mesh.deltas
 
+# code gen ends heere
+   
 
 def internal_sum(phi, mesh, absolute=False):
     if 0:#config.device == "cpu":
@@ -87,6 +90,18 @@ def internal_sum(phi, mesh, absolute=False):
     #x = ad.patternbroadcast(x, phi.field.broadcastable)
     return x
 
+def internal_sum_numpy(phi, mesh):
+    return (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
+
+
+def laplacian(phi, DT):
+    logger.info('laplacian of {0}'.format(phi.name))
+    mesh = phi.mesh
+    gradFdotn = snGrad(phi)
+    laplacian2 = internal_sum(gradFdotn*DT, mesh)
+    return Field('laplacian({0})'.format(phi.name), laplacian2, phi.dimensions)
+
+
 def divOld(phi, U=None, ghost=False):
     logger.info('divergence of {0}'.format(phi.name))
     mesh = phi.mesh
@@ -100,18 +115,6 @@ def divOld(phi, U=None, ghost=False):
         return divPhi
     else:
         return Field('div({0})'.format(phi.name), divField, phi.dimensions)
-
-
-def internal_sum_numpy(phi, mesh):
-    return (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
-
-
-def laplacian(phi, DT):
-    logger.info('laplacian of {0}'.format(phi.name))
-    mesh = phi.mesh
-    gradFdotn = snGrad(phi)
-    laplacian2 = internal_sum(gradFdotn*DT, mesh)
-    return Field('laplacian({0})'.format(phi.name), laplacian2, phi.dimensions)
 
 # dual defined 
 def gradOld(phi, ghost=False, op=False, numpy=False):
