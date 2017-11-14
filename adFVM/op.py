@@ -63,6 +63,7 @@ def gradCell(phi, mesh):
 
 def snGrad(phiL, phiR, mesh):
     return (phiR - phiL)/mesh.deltas
+# corrected snGrad?
 
 # code gen ends heere
    

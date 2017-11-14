@@ -110,7 +110,6 @@ class RCF(Solver):
     # only reads fields
     @config.timeFunction('Time for reading fields')
     def readFields(self, t, suffix=''):
-
         with IOField.handle(t):
             U = IOField.read('U' + suffix, skipField=False)
             T = IOField.read('T' + suffix, skipField=False)
@@ -194,15 +193,16 @@ class RCF(Solver):
         D = mesh.deltasUnit
         N = mesh.normals
 
-        ##qF = kappa*snGrad(TL, TR, mesh)
-        #qF = kappa*gradTF[0].dot(mesh.normals)
-        gradTF = gradTF[0] + snGrad(TL, TR, mesh)*D - gradTF[0].dot(D)*D
-        gradUF =  gradUF + snGrad(UL, UR, mesh).outer(D) - gradUF.tensordot(D).outer(D)
-        #gradTF = gradTF[0]
-        #gradUF = gradUF 
-        qF = kappa*gradTF.dot(N)
+        #gradTF = gradTF[0] + snGrad(TL, TR, mesh)*D - gradTF[0].dot(D)*D
+        #gradUF =  gradUF + snGrad(UL, UR, mesh).outer(D) - gradUF.tensordot(D).outer(D)
+        ##gradTF = gradTF[0]
+        ##gradUF = gradUF 
+        #qF = kappa*gradTF.dot(N)
+        #tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
 
-        tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
+        qF = kappa*snGrad(TL, TR, mesh)
+        tmp2 = snGrad(UL, UR, mesh) + gradUF.transpose().tensordot(N)
+
         tmp3 = gradUF.trace()
         sigmaF = mu*(tmp2-2./3*tmp3*N)
 
