@@ -66,7 +66,7 @@ for i in range(0, N):
     tn = t + np.dot(dfdu, t)*dt
     ts.append(tn.flatten())
 ts = np.array(ts)
-plt.plot(ts)
+#plt.plot(ts)
 #plt.show()
     
 n = N + 1
@@ -77,38 +77,41 @@ def dot(x, y):
 lamb = 1e1
 def f(u):
     x, p = u[:3*n], u[3*n:6*n]
-    #x, p, v = u[:3*n], u[3*n:6*n], u[6*n:]
-    #v = v.reshape((N, 1))
-    #lamb = 100. + v
+    #lambc = lamb
+    v = u[6*n:]
+    v = v.reshape((N, 1))
+    lambc = lamb + v
     x = x.reshape((n, 3))
     p = p.reshape((n, 3))
 
     dfdu = dfdu_lorenz(ad.array(xs[:-1]), 28, mod=ad)*dt + ad.eye(3).reshape((1,3,3))
     dJdu = dJdu_obj(ad.array(xs[:-1]), mod=ad)
     #dJdu = 0.
-    fx = x[1:]+p[1:]*dot(x[:-1], x[:-1]).reshape((-1,1))/lamb - dot(dfdu, x[:-1].reshape((N, 1, 3))) - dJdu
-    fp = p[:-1]+x[:-1]*dot(p[1:], p[1:]).reshape((-1,1))/lamb - x[:-1] - dot(dfdu.transpose((0, 2, 1)), p[1:].reshape((N, 1, 3)))
+    fx = x[1:]+p[1:]*dot(x[:-1], x[:-1]).reshape((-1,1))/lambc - dot(dfdu, x[:-1].reshape((N, 1, 3))) - dJdu
+    fp = p[:-1]+x[:-1]*dot(p[1:], p[1:]).reshape((-1,1))/lambc - x[:-1] - dot(dfdu.transpose((0, 2, 1)), p[1:].reshape((N, 1, 3)))
 
-    return ad.concatenate((x[0]-ad.array(ti.flatten()), ad.ravel(fx), ad.ravel(fp), p[-1]-x[-1]))
+    #return ad.concatenate((x[0]-ad.array(ti.flatten()), ad.ravel(fx), ad.ravel(fp), p[-1]-x[-1]))
     ##constraint
-    ##cons = 1e-2
     #cons = 1e-2
-    #frob = dot(x[:-1], x[:-1])*dot(p[1:], p[1:])/(ad.ravel(lamb)**2)
-    #return ad.concatenate((x[0]-ad.array(ti.flatten()), ad.ravel(fx), ad.ravel(fp), p[-1]-x[-1], ad.ravel(v)*(frob-cons)))
+    cons = 1e-2
+    frob = dot(x[:-1], x[:-1])*dot(p[1:], p[1:])/(ad.ravel(lamb)**2)
+    return ad.concatenate((x[0]-ad.array(ti.flatten()), ad.ravel(fx), ad.ravel(fp), p[-1]-x[-1], ad.ravel(v)*(frob-cons)))
 
 xi = ts.flatten()
 pi = xi
-u0 = np.concatenate((xi, pi))
+#u0 = np.concatenate((xi, pi))
+v = np.zeros(N)
+u0 = np.concatenate((xi, pi, v))
+
 u0 = ad.array(u0)
-#u0 = ad.array(np.random.randn(6*n + N))
 u = ad.solve(f, u0, max_iter=1000)
 
 x, p = u[:3*n]._value, u[3*n:6*n]._value
-#x, p, v = u[:3*n]._value, u[3*n:6*n]._value, u[6*n:]._value
 x = x.reshape(n, 3)
 p = p.reshape(n, 3)
-L = p[1:].reshape(N, 1, 3)*x[:-1].reshape(N, 3, 1)/lamb
-#L = p[1:].reshape(N, 1, 3)*x[:-1].reshape(N, 3, 1)/(100. + v.reshape(N, 1, 1))**2
+#L = p[1:].reshape(N, 1, 3)*x[:-1].reshape(N, 3, 1)/lamb
+v = u[6*n:]._value
+L = p[1:].reshape(N, 1, 3)*x[:-1].reshape(N, 3, 1)/(lamb + v.reshape(N, 1, 1))**2
 plt.plot(x)
 #plt.plot(v)
 plt.show()
