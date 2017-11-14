@@ -193,13 +193,17 @@ class RCF(Solver):
         D = mesh.deltasUnit
         N = mesh.normals
 
+        # charles, unstable
         #gradTF = gradTF[0] + snGrad(TL, TR, mesh)*D - gradTF[0].dot(D)*D
         #gradUF =  gradUF + snGrad(UL, UR, mesh).outer(D) - gradUF.tensordot(D).outer(D)
+        # stable but too dissipative
         ##gradTF = gradTF[0]
         ##gradUF = gradUF 
         #qF = kappa*gradTF.dot(N)
         #tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
 
+        # more accurate, slightly unstable
+        # needs snGrad correction?
         qF = kappa*snGrad(TL, TR, mesh)
         tmp2 = snGrad(UL, UR, mesh) + gradUF.transpose().tensordot(N)
 
@@ -269,10 +273,12 @@ class RCF(Solver):
             rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
             rhoFlux, rhoUFlux, rhoEFlux = self.riemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
             rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
+            # more accurate
             #UF = 0.5*(ULF + URF)
             #TF = 0.5*(TLF + TRF)
             #gradUF = central(gradU, mesh)
             #gradTF = central(gradT, mesh)
+            # charles
             TF = 0.5*(TL + TR)
             UF = 0.5*(UL + UR)
             gradTF = 0.5*(gradT.extract(P) + gradT.extract(N))
