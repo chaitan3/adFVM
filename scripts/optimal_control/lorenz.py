@@ -93,7 +93,7 @@ def f(u):
     #return ad.concatenate((x[0]-ad.array(ti.flatten()), ad.ravel(fx), ad.ravel(fp), p[-1]-x[-1]))
     ##constraint
     #cons = 1e-2
-    cons = 1e-2
+    cons = 1e-4
     frob = dot(x[:-1], x[:-1])*dot(p[1:], p[1:])/(ad.ravel(lamb)**2)
     return ad.concatenate((x[0]-ad.array(ti.flatten()), ad.ravel(fx), ad.ravel(fp), p[-1]-x[-1], ad.ravel(v)*(frob-cons)))
 
@@ -104,7 +104,7 @@ v = np.zeros(N)
 u0 = np.concatenate((xi, pi, v))
 
 u0 = ad.array(u0)
-u = ad.solve(f, u0, max_iter=1000)
+u = ad.solve(f, u0, max_iter=1000, rel_tol=1e-12, abs_tol=1e-6)
 
 x, p = u[:3*n]._value, u[3*n:6*n]._value
 x = x.reshape(n, 3)
