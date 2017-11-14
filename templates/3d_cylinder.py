@@ -90,11 +90,11 @@ parameters = 'mesh'
 #parameters = ('BCs', 'p', 'left', 'U0')
 
 nSteps = 200000
-writeInterval = 10000
+writeInterval = 50000
 #reportInterval = 100
 #sampleInterval = 50
-startTime = 0.0
-dt = 1e-8
+startTime = 1.0
+dt = 1e-9
 
 viscousInterval = 1
 #adjParams = [1e-2, 'uniform', None]

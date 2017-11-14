@@ -34,20 +34,29 @@ def dfdu_lorenz(u, rho, mod=np, per=0.0):
     dfdu = mod.concatenate((f1, f2, f3), axis=2)
     return dfdu
 
+def obj(u, r=0.):
+    return u[:,2]**2/(2*N)
+
+def dJdu_obj(u, r=0., mod=np):
+    dJdu = mod.zeros(u.shape)
+    dJdu[:,2] = u[:,2]/N
+    return dJdu
+
 dt = 0.001
 Ni = 50000
 x = np.array([1, 0, -1])
 for i in range(0, Ni):
     x = x + lorenz(x, 28)*dt
 #N = 10000
-N = 10000
+N = 1000
 xs = [x]
 for i in range(0, N):
     x = xs[-1]
     xn = x + lorenz(x, 28)*dt
     xs.append(xn)
-#plot(xs)
-#show()
+xs = np.array(xs)
+#plt.plot(xs)
+#plt.show()
 
 ti = np.random.randn(3,1)
 ts = [ti.flatten()]
@@ -56,28 +65,54 @@ for i in range(0, N):
     dfdu = dfdu_lorenz(x, 28).reshape(3,3)
     tn = t + np.dot(dfdu, t)*dt
     ts.append(tn.flatten())
-#plot(ts)
-#show()
+ts = np.array(ts)
+plt.plot(ts)
+#plt.show()
     
 n = N + 1
+
+def dot(x, y):
+    return (x*y).sum(axis=-1)
+
+lamb = 1e1
 def f(u):
-    x, p = u[:3*n], u[3*n:]
+    x, p = u[:3*n], u[3*n:6*n]
+    #x, p, v = u[:3*n], u[3*n:6*n], u[6*n:]
+    #v = v.reshape((N, 1))
+    #lamb = 100. + v
     x = x.reshape((n, 3))
     p = p.reshape((n, 3))
-    def dot(x, y):
-        return (x*y).sum(axis=-1)
-    dfdu = dfdu_lorenz(x[:-1], 28, mod=ad)*dt + ad.eye(3).reshape((1,3,3))
-    lamb = 100.
-    fx = x[1:]+1./lamb*p[1:]*(dot(x[:-1], x[:-1]).reshape((-1,1))) - dot(dfdu, x[:-1].reshape((N, 1, 3)))
-    fp = p[:-1]+1./lamb*x[:-1]*(dot(p[1:], p[1:]).reshape((-1,1))) - x[:-1] - dot(dfdu.transpose((0, 2, 1)), p[1:].reshape((N, 1, 3)))
-    return ad.concatenate((x[0]-ad.array(ti.flatten()), ad.ravel(fx), ad.ravel(fp), p[-1]-x[-1]))
 
-u0 = ad.array(np.random.randn(6*n))
+    dfdu = dfdu_lorenz(ad.array(xs[:-1]), 28, mod=ad)*dt + ad.eye(3).reshape((1,3,3))
+    dJdu = dJdu_obj(ad.array(xs[:-1]), mod=ad)
+    #dJdu = 0.
+    fx = x[1:]+p[1:]*dot(x[:-1], x[:-1]).reshape((-1,1))/lamb - dot(dfdu, x[:-1].reshape((N, 1, 3))) - dJdu
+    fp = p[:-1]+x[:-1]*dot(p[1:], p[1:]).reshape((-1,1))/lamb - x[:-1] - dot(dfdu.transpose((0, 2, 1)), p[1:].reshape((N, 1, 3)))
+
+    return ad.concatenate((x[0]-ad.array(ti.flatten()), ad.ravel(fx), ad.ravel(fp), p[-1]-x[-1]))
+    ##constraint
+    ##cons = 1e-2
+    #cons = 1e-2
+    #frob = dot(x[:-1], x[:-1])*dot(p[1:], p[1:])/(ad.ravel(lamb)**2)
+    #return ad.concatenate((x[0]-ad.array(ti.flatten()), ad.ravel(fx), ad.ravel(fp), p[-1]-x[-1], ad.ravel(v)*(frob-cons)))
+
+xi = ts.flatten()
+pi = xi
+u0 = np.concatenate((xi, pi))
+u0 = ad.array(u0)
+#u0 = ad.array(np.random.randn(6*n + N))
 u = ad.solve(f, u0, max_iter=1000)
 
-x, p = u[:3*n]._value, u[3*n:]._value
+x, p = u[:3*n]._value, u[3*n:6*n]._value
+#x, p, v = u[:3*n]._value, u[3*n:6*n]._value, u[6*n:]._value
 x = x.reshape(n, 3)
 p = p.reshape(n, 3)
-L = p.reshape(n, 1, 3)*x.reshape(n, 3, 1)
+L = p[1:].reshape(N, 1, 3)*x[:-1].reshape(N, 3, 1)/lamb
+#L = p[1:].reshape(N, 1, 3)*x[:-1].reshape(N, 3, 1)/(100. + v.reshape(N, 1, 1))**2
 plt.plot(x)
+#plt.plot(v)
+plt.show()
+#plt.plot(p)
+#plt.plot(dot(x[:-1], x[:-1])*dot(p[1:], p[1:])/(100.+v)**2)
+plt.plot(L[:,:,0])
 plt.show()
