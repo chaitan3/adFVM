@@ -197,8 +197,8 @@ class RCF(Solver):
         #gradTF = gradTF[0] + snGrad(TL, TR, mesh)*D - gradTF[0].dot(D)*D
         #gradUF =  gradUF + snGrad(UL, UR, mesh).outer(D) - gradUF.tensordot(D).outer(D)
         # stable but too dissipative
-        ##gradTF = gradTF[0]
-        ##gradUF = gradUF 
+        #gradTF = gradTF[0]
+        #gradUF = gradUF 
         #qF = kappa*gradTF.dot(N)
         #tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
 
@@ -208,6 +208,9 @@ class RCF(Solver):
         # snGrad correction
         qF = kappa*snGradCorr(TL, TR, gradTF, mesh)
         tmp2 = snGradCorr(UL, UR, gradUF, mesh) + gradUF.transpose().tensordot(N)
+        # old setup
+        #qF = kappa*snGrad(TL, TR, mesh)
+        #tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
 
         tmp3 = gradUF.trace()
         sigmaF = mu*(tmp2-2./3*tmp3*N)
@@ -260,7 +263,7 @@ class RCF(Solver):
         UL, UR = U.extract(P), U.extract(N)
 
         if characteristic:
-            URF, TRF, pRF = U.extract(N), T.extract(N), p.extract(N)
+            URF, TRF, pRF = UR, TR, p.extract(N)
             rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
             rhoFlux, rhoUFlux, rhoEFlux = self.boundaryRiemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
             rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
@@ -276,13 +279,13 @@ class RCF(Solver):
             rhoFlux, rhoUFlux, rhoEFlux = self.riemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
             rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)
             # more accurate
-            #UF = 0.5*(ULF + URF)
-            #TF = 0.5*(TLF + TRF)
+            UF = 0.5*(ULF + URF)
+            TF = 0.5*(TLF + TRF)
             #gradUF = central(gradU, mesh)
             #gradTF = central(gradT, mesh)
             # charles
-            TF = 0.5*(TL + TR)
-            UF = 0.5*(UL + UR)
+            #TF = 0.5*(TL + TR)
+            #UF = 0.5*(UL + UR)
             gradTF = 0.5*(gradT.extract(P) + gradT.extract(N))
             gradUF = 0.5*(gradU.extract(P) + gradU.extract(N))
 
