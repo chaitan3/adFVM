@@ -68,9 +68,9 @@ def snGradCorr(phiL, phiR, gradPhiF, mesh):
     implicit = (phiR - phiL)/mesh.deltas
     cost = mesh.deltasUnit.dot(mesh.normals)
     if phiL.shape == (1,):
-        explicit = gradPhiF[0].dot(mesh.normals-mesh.deltas/cost)
+        explicit = gradPhiF[0].dot(mesh.normals-mesh.deltasUnit/cost)
     else:
-        explicit = gradPhiF.tensordot(mesh.normals-mesh.deltas/cost)
+        explicit = gradPhiF.tensordot(mesh.normals-mesh.deltasUnit/cost)
     return implicit/cost + explicit
 # code gen ends heere
    
