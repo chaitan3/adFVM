@@ -2,7 +2,7 @@ from . import config, riemann, interp
 from .tensor import Kernel, ExternalFunctionOp
 from .variable import Variable, Function, Zeros
 from .field import Field, IOField, CellField
-from .op import  div, absDiv, snGrad, grad, gradCell
+from .op import  div, absDiv, snGrad, grad, gradCell, snGradCorr
 from .solver import Solver
 from .interp import central, secondOrder
 from . import BCs
@@ -203,9 +203,11 @@ class RCF(Solver):
         #tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
 
         # more accurate, slightly unstable
-        # needs snGrad correction?
-        qF = kappa*snGrad(TL, TR, mesh)
-        tmp2 = snGrad(UL, UR, mesh) + gradUF.transpose().tensordot(N)
+        #qF = kappa*snGrad(TL, TR, mesh)
+        #tmp2 = snGrad(UL, UR, mesh) + gradUF.transpose().tensordot(N)
+        # snGrad correction
+        qF = kappa*snGradCorr(TL, TR, gradTF, mesh)
+        tmp2 = snGradCorr(UL, UR, gradUF, mesh) + gradUF.transpose().tensordot(N)
 
         tmp3 = gradUF.trace()
         sigmaF = mu*(tmp2-2./3*tmp3*N)

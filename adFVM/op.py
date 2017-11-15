@@ -63,8 +63,15 @@ def gradCell(phi, mesh):
 
 def snGrad(phiL, phiR, mesh):
     return (phiR - phiL)/mesh.deltas
-# corrected snGrad?
 
+def snGradCorr(phiL, phiR, gradPhiF, mesh):
+    implicit = (phiR - phiL)/mesh.deltas
+    cost = mesh.deltasUnit.dot(mesh.normals)
+    if phiL.shape == (1,):
+        explicit = gradPhiF[0].dot(mesh.normals-mesh.deltas/cost)
+    else:
+        explicit = gradPhiF.tensordot(mesh.normals-mesh.deltas/cost)
+    return implicit/cost + explicit
 # code gen ends heere
    
 
