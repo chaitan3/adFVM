@@ -259,24 +259,24 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         V4 = rho*u3/re
         V5 = -rho/re
 
-        k1 = (V2*V2+V3*V3+V4*V4)/(2*V5)
-        s=g-V1+k1
-        re = pref*np.exp(-s/g1)*(g1*(1/pref)**g/V5**g)**(1/g1)
-        #re = 1
-        k2 = k1-g
-        k3 = k1*k1 -2*g*k1 + g
-        k4 = k2-g1
-        k5 = k2*k2 - g1*(k1+k2)
-        c1 = g1*V5-V2*V2
-        c2 = g1*V5-V3*V3
-        c3 = g1*V5-V4*V4
-        d1 = -V2*V3
-        d2 = -V2*V4
-        d3 = -V3*V4
-        e1 = V2*V5
-        e2 = V3*V5
-        e3 = V4*V5
-        print 'here2'
+        #k1 = (V2*V2+V3*V3+V4*V4)/(2*V5)
+        #s=g-V1+k1
+        #re = pref*np.exp(-s/g1)*(g1*(1/pref)**g/(-V5)**g)**(1/g1)
+        ##re = 1
+        #k2 = k1-g
+        #k3 = k1*k1 -2*g*k1 + g
+        #k4 = k2-g1
+        #k5 = k2*k2 - g1*(k1+k2)
+        #c1 = g1*V5-V2*V2
+        #c2 = g1*V5-V3*V3
+        #c3 = g1*V5-V4*V4
+        #d1 = -V2*V3
+        #d2 = -V2*V4
+        #d3 = -V3*V4
+        #e1 = V2*V5
+        #e2 = V3*V5
+        #e3 = V4*V5
+        #print 'here2'
 
         #A = np.array([[[e1*V5, c1*V5,d1*V5, d2*V5, k2*e1],[c1*V5, -(c1+2*g1*V5)*V2, -c1*V3, -c1*V4, c1*k2+g1*V2*V2],[d1*V5,-c1*V3, -c2*V2, -d1*V4,k4*d1],[d2*V5,-c1*V4,-d1*V4,-c3*V2,k4*d2],[k2*e1,c1*k2+g1*V2*V2,k4*d1,k4*d2,k5*V2]],[[e2*V5,d1*V5, c2*V5,d3*V5,k2*e2],[d1*V5,-c1*V3,-c2*V2,-d1*V4,k4*d1],[c2*V5,-c2*V2,-(c2+2*g1*V5)*V3, -c2*V4,c2*k2+g1*V3*V3],[d3*V5,-d1*V4,-c2*V4,-c3*V3,k4*d3],[k2*e2,k4*d1,c2*k2+g1*V3*V3,k4*d3,k5*V3]],[[e3*V5,d2*V5,d3*V5,c3*V5,k2*e3],[d2*V5,-c1*V4,-d2*V3,-c3*V2,k4*d2],[d3*V5,-d2*V3,-c2*V4,-c3*V3,k4*d3],[c3*V5,-c3*V2,-c3*V3,-(c3+2*g1*V5)*V4,c3*k2+g1*V4*V4],[k2*c2,k4*d2,k4*d3,c3*k2+g1*V4*V4,k5*V4]]])
         #A = re/(g1*V5*V5)*A
@@ -291,12 +291,13 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         #B = 1
         #Y = 1
         from .symmetrizations.entropy_hughes_numerical import expression
+        #Twq, B, Y, A0I, A = expression(rho,u1,u2,u3,p,V1,V2,V3,V4,V5, pref, g, re)
         Twq, B, Y, A0I, A = expression(rho,u1,u2,u3,p,V1,V2,V3,V4,V5, pref, g)
         Tvq = np.matmul(A0I, Twq)
         G = np.concatenate((gradrho.reshape(-1,1,3), gradU, gradp.reshape(-1,1,3)), axis=1)
         Gv = np.matmul(Tvq, G)
         M2 = np.einsum('pikj,pjl,plmn,pnm->pik', Y, A0I, A, Gv)
-        M1 = np.einsum('pkjil,plj->pki', B, Gv)
+        M1 = np.einsum('pkjil,plj->pik', B, Gv)
         M = M1 + M2
 
     elif visc == 'entropy_jameson' or visc == 'uniform':
