@@ -41,10 +41,10 @@ primal = RCF('/home/talnikar/adFVM/cases/3d_cylinder/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              #mu=lambda T: 2.5e-5*T/T,
-             #mu=lambda T: 2.5e-5,
+             mu=lambda T: 1.81e-5,
              #boundaryRiemannSolver='eulerLaxFriedrichs',
              objective = objective,
-             #fixedTimeStep = True,
+             fixedTimeStep = True,
 )
 
 def makePerturb(param, eps=1e-4):
@@ -91,10 +91,10 @@ parameters = 'mesh'
 
 nSteps = 200000
 writeInterval = 50000
-#reportInterval = 100
+reportInterval = 100
 #sampleInterval = 50
 startTime = 1.0
-dt = 1e-9
+dt = 6e-9
 
 viscousInterval = 1
 #adjParams = [1e-2, 'uniform', None]
