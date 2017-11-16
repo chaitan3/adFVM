@@ -194,24 +194,23 @@ class RCF(Solver):
         N = mesh.normals
 
         # charles, unstable
-        #gradTF = gradTF[0] + snGrad(TL, TR, mesh)*D - gradTF[0].dot(D)*D
-        #gradUF =  gradUF + snGrad(UL, UR, mesh).outer(D) - gradUF.tensordot(D).outer(D)
-        # stable but too dissipative
+        gradTF = gradTF[0] + snGrad(TL, TR, mesh)*D - gradTF[0].dot(D)*D
+        gradUF =  gradUF + snGrad(UL, UR, mesh).outer(D) - gradUF.tensordot(D).outer(D)
+        # stable, too dissipative
         #gradTF = gradTF[0]
         #gradUF = gradUF 
-        #qF = kappa*gradTF.dot(N)
-        #tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
+        qF = kappa*gradTF.dot(N)
+        tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
 
-        # SOMETHING IS WRONG, EVERYTHING TOO DISSIPATIVE
         # more accurate, slightly unstable
         #qF = kappa*snGrad(TL, TR, mesh)
         #tmp2 = snGrad(UL, UR, mesh) + gradUF.transpose().tensordot(N)
-        # snGrad correction
+        # snGrad correction, no difference
         #qF = kappa*snGradCorr(TL, TR, gradTF, mesh)
         #tmp2 = snGradCorr(UL, UR, gradUF, mesh) + gradUF.transpose().tensordot(N)
         # old setup
-        qF = kappa*snGrad(TL, TR, mesh)
-        tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
+        #qF = kappa*snGrad(TL, TR, mesh)
+        #tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
 
         tmp3 = gradUF.trace()
         sigmaF = mu*(tmp2-2./3*tmp3*N)
@@ -221,7 +220,6 @@ class RCF(Solver):
         return rhoUFlux, rhoEFlux
 
     #symbolic funcs
-
     def gradients(self, U, T, p, *mesh, **options):
         mesh = Mesh.container(mesh)
         neighbour = options.pop('neighbour', True)

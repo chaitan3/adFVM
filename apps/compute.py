@@ -39,20 +39,20 @@ for index, time in enumerate(times):
 
     with IOField.handle(time):
 
-        #outputs = computeGradients(solver, U, T, p)
-        #outputsF = []
-        #for field, name, dim in zip(outputs, names, dimensions):
-        #    outputsF.append(IOField(name, field, dim))
-        #    if len(dim) != 2:
-        #        outputsF[-1].defaultComplete()
-        #        outputsF[-1].write()
-        #pprint()
+        outputs = computeGradients(solver, U, T, p)
+        outputsF = []
+        for field, name, dim in zip(outputs, names, dimensions):
+            outputsF.append(IOField(name, field, dim))
+            if len(dim) != 2:
+                outputsF[-1].defaultComplete()
+                outputsF[-1].write()
+        pprint()
 
-        Re = getRe(U, T, p, rho, 2.5e-4)
-        #Re = getRe(U, T, p, rho, 5.5e-3)
-        Re.write(name='Re')
-        exit(1)
-        #pprint(Re.getPatch('outlet').mean())
+        #Re = getRe(U, T, p, rho, 2.5e-4)
+        ##Re = getRe(U, T, p, rho, 5.5e-3)
+        #Re.write(name='Re')
+        #exit(1)
+        ##pprint(Re.getPatch('outlet').mean())
 
         #enstrophy, Q = getEnstrophyAndQ(outputsF[1])
         #enstrophy.write(name='enstrophy') 
@@ -83,7 +83,7 @@ for index, time in enumerate(times):
 
         ###scale = lambda x: 1/(1+np.exp(-10*(x/parallel.max(x)-1)))
         scale = None
-        for visc in ["abarbanel", "entropy_jameson", "uniform"]:
+        for visc in ["abarbanel", "entropy_jameson", "uniform", "entropy_hughes"]:
         #for visc in ["abarbanel", "entropy_jameson", "entropy_hughes"]:
             adjNorm, energy, diss = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs, visc=visc, scale=scale)
             adjNorm.write()
