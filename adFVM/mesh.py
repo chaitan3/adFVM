@@ -653,7 +653,7 @@ class Mesh(object):
             F = self.faceCentres - self.cellCentres[C]
             w = (F*R).sum(axis=1)/(R*R).sum(axis=1)
 
-            # central scheme
+            # central difference scheme
             #linearWeights = w
             #quadraticWeights = 0.*F
             # upwind biased: gradient based

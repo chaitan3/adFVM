@@ -89,11 +89,11 @@ parameters = 'mesh'
 #perturb = [makePerturb(1.)]
 #parameters = ('BCs', 'p', 'left', 'U0')
 
-nSteps = 200000
+nSteps = 400000
 writeInterval = 50000
 reportInterval = 100
 #sampleInterval = 50
-startTime = 1.0
+startTime = 1.0012
 dt = 6e-9
 
 viscousInterval = 1

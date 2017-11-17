@@ -4,7 +4,8 @@ from .variable import Variable, Function, Zeros
 from .field import Field, IOField, CellField
 from .op import  div, absDiv, snGrad, grad, gradCell, snGradCorr
 from .solver import Solver
-from .interp import central, secondOrder
+from .interp import central
+from .interp import secondOrder as faceInterpolator
 from . import BCs
 from . import postpro
 from . import timestep
@@ -254,9 +255,9 @@ class RCF(Solver):
         characteristic = options.pop('characteristic', False)
         P, N = mesh.owner, mesh.neighbour
 
-        ULF = secondOrder(U, gradU, mesh, 0)
-        TLF = secondOrder(T, gradT, mesh, 0)
-        pLF = secondOrder(p, gradp, mesh, 0)
+        ULF = faceInterpolator(U, gradU, mesh, 0)
+        TLF = faceInterpolator(T, gradT, mesh, 0)
+        pLF = faceInterpolator(p, gradp, mesh, 0)
         rhoLF, rhoULF, rhoELF = self.conservative(ULF, TLF, pLF)
         TL, TR = T.extract(P), T.extract(N)
         UL, UR = U.extract(P), U.extract(N)
@@ -271,9 +272,9 @@ class RCF(Solver):
             gradTF = gradT.extract(N)
             gradUF = gradU.extract(N)
         else:
-            URF = secondOrder(U, gradU, mesh, 1)
-            TRF = secondOrder(T, gradT,  mesh, 1)
-            pRF = secondOrder(p, gradp, mesh, 1)
+            URF = faceInterpolator(U, gradU, mesh, 1)
+            TRF = faceInterpolator(T, gradT,  mesh, 1)
+            pRF = faceInterpolator(p, gradp, mesh, 1)
             rhoRF, rhoURF, rhoERF = self.conservative(URF, TRF, pRF)
             rhoFlux, rhoUFlux, rhoEFlux = self.riemannSolver(self.gamma, pLF, pRF, TLF, TRF, ULF, URF, \
             rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, mesh.normals)

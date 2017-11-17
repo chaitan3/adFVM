@@ -214,12 +214,22 @@ void Mesh::build() {
         }
         w1 /= d;
         w2 /= d;
+
+        // central difference + upwind gradient
         this->linearWeights(f, 0) = w1/3;
         this->linearWeights(f, 1) = w2/3;
         for (i = 0; i < 3; i++) {
             this->quadraticWeights(f, 0, i) = 2./3*pF[i] + 1./3*(pF[i]+w1*delta[i]);
             this->quadraticWeights(f, 1, i) = 2./3*nF[i] + 1./3*(nF[i]-w2*delta[i]);
         }
+        
+        // upwind
+        //this->linearWeights(f, 0) = 0;
+        //this->linearWeights(f, 1) = 0;
+        //for (i = 0; i < 3; i++) {
+        //    this->quadraticWeights(f, 0, i) = pF[i];
+        //    this->quadraticWeights(f, 1, i) = nF[i];
+        //}
     }
     PyObject_SetAttrString(this->mesh, "deltas", putArray(this->deltas));
     PyObject_SetAttrString(this->mesh, "deltasUnit", putArray(this->deltasUnit));

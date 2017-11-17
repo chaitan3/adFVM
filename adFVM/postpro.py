@@ -30,8 +30,10 @@ def computeGradients(solver, U, T, p):
     c = c.getInternal()
     p = p.getInternal()
     gradrho = g*(gradp-c*p)/(c*c)
+    TF = interp.centralOld(T, mesh)
+    gradT = op.gradOld(TF)
 
-    return gradrho.field, gradU.field, gradp.field, gradc.field, divU.field
+    return gradT.field, gradrho.field, gradU.field, gradp.field, gradc.field, divU.field
 
 def getEnstrophyAndQ(gradU):
     enstrophy =  gradU.norm()
