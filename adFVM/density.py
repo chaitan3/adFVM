@@ -194,7 +194,7 @@ class RCF(Solver):
         D = mesh.deltasUnit
         N = mesh.normals
 
-        # charles, unstable
+        # charles
         gradTF = gradTF[0] + snGrad(TL, TR, mesh)*D - gradTF[0].dot(D)*D
         gradUF =  gradUF + snGrad(UL, UR, mesh).outer(D) - gradUF.tensordot(D).outer(D)
         # stable, too dissipative
@@ -203,13 +203,13 @@ class RCF(Solver):
         qF = kappa*gradTF.dot(N)
         tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
 
-        # more accurate, slightly unstable
+        # no snGrad correction
         #qF = kappa*snGrad(TL, TR, mesh)
         #tmp2 = snGrad(UL, UR, mesh) + gradUF.transpose().tensordot(N)
-        # snGrad correction, no difference
+        # snGrad correction 
         #qF = kappa*snGradCorr(TL, TR, gradTF, mesh)
         #tmp2 = snGradCorr(UL, UR, gradUF, mesh) + gradUF.transpose().tensordot(N)
-        # old setup
+        # old theano setup
         #qF = kappa*snGrad(TL, TR, mesh)
         #tmp2 = (gradUF + gradUF.transpose()).tensordot(N)
 

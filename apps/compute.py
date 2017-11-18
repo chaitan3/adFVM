@@ -47,7 +47,6 @@ for index, time in enumerate(times):
                 outputsF[-1].defaultComplete()
                 outputsF[-1].write()
         pprint()
-        exit(1)
 
         #Re = getRe(U, T, p, rho, 2.5e-4)
         ##Re = getRe(U, T, p, rho, 5.5e-3)
