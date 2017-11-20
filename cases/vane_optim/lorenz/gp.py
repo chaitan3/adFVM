@@ -209,7 +209,7 @@ class GaussianProcess(object):
 
     def posterior_min(self):
         res = _optimize(lambda x: self.evaluate(x)[0][0], self.bounds, cons=self.cons)
-        return res
+        return res + (self.evaluate(res[0])[1][0,0],)
 
     def data_min(self):
         ys = np.array(self.y).flatten()

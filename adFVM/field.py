@@ -36,10 +36,7 @@ class Field(object):
         self.initField()
 
     def _getType(self):
-        if isinstance(self.field, np.ndarray):
-            return np
-        else:
-            return ad
+        return np
 
     def _getMesh(self):
         if isinstance(self.field, np.ndarray):
@@ -193,7 +190,7 @@ class Field(object):
     # creates a view
     def transpose(self):
         assert len(self.dimensions) == 2
-        return self.__class__('{0}.T'.format(self.name), ad.transpose(self.field, (0,2,1)), self.dimensions)
+        return self.__class__('{0}.T'.format(self.name), np.transpose(self.field, (0,2,1)), self.dimensions)
 
     def trace(self):
         assert len(self.dimensions) == 2

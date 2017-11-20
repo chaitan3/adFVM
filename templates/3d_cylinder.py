@@ -37,7 +37,7 @@ def objective(fields, solver):
     return drag
    
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('/home/talnikar/adFVM/cases/3d_cylinder/',
+primal = RCF('/home/talnikar/adFVM/cases/3d_cylinder/adjoint_jameson/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              #mu=lambda T: 2.5e-5*T/T,
@@ -90,15 +90,15 @@ parameters = 'mesh'
 #perturb = [makePerturb(1.)]
 #parameters = ('BCs', 'p', 'left', 'U0')
 
-nSteps = 400000
-writeInterval = 50000
+nSteps = 100000
+writeInterval = 1000
 reportInterval = 100
-#sampleInterval = 50
-startTime = 1.0
+sampleInterval = 50
+startTime = 2.0
 dt = 6e-9
 
-viscousInterval = 1
+viscousInterval = 10
 #adjParams = [1e-2, 'uniform', None]
 #adjParams = [1e-2, 'abarbanel', None]
-#adjParams = [1e-2, 'entropy_jameson', None]
+adjParams = [1e-2, 'entropy_jameson', None]
 #runCheckpoints = 3

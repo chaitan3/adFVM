@@ -54,9 +54,10 @@ for index, time in enumerate(times):
         #exit(1)
         ##pprint(Re.getPatch('outlet').mean())
 
-        #enstrophy, Q = getEnstrophyAndQ(outputsF[1])
-        #enstrophy.write(name='enstrophy') 
-        #Q.write(name='Q')
+        enstrophy, Q = getEnstrophyAndQ(outputsF[2])
+        enstrophy.write(name='enstrophy') 
+        Q.write(name='Q')
+        exit(1)
 
         #c, M, pt, s = getTotalPressureAndEntropy(U, T, p, solver)
         ##c.write(name='c') 

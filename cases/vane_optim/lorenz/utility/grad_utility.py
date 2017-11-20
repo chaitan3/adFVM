@@ -65,8 +65,8 @@ def doe():
 def optim():
     
     orig_bounds = np.array([[0.,1.], [0,1], [0,1], [0,1]])
-    L, sigma = 0.5, 0.001
-    #L, sigma = 0.3, 0.003
+    #L, sigma = 0.5, 0.001
+    L, sigma = 0.3, 0.003
     mean = 0.0092
     kernel = GP.SquaredExponentialKernel([L, L, L, L], sigma)
     #gp = GP.GaussianProcess(kernel, orig_bounds, noise=5e-9, cons=constraint)
@@ -98,7 +98,12 @@ def optim():
     #print yd
     #print ydn
     #exit(1)
-    gp2.train(x, y, yd, yn, ydn)
+    gp2.train(x[:m], y[:m], yd[:m], yn[:m], ydn[:m])
+    for i in range(m, n):
+        gp2.train(x[i], y[i], yd[i], yn[i], ydn[i])
+        #pmin = gp2.posterior_min()
+        #print pmin[1] + mean, pmin[2]
+    #exit(1)
     x = x[:m]
     y = y[:m]
     yn = yn[:m]
@@ -107,10 +112,10 @@ def optim():
 
     for i in range(m, 25):
         dmin = gp.data_min()
-        pmin = gp.posterior_min()
+        pmin = gp.posterior_min() 
         #print 'data min:', dmin[0], dmin[1] + mean
         #print 'posterior min:', pmin[0], pmin[1] + mean
-        print  '{},{},{}'.format(i, ','.join(np.char.mod('%f', pmin[0])), pmin[1] + mean)
+        print  '{},{},{},{}'.format(i, ','.join(np.char.mod('%f', pmin[0])), pmin[1] + mean, pmin[2])
 
         x = ei.optimize()
         y, yn = gp2.evaluate(x)
