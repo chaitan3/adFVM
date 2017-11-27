@@ -96,6 +96,7 @@ reportInterval = 100
 sampleInterval = 50
 startTime = 2.0
 dt = 6e-9
+runCheckpoints = 1
 
 viscousInterval = 10
 #adjParams = [1e-2, 'uniform', None]
