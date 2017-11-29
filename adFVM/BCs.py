@@ -61,6 +61,7 @@ class BoundaryCondition(object):
         self.patch['_{}'.format(key)] = value
         symbolic = StaticVariable((self.nFaces,) + dimensions)
         #print(symbolic.dtype)
+        self.keys.append(key)
         self.inputs.append((symbolic, value))
         return symbolic
 

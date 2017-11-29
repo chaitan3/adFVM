@@ -271,7 +271,7 @@ class Solver(object):
                     patch = getattr(self, phi).phi.BC[patchID]
                     index = patch.keys.index(key)
                     patch.inputs[index][1][:] += value
-                elif isinstance(param, ad.TensorType):
+                else:
                     raise NotImplementedError
 
         # made static
@@ -415,6 +415,8 @@ class Solver(object):
             #    doPerturb(revert=True)
             #    pprint()
 
+        if perturbation:
+            doPerturb(revert=True)
 
         if mode == 'forward':
             return solutions

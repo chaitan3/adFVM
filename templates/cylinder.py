@@ -47,21 +47,21 @@ primal = RCF('/home/talnikar/adFVM/cases/cylinder/testing/',
              fixedTimeStep = True,
 )
 
-def makePerturb(param, eps=1e-4):
-    def perturbMesh(fields, mesh, t):
-        if not hasattr(perturbMesh, 'perturbation'):
-            ## do the perturbation based on param and eps
-            #perturbMesh.perturbation = mesh.getPerturbation()
-            points = np.zeros_like(mesh.points)
-            #points[param] = eps
-            points[:] = eps*mesh.points
-            perturbMesh.perturbation = mesh.getPointsPerturbation(points)
-        return perturbMesh.perturbation
-    return perturbMesh
-#perturb = [makePerturb(1), makePerturb(2)]
-perturb = [makePerturb(1)]
-
-parameters = 'mesh'
+#def makePerturb(param, eps=1e-4):
+#    def perturbMesh(fields, mesh, t):
+#        if not hasattr(perturbMesh, 'perturbation'):
+#            ## do the perturbation based on param and eps
+#            #perturbMesh.perturbation = mesh.getPerturbation()
+#            points = np.zeros_like(mesh.points)
+#            #points[param] = eps
+#            points[:] = eps*mesh.points
+#            perturbMesh.perturbation = mesh.getPointsPerturbation(points)
+#        return perturbMesh.perturbation
+#    return perturbMesh
+##perturb = [makePerturb(1), makePerturb(2)]
+#perturb = [makePerturb(1)]
+#
+#parameters = 'mesh'
 
 #def makePerturb(scale):
 #    def perturb(fields, mesh, t):
@@ -69,7 +69,7 @@ parameters = 'mesh'
 #        #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
 #        mid = np.array([-0.0005, 0.0, 0.])
 #        #G = scale*np.exp(-2.5e9*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#        G = scale*np.exp(-2.5e6*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+#        G = scale*np.exp(-2.5e6*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
 #        rho = G
 #        rhoU = np.zeros((mesh.nInternalCells, 3))
 #        rhoU[:, 0] += G.flatten()*100
@@ -80,14 +80,16 @@ parameters = 'mesh'
 #perturb = [makePerturb(1e6)]
 #parameters = 'source'
 
-#def makePerturb(pt_per):
-#    def perturb(fields, mesh, t):
-#        return pt_per
-#    return perturb
+patchID = 'left'
+def makePerturb(pt_per):
+    def perturb(fields, mesh, t):
+        nFaces = mesh.boundary[patchID]['nFaces']
+        return pt_per*np.ones((nFaces, 1), config.precision)
+    return perturb
 
 #perturb = [makePerturb(0.1), makePerturb(0.2), makePerturb(0.4)]
-#perturb = [makePerturb(1.)]
-#parameters = ('BCs', 'p', 'left', 'U0')
+perturb = [makePerturb(1.)]
+parameters = ('BCs', 'p', patchID, 'pt')
 
 #nSteps = 200000
 #writeInterval = 10000

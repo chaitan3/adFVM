@@ -10,7 +10,7 @@ from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, getAdjointVisco
 from adFVM.solver import Solver
 from adFVM.tensor import TensorFunction
 from adFVM.variable import Variable, Function, Zeros
-from adFVM.mesh import cmesh
+from adFVM.mesh import cmesh, Mesh
 
 from problem import primal, nSteps, writeInterval, sampleInterval, reportInterval, viscousInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints, startTime
 
@@ -78,21 +78,42 @@ class Adjoint(Solver):
     def compileSolver(self):
         primal.compileSolver()
 
+        mesh = primal.mesh
         n = len(self.fields)
         scaling = Variable((1, 1))
+        # inputs of primal: fields, dt, mesh, source, BC, extra
         gradOutputs, gradInputs = primal.map.grad()
         fields = gradInputs[:n]
+
+        param = parameters[0]
+        if param == 'source':
+            start = n + 1 + len(mesh.getTensor()) + len(mesh.getScalar())
+            end = start + n
+        elif param == 'mesh':
+            start = n + 1
+            end = start + len(Mesh.gradFields)
+        elif isinstance(param, tuple):
+            assert param[0] == 'BCs'
+            _, phi, patchID, key = param
+            patch = getattr(primal, phi).phi.BC[patchID]
+            index = patch.keys.index(key)
+            variable = patch.inputs[index][0]
+            start = primal.map._inputs.index(variable)
+            end = start + 1
+        else:
+            raise NotImplementedError
+        paramGradient = gradInputs[start:end]
+
         args = primal.map._inputs + gradOutputs + [scaling]
-        outputs = list(fields) + gradInputs[n:]
+        outputs = list(fields) + paramGradient
         self.map = Function('primal_grad', args, outputs)
         if self.viscosityType and not matop_python:
             primalFields = primal.map._inputs[:n]
             M_2norm, DT = getAdjointViscosityCpp(*([primal, self.viscosityType] + primalFields + [scaling]))
             fields = viscositySolver(*([primal] + fields + [DT]))
+            outupts = list(fields) + paramGradient
             if write_M_2norm:
-                outputs = list(fields) + gradInputs[n:] + [M_2norm]
-            else:
-                outputs = list(fields) + gradInputs[n:]
+                outputs = outputs + [M_2norm]
             self.viscousMap = Function('primal_grad_viscous', args, outputs)
         #self.map self.map.getAdjoint()
 
@@ -263,26 +284,12 @@ class Adjoint(Solver):
 
                 #print([type(x) for x in outputs])
                 if sample:
-                    ms = n + 1
-                    me = ms + len(mesh.gradFields)
-                    meshGradient = outputs[ms:me]
-                    #import pdb;pdb.set_trace()
-                    ss = n+1+len(mesh.gradFields + mesh.intFields)
-                    se = ss + n
-                    sourceGradient = outputs[ss:se]
+                    paramGradient = list(outputs[n:])
 
                     # compute sensitivity using adjoint solution
                     sensitivities = []
                     for index, perturbation in enumerate(perturbations):
                         # make efficient cpu implementation
-                        param = parameters[0]
-                        if param == 'source':
-                            paramGradient = sourceGradient
-                        elif param == 'mesh':
-                            paramGradient = meshGradient
-                        else:
-                            raise Exception('unrecognized perturbation')
-                        paramGradient = list(paramGradient)
                         #sensitivity = 0.
                         #for derivative, delphi in zip(paramGradient, perturbation):
                         #    sensitivity += np.sum(derivative * delphi)
@@ -303,7 +310,7 @@ class Adjoint(Solver):
                     end = time.time()
                     pprint('Time for adjoint iteration: {0}'.format(end-start))
                     pprint('Time since beginning:', end-config.runtime)
-                    pprint('Simulation Time and step: {0}, {1}\n'.format(*timeSteps[primalIndex + adjointIndex + 1]))
+                    pprint('Simulation Time and step: {0}, {1}'.format(*timeSteps[primalIndex + adjointIndex + 1]))
                 pprint()
                 #parallel.mpi.Barrier()
 
