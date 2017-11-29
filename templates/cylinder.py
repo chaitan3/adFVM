@@ -80,16 +80,16 @@ def makePerturb(scale):
 perturb = [makePerturb(1e-3)]
 parameters = 'source'
 
-#patchID = 'left'
-#def makePerturb(pt_per):
-#    def perturb(fields, mesh, t):
-#        nFaces = mesh.boundary[patchID]['nFaces']
-#        return pt_per*np.ones((nFaces, 1), config.precision)
-#    return perturb
+patchID = 'left'
+def makePerturb(pt_per):
+    def perturb(fields, mesh, t):
+        nFaces = mesh.boundary[patchID]['nFaces']
+        return pt_per*np.ones((nFaces, 1), config.precision)
+    return perturb
 
 #perturb = [makePerturb(0.1), makePerturb(0.2), makePerturb(0.4)]
-#perturb = [makePerturb(1.)]
-#parameters = ('BCs', 'p', patchID, 'pt')
+perturb = [makePerturb(1.)]
+parameters = ('BCs', 'p', patchID, 'pt')
 
 #nSteps = 200000
 #writeInterval = 10000
