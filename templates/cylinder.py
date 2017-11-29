@@ -63,33 +63,33 @@ primal = RCF('/home/talnikar/adFVM/cases/cylinder/testing/',
 #
 #parameters = 'mesh'
 
-#def makePerturb(scale):
-#    def perturb(fields, mesh, t):
-#        #mid = np.array([-0.012, 0.0, 0.])
-#        #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#        mid = np.array([-0.0005, 0.0, 0.])
-#        #G = scale*np.exp(-2.5e9*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#        G = scale*np.exp(-2.5e6*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
-#        rho = G
-#        rhoU = np.zeros((mesh.nInternalCells, 3))
-#        rhoU[:, 0] += G.flatten()*100
-#        rhoE = G*2e5
-#        return rho, rhoU, rhoE
-#    return perturb
-# 
-#perturb = [makePerturb(1e6)]
-#parameters = 'source'
-
-patchID = 'left'
-def makePerturb(pt_per):
+def makePerturb(scale):
     def perturb(fields, mesh, t):
-        nFaces = mesh.boundary[patchID]['nFaces']
-        return pt_per*np.ones((nFaces, 1), config.precision)
+        #mid = np.array([-0.012, 0.0, 0.])
+        #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+        mid = np.array([-0.0005, 0.0, 0.], config.precision)
+        #G = scale*np.exp(-2.5e9*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+        G = scale*np.exp(-2.5e6*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+        rho = G
+        rhoU = np.zeros((mesh.nInternalCells, 3), config.precision)
+        rhoU[:, 0] += G.flatten()*100
+        rhoE = G*2e5
+        return rho, rhoU, rhoE
     return perturb
+ 
+perturb = [makePerturb(1e-3)]
+parameters = 'source'
+
+#patchID = 'left'
+#def makePerturb(pt_per):
+#    def perturb(fields, mesh, t):
+#        nFaces = mesh.boundary[patchID]['nFaces']
+#        return pt_per*np.ones((nFaces, 1), config.precision)
+#    return perturb
 
 #perturb = [makePerturb(0.1), makePerturb(0.2), makePerturb(0.4)]
-perturb = [makePerturb(1.)]
-parameters = ('BCs', 'p', patchID, 'pt')
+#perturb = [makePerturb(1.)]
+#parameters = ('BCs', 'p', patchID, 'pt')
 
 #nSteps = 200000
 #writeInterval = 10000
