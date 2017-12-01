@@ -71,7 +71,7 @@ class SquaredExponentialKernel(Kernel):
         return sigma**2*np.exp(-(d**2).sum(axis=-1)/2)
 
 class GaussianProcess(object):
-    def __init__(self, kernel, bounds, noise=None, cons=None):
+    def __init__(self, kernel, bounds, noise=None, noiseGP=False, cons=None):
         self.kernel = kernel
         self.x = []
         self.y = []
@@ -80,6 +80,12 @@ class GaussianProcess(object):
         self.noise = noise
         self.ndim = self.bounds.shape[0]
         self.cons = cons
+        if noise is None:
+            self.noise = [0., np.zeros(self.ndim)]
+        self.noiseGP = None
+        if noiseGP:
+            kernel = SquaredExponentialKernel(kernel.L, 1.)
+            self.noiseGP = GaussianProcess(kernel, bounds, noise=0.1)
     
     def evaluate(self, xs):
         xs = _sanitize(xs)
@@ -99,8 +105,6 @@ class GaussianProcess(object):
         emu = np.exp(mu + np.diag(cov)/2)
         ecov = np.outer(emu, emu)*(np.exp(cov)-1)
         return emu, ecov
-
-
 
     def explore(self, n, func):
         assert len(self.x) == 0
@@ -136,12 +140,19 @@ class GaussianProcess(object):
         self.x.extend(x)
         self.y.extend(y)
         self.Kd = self.kernel.evaluate(self.x, self.x)
-        if self.noise is not None:
+        if self.noiseGP is None:
             yn = self.noise
         if isinstance(yn, float):
             yn = list(yn*np.ones_like(np.array(y)))
-        self.yn.extend(yn)
-        self.Kd += np.diag(np.array(self.yn))
+        yn = np.array(yn)
+        if self.noiseGP is None:
+            if len(self.x) != len(yn):
+                yn = np.tile(yn[0], len(self.x))
+        else: 
+            self.noiseGP.train(x, np.log(yn/self.noise))
+            indices = np.indices((len(self.x), len(self.x)))
+            yn = self.noiseGP.exponential(self.x)[0]*self.noise
+        self.Kd += np.diag(np.array(yn))
         # do noise analysis.
 
     def posterior_min(self):

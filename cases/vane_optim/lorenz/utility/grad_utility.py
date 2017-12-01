@@ -11,7 +11,7 @@ sys.path.append('../')
 import gp_noder as GP
 import gp as GP2
 
-stateFile = 'state_edit.pkl'
+stateFile = 'state.pkl'
 STATES = ['BEGIN', 'MESH', 'PRIMAL1', 'PRIMADJ', 'DONE']
 def save_state(state):
     with open(stateFile, 'w') as f:
@@ -65,12 +65,12 @@ def doe():
 def optim():
     
     orig_bounds = np.array([[0.,1.], [0,1], [0,1], [0,1]])
-    #L, sigma = 0.5, 0.001
-    L, sigma = 0.3, 0.003
+    L, sigma = 0.5, 0.001
+    #L, sigma = 0.3, 0.003
     mean = 0.0092
     kernel = GP.SquaredExponentialKernel([L, L, L, L], sigma)
     #gp = GP.GaussianProcess(kernel, orig_bounds, noise=5e-9, cons=constraint)
-    gp = GP.GaussianProcess(kernel, orig_bounds, noise=None, cons=constraint)
+    gp = GP.GaussianProcess(kernel, orig_bounds, noise=5e-9, noiseGP=True, cons=constraint)
     ei = GP.ExpectedImprovement(gp)
 
     kernel = GP2.SquaredExponentialKernel([L, L, L, L], sigma)
@@ -86,7 +86,9 @@ def optim():
     #        state['evals'].append(res)
     #        update_state(state, 'DONE', index)
     #        exit(1)
-    n = len(state['points'])-1
+    n = len(state['points'])
+    if len(state['evals']) < len(state['points']):
+        n -= 1
     m = 8
     x = state['points'][:n]
     y = [res[0]-mean for res in state['evals']][:n]

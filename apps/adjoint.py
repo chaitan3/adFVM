@@ -111,10 +111,11 @@ class Adjoint(Solver):
             primalFields = primal.map._inputs[:n]
             M_2norm, DT = getAdjointViscosityCpp(*([primal, self.viscosityType] + primalFields + [scaling]))
             fields = viscositySolver(*([primal] + fields + [DT]))
-            outupts = list(fields) + paramGradient
+            outputs = list(fields) + paramGradient
             if write_M_2norm:
                 outputs = outputs + [M_2norm]
             self.viscousMap = Function('primal_grad_viscous', args, outputs)
+            #exit(0)
         #self.map self.map.getAdjoint()
 
     def initPrimalData(self):

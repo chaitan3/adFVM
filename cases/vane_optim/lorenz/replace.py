@@ -13,6 +13,7 @@ if len(sys.argv) > 1:
     del b['state'][-1]
     del b['points'][-1]
 else:
+    print b['evals'][3]
     print sum([x[0] for x in b['evals']])/8
     print b; exit(1)
 
