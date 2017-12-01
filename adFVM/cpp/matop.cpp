@@ -44,6 +44,9 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     Vec x, b;
     Mat A;
     long long start = current_timestamp();
+    //if (mesh.rank == 0) cout << "here1" << endl;
+    //MPI_Barrier(MPI_COMM_WORLD);
+    //exit(1);
 
     PetscInt n = mesh.nInternalCells;
     PetscInt il, ih;

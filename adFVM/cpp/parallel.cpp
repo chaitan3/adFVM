@@ -9,11 +9,14 @@ template void func<>(vector<extArrType<scalar, 3, 1>*> phiP); \
 template void func<>(vector<extArrType<scalar, 3, 3>*> phiP);
 
 static MPI_Request* mpi_req;
+static MPI_Request* mpi_req_grad;
 static integer mpi_reqIndex;
+static integer mpi_reqIndex_grad;
 static integer mpi_reqField = 0;
 static bool mpi_init = false;
 static bool mpi_init_grad = false;
 static map<void *, void *> mpi_reqBuf;
+static map<void *, void *> mpi_reqBuf_grad;
 //extArrType<integer> owner;
 
 void parallel_init() {
@@ -34,6 +37,7 @@ void Function_mpi(vector<extArrType<dtype, shape1, shape2>*> phiP) {
 
     extArrType<dtype, shape1, shape2>* phiBuf;
     phiBuf = (extArrType<dtype, shape1, shape2>*)mpi_reqBuf[phiP[1]];
+    assert (phiBuf != NULL);
 
     for (auto& patch: mesh.boundary) {
         string patchType = patch.second.at("type");
@@ -66,7 +70,8 @@ void Function_mpi_grad(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     if (mesh.nProcs == 1) return;
 
     extArrType<dtype, shape1, shape2>* phiBuf;
-    phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf[phiP[1]];
+    phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf_grad[phiP[1]];
+    assert (phiBuf != NULL);
 
     for (auto& patch: mesh.boundary) {
         string patchType = patch.second.at("type");
@@ -82,9 +87,9 @@ void Function_mpi_grad(vector<extArrType<dtype, shape1, shape2>*> phiP) {
             integer dest = stoi(patchInfo.at("neighbProcNo"));
             integer tag = mpi_reqField*10000 + mesh.tags.at(patchID);
             //cout << "send " << patchID << " " << phi(cellStartFace) << " " << shape1 << shape2 << endl;
-            MPI_Isend(&phi(cellStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &mpi_req[mpi_reqIndex]);
-            MPI_Irecv(&(*phiBuf)(bufStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &mpi_req[mpi_reqIndex+1]);
-            mpi_reqIndex += 2;
+            MPI_Isend(&phi(cellStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &mpi_req_grad[mpi_reqIndex_grad]);
+            MPI_Irecv(&(*phiBuf)(bufStartFace), size, mpi_type<dtype>(), dest, tag, MPI_COMM_WORLD, &mpi_req_grad[mpi_reqIndex_grad+1]);
+            mpi_reqIndex_grad += 2;
         }
     }
     mpi_reqField = (mpi_reqField + 1) % 100;
@@ -109,6 +114,7 @@ void Function_mpi_init(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     extArrType<dtype, shape1, shape2>& phi = *(phiP[2]);
     extArrType<dtype, shape1, shape2>* phiBuf;
     phiBuf = new extArrType<dtype, shape1, shape2>(mesh.nCells-mesh.nLocalCells, true);
+    assert (phiBuf != NULL);
     mpi_reqBuf[phiP[2]] = (void *) phiBuf;
     extArrType<integer>& owner = *((extArrType<integer>*)phiP[1]);
 
@@ -139,11 +145,12 @@ void Function_mpi_init_grad(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     extArrType<integer>& owner = *((extArrType<integer>*)phiP[1]);
         // run once
     if (mpi_init_grad) {
-        MPI_Waitall(mpi_reqIndex, (mpi_req), MPI_STATUSES_IGNORE);
-        delete[] mpi_req;
+        MPI_Waitall(mpi_reqIndex_grad, (mpi_req_grad), MPI_STATUSES_IGNORE);
+        delete[] mpi_req_grad;
         mpi_init_grad = false;
     }
-    phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf[phiP[2]];
+    phiBuf = (extArrType<dtype, shape1, shape2> *)mpi_reqBuf_grad[phiP[2]];
+    assert (phiBuf != NULL);
     
     //MPI_Barrier(MPI_COMM_WORLD);
     for (auto& patch: mesh.boundary) {
@@ -178,6 +185,7 @@ void Function_mpi_end(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     }
 
     extArrType<dtype,shape1,shape2>* phiBuf = (extArrType<dtype,shape1,shape2>*)mpi_reqBuf[phiP[1]];
+    assert (phiBuf != NULL);
     phiBuf->destroy();
     delete phiBuf;
 }
@@ -189,14 +197,15 @@ void Function_mpi_end_grad(vector<extArrType<dtype, shape1, shape2>*> phiP) {
     // run once
     
     if (!mpi_init_grad) {
-        mpi_reqIndex = 0;
-        mpi_reqBuf.clear();
-        mpi_req = new MPI_Request[2*3*mesh.nRemotePatches];
+        mpi_reqIndex_grad = 0;
+        mpi_reqBuf_grad.clear();
+        mpi_req_grad = new MPI_Request[2*3*mesh.nRemotePatches];
         mpi_init_grad = true;
     }
 
     extArrType<dtype, shape1, shape2>* phiBuf = new extArrType<dtype, shape1, shape2>(mesh.nCells-mesh.nLocalCells, true);
-    mpi_reqBuf[phiP[1]] = (void *) phiBuf;
+    assert (phiBuf != NULL);
+    mpi_reqBuf_grad[phiP[1]] = (void *) phiBuf;
 }
 
 MPI_SPECIALIZE(Function_mpi_end)
