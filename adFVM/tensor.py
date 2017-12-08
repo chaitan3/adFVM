@@ -357,7 +357,10 @@ class TensorFunction(object):
             codeFile.write('\tfor (i = 0; i < n; i++) {\n')
         names = {}
         int_size = 4
-        float_size = 8
+        if config.gpu and not config.gpu_double:
+            float_size = 4
+        else:
+            float_size = 8
         for index, op in enumerate(sortedOps):
             if op in names:
                 continue
@@ -368,7 +371,7 @@ class TensorFunction(object):
                 tensorIndex = self._inputTensorIndices[op]
                 if not tensorIndex[3]:
                     code = '{} {} = {}[i*{} + {}];'.format(dtype, names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
-                self._loads += float_size
+                    self._loads += float_size
             elif isinstance(op, IntegerScalar) and not isinstance(op, OpBase):
                 tensorIndex = self._inputTensorIndices[op]
                 code = '{} {} = {}[i*{} + {}];'.format('integer', names[op], tensorIndex[0], tensorIndex[1], tensorIndex[2])
@@ -429,9 +432,9 @@ class TensorFunction(object):
                 tensorIndex = self._outputTensorIndices[op]
                 if not tensorIndex[3]:
                     code += '\n\t\t{}[i*{} + {}] += {};'.format(tensorIndex[0], tensorIndex[1], tensorIndex[2], names[op])
-                self._stores += float_size
-                self._loads += float_size
-                self._flops += 1
+                    self._stores += float_size
+                    self._loads += float_size
+                    self._flops += 1
 
             codeFile.write('\t\t' + code + '\n')
         codeFile.write('\t}\n')

@@ -407,7 +407,8 @@ class Function(object):
                     #codeFile.write('\tdim3 threads(min(GPU_THREADS_PER_BLOCK, {}));\n'.format(name))
                     #codeFile.write('\t\t{}<<<blocks, threads>>>({}, {});\n'.format(op.name, name, op.getCallString()))
                     codeFile.write('\t{}<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>({}, {});\n'.format(op.name, name, op.getCallString()))
-                    #codeFile.write('\tgpuErrorCheck(cudaDeviceSynchronize());\n')
+                    if config.profile:
+                        codeFile.write('\tgpuErrorCheck(cudaDeviceSynchronize());\n')
                     codeFile.write('\tgpuErrorCheck(cudaPeekAtLastError());\n')
                 else:
                     codeFile.write('\t{}({}, {});\n'.format(op.name, name, op.getCallString()))

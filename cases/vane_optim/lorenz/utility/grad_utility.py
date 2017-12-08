@@ -103,9 +103,12 @@ def optim():
     gp2.train(x[:m], y[:m], yd[:m], yn[:m], ydn[:m])
     for i in range(m, n):
         gp2.train(x[i], y[i], yd[i], yn[i], ydn[i])
-        #pmin = gp2.posterior_min()
-        #print pmin[1] + mean, pmin[2]
-    #exit(1)
+        # GRAD based optim
+        pmin = gp2.posterior_min()
+        print pmin[1] + mean, pmin[2]
+    exit(1)
+    # GRAD based optim
+
     x = x[:m]
     y = y[:m]
     yn = yn[:m]
