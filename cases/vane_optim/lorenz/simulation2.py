@@ -8,7 +8,7 @@ from scipy.optimize import rosen, rosen_der
 #from clorenz import lorenz
 import lorenz
 import gp as GP
-optime = 'optim_nd2_lorenz'
+optime = 'beta_{}/optim_nd2_lorenz'.format(GP.beta)
 #optime = 'optim_nd1_lorenz'
 #optime = 'optim_nd2_rosenbrock'
 #import gp_noder as GP
@@ -191,5 +191,5 @@ def optim():
             pkl.dump([evals, gps, values], f)
 
 if __name__ == "__main__":
-    #optim()
-    minimum()
+    optim()
+    #minimum()

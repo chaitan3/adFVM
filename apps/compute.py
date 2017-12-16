@@ -54,10 +54,10 @@ for index, time in enumerate(times):
         #exit(1)
         ##pprint(Re.getPatch('outlet').mean())
 
-        enstrophy, Q = getEnstrophyAndQ(outputsF[2])
-        enstrophy.write(name='enstrophy') 
-        Q.write(name='Q')
-        exit(1)
+        #enstrophy, Q = getEnstrophyAndQ(outputsF[2])
+        #enstrophy.write(name='enstrophy') 
+        #Q.write(name='Q')
+        #exit(1)
 
         #c, M, pt, s = getTotalPressureAndEntropy(U, T, p, solver)
         ##c.write(name='c') 
@@ -84,7 +84,7 @@ for index, time in enumerate(times):
 
         ###scale = lambda x: 1/(1+np.exp(-10*(x/parallel.max(x)-1)))
         scale = None
-        for visc in ["abarbanel", "entropy_jameson", "uniform", "entropy_hughes"]:
+        for visc in ["abarbanel"]:#, "entropy_jameson", "uniform", "entropy_hughes"]:
         #for visc in ["abarbanel", "entropy_jameson", "entropy_hughes"]:
             adjNorm, energy, diss = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs, visc=visc, scale=scale)
             adjNorm.write()

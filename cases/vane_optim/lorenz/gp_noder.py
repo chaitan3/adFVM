@@ -98,7 +98,7 @@ class GaussianProcess(object):
         L = sp.linalg.cho_factor(Kd)
         mu = np.dot(Ki, sp.linalg.cho_solve(L, y))
         cov = K - np.dot(Ki, sp.linalg.cho_solve(L, Ki.T))
-        return mu, cov
+        return mu.flatten(), cov
 
     def exponential(self, xs):
         mu, cov = self.evaluate(xs)

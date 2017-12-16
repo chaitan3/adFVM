@@ -4,14 +4,13 @@ import scipy.linalg
 from scipy.stats import norm
 from scipy.optimize import *
 import nlopt
-#import matplotlib.pyplot as plt
 from pyDOE import *
 import gp_noder
 
-beta = 1.
 beta = 0.
-beta = 0.5
-beta = 2.0
+#beta = 0.5
+#beta = 1.
+#beta = 2.0
 
 def _sanitize(x):
     if isinstance(x, list):
@@ -134,6 +133,22 @@ class GaussianProcess(object):
         cov = K - np.dot(Ki, sp.linalg.cho_solve(L, Ki.T))
         return mu, cov
 
+    def evaluate_grad(self, xs):
+        xs = _sanitize(xs)
+        x, y, yd = np.array(self.x), np.array(self.y), np.array(self.yd)
+        d = np.concatenate((y, yd.flatten()))
+        #Ki = np.hstack((self.kernel.evaluate(xs, x), -self.kernel.gradient(xs, x)))
+        Kid = self.kernel.gradient(xs, x)
+        Ki = np.vstack((np.hstack((self.kernel.evaluate(xs, x), -self.kernel.gradient(xs, x))), np.hstack((-self.kernel.gradient(x, xs).T, self.kernel.hessian(xs, x)))))
+
+        Kd = self.kernel.gradient(xs, xs)
+        K = np.vstack((np.hstack((self.kernel.evaluate(xs, xs), -Kd)), np.hstack((-Kd.T, self.kernel.hessian(xs, xs)))))
+        Kd = self.Kd + 1e-30*np.diag(np.ones_like(np.diag(self.Kd)))
+        L = sp.linalg.cho_factor(Kd)
+        mu = np.dot(Ki, sp.linalg.cho_solve(L, d))
+        cov = K - np.dot(Ki, sp.linalg.cho_solve(L, Ki.T))
+        return mu, cov
+
     def exponential(self, xs):
         mu, cov = self.evaluate(xs)
         emu = np.exp(mu + np.diag(cov)/2)
@@ -211,6 +226,14 @@ class GaussianProcess(object):
         res = _optimize(lambda x: self.evaluate(x)[0][0], self.bounds, cons=self.cons)
         return res + (self.evaluate(res[0])[1][0,0],)
 
+    def get_noise(self, x):
+        x = _sanitize(x)
+        yn = self.noiseGP[0].exponential(x)[0]*self.noise[0]
+        ydn = []
+        for i in range(1, 1 + self.ndim):
+            ydn.append((self.noiseGP[i].exponential(x)[0]*self.noise[1][i-1]).reshape(-1,1))
+        return yn, ydn
+
     def data_min(self):
         ys = np.array(self.y).flatten()
         i = np.argmin(ys)
@@ -240,17 +263,18 @@ def test_func(x):
     x = _sanitize(x)
     return np.sin(x).reshape((x.shape[0])) + sig*np.random.randn(),\
            np.cos(x).reshape((x.shape[0])) + sig*np.random.randn(),\
-           sig**2, \
-           sig**2
+           sig**2*np.ones((x.shape[0], 1)), \
+           sig**2*np.ones((x.shape[0], 1))
 
 
 def _test_main():
+    import matplotlib.pyplot as plt
     kernel = SquaredExponentialKernel([3.], 1.)
     bounds = [[0, 4*2*np.pi]]
     #kernel = SquaredExponentialKernel([1., 1.], 10.)
     #bounds = [[-10, 10], [-10.,10]]
 
-    gp = GaussianProcess(kernel, bounds)
+    gp = GaussianProcess(kernel, bounds, noise=[sig**2, [sig**2]], noiseGP=True)
     gp.explore(4, test_func)
     xs = np.linspace(gp.bounds[0,0], gp.bounds[0,1], 500).reshape(-1,1)
 
@@ -259,16 +283,18 @@ def _test_main():
         x = ei.optimize()
         y, yd, yn, ydn = test_func(x)
         gp.train(x, y, yd, yn, ydn)
+        print gp.evaluate_grad(np.array([[1.], [3.], [7.]]))
+        print gp.evaluate(np.array([[1.], [3.], [7.]]))
 
         #plt.ylim([-2,2])
         #plt.plot(xs, expected_improvement(xs))
 
         mu, cov = gp.evaluate(xs)
         std = np.diag(cov)**0.5
-        plt.contourf()
-        #plt.plot(xs.flatten(), mu)
-        #plt.fill_between(xs.flatten(), mu-std, mu + std, facecolor='gray')
-        #plt.scatter(gp.x, gp.y, c='k')
+        #plt.contourf()
+        plt.plot(xs.flatten(), mu)
+        plt.fill_between(xs.flatten(), mu-std, mu + std, facecolor='gray')
+        plt.scatter(gp.x, gp.y, c='k')
 
         plt.show()
 

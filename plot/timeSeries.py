@@ -26,8 +26,8 @@ for f in sys.argv[1:]:
     s = np.cumsum(y)/np.arange(1,len(y)+1)
     plt.xlabel('time (T)')
     #plt.semilogy(x, y, label=os.path.basename(f))
-    #plt.semilogy(x, y, label=f)
-    plt.plot(x, y, label=f)
+    plt.semilogy(x, y, label=f)
+    #plt.plot(x, y, label=f)
     #plt.plot(x, y, label='instantaneous objective')
     #plt.plot(x, s, label='cumulative averaged objective')
     #token = os.path.basename(f).split('_')[0]

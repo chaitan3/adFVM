@@ -34,14 +34,16 @@ def match_htc(hp, coordsp, hs, coordss, saveFile):
     indices = ss < 1.25
     ss, hs = ss[indices], hs[indices]
     
-    #hs = smooth(hs, 5)
-    #hp = smooth(hp, 5)
+    hs = smooth(hs, 9)
+    hp = smooth(hp, 9)
 
     expe = read_data('data/htc_0.9_1e6.csv')
+    gour = read_data('data/gourdain_htc_0.92_1e6.csv')
     #expe = read_data('data/htc_1.07_1e6.csv')
 
     fill = 1
     plt.scatter(expe[:,0]/(c*1000), expe[:,1], c='k', alpha=fill,marker='o', label='Experiment')
+    plt.scatter(gour[:,0]/(c*1000), gour[:,1], c='green', edgecolors='green', alpha=fill,marker='*',s=60, label='Gourdain')
     #plt.scatter(sp, hp, c='r', s=10, alpha=fill,marker='+', label='Simulation')
     #plt.scatter(ss, hs, c='b', s=10, alpha=fill, marker='+')
     plt.plot(sp, hp, c='r', label='Simulation')
@@ -55,8 +57,12 @@ def match_htc(hp, coordsp, hs, coordss, saveFile):
 
 def match_velocity(Map, coordsp, Mas, coordss, saveFile):
 
-    sp = get_length(pressure, coordsp)[0]/c
-    ss = get_length(suction, coordss)[0]/c
+    sp, indices = get_length(pressure, coordsp)
+    sp = sp/c
+    sp, Map = sp[indices], Map[indices]
+    ss, indices = get_length(suction, coordss)
+    ss = ss/c
+    ss, Mas = ss[indices], Mas[indices]
     #indices = ss < 1.1
     #ss = ss[indices]
     #Mas = Mas[indices]
@@ -66,6 +72,9 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
     indices = logical_not(isnan(Map))
     sp, Map = sp[indices], Map[indices]
 
+    Mas = smooth(Mas, 5)
+    Map = smooth(Map, 5)
+
     expp = read_data('data/Ma_pressure_0.875.csv')
     exps = read_data('data/Ma_suction_0.875.csv')
     #expp = read_data('data/Ma_pressure_1.02.csv')
@@ -73,10 +82,12 @@ def match_velocity(Map, coordsp, Mas, coordss, saveFile):
 
     fill=1
 
-    plt.scatter(expp[:,0], expp[:,1], marker='o', label='Exp. pressure')
-    plt.scatter(exps[:,0], exps[:,1], marker='o', label='Exp. suction')
-    plt.scatter(sp, Map, c='r', s=10, alpha=fill, marker='+', label='Sim. pressure')
-    plt.scatter(ss, Mas, c='b', s=10, alpha=fill, marker='+', label='Sim. suction')
+    plt.scatter(expp[:,0], expp[:,1], c='k', marker='o', label='Exp. pressure')
+    plt.scatter(exps[:,0], exps[:,1], c='k', marker='o', label='Exp. suction')
+    #plt.scatter(sp, Map, c='r', s=10, alpha=fill, marker='+', label='Sim. pressure')
+    #plt.scatter(ss, Mas, c='b', s=10, alpha=fill, marker='+', label='Sim. suction')
+    plt.plot(sp, Map, c='r', label='Simulation')
+    plt.plot(ss, Mas, c='b')
     plt.xlim([0, 1.4])
     plt.ylim([0, 1.2])
     plt.xlabel('s/c (mm)')
@@ -168,8 +179,8 @@ if __name__ == '__main__':
         #with open(pklFile, 'w') as f:
         #    pkl.dump([htc_args, Ma_args], f)
 
-    match_velocity(*Ma_args)
-    #match_htc(*htc_args)
+    #match_velocity(*Ma_args)
+    match_htc(*htc_args)
 
     #p0 = 175158.
     #nCellsPerLayer = len(wakeCells)/nLayers

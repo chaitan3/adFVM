@@ -6,6 +6,7 @@ from . import op, interp
 from .compat import intersectPlane
 import time
 from .mesh import Mesh
+from .parallel import pprint
 
 def computeGradients(solver, U, T, p):
     mesh = solver.mesh
@@ -355,6 +356,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         M_2norm = np.ones_like(M_2norm)
     if report:
         getAdjointMatrixNorm.l2_norm = l2_norm(M_2norm)
+        pprint(getAdjointMatrixNorm.l2_norm)
     M_2norm /= getAdjointMatrixNorm.l2_norm
     M_2norm = IOField('M_2norm' + suffix, M_2norm, (1,))
     #M_2norm.write()

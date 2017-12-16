@@ -5,6 +5,9 @@ import os, sys, glob, shutil
 import subprocess
 import cPickle as pkl
 from multiprocessing import Pool
+import matplotlib
+#matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 sys.path.append('../')
 #import gp as GP
@@ -109,12 +112,31 @@ def optim():
     #print ydn
     #exit(1)
     gp2.train(x[:m], y[:m], yd[:m], yn[:m], ydn[:m])
+    mus = []
+    varis = []
     for i in range(m, n):
+        mu, vari = gp2.evaluate(x[i])
+        mus.append(mu[0] + mean)
+        varis.append(vari[0,0]**0.5)
         gp2.train(x[i], y[i], yd[i], yn[i], ydn[i])
         # GRAD based optim
         #pmin = gp2.posterior_min()
         #print pmin[1] + mean, pmin[2]
-    #exit(1)
+    mus = np.array(mus)
+    varis = np.array(varis)
+    cm = plt.cm.get_cmap('RdYlBu')
+    z = np.arange(0,len(mus))
+    plt.locator_params(axis='x', numticks=4)
+    plt.locator_params(axis='y', numticks=4)
+    sc = plt.scatter(varis, mus, c=z, s=100)
+    plt.colorbar(sc, ticks=z+1)
+    d = 0.0001
+    plt.xlim([varis.min()-d, varis.max()+d])
+    plt.ylim([mus.min()-d, mus.max()+d])
+    plt.xlabel('standard deviation of GP at evaluation')
+    plt.ylabel('mean of GP at evaluation')
+    plt.show()
+    exit(1)
     # GRAD based optim
 
     x = x[:m]
