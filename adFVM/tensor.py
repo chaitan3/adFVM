@@ -264,8 +264,6 @@ class TensorFunction(object):
         if grad:
             self.grad = self._getAdjoint()
 
-
-
     def _getAdjoint(self):
         gradOutputs = []
         for out in self._outputTensors:

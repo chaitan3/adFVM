@@ -31,20 +31,22 @@ PyObject* initialize(PyObject *self, PyObject *args) {
 
     meshp = new Mesh(meshObject);
     meshp->init();
-    meshp->localRank = PyInt_AsLong(PyTuple_GetItem(args, 1));
+    int rank = PyInt_AsLong(PyTuple_GetItem(args, 1));
+    meshp->localRank = rank;
     parallel_init();
 
     #ifdef GPU
         int count;
-        gpuErrorCheck(cudaSetDevice(meshp->localRank));
+        gpuErrorCheck(cudaSetDevice(rank));
         gpuErrorCheck(cudaSetDeviceFlags(cudaDeviceMapHost));
         gpuErrorCheck(cudaGetDeviceCount(&count));
+        printf("GPU devices: %d, rank: %d\n", count, meshp->localRank);
+
         auto status1 = cusolverDnCreate(&cusolver_handle);
         assert(status1 == CUSOLVER_STATUS_SUCCESS);
         auto status2 = cublasCreate(&cublas_handle);
         assert(status2 == CUBLAS_STATUS_SUCCESS);
 
-        printf("GPU devices: %d, rank: %d\n", count, meshp->localRank);
         //cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, 0);
         //cout << "num sms: " << numSMs << endl;
     #endif

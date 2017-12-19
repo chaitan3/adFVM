@@ -10,7 +10,7 @@ import lorenz
 import gp as GP
 #optime = 'optim_nd2_lorenz'
 #optime = 'optim_nd1_lorenz'
-optime = 'beta_2/optim_nd2_rosenbrock'
+optime = 'beta_{}/optim_nd2_rosenbrock2'.format(GP.beta)
 #import gp_noder as GP
 #optim = 'optim_noder'
 
@@ -18,7 +18,7 @@ orig_bounds = np.array([[-3., 3], [-3, 3.]])
 #orig_bounds = lorenz.orig_bounds
 #orig_bounds = lorenz.orig_bounds[:1]
 # if threshold is negative constraint passes all points
-sig = 10.
+sig = 20.
 def objective_single(x):
     x = GP._sanitize(x)
     y = []
@@ -100,7 +100,7 @@ def optim():
         # * finite budget
         print
 
-        for i in range(0, 100):
+        for i in range(0, 1000):
             #x = ei.optimize()
             try:
                 x = ei.optimize()

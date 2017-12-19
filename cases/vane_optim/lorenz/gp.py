@@ -8,9 +8,6 @@ from pyDOE import *
 import gp_noder
 
 beta = 0.
-#beta = 0.5
-#beta = 1.
-#beta = 2.0
 
 def _sanitize(x):
     if isinstance(x, list):
