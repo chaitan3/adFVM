@@ -25,13 +25,18 @@ modules = cythonize(
         [Extension(compatDir + 'cfuncs', [compatDir + 'cfuncs.pyx'], 
         language='c++', extra_compile_args=compile_args, extra_link_args=link_args)])
 
+import adpy.config
+
 cppDir = 'adFVM/cpp/'
 incdirs = [np.get_include()]
 incdirs += [cppDir + 'include/']
 libdirs = []
 libs = []
-sources = ['mesh.cpp', 'cmesh.cpp', 'interface.cpp']
+sources = ['mesh.cpp', 'cmesh.cpp']
 sources = [cppDir + f for f in sources]
+inc, src = adpy.config.get_sources()
+sources += src
+incdirs += inc
 
 #compile_args = ['-std=c++11', '-O3']#, '-march=native']
 compile_args += ['-std=c++11', '-O3', '-g']#, '-march=native']
@@ -54,7 +59,7 @@ setup(name='adFVM',
       author_email='talnikar@mit.edu',
       packages=['adFVM', 'adFVM.compat'],
       package_data={
-       'adFVM': ['gencode/*', 'cpp/*.cpp', 'cpp/*.py', 'cpp/include/*'],
+       'adFVM': ['cpp/*.cpp', 'cpp/*.py', 'cpp/include/*'],
       },
       include_package_data=True,
       ext_modules = modules,
