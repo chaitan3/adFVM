@@ -409,7 +409,7 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True, **kwa
     viscosity.boundary = mesh.defaultBoundary
     return viscosity
 
-from adFVM.tensor import *
+from adpy.tensor import *
 def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
     g = solver.gamma
     mesh = solver.mesh.symMesh

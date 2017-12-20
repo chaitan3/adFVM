@@ -8,8 +8,7 @@ from adFVM import interp
 from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, getAdjointViscosityCpp, viscositySolver
 from adFVM.solver import Solver
-from adFVM.tensor import TensorFunction
-from adFVM.variable import Variable, Function, Zeros
+from adpy.variable import Variable, Function, Zeros
 from adFVM.mesh import cmesh, Mesh
 
 from problem import primal, nSteps, writeInterval, sampleInterval, reportInterval, viscousInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints, startTime

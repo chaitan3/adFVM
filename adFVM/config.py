@@ -47,6 +47,7 @@ def stop():
 # compute type
 gpu = user.use_gpu
 gpu_double = user.use_gpu_double
+
 if user.use_gpu:
     import ctypes
     ctypes.CDLL('libgomp.so.1', mode=ctypes.RTLD_GLOBAL)
@@ -59,13 +60,16 @@ else:
     precision = np.float64
     codeExt = 'cpp'
 openmp = user.use_openmp
-matop = user.use_matop
 gc = user.use_gc
-hdf5 = user.hdf5
 profile = user.profile
 gc = user.use_gc
-
 compile = (user.compile or user.compile_exit) and (parallel.rank == 0)
+
+import adpy.config
+adpy.config.set_config(sys.modules[__name__])
+
+matop = user.use_matop
+hdf5 = user.hdf5
 compile_exit = user.compile_exit
 
 # LOGGING

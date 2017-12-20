@@ -91,7 +91,6 @@ for index, time in enumerate(times):
             #energy.write()
             #diss.write()
             pprint()
-        #from adFVM.tensor import TensorFunction
         #adjNorm = TensorFunction._module.viscosity(np.zeros((10, 5), np.float64), rho.field, rhoU.field, rhoE.field, 1e-3, 0, True)
         #adjNorm = IOField('M_2norm', adjNorm/1e-3, (1,))
         #adjNorm.write()
