@@ -64,7 +64,7 @@ class Solver(object):
         Function.compile()
         if config.compile_exit:
             exit(0)
-        Function._module.initialize(self.mesh, parallel.localRank)
+        Function._module.initialize(parallel.localRank, self.mesh)
         return
         
     def function(self, inputs, outputs, name, **kwargs):

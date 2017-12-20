@@ -34,9 +34,8 @@ libdirs = []
 libs = []
 sources = ['mesh.cpp', 'cmesh.cpp']
 sources = [cppDir + f for f in sources]
-inc, src = adpy.config.get_sources()
-sources += src
-incdirs += inc
+sources += adpy.config.get_sources()
+incdirs += [adpy.config.includeDir]
 
 #compile_args = ['-std=c++11', '-O3']#, '-march=native']
 compile_args += ['-std=c++11', '-O3', '-g']#, '-march=native']
