@@ -22,8 +22,8 @@ def test_second_order():
     Uc = Field('U', 2*X + X**3*Y**2, (1,))
     gradUc = gradOld(centralOld(Uc, mesh), ghost=True)
     gradUc.field = gradUc.field.reshape((mesh.nCells, 1, 3))
-    XF, YF = mesh.faceCentres[:, [0]], mesh.faceCentres[:,[1]]
-    Ur = 2*XF + XF**3*YF**2
+    Xf, Yf = mesh.faceCentres[:, [0]], mesh.faceCentres[:,[1]]
+    Ur = 2*Xf + Xf**3*Yf**2
 
     U = Variable((mesh.symMesh.nCells, 1))
     gradU = Variable((mesh.symMesh.nCells, 1, 3))
@@ -34,7 +34,7 @@ def test_second_order():
     meshArgs = mesh.symMesh.getTensor()
     Uf = Kernel(interpolate)(mesh.symMesh.nFaces, (Uf,))(U, gradU, *meshArgs)[0]
     meshArgs = mesh.symMesh.getTensor() + mesh.symMesh.getScalar()
-    func = Function('interpolate', [U, gradU] + meshArgs, (Uf,))
+    func = Function('second_order', [U, gradU] + meshArgs, (Uf,))
 
     Function.compile(init=False, compiler_args=config.get_compiler_args())
     Function.initialize(0, mesh)
@@ -51,8 +51,8 @@ def test_central():
 
     X, Y = mesh.cellCentres[:, [0]], mesh.cellCentres[:,[1]]
     Uc = Field('U', 2*X + X*Y, (1,))
-    XF, YF = mesh.faceCentres[:, [0]], mesh.faceCentres[:,[1]]
-    Ur = 2*XF + XF*YF
+    Xf, Yf = mesh.faceCentres[:, [0]], mesh.faceCentres[:,[1]]
+    Ur = 2*Xf + XF*Yf
     Uf = centralOld(Uc, mesh).field
     assert relative_error(Uf, Ur) < thres
 
@@ -64,7 +64,7 @@ def test_central():
     meshArgs = mesh.symMesh.getTensor()
     Uf = Kernel(interpolate)(mesh.symMesh.nFaces, (Uf,))(U, *meshArgs)[0]
     meshArgs = mesh.symMesh.getTensor() + mesh.symMesh.getScalar()
-    func = Function('interpolate', [U] + meshArgs, (Uf,))
+    func = Function('central', [U] + meshArgs, (Uf,))
 
     Function.compile()
     meshArgs = mesh.getTensor() + mesh.getScalar()
