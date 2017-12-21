@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import shutil
 import sys
 from setuptools import setup, Extension, Command
 from Cython.Build import cythonize
@@ -25,17 +26,21 @@ modules = cythonize(
         [Extension(compatDir + 'cfuncs', [compatDir + 'cfuncs.pyx'], 
         language='c++', extra_compile_args=compile_args, extra_link_args=link_args)])
 
-import adpy.config
-
 cppDir = 'adFVM/cpp/'
 incdirs = [np.get_include()]
 incdirs += [cppDir + 'include/']
 libdirs = []
 libs = []
-sources = ['mesh.cpp', 'cmesh.cpp']
+
+import adpy.config
+adpyCppDir = 'adpy/adpy/cpp/'
+adpyFiles = adpy.config.get_sources()
+for f in adpyFiles:
+    shutil.copyfile(adpyCppDir + f, cppDir + f)
+sources = ['mesh.cpp', 'cmesh.cpp'] + adpyFiles
 sources = [cppDir + f for f in sources]
-sources += adpy.config.get_sources()
-incdirs += [adpy.config.includeDir]
+
+incdirs += adpy.config.get_include_dirs()
 
 #compile_args = ['-std=c++11', '-O3']#, '-march=native']
 compile_args += ['-std=c++11', '-O3', '-g']#, '-march=native']
@@ -59,6 +64,7 @@ setup(name='adFVM',
       packages=['adFVM', 'adFVM.compat'],
       package_data={
        'adFVM': ['cpp/*.cpp', 'cpp/*.py', 'cpp/include/*'],
+       #'adpy': ['cpp/*.cpp'],
       },
       include_package_data=True,
       ext_modules = modules,

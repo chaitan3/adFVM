@@ -1,7 +1,6 @@
 #define NO_IMPORT_ARRAY
 #include "mesh.hpp"
-
-
+#include "parallel.hpp"
 
 Mesh::Mesh (PyObject* meshObject) {
     this->mesh = meshObject;

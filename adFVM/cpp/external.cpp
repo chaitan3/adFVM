@@ -1,3 +1,4 @@
+#define NO_IMPORT_ARRAY
 #include "external.hpp"
 
 void Mesh::build() {}

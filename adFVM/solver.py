@@ -6,13 +6,14 @@ import copy
 
 #import adFVMcpp
 from . import config, parallel, timestep
-from .tensor import StaticVariable, ExternalFunctionOp, Function
 from .parallel import pprint
 from .memory import printMemUsage
 
 from .field import Field, CellField, IOField
 from .mesh import Mesh
 from .mesh import extractField
+
+from adpy.tensor import StaticVariable, ExternalFunctionOp, Function
 
 logger = config.Logger(__name__)
 
@@ -61,7 +62,7 @@ class Solver(object):
         Function.createCodeDir(self.mesh.caseDir)
         self.compileInit()
         self.compileSolver()
-        Function.compile()
+        Function.compile(compiler_args=config.get_compiler_args())
         if config.compile_exit:
             exit(0)
         Function._module.initialize(parallel.localRank, self.mesh)

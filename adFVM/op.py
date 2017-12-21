@@ -3,7 +3,8 @@ import numpy as np
 
 from . import config
 from .field import Field, CellField, IOField
-from .tensor import Tensor
+
+from adpy.tensor import Tensor
 
 logger = config.Logger(__name__)
 

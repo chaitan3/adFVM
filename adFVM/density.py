@@ -1,6 +1,4 @@
 from . import config, riemann, interp
-from .tensor import Kernel, ExternalFunctionOp
-from .variable import Variable, Function, Zeros
 from .field import Field, IOField, CellField
 from .op import  div, absDiv, snGrad, grad, gradCell, snGradCorr
 from .solver import Solver
@@ -10,6 +8,9 @@ from . import BCs
 from . import postpro
 from . import timestep
 from .mesh import Mesh
+
+from adpy.tensor import Kernel, ExternalFunctionOp
+from adpy.variable import Variable, Function, Zeros
 
 import numpy as np
 #import adFVMcpp

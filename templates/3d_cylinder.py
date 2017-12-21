@@ -3,7 +3,8 @@ import numpy as np
 from adFVM import config
 from adFVM.density import RCF 
 from adFVM.mesh import Mesh
-from adFVM import tensor
+
+from adpy import tensor
 
 # drag over cylinder surface
 def objectiveDrag(U, T, p, *mesh, **options):

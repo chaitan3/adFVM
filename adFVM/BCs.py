@@ -1,9 +1,10 @@
 import numpy as np
 
 from . import config
-from .tensor import Tensor, Kernel, StaticVariable
 from .mesh import extractField, extractVector
 logger = config.Logger(__name__)
+
+from adpy.tensor import Tensor, Kernel, StaticVariable
 
 # from charles
 # WALL BC's

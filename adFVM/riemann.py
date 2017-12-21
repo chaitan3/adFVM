@@ -1,6 +1,7 @@
 from . import config
-from .tensor import Tensor
 from .field import Field
+
+from adpy.tensor import Tensor
 
 def eulerLaxFriedrichs(gamma, pLF, pRF, TLF, TRF, ULF, URF, \
                 rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, Normals):

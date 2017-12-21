@@ -6,9 +6,10 @@ from numbers import Number
 from contextlib import contextmanager
 
 from . import config, parallel, BCs
-from .tensor import Variable
 from .parallel import pprint
 from .mesh import extractField, writeField
+
+from adpy.tensor import Variable
 
 try:
     import h5py

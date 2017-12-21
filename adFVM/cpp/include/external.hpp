@@ -4,10 +4,10 @@
 #include "mesh.hpp"
 #include "parallel.hpp"
 
-void external_init();
+void external_init(PyObject*);
 void external_exit();
 
-extern Mesh *meshp:
+extern Mesh *meshp;
 #ifdef GPU
     extern cusolverDnHandle_t cusolver_handle;
     extern cublasHandle_t cublas_handle;

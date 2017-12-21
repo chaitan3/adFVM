@@ -2,7 +2,7 @@ import numpy as np
 
 from . import config
 from .field import Field
-from .tensor import Kernel
+from adpy.tensor import Kernel
 
 createFields = lambda internalFields, solver : [Field(solver.names[index], phi, solver.dimensions[index]) for index, phi in enumerate(internalFields)]
 

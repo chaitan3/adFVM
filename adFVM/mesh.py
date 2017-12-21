@@ -10,11 +10,12 @@ from . import config, parallel
 from .compat import decompose
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
-from .tensor import IntegerScalar, Container, StaticVariable, StaticIntegerVariable
 if config.gpu and not config.gpu_double:
     from .cpp import cmesh_gpu as cmesh
 else:
     from .cpp import cmesh
+
+from adpy.tensor import IntegerScalar, Container, StaticVariable, StaticIntegerVariable
 
 try:
     import h5py

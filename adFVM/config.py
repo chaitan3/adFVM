@@ -62,8 +62,48 @@ else:
 openmp = user.use_openmp
 gc = user.use_gc
 profile = user.profile
-gc = user.use_gc
 compile = (user.compile or user.compile_exit) and (parallel.rank == 0)
+
+def get_compiler_args():
+    compiler = 'ccache mpicc'
+    linker = 'mpicxx'
+    libs = []
+    incdirs = []
+    libdirs = []
+    sources = []
+
+    cppDir = os.path.join(os.path.realpath(os.path.dirname(__file__)), 'cpp')
+    incdirs += [os.path.join(cppDir, 'include')]
+    sources += [os.path.join(cppDir, x) for x in ['external.cpp', 'mesh.cpp', 'parallel.cpp', 'scaling.cpp']]
+
+    if gpu:
+        mpi_incdirs = subprocess.check_output('mpicc --showme | egrep -o -e "-I[a-z\/\.]*"', shell=True)
+        incdirs += [d[2:] for d in mpi_incdirs.split('\n')[:-1]]
+        mpi_libdirs = subprocess.check_output('mpicc --showme | egrep -o -e "-L[a-z\/\.]*"', shell=True)
+        libdirs += [d[2:] for d in mpi_libdirs.split('\n')[:-1]]
+        libs += ['mpi', 'cublas', 'cusolver']
+    else:
+        libs += ['lapack']
+    if matop:
+        sources += [os.path.join(cppDir, 'matop.cpp')]
+        compile_args += ['-DMATOP']
+        if gpu and not gpu_double:
+            compile_args += ['-DPETSC_USE_REAL_SINGLE']
+            home = os.path.expanduser('~') + '/sources/petsc_single/'
+        else:
+            home = os.path.expanduser('~') + '/sources/petsc/'
+        build = 'arch-linux2-c-debug'
+        incdirs += ['{}/{}/include'.format(home, build), home + '/include', os.path.expanduser('~') + '/sources/cusp/']
+        #incdirs += [home + '/linux-gnu-c-opt/include']
+        libdirs += ['{}/{}/lib'.format(home, build)]
+        libs += ['petsc']
+
+    return {'compiler': compiler,
+            'linker': linker,
+            'libs': libs,
+            'incdirs': incdirs,
+            'libdirs': libdirs,
+            'sources': sources}
 
 import adpy.config
 adpy.config.set_config(sys.modules[__name__])

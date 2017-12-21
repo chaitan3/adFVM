@@ -2,6 +2,7 @@
 #define PARALLEL_HPP
 
 #include "interface.hpp"
+#include<mpi.h>
 
 template <typename dtype, integer shape1, integer shape2>
 void Function_mpi_init(std::vector<extArrType<dtype, shape1, shape2>*> phiP);

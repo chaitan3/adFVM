@@ -6,7 +6,6 @@
 #ifdef GPU
     #include <petsccuda.h>
 #endif
-#include "common.hpp"
 #include "mesh.hpp"
 
 class Matop {
