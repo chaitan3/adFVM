@@ -20,54 +20,53 @@ def test_mpi_comm_method(case_path):
         U.write()
     return
 
-class TestParallel(unittest.TestCase):
-    def test_mpi_comm(self):
-        case_path = os.path.join(cases_path, 'forwardStep')
-        mesh = Mesh.create(case_path)
-        IOField.setMesh(mesh)
-        with IOField.handle(0.):
-            U = IOField.read('U')
-            U.partialComplete()
-        U.field = np.random.rand(*U.field.shape)
-        with IOField.handle(1.):
-            U.write()
-        time.sleep(1)
+def test_mpi_comm(self):
+    case_path = os.path.join(cases_path, 'forwardStep')
+    mesh = Mesh.create(case_path)
+    IOField.setMesh(mesh)
+    with IOField.handle(0.):
+        U = IOField.read('U')
+        U.partialComplete()
+    U.field = np.random.rand(*U.field.shape)
+    with IOField.handle(1.):
+        U.write()
+    time.sleep(1)
 
-        subprocess.check_output(['decomposePar', '-case', case_path, '-time', '1'])
+    subprocess.check_output(['decomposePar', '-case', case_path, '-time', '1'])
 
-        subprocess.check_output(['mpirun', '-np', '4', 'python2', __file__, 'RUN', 'test_mpi_comm_method', case_path])
+    subprocess.check_output(['mpirun', '-np', '4', 'python2', __file__, 'RUN', 'test_mpi_comm_method', case_path])
 
-        try:
-            checkFields(self, case_path, 'U', '1.0', '2.0', relThres=1e-12, nProcs=4)
-        finally:
-            shutil.rmtree(os.path.join(case_path, '1'))
-            map(shutil.rmtree, glob.glob(os.path.join(case_path, 'processor*')))
+    try:
+        checkFields(self, case_path, 'U', '1.0', '2.0', relThres=1e-12, nProcs=4)
+    finally:
+        shutil.rmtree(os.path.join(case_path, '1'))
+        map(shutil.rmtree, glob.glob(os.path.join(case_path, 'processor*')))
 
-    def test_mpi(self):
-        solver = os.path.join(apps_path, 'pyRCF.py')
-        case_path = os.path.join(cases_path, 'forwardStep')
-        endTime = '0.1'
-        args = ['-t', endTime, '-w', '1000', '-f', 'AnkitENO', '-v', '--Cp', '2.5', '--dt', '1e-4']
-        subprocess.check_output([solver, case_path, '0.0'] + args)
-        folder = float(endTime)
-        if folder.is_integer():
-            folder = int(folder)
-        folder = str(folder)
-        subprocess.check_output(['mv', os.path.join(case_path, folder), os.path.join(case_path, '10')])
+def test_mpi(self):
+    solver = os.path.join(apps_path, 'pyRCF.py')
+    case_path = os.path.join(cases_path, 'forwardStep')
+    endTime = '0.1'
+    args = ['-t', endTime, '-w', '1000', '-f', 'AnkitENO', '-v', '--Cp', '2.5', '--dt', '1e-4']
+    subprocess.check_output([solver, case_path, '0.0'] + args)
+    folder = float(endTime)
+    if folder.is_integer():
+        folder = int(folder)
+    folder = str(folder)
+    subprocess.check_output(['mv', os.path.join(case_path, folder), os.path.join(case_path, '10')])
 
-        subprocess.check_output(['decomposePar', '-case', case_path, '-time', '0'])
-        #subprocess.check_output([os.path.join(scripts_path, 'decompose.py'), case_path, '4', '0.0'])
-        for pkl in glob.glob(os.path.join(case_path, '*.pkl')):
-            shutil.copy(pkl, os.path.join(case_path, 'processor0'))
-        subprocess.check_output(['mpirun', '-np', '4', solver, case_path, '0.0'] + args)
-        subprocess.check_output(['reconstructPar', '-case', case_path, '-time', endTime])
+    subprocess.check_output(['decomposePar', '-case', case_path, '-time', '0'])
+    #subprocess.check_output([os.path.join(scripts_path, 'decompose.py'), case_path, '4', '0.0'])
+    for pkl in glob.glob(os.path.join(case_path, '*.pkl')):
+        shutil.copy(pkl, os.path.join(case_path, 'processor0'))
+    subprocess.check_output(['mpirun', '-np', '4', solver, case_path, '0.0'] + args)
+    subprocess.check_output(['reconstructPar', '-case', case_path, '-time', endTime])
 
-        try:
-            checkFields(self, case_path, 'U', endTime, '10.0')
-        finally:
-            shutil.rmtree(os.path.join(case_path, endTime))
-            shutil.rmtree(os.path.join(case_path, '10'))
-            map(shutil.rmtree, glob.glob(os.path.join(case_path, 'processor*')))
+    try:
+        checkFields(self, case_path, 'U', endTime, '10.0')
+    finally:
+        shutil.rmtree(os.path.join(case_path, endTime))
+        shutil.rmtree(os.path.join(case_path, '10'))
+        map(shutil.rmtree, glob.glob(os.path.join(case_path, 'processor*')))
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == 'RUN':

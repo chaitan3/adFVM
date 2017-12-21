@@ -33,33 +33,6 @@ class Field(object):
         self.field = field
         self.dimensions = dimensions
 
-    #def _getType(self):
-    #    return np
-
-    #def _getMesh(self):
-    #    if isinstance(self.field, np.ndarray):
-    #        return self.mesh
-    #    else:
-    #        return self.mesh
-
-    # apply to ad
-    #@classmethod
-    #def max(self, a, b):
-    #    return self('max({0},{1})'.format(a.name, b.name), ad.maximum(a.field, b.field), a.dimensions)
-    #@classmethod
-    #def min(self, a, b):
-    #    return self('min({0},{1})'.format(a.name, b.name), ad.minimum(a.field, b.field), a.dimensions)
-
-    #@classmethod
-    #def switch(self, condition, a, b):
-    #    return self('switch({0},{1})'.format(a.name, b.name), ad.where(condition, a.field, b.field), a.dimensions)
-
-    #def stabilise(self, num):
-    #    return self.__class__('stabilise({0})'.format(self.name), ad.where(self.field < 0., self.field - num, self.field + num), self.dimensions)
-
-    #def sign(self):
-    #    return self.__class__('abs({0})'.format(self.name), ad.sgn(self.field), self.dimensions)
-
     # apply to np
     def info(self):
         mesh = self.mesh
@@ -85,88 +58,10 @@ class Field(object):
     def copy(self):
         return self.__class__(self.name, self.field.copy(), self.dimensions)
 
-    #def cross(self, phi):
-    #    assert self.dimensions == (3,)
-    #    assert phi.dimensions == (3,)
-    #    product = np.cross(self.field, phi.field) 
-    #    return self.__class__('cross({0},{1})'.format(self.name, phi.name), product, phi.dimensions)
-
-    # apply to both np and ad
-
-    # creates a view
-    #def component(self, component): 
-    #    assert self.dimensions == (3,)
-    #    comp = ad.reshape(self.field[:,0], (-1,1))
-    #    return self.__class__('{0}.{1}'.format(self.name, component), comp, (1,))
-
     def magSqr(self):
         assert self.dimensions == (3,)
         return self.__class__('magSqr({0})'.format(self.name), np.reshape(np.sum(self.field*self.field, axis=1), (-1,1)), (1,))
-
-    #def sqrt(self):
-    #    ad = self._getType()
-    #    return self.__class__('abs({0})'.format(self.name), ad.sqrt(self.field), self.dimensions)
-
-    #def mag(self):
-    #    return self.magSqr().sqrt()
-
-    #def sqr(self):
-    #    return self.__class__('abs({0})'.format(self.name), self.field*self.field, self.dimensions)
-
-    #def log(self):
-    #    ad = self._getType()
-    #    return self.__class__('log({0})'.format(self.name), ad.log(self.field), self.dimensions)
-
-    #def exp(self):
-    #    ad = self._getType()
-    #    return self.__class__('exp({0})'.format(self.name), ad.exp(self.field), self.dimensions)
-
-
-    #def abs(self):
-    #    return self.__class__('abs({0})'.format(self.name), ad.abs(self.field), self.dimensions)
-
-    #def dot(self, phi):
-    #    assert phi.dimensions == (3,)
-    #    ad = self._getType()
-    #    # if tensor
-    #    if len(self.dimensions) == 2:
-    #        assert self.dimensions[1] == 3
-    #        phi = self.__class__(phi.name, phi.field[:,np.newaxis,:], (1,3))
-    #        dimensions = (self.dimensions[0],)
-    #    else:
-    #        assert self.dimensions == (3,)
-    #        dimensions = (1,)
-    #    product = ad.sum(self.field * phi.field, axis=-1)
-    #    # if summed over vector
-    #    if len(self.dimensions) == 1:
-    #        #product = ad.reshape(product,(self.field.shape[0],1))
-    #        product = ad.reshape(product,(-1,1))
-    #    return self.__class__('dot({0},{1})'.format(self.name, phi.name), product, dimensions)
-
-    #def dotN(self):
-    #    return self.dot(self._getMesh().Normals)
-
-    ## represents self * phi
-    #def outer(self, phi):
-    #    return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:], (3,3))
-    #
-    ## creates a view
-    #def transpose(self):
-    #    assert len(self.dimensions) == 2
-    #    return self.__class__('{0}.T'.format(self.name), np.transpose(self.field, (0,2,1)), self.dimensions)
-
-    #def trace(self):
-    #    assert len(self.dimensions) == 2
-    #    phi = self.field
-    #    return self.__class__('tr({0})'.format(self.name), ad.reshape(phi[:,0,0] + phi[:,1,1] + phi[:,2,2], (-1,1)), (1,))
-
-    #def norm(self):
-    #    assert len(self.dimensions) == 2
-    #    ad = self._getType()
-    #    phi = self.field
-    #    normPhi = ad.sqrt(ad.reshape(ad.sum(ad.sum(phi*phi, axis=2), axis=1), (-1,1)))
-    #    return self.__class__('norm({0})'.format(self.name), normPhi, (1,))
-
+    
     def __neg__(self):
         return self.__class__('-{0}'.format(self.name), -self.field, self.dimensions)
 
@@ -644,89 +539,3 @@ class IOField(Field):
         field = griddata(cellCentres[:,:2], internalField, points[:,:2])
         return field
 
-
-#class ExchangerOp(T.Op):
-#    __props__ = ()
-#    def __init__(self):
-#        if parallel.nProcessors == 1:
-#            self.view_map = {0: [0]}
-#
-#    def make_node(self, x):
-#        assert hasattr(self, '_props')
-#        x = ad.as_tensor_variable(x)
-#        return T.Apply(self, [x], [x.type()])
-#
-#    def perform(self, node, inputs, output_storage):
-#        field = np.ascontiguousarray(inputs[0])
-#        output_storage[0][0] = parallel.getRemoteCells(field, Field.mesh)
-#
-#    def grad(self, inputs, output_grads):
-#        return [gradExchange(output_grads[0])]
-#
-#    def R_op(self, inputs, eval_points):
-#        return [exchange(eval_points[0])]
-#
-#class FaceExchangerOp(T.Op):
-#    __props__ = ()
-#    def __init__(self):
-#        if parallel.nProcessors == 1:
-#            self.view_map = {0: [0]}
-#
-#    def make_node(self, x, y, z):
-#        assert hasattr(self, '_props')
-#        x = ad.as_tensor_variable(x)
-#        y = ad.as_tensor_variable(y)
-#        z = ad.as_tensor_variable(z)
-#        return T.Apply(self, [x, y, z], [x.type()])
-#
-#    def perform(self, node, inputs, output_storage):
-#        field1 = np.ascontiguousarray(inputs[0])
-#        field2 = np.ascontiguousarray(inputs[1])
-#        startFace = inputs[2]
-#        output_storage[0][0] = parallel.getRemoteFaces(field1, field2, startFace, Field.mesh)
-#
-#    def grad(self, inputs, output_grads):
-#        gradFace = gradFaceExchange(output_grads[0], inputs[2])
-#        gradFace.append(T.gradient.disconnected_type())
-#        return gradFace
-#
-#class gradFaceExchangerOp(T.Op):
-#    __props__ = ()
-#
-#    def __init__(self):
-#        if parallel.nProcessors == 1:
-#            self.view_map = {0: [0]}
-#
-#    def make_node(self, x, y):
-#        assert hasattr(self, '_props')
-#        x = ad.as_tensor_variable(x)
-#        y = ad.as_tensor_variable(y)
-#        return T.Apply(self, [x, y], [x.type(), x.type()])
-#
-#    def perform(self, node, inputs, output_storage):
-#        gradField = np.ascontiguousarray(inputs[0])
-#        startFace = inputs[1]
-#        gradField1, gradField2 = parallel.getAdjointRemoteFaces(gradField, startFace, Field.mesh)
-#        output_storage[0][0] = gradField1
-#        output_storage[1][0] = gradField2
-#
-#class gradExchangerOp(T.Op):
-#    __props__ = ()
-#
-#    def __init__(self):
-#        if parallel.nProcessors == 1:
-#            self.view_map = {0: [0]}
-#
-#    def make_node(self, x):
-#        assert hasattr(self, '_props')
-#        x = ad.as_tensor_variable(x)
-#        return T.Apply(self, [x], [x.type()])
-#
-#    def perform(self, node, inputs, output_storage):
-#        field = np.ascontiguousarray(inputs[0])
-#        output_storage[0][0] = parallel.getAdjointRemoteCells(field, Field.mesh)
-#
-#exchange = ExchangerOp()
-#faceExchange = FaceExchangerOp()
-#gradExchange = gradExchangerOp()
-#gradFaceExchange = gradFaceExchangerOp()

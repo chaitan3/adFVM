@@ -6,15 +6,6 @@ from adpy.tensor import Kernel
 
 createFields = lambda internalFields, solver : [Field(solver.names[index], phi, solver.dimensions[index]) for index, phi in enumerate(internalFields)]
 
-#def euler(equation, boundary, stackedFields, solver):
-#    solver.stage = 1
-#    fields = solver.unstackFields(stackedFields, CellField)
-#    LHS = equation(*fields)
-#    internalFields = [(fields[index].getInternalField() - LHS[index].field*solver.dt) for index in range(0, len(fields))]
-#    internalFields = createFields(internalFields, solver)
-#    newFields = boundary(*internalFields)
-#    return solver.stackFields(newFields, ad)
-
 def euler():
     alpha = np.array([[1.]], config.precision)
     beta = np.array([[1.]], config.precision)
@@ -44,14 +35,12 @@ def timeStepper(equation, initFields, solver):
     def update(*args, **kwargs):
         i = kwargs['i']
         currFields = [0]*n
-        #LHS, fields, dt = args[:n], args[n:-1], args[-1]
         LHS, S, fields, dt = args[:n], args[n:2*n], args[2*n:-1], args[-1]
         dt = dt.scalar()
         for j in range(0, i+1):
             for index in range(0, n):
                 currFields[index] += alpha[i,j]*fields[j*n+index]
         for index in range(0, n):
-            #currFields[index] += -beta[i,i]*LHS[index]*dt
             currFields[index] += -beta[i,i]*(LHS[index]-S[index])*dt
         return tuple(currFields)
 
@@ -59,64 +48,9 @@ def timeStepper(equation, initFields, solver):
         #solver.t = solver.t0 + gamma[i]*solver.dt
         LHS = equation(*fields[i])
         S = [x[0] for x in solver.sourceTerms]
-        #args = list(LHS) + sum(fields, []) + [solver.dt]
         args = list(LHS) + S + sum(fields, []) + [solver.dt]
         currFields = Kernel(update)(mesh.nInternalCells)(*args, i=i)
         solver.stage += 1
         fields.append(list(currFields))
     return fields[-1]
-
-#def timeStepper(equation, initFields, solver):
-#    alpha, beta, gamma = solver.timeStepCoeff
-#    nStages = alpha.shape[0]
-#    LHS = []
-#    fields = [initFields]
-#    nFields = len(fields[0])
-#    for i in range(0, nStages):
-#        solver.t = solver.t0 + gamma[i]*solver.dt
-#        LHS.append(equation(*fields[i]))
-#        internalFields = [0]*nFields
-#        for j in range(0, i+1):
-#            for index in range(0, nFields):
-#                internalFields[index] += alpha[i,j]*fields[j][index].field-beta[i,j]*LHS[j][index].field*solver.dt
-#        internalFields = createFields(internalFields, solver)
-#        solver.stage += 1
-#        if i == nStages-1:
-#            return  [phi.field for phi in internalFields]
-#        else:
-#            fields.append(internalFields)
-
-# DOES NOT WORK
-#def implicit(equation, boundary, fields, garbage):
-#    assert ad.__name__ == 'numpad'
-#    start = time.time()
-#
-#    names = [phi.name for phi in fields]
-#    pprint('Solving for', ' '.join(names))
-#    for index in range(0, len(fields)):
-#        fields[index].old = CellField.copy(fields[index])
-#        fields[index].info()
-#    nDimensions = np.concatenate(([0], np.cumsum(np.array([phi.dimensions[0] for phi in fields]))))
-#    nDimensions = zip(nDimensions[:-1], nDimensions[1:])
-#    def setInternalFields(stackedInternalFields):
-#        internalFields = []
-#        # range creates a copy on the array
-#        for index in range(0, len(fields)):
-#            internalFields.append(stackedInternalFields[:, range(*nDimensions[index])])
-#        return boundary(*internalFields)
-#    def solver(internalFields):
-#        newFields = setInternalFields(internalFields)
-#        for index in range(0, len(fields)):
-#            newFields[index].old = fields[index].old
-#        return ad.hstack([phi.field for phi in equation(*newFields)])
-#
-#    internalFields = ad.hstack([phi.getInternalField() for phi in fields])
-#    solution = ad.solve(solver, internalFields)
-#    newFields = setInternalFields(solution)
-#    for index in range(0, len(fields)):
-#        newFields[index].name = fields[index].name
-#
-#    end = time.time()
-#    pprint('Time for iteration:', end-start)
-#    return newFields
 

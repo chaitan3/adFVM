@@ -30,8 +30,6 @@ class Mesh(object):
                   'weights', 'deltas', 'normals', 'deltasUnit',
                   'linearWeights', 'quadraticWeights',
                   'volumes'
-                  #'cellCentres', 'faceCentres', 
-                  #'gradOp'
                  ]
     
     BCFields = ['startFace', 'nFaces', 'cellStartFace']
@@ -40,18 +38,7 @@ class Mesh(object):
                  'nLocalCells', 'nRemoteCells', 'nLocalFaces', 'nGhostCells']
 
     def __init__(self):
-        #for attr in Mesh.constants:
-        #    setattr(self, attr, 0)
-        #for attr in Mesh.fields:
-        #    setattr(self, attr, np.array([[]]))
         self.boundary = {}
-        #for attr in Mesh.gradFields:
-        #    setattr(self, attr, 0)
-
-        #self.localRemoteCells = None
-        #self.localRemoteFaces = None
-        #nameself.remoteCells = None
-        #self.remoteFaces = None
 
     @classmethod
     def container(cls, mesh):
@@ -119,36 +106,6 @@ class Mesh(object):
         self.calculatedBoundary = self.getCalculatedBoundary()
 
         cmesh.build(self)
-        #print(time.time()-start)
-        #self.normals = self.getNormals()
-        #self.faceCentres, self.areas = self.getFaceCentresAndAreas()
-        #self.cellCentres, self.volumes = self.getCellCentresAndVolumes() 
-        #print(time.time()-start)
-        #print (np.abs(normals-self.normals)).max()
-        #print (np.abs(faceCentres-self.faceCentres)).max()
-        #print (np.abs(areas-self.areas)).max()
-        #print (np.abs(cellCentres-self.cellCentres)).max()
-        #print (np.abs(volumes-self.volumes)).max()
-
-        # ghost cell modification: neighbour and cellCentres
-        #self.nLocalCells = self.createGhostCells()
-        #deltas, deltasUnit = self.getDeltas()           # nFaces 
-        #weights, linearWeights, quadraticWeights = self.getWeights()   # nFaces
-        #print 'check', (np.abs(deltas-self.deltas)).max()
-        #print 'check', (np.abs(deltasUnit-self.deltasUnit)).max()
-        #print 'check', (np.abs(weights-self.weights)).max()
-        #print 'check', (np.abs(linearWeights-self.linearWeights)).max()
-        #print 'check', (np.abs(quadraticWeights-self.quadraticWeights)).max()
-        #exit(1)
-
-        # uses neighbour
-        #self.cellNeighboursMatOp = self.getCellNeighbours(boundary=False)
-        #self.cellNeighbours = self.getCellNeighbours()
-
-        #self.sumOp = self.getSumOp(self)             # (nInternalCells, nFaces)
-        #self.gradOp = self.getGradOp(self)             # (nInternalCells, nCells)
-        #self.checkWeights()
-        
         self.volumesL = self.volumes[self.owner]
         self.volumesR = self.volumes[self.neighbour[:self.nInternalFaces]]
         self.nRemoteCells = self.nCells - self.nLocalCells
@@ -694,17 +651,8 @@ class Mesh(object):
         owner = sparse.csc_matrix((np.ones(mesh.nFaces, config.precision), mesh.owner, np.arange(0, mesh.nFaces+1, dtype=np.int32)), shape=(mesh.nInternalCells, mesh.nFaces))
         Nindptr = np.concatenate((np.arange(0, mesh.nInternalFaces+1, dtype=np.int32), mesh.nInternalFaces*np.ones(mesh.nFaces-mesh.nInternalFaces, np.int32)))
         neighbour = sparse.csc_matrix((-np.ones(mesh.nInternalFaces, config.precision), mesh.neighbour[:mesh.nInternalFaces], Nindptr), shape=(mesh.nInternalCells, mesh.nFaces))
-        # skip empty patches
-        #for patchID in self.boundary:
-        #    patch = self.boundary[patchID]
-        #    if patch['type'] == 'empty' and patch['nFaces'] != 0:
-        #        pprint('Deleting empty patch ', patchID)
-        #        startFace = mesh.nInternalFaces + patch['startFace'] - self.nInternalFaces
-        #        endFace = startFace + patch['nFaces']
-        #        owner.data[startFace:endFace] = 0
         sumOp = (owner + neighbour).tocoo()
     
-        #return adsparse.CSR(sumOp.data, sumOp.indices, sumOp.indptr, sumOp.shape)
         return sumOp
 
     def getGradOp(self, mesh):
@@ -928,17 +876,6 @@ class Mesh(object):
             boundary.extend([patch[attr] for attr in Mesh.BCFields])
         return boundary
 
-    def getSparseTensor(self, attr):
-        indices = ad.placeholder(ad.int64)
-        values = ad.placeholder(config.dtype)
-        shape = ad.placeholder(ad.int64)
-        sparse = getattr(self, attr)
-        sparse.indices = np.stack((sparse.row, sparse.col), axis=1).astype(np.int64)
-        sparse.values = sparse.data
-        sparse.dense_shape = np.array(sparse.shape).astype(np.int64)
-        sumOp = ad.SparseTensor(indices, values, shape)
-        return sumOp
-
 
     @config.timeFunction('Time to update mesh')
     def update(self, t, dt):
@@ -947,6 +884,7 @@ class Mesh(object):
             if self.boundary[patchID]['type'] == 'slidingPeriodic1D':
                 self.updateSlidingPatch(patchID, t, dt)
 
+    # dynamic mesh
     def initSlidingPatch(self, patchID):
         mesh = self
         patch = mesh.boundary[patchID]

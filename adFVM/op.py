@@ -96,8 +96,6 @@ def internal_sum(phi, mesh, sumOp=False, absolute=False):
             np.add.at(x, mesh.neighbour[:mesh.nInternalFaces], phiF[:mesh.nInternalFaces])
         x = x[:-1]/mesh.volumes
 
-    # retain pattern broadcasting
-    #x = ad.patternbroadcast(x, phi.field.broadcastable)
     return x
 
 

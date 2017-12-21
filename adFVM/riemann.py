@@ -10,10 +10,6 @@ def eulerLaxFriedrichs(gamma, pLF, pRF, TLF, TRF, ULF, URF, \
     cLF = (gamma*pLF/rhoLF).sqrt()
     cRF = (gamma*pRF/rhoRF).sqrt()
     aF = Tensor.max(abs(UnLF) + cLF, abs(UnRF) + cRF)
-    #Z = Field('Z', ad.bcalloc(config.precision(0.), (mesh.nFaces, 1)), (1,))
-    #apF = Field.max(Field.max(UnLF + cLF, UnRF + cRF), Z)
-    #amF = Field.min(Field.min(UnLF - cLF, UnRF - cRF), Z)
-    #aF = Field.max(apF.abs(), amF.abs())
 
     rhoFlux = 0.5*(rhoLF*UnLF + rhoRF*UnRF) - 0.5*aF*(rhoRF-rhoLF)
     rhoUFlux = 0.5*(rhoULF*UnLF + rhoURF*UnRF + (pLF + pRF)*Normals) - 0.5*aF*(rhoURF-rhoULF)
@@ -49,7 +45,6 @@ def eulerRoe(gamma, pLF, pRF, TLF, TRF, ULF, URF, \
     drhoUF = rhoRF*URF - rhoLF*ULF
     drhoEF = (hRF*rhoRF-pRF)-(hLF*rhoLF-pLF)
 
-    #lam1, lam2, lam3 = UnF.abs(), (UnF + aF).abs(), (UnF - aF).abs()
     lam1, lam2, lam3 = abs(UnF), abs(UnF + aF), abs(UnF - aF)
 
     eps = 0.5*abs(rhoUnLF/rhoLF - rhoUnRF/rhoRF)
@@ -74,73 +69,3 @@ def eulerRoe(gamma, pLF, pRF, TLF, TRF, ULF, URF, \
 
     return rhoFlux, rhoUFlux, rhoEFlux
 
-
-def eulerHLLC(gamma, pLF, pRF, TLF, TRF, ULF, URF, \
-                rhoLF, rhoRF, rhoULF, rhoURF, rhoELF, rhoERF, Normals):
-
-    UnLF, UnRF = ULF.dot(Normals), URF.dot(Normals)
-    qLF, qRF = ULF.magSqr(), URF.magSqr()
-    cLF, cRF = (gamma*pLF)/rhoLF, (gamma*pRF)/rhoRF
-    hLF = gamma*pLF/((gamma-1)*rhoLF) + 0.5*qLF
-    hRF = gamma*pRF/((gamma-1)*rhoRF) + 0.5*qRF
-    eLF, eRF = hLF*rhoLF-pLF, hRF*rhoRF-pRF
-
-    RrhoF = (rhoRF/rhoLF).sqrt()
-    divRhoF = RrhoF + 1
-    UF = (ULF + URF*RrhoF)/divRhoF
-    # normal velocity for CFL
-    UnF = UF.dot(Normals)
-
-    PrhoF = (cLF.sqr()+0.5*(gamma-1)*qLF + (cRF.sqr()+0.5*(gamma-1)*qRF)*RrhoF)/divRhoF
-    cF = (PrhoF-0.5*(gamma-1)*UF.magSqr()).sqrt()
-    # speed of sound for CFL
-    #aF = cF
-
-    sLF = Field.min(UnF-cF, UnLF-cLF)
-    sRF = Field.max(UnF+cF, UnRF+cRF)
-
-    sMF = (pLF-pRF - rhoLF*UnLF*(sLF-UnLF) + rhoRF*UnRF*(sRF-UnRF)) \
-          /(rhoRF*(sRF-UnRF)-rhoLF*(sLF-UnRF))
-    pSF = rhoRF*(UnRF-sRF)*(UnRF-sMF) + pRF
-
-    Frho1 = rhoLF*UnLF
-    FrhoU1 = Frho1*ULF + pLF*Normals
-    FrhoE1 = (eLF + pLF)*UnLF
-
-    divsLF = sLF-sMF
-    sUnLF = sLF-UnLF
-    rhosLF = rhoLF*sUnLF/divsLF
-    rhoUsLF = (rhoLF*ULF*sUnLF + (pSF-pLF)*Normals)/divsLF
-    esLF = (sUnLF*eLF-pLF*UnLF+pSF*sMF)/divsLF
-
-    Frho2 = rhosLF*sMF
-    FrhoU2 = rhoUsLF*sMF + pSF*Normals
-    FrhoE2 = (esLF + pSF)*sMF
-
-    divsRF = sRF-sMF
-    sUnRF = sRF-UnRF
-    rhosRF = rhoRF*sUnRF/divsRF
-    rhoUsRF = (rhoRF*URF*sUnRF + (pSF-pRF)*Normals)/divsRF
-    esRF = (sUnRF*eRF-pRF*UnRF+pSF*sMF)/divsRF
-
-    Frho3 = rhosRF*sMF
-    FrhoU3 = rhoUsRF*sMF + pSF*Normals
-    FrhoE3 = (esRF + pSF)*sMF
-
-    Frho4 = rhoRF*UnRF
-    FrhoU4 = Frho1*URF + pRF*Normals
-    FrhoE4 = (eRF + pRF)*UnRF
-
-    rhoFlux = Field.switch(ad.gt(sMF.field, 0.), \
-              Field.switch(ad.gt(sLF.field, 0.), Frho1, Frho2), \
-              Field.switch(ad.gt(sRF.field, 0.), Frho3, Frho4))
-    
-    rhoUFlux = Field.switch(ad.gt(sMF.field, 0.), \
-              Field.switch(ad.gt(sLF.field, 0.), FrhoU1, FrhoU2), \
-              Field.switch(ad.gt(sRF.field, 0.), FrhoU3, FrhoU4))
-
-    rhoEFlux = Field.switch(ad.gt(sMF.field, 0.), \
-              Field.switch(ad.gt(sLF.field, 0.), FrhoE1, FrhoE2), \
-              Field.switch(ad.gt(sRF.field, 0.), FrhoE3, FrhoE4))
-
-    return rhoFlux, rhoUFlux, rhoEFlux
