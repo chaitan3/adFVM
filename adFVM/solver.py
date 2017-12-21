@@ -48,6 +48,7 @@ class Solver(object):
         self.statusFile = self.mesh.case + 'status.pkl'
         self.timeSeriesFile = self.mesh.case + 'timeSeries{}.txt'.format(self.timeSeriesAppend)
         Field.setSolver(self)
+        #Field.setMesh(self.mesh)
 
         self.timeStepCoeff = getattr(timestep, self.timeIntegrator)()
         self.nStages = self.timeStepCoeff[0].shape[0]
@@ -59,13 +60,13 @@ class Solver(object):
 
     def compile(self, adjoint=None):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
-        Function.createCodeDir(self.mesh.caseDir)
         self.compileInit()
         self.compileSolver()
-        Function.compile(compiler_args=config.get_compiler_args())
+        if config.compile:
+            Function.compile(self.mesh.caseDir, init=False, compiler_args=config.get_compiler_args())
         if config.compile_exit:
             exit(0)
-        Function._module.initialize(parallel.localRank, self.mesh)
+        Function.initialize(parallel.localRank, self.mesh)
         return
         
     def function(self, inputs, outputs, name, **kwargs):

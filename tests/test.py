@@ -1,17 +1,7 @@
-import unittest
 import numpy as np
 import os
 import subprocess
 
-from deep_eq import deep_eq
-
-from adFVM import config
-from adFVM.config import ad, T
-config.unpickleFunction = False
-config.pickleFunction = False
-from adFVM.solver import SolverFunction
-from adFVM.mesh import Mesh
-from adFVM.field import Field, CellField
 
 test_path = os.path.dirname(__file__)
 adFVM_path = os.path.join(test_path, '..')
@@ -19,25 +9,6 @@ scripts_path = os.path.join(adFVM_path, 'scripts')
 apps_path = os.path.join(adFVM_path, 'apps')
 cases_path = os.path.join(adFVM_path, 'cases')
 templates_path = os.path.join(adFVM_path, 'templates')
-
-class TestAdFVM(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
-        self.case = '../cases/convection/'
-        self.mesh = Mesh.create(self.case)
-        Field.setSolver(self)
-        self.meshO = self.mesh.origMesh
-        self.postpro = []
-        
-        self.X = self.meshO.cellCentres[:, 0]
-        self.Y = self.meshO.cellCentres[:, 1]
-        self.XF = self.meshO.faceCentres[:, 0]
-        self.YF = self.meshO.faceCentres[:, 1]
-
-        self.U = ad.matrix()
-        self.FU = CellField('F', self.U, (3,))
-        self.V = ad.bcmatrix()
-        self.FV = CellField('F', self.V, (1,))
 
 def evaluate(output, inputs, value, self):
     if not isinstance(inputs, list):

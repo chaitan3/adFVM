@@ -20,82 +20,45 @@ logger = config.Logger(__name__)
 
 class Field(object):
     @classmethod
-    def setSolver(cls, solver):
-        cls.solver = solver
-        cls.setMesh(solver.mesh)
-
-    @classmethod
     def setMesh(cls, mesh):
         cls.mesh = mesh
-        if not hasattr(mesh, 'Normals') and hasattr(mesh, 'normals'):
-            mesh.Normals = Field('nF', mesh.normals, (3,))
+
+    @classmethod
+    def setSolver(cls, solver):
+        cls.setMesh(solver.mesh)
+        cls.solver = solver
 
     def __init__(self, name, field, dimensions):
         self.name = name
         self.field = field
         self.dimensions = dimensions
-        self.initField()
 
-    def _getType(self):
-        return np
+    #def _getType(self):
+    #    return np
 
-    def _getMesh(self):
-        if isinstance(self.field, np.ndarray):
-            return self.mesh
-        else:
-            return self.mesh
+    #def _getMesh(self):
+    #    if isinstance(self.field, np.ndarray):
+    #        return self.mesh
+    #    else:
+    #        return self.mesh
 
     # apply to ad
-    @classmethod
-    def max(self, a, b):
-        return self('max({0},{1})'.format(a.name, b.name), ad.maximum(a.field, b.field), a.dimensions)
-    @classmethod
-    def min(self, a, b):
-        return self('min({0},{1})'.format(a.name, b.name), ad.minimum(a.field, b.field), a.dimensions)
+    #@classmethod
+    #def max(self, a, b):
+    #    return self('max({0},{1})'.format(a.name, b.name), ad.maximum(a.field, b.field), a.dimensions)
+    #@classmethod
+    #def min(self, a, b):
+    #    return self('min({0},{1})'.format(a.name, b.name), ad.minimum(a.field, b.field), a.dimensions)
 
-    @classmethod
-    def switch(self, condition, a, b):
-        return self('switch({0},{1})'.format(a.name, b.name), ad.where(condition, a.field, b.field), a.dimensions)
+    #@classmethod
+    #def switch(self, condition, a, b):
+    #    return self('switch({0},{1})'.format(a.name, b.name), ad.where(condition, a.field, b.field), a.dimensions)
 
-    def getField(self, indices):
-        if isinstance(indices, tuple):
-            return self.__class__(self.name, self.field[indices[0]:indices[1]], self.dimensions)
-        else:
-            return self.__class__(self.name, ad.gather(self.field, indices), self.dimensions)
+    #def stabilise(self, num):
+    #    return self.__class__('stabilise({0})'.format(self.name), ad.where(self.field < 0., self.field - num, self.field + num), self.dimensions)
 
-    def initField(self):
-        self._indices = []
-        self._values = []
-
-    def setField(self, indices, field):
-        if isinstance(field, Field):
-            field = field.field
-        self._indices.append(indices)
-        self._values.append(field)
-        #if isinstance(indices, tuple):
-        #    #print self.field.shape, field.shape
-        #    self.field = ad.concat((self.field[:indices[0]], field, self.field[indices[1]:]), 0)
-        #    #self.field = ad.set_subtensor(self.field[indices[0]:indices[1]], field)
-        #    
-        #else:
-        #    raise Exception('not implemented')
-        #    rev_indices = 1 - ad.scatter_nd(indices, 1, 1)
-        #    self.field = ad.dynamic_stitch([indices, rev_indices], field, ad.gather(self.field, rev_indices))
-        #    #self.field = ad.set_subtensor(self.field[indices], field)
-
-    def gatherField(self, gtype='stitch'):
-        if gtype == 'stitch':
-            self.field = ad.dynamic_stitch(self._indices, self._values)
-        elif gtype == 'concat':
-            self.field = ad.concat(self._values, 0)
-        else:
-            raise Exception('WTF')
-
-    def stabilise(self, num):
-        return self.__class__('stabilise({0})'.format(self.name), ad.where(self.field < 0., self.field - num, self.field + num), self.dimensions)
-
-    def sign(self):
-        return self.__class__('abs({0})'.format(self.name), ad.sgn(self.field), self.dimensions)
+    #def sign(self):
+    #    return self.__class__('abs({0})'.format(self.name), ad.sgn(self.field), self.dimensions)
 
     # apply to np
     def info(self):
@@ -122,88 +85,87 @@ class Field(object):
     def copy(self):
         return self.__class__(self.name, self.field.copy(), self.dimensions)
 
-    def cross(self, phi):
-        assert self.dimensions == (3,)
-        assert phi.dimensions == (3,)
-        product = np.cross(self.field, phi.field) 
-        return self.__class__('cross({0},{1})'.format(self.name, phi.name), product, phi.dimensions)
+    #def cross(self, phi):
+    #    assert self.dimensions == (3,)
+    #    assert phi.dimensions == (3,)
+    #    product = np.cross(self.field, phi.field) 
+    #    return self.__class__('cross({0},{1})'.format(self.name, phi.name), product, phi.dimensions)
 
     # apply to both np and ad
 
     # creates a view
-    def component(self, component): 
-        assert self.dimensions == (3,)
-        comp = ad.reshape(self.field[:,0], (-1,1))
-        return self.__class__('{0}.{1}'.format(self.name, component), comp, (1,))
+    #def component(self, component): 
+    #    assert self.dimensions == (3,)
+    #    comp = ad.reshape(self.field[:,0], (-1,1))
+    #    return self.__class__('{0}.{1}'.format(self.name, component), comp, (1,))
 
     def magSqr(self):
         assert self.dimensions == (3,)
-        ad = self._getType()
-        return self.__class__('magSqr({0})'.format(self.name), ad.reshape(ad.sum(self.field*self.field, axis=1), (-1,1)), (1,))
+        return self.__class__('magSqr({0})'.format(self.name), np.reshape(np.sum(self.field*self.field, axis=1), (-1,1)), (1,))
 
-    def sqrt(self):
-        ad = self._getType()
-        return self.__class__('abs({0})'.format(self.name), ad.sqrt(self.field), self.dimensions)
+    #def sqrt(self):
+    #    ad = self._getType()
+    #    return self.__class__('abs({0})'.format(self.name), ad.sqrt(self.field), self.dimensions)
 
-    def mag(self):
-        return self.magSqr().sqrt()
+    #def mag(self):
+    #    return self.magSqr().sqrt()
 
-    def sqr(self):
-        return self.__class__('abs({0})'.format(self.name), self.field*self.field, self.dimensions)
+    #def sqr(self):
+    #    return self.__class__('abs({0})'.format(self.name), self.field*self.field, self.dimensions)
 
-    def log(self):
-        ad = self._getType()
-        return self.__class__('log({0})'.format(self.name), ad.log(self.field), self.dimensions)
+    #def log(self):
+    #    ad = self._getType()
+    #    return self.__class__('log({0})'.format(self.name), ad.log(self.field), self.dimensions)
 
-    def exp(self):
-        ad = self._getType()
-        return self.__class__('exp({0})'.format(self.name), ad.exp(self.field), self.dimensions)
+    #def exp(self):
+    #    ad = self._getType()
+    #    return self.__class__('exp({0})'.format(self.name), ad.exp(self.field), self.dimensions)
 
 
-    def abs(self):
-        return self.__class__('abs({0})'.format(self.name), ad.abs(self.field), self.dimensions)
+    #def abs(self):
+    #    return self.__class__('abs({0})'.format(self.name), ad.abs(self.field), self.dimensions)
 
-    def dot(self, phi):
-        assert phi.dimensions == (3,)
-        ad = self._getType()
-        # if tensor
-        if len(self.dimensions) == 2:
-            assert self.dimensions[1] == 3
-            phi = self.__class__(phi.name, phi.field[:,np.newaxis,:], (1,3))
-            dimensions = (self.dimensions[0],)
-        else:
-            assert self.dimensions == (3,)
-            dimensions = (1,)
-        product = ad.sum(self.field * phi.field, axis=-1)
-        # if summed over vector
-        if len(self.dimensions) == 1:
-            #product = ad.reshape(product,(self.field.shape[0],1))
-            product = ad.reshape(product,(-1,1))
-        return self.__class__('dot({0},{1})'.format(self.name, phi.name), product, dimensions)
+    #def dot(self, phi):
+    #    assert phi.dimensions == (3,)
+    #    ad = self._getType()
+    #    # if tensor
+    #    if len(self.dimensions) == 2:
+    #        assert self.dimensions[1] == 3
+    #        phi = self.__class__(phi.name, phi.field[:,np.newaxis,:], (1,3))
+    #        dimensions = (self.dimensions[0],)
+    #    else:
+    #        assert self.dimensions == (3,)
+    #        dimensions = (1,)
+    #    product = ad.sum(self.field * phi.field, axis=-1)
+    #    # if summed over vector
+    #    if len(self.dimensions) == 1:
+    #        #product = ad.reshape(product,(self.field.shape[0],1))
+    #        product = ad.reshape(product,(-1,1))
+    #    return self.__class__('dot({0},{1})'.format(self.name, phi.name), product, dimensions)
 
-    def dotN(self):
-        return self.dot(self._getMesh().Normals)
+    #def dotN(self):
+    #    return self.dot(self._getMesh().Normals)
 
-    # represents self * phi
-    def outer(self, phi):
-        return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:], (3,3))
-    
-    # creates a view
-    def transpose(self):
-        assert len(self.dimensions) == 2
-        return self.__class__('{0}.T'.format(self.name), np.transpose(self.field, (0,2,1)), self.dimensions)
+    ## represents self * phi
+    #def outer(self, phi):
+    #    return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:], (3,3))
+    #
+    ## creates a view
+    #def transpose(self):
+    #    assert len(self.dimensions) == 2
+    #    return self.__class__('{0}.T'.format(self.name), np.transpose(self.field, (0,2,1)), self.dimensions)
 
-    def trace(self):
-        assert len(self.dimensions) == 2
-        phi = self.field
-        return self.__class__('tr({0})'.format(self.name), ad.reshape(phi[:,0,0] + phi[:,1,1] + phi[:,2,2], (-1,1)), (1,))
+    #def trace(self):
+    #    assert len(self.dimensions) == 2
+    #    phi = self.field
+    #    return self.__class__('tr({0})'.format(self.name), ad.reshape(phi[:,0,0] + phi[:,1,1] + phi[:,2,2], (-1,1)), (1,))
 
-    def norm(self):
-        assert len(self.dimensions) == 2
-        ad = self._getType()
-        phi = self.field
-        normPhi = ad.sqrt(ad.reshape(ad.sum(ad.sum(phi*phi, axis=2), axis=1), (-1,1)))
-        return self.__class__('norm({0})'.format(self.name), normPhi, (1,))
+    #def norm(self):
+    #    assert len(self.dimensions) == 2
+    #    ad = self._getType()
+    #    phi = self.field
+    #    normPhi = ad.sqrt(ad.reshape(ad.sum(ad.sum(phi*phi, axis=2), axis=1), (-1,1)))
+    #    return self.__class__('norm({0})'.format(self.name), normPhi, (1,))
 
     def __neg__(self):
         return self.__class__('-{0}'.format(self.name), -self.field, self.dimensions)

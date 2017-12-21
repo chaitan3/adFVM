@@ -1,270 +1,43 @@
 from __future__ import print_function
-from test import *
 import copy
 import shutil
 import glob
 import os
 import sys
+import numpy as np
+import subprocess
 
 from adFVM import config
 from adFVM.field import Field, CellField, IOField
 from adFVM.mesh import Mesh
+from deep_eq import deep_eq
 
-class TestField(TestAdFVM):
-    @classmethod
-    def setUpClass(self):
-        super(self, TestField).setUpClass()
+def test_field():
+    case = '../cases/convection/'
+    mesh = Mesh.create(case)
+    Field.setMesh(mesh)
+    n = mesh.nFaces
 
-        self.X = self.X[:self.meshO.nInternalCells]
-        self.Y = self.Y[:self.meshO.nInternalCells]
+    Ur = np.random.rand(n, 1)
+    Vr = np.random.rand(n, 1) + 2
+    
+    U = Field('U', Ur, (1,))
+    V = Field('V', Vr, (1,))
 
-        self.U = ad.matrix()
-        self.FU = Field('F', self.U, (3,))
-        self.V = ad.matrix()
-        self.FV = Field('F', self.V, (3,))
-        self.W = ad.tensor3()
-        self.FW = Field('F', self.W, (3,3))
+    Wr = (Ur + Vr/Ur)*Vr**0.5
+    W = (U + V/U)*V**0.5
+    assert np.allclose(W.field, Wr)
 
-    def test_max(self):
-        FU = Field('F', self.U, (1,))
-        FV = Field('F', self.V, (1,))
-        R = Field.max(FU, FV)
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (1,))
-
-        S = np.random.rand(self.meshO.nFaces, 1) 
-        T = np.random.rand(self.meshO.nFaces, 1)
-        res = evaluate(R.field, [self.U, self.V], [S,T], self)
-        ref = np.maximum(S, T)
-        checkArray(self, res, ref)
-
-    def test_switch(self):
-        C = ad.matrix()
-        FU = Field('F', self.U, (1,))
-        FV = Field('F', self.V, (1,))
-        R = Field.switch(C, FU, FV)
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (1,))
-
-        S = np.random.rand(self.meshO.nFaces, 1)
-        T = np.random.rand(self.meshO.nFaces, 1)
-        P = S > T
-        res = evaluate(R.field, [C, self.U, self.V], [P,S,T], self)
-        ref = np.maximum(S, T)
-        checkArray(self, res, ref)
-
-    def test_abs(self):
-        R = self.FU.abs()
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (3,))
-
-        T = np.zeros((self.meshO.nInternalCells, 3))
-        T[:,0] = self.X
-        T[:,1] = -1
-        T[:,2] = 2.
-        res = evaluate(R.field, self.U, T, self)
-        ref = np.zeros_like(T)
-        ref[:,0] = np.abs(self.X)
-        ref[:,1] = 1.
-        ref[:,2] = 2.
-        checkArray(self, res, ref)
-
-    def test_sign(self):
-        R = self.FU.sign()
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (3,))
-
-        T = np.zeros((self.meshO.nInternalCells, 3))
-        T[:,0] = self.X
-        T[:,1] = -1
-        T[:,2] = 2.
-        res = evaluate(R.field, self.U, T, self)
-        ref = np.zeros_like(T)
-        ref[:,0] = np.sign(self.X)
-        ref[:,1] = -1.
-        ref[:,2] = 1.
-        checkArray(self, res, ref)
-
-    def test_component(self):
-        R = self.FU.component(0)
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (1,))
-
-        T = np.random.rand(self.meshO.nFaces, 3)
-        res = evaluate(R.field, self.U, T, self)
-        ref = T[:,[0]]
-        checkArray(self, res, ref)
-
-    def test_magSqr(self):
-        R = self.FU.magSqr()
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (1,))
-
-        T = np.zeros((self.meshO.nInternalCells, 3))
-        T[:, 0] = self.X
-        T[:, 1] = self.Y
-        res = evaluate(R.field, self.U, T, self)
-        ref = (self.X**2 + self.Y**2).reshape(-1,1)
-        checkArray(self, res, ref)
-
-    def test_dot_vector(self):
-        R = self.FU.dot(self.FV)
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (1,))
-
-        S = np.zeros((self.meshO.nInternalCells, 3))
-        T = np.zeros((self.meshO.nInternalCells, 3))
-        S[:,0], S[:,1] = self.X, self.Y
-        T[:,0], T[:,1] = self.Y, -self.X
-        res = evaluate(R.field, [self.U, self.V], [S, T], self)
-        ref = np.zeros((self.meshO.nInternalCells, 1))
-        checkArray(self, res, ref)
-
-    def test_outer(self):
-        R = self.FU.outer(self.FV)
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (3,3))
-
-        S = np.zeros((self.meshO.nInternalCells, 3))
-        T = np.zeros((self.meshO.nInternalCells, 3))
-        S[:,0], S[:,1], S[:,2] = self.X, self.Y, 0.5
-        T[:,0], T[:,1], T[:,2] = self.Y, -self.X, 2.
-        res = evaluate(R.field, [self.U, self.V], [S, T], self)
-        ref = np.zeros((self.meshO.nInternalCells, 3, 3))
-        ref[:, 0, 0] = self.X*self.Y
-        ref[:, 0, 1] = -self.X*self.X
-        ref[:, 0, 2] = 2*self.X
-        ref[:, 1, 0] = self.Y*self.Y
-        ref[:, 1, 1] = -self.X*self.Y
-        ref[:, 1, 2] = 2*self.Y
-        ref[:, 2, 0] = 0.5*self.Y
-        ref[:, 2, 1] = -0.5*self.X
-        ref[:, 2, 2] = 1.
-        checkArray(self, res, ref)
-
-    def test_dot_tensor(self):
-        R = self.FW.dot(self.FU)
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (3,))
-
-        S = np.zeros((self.meshO.nInternalCells, 3, 3))
-        T = np.zeros((self.meshO.nInternalCells, 3))
-        S[:, 0, 0] = self.X*self.X
-        S[:, 0, 1] = self.X*self.Y
-        S[:, 1, 1] = self.Y*self.Y
-        S[:, 2, 2] = 1.
-        T[:,0], T[:,1], T[:,2] = self.X*0.1, self.X*0.2, self.X*0.3
-        res = evaluate(R.field, [self.W, self.U], [S, T], self)
-        ref = np.zeros((self.meshO.nInternalCells, 3))
-        ref[:, 0] = (S[:, 0, 0]*0.1 + S[:, 0, 1]*0.2)*self.X
-        ref[:, 1] = S[:, 1, 1]*0.2*self.X
-        ref[:, 2] = S[:, 2, 2]*0.3*self.X
-        checkArray(self, res, ref)
-
-    def test_transpose(self):
-        R = self.FW.transpose()
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (3,3))
-
-        S = np.zeros((self.meshO.nInternalCells, 3, 3))
-        S[:, 0, 0] = self.X*self.X
-        S[:, 0, 1] = self.X*self.Y
-        S[:, 1, 1] = self.Y*self.Y
-        S[:, 2, 2] = 1.
-        res = evaluate(R.field, self.W, S, self)
-        ref = np.zeros((self.meshO.nInternalCells, 3, 3))
-        ref[:, 0, 0] = self.X*self.X
-        ref[:, 1, 0] = self.X*self.Y
-        ref[:, 1, 1] = self.Y*self.Y
-        ref[:, 2, 2] = 1.
-        checkArray(self, res, ref)
-
-    def test_trace(self):
-        R = self.FW.trace()
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (1,))
-
-        S = np.zeros((self.meshO.nInternalCells, 3, 3))
-        S[:, 0, 0] = self.X*self.X
-        S[:, 0, 1] = self.X*self.Y
-        S[:, 1, 1] = self.Y*self.Y
-        S[:, 2, 2] = 1.
-        res = evaluate(R.field, self.W, S, self)
-        ref = (self.X*self.X + self.Y*self.Y + 1.).reshape(-1,1)
-        checkArray(self, res, ref)
-
-    def test_add(self):
-        R = self.FU + self.FV
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (3,))
-
-        S = np.zeros((self.meshO.nInternalCells, 3))
-        T = np.zeros((self.meshO.nInternalCells, 3))
-        S[:,0], S[:,1] = self.X, self.Y
-        T[:,0], T[:,1] = self.Y, -self.X
-        res = evaluate(R.field, [self.U, self.V], [S, T], self)
-        ref = np.zeros((self.meshO.nInternalCells, 3))
-        ref[:,0] = self.X + self.Y
-        ref[:,1] = self.Y - self.X
-        checkArray(self, res, ref)
-
-    def test_mul(self):
-        R = self.FU * self.FV
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (3,))
-
-        S = np.zeros((self.meshO.nInternalCells, 3))
-        T = np.zeros((self.meshO.nInternalCells, 3))
-        S[:,0], S[:,1] = self.X, self.Y
-        T[:,0], T[:,1] = self.Y, -self.X
-        res = evaluate(R.field, [self.U, self.V], [S, T], self)
-        ref = np.zeros((self.meshO.nInternalCells, 3))
-        ref[:,0] = self.X * self.Y
-        ref[:,1] = self.Y * -self.X
-        checkArray(self, res, ref)
-
-    def test_mul_vector(self):
-        V = ad.bcmatrix()
-        FV = Field('F', V, (1,))
-        R = self.FU * FV
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (3,))
-
-        S = np.zeros((self.meshO.nInternalCells, 3))
-        T = np.zeros((self.meshO.nInternalCells, 1))
-        S[:,0], S[:,1] = self.X, self.Y
-        T[:,0] = self.Y
-        res = evaluate(R.field, [self.U, V], [S, T], self)
-        ref = np.zeros((self.meshO.nInternalCells, 3))
-        ref[:,0] = self.X*self.Y
-        ref[:,1] = self.Y*self.Y
-        checkArray(self, res, ref)
-
-    def test_neg(self):
-        R = self.FU.abs()
-        self.assertTrue(isinstance(R, Field))
-        self.assertEqual(R.dimensions, (3,))
-
-        T = np.zeros((self.meshO.nInternalCells, 3))
-        T[:,0] = self.X
-        T[:,1] = -1
-        T[:,2] = 2.
-        res = evaluate(R.field, self.U, T, self)
-        ref = np.zeros_like(T)
-        ref[:,0] = np.abs(self.X)
-        ref[:,1] = 1.
-        ref[:,2] = 2.
-        checkArray(self, res, ref)
-
-def test_field_io(self, case, hdf5):
+def test_field_io(case, hdf5):
     config.hdf5 = hdf5
     mesh = Mesh.create(case)
-    IOField.setMesh(mesh)
+    Field.setMesh(mesh)
+
     time = 1.0
 
-    field = np.random.rand(mesh.origMesh.nInternalCells, 3)
+    field = np.random.rand(mesh.nInternalCells, 3)
     boundary = copy.deepcopy(mesh.defaultBoundary)
-    nFaces = mesh.origMesh.getPatchFaceRange('inlet')[2]
+    nFaces = mesh.getPatchFaceRange('inlet')[2]
     boundary['inlet'] = {
             'type':'CBC_TOTAL_PT',
             'pt': 'uniform 20',
@@ -273,7 +46,7 @@ def test_field_io(self, case, hdf5):
     U = IOField('U', field, (3,), boundary)
     U.partialComplete()
 
-    field = np.random.rand(mesh.origMesh.nInternalCells, 1)
+    field = np.random.rand(mesh.nInternalCells, 1)
     boundary = copy.deepcopy(mesh.defaultBoundary)
     T = IOField('T', field, (1,), boundary)
     boundary['outlet'] = {
@@ -291,14 +64,15 @@ def test_field_io(self, case, hdf5):
         Un.partialComplete()
 
     config.hdf5 = False
-    self.assertTrue(deep_eq(Tn.boundary, T.boundary))
-    self.assertTrue(deep_eq(Un.boundary, U.boundary))
-    checkArray(self, Tn.field, T.field, maxThres=1e-16)
-    checkArray(self, Un.field, U.field, maxThres=1e-16)
+    assert (deep_eq(Tn.boundary, T.boundary))
+    assert (deep_eq(Un.boundary, U.boundary))
+    np.allclose(Tn.field, T.field)
+    np.allclose(Un.field, U.field)
 
 def test_field_io_mpi(case):
     mesh = Mesh.create(case)
-    IOField.setMesh(mesh)
+    Field.setMesh(mesh)
+
     time = 1.0
 
     config.hdf5 = False
@@ -314,47 +88,51 @@ def test_field_io_mpi(case):
     assert np.allclose(U.field, Uh.field)
     assert deep_eq(U.boundary, Uh.boundary)
 
-class TestIOField(unittest.TestCase):
-    def test_foam(self):
-        case = '../cases/forwardStep/'
+def test_foam():
+    case = '../cases/forwardStep/'
+    try:
+        test_field_io(case, False)
+    finally:
+        shutil.rmtree(os.path.join(case, '1'))
+
+def test_hdf5():
+    case = '../cases/forwardStep/'
+    try:
+        subprocess.check_output(['../scripts/conversion/hdf5.py', case])
+        test_field_io(case, True)
+    finally:
+        map(os.remove, glob.glob(os.path.join(case, '*.hdf5')))
+
+def test_hdf5_mpi():
+    case = '../cases/forwardStep/'
+    try:
+        mesh = Mesh.create(case)
+        IOField.setMesh(mesh)
+        time = 1.0
+        field = np.random.rand(mesh.nInternalCells, 3)
+        boundary = copy.deepcopy(mesh.defaultBoundary)
+        U = IOField('U', field, (3,), boundary)
+        with IOField.handle(time):
+            U.write()
+
+        subprocess.check_output(['decomposePar', '-time', '1', '-case', case])
+        subprocess.check_output(['mpirun', '-np', '4', '../scripts/conversion/hdf5.py', case, str(time)])
+        subprocess.check_output(['mpirun', '-np', '4', sys.executable, __file__, 'RUN', 'test_field_io_mpi', case])
+    finally:
         try:
-            test_field_io(self, case, False)
-        finally:
             shutil.rmtree(os.path.join(case, '1'))
-
-    def test_hdf5(self):
-        case = '../cases/forwardStep/'
-        try:
-            subprocess.check_output(['../scripts/conversion/hdf5.py', case])
-            test_field_io(self, case, True)
-        finally:
-            map(os.remove, glob.glob(os.path.join(case, '*.hdf5')))
-
-    def test_hdf5_mpi(self):
-        case = '../cases/forwardStep/'
-        try:
-            mesh = Mesh.create(case)
-            IOField.setMesh(mesh)
-            time = 1.0
-            field = np.random.rand(mesh.origMesh.nInternalCells, 3)
-            boundary = copy.deepcopy(mesh.defaultBoundary)
-            U = IOField('U', field, (3,), boundary)
-            with IOField.handle(time):
-                U.write()
-
-            subprocess.check_output(['decomposePar', '-time', '1', '-case', case])
-            subprocess.check_output(['mpirun', '-np', '4', '../scripts/conversion/hdf5.py', case, str(time)])
-            subprocess.check_output(['mpirun', '-np', '4', sys.executable, __file__, 'RUN', 'test_field_io_mpi', case])
-        finally:
-            shutil.rmtree(os.path.join(case, '1'))
-            map(os.remove, glob.glob(os.path.join(case, '*.hdf5')))
-            map(shutil.rmtree, glob.glob(os.path.join(case, 'processor*')))
+        except OSError:
+            pass
+        map(os.remove, glob.glob(os.path.join(case, '*.hdf5')))
+        map(shutil.rmtree, glob.glob(os.path.join(case, 'processor*')))
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == 'RUN':
         func = locals()[sys.argv[2]]
         func(*sys.argv[3:])
-
     else:
-        unittest.main(verbosity=2, buffer=True)
+        #test_field()
+        #test_foam()
+        #test_hdf5()
+        test_hdf5_mpi()
