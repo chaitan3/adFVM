@@ -76,12 +76,12 @@ def snGradCorr(phiL, phiR, gradPhiF, mesh):
 # code gen ends heere
    
 
-def internal_sum(phi, mesh, absolute=False):
-    if 0:#config.device == "cpu":
+def internal_sum(phi, mesh, sumOp=False, absolute=False):
+    if sumOp:
         if not absolute:
             sumOp = mesh.sumOp
         else:
-            sumOp = ad.abs(mesh.sumOp)
+            sumOp = np.abs(mesh.sumOp)
         #x = (adsparse.basic.dot(sumOp, (phi.field * mesh.areas)))/mesh.volumes
         x = ad.sparse_tensor_dense_matmul(sumOp, phi.field * mesh.areas)/mesh.volumes
     else:
@@ -98,10 +98,6 @@ def internal_sum(phi, mesh, absolute=False):
     # retain pattern broadcasting
     #x = ad.patternbroadcast(x, phi.field.broadcastable)
     return x
-
-def internal_sum_numpy(phi, mesh):
-    return (mesh.sumOp * (phi.field * mesh.areas))/mesh.volumes
-
 
 def laplacian(phi, DT):
     logger.info('laplacian of {0}'.format(phi.name))
@@ -125,8 +121,7 @@ def divOld(phi, U=None, ghost=False):
     else:
         return Field('div({0})'.format(phi.name), divField, phi.dimensions)
 
-# dual defined 
-def gradOld(phi, ghost=False, op=False, numpy=False):
+def gradOld(phi, op=False, sumOp=False, ghost=False):
     assert len(phi.dimensions) == 1
     logger.info('gradient of {0}'.format(phi.name))
     mesh = phi.mesh
@@ -135,39 +130,25 @@ def gradOld(phi, ghost=False, op=False, numpy=False):
     else:
         dimensions = phi.dimensions + (3,)
 
-    if numpy:
-        assert not op
-        loc_internal_sum = internal_sum_numpy
-        mod = IOField
-        ad = np
-    else:
-        loc_internal_sum = internal_sum
-        mod = CellField
-
-    if op and config.device == 'cpu':
+    if op:
         gradField = adsparse.basic.dot(mesh.gradOp, phi.field)
         gradField = gradField.reshape((mesh.nInternalCells,) + dimensions)
         if dimensions == (3,3):
             gradField = gradField.transpose((0, 2, 1))
     else:
+        N = Field('N', mesh.normals, (3,))
         if dimensions == (3,):
-            product = phi * mesh.Normals
+            product = phi * N
         else:
-            product = phi.outer(mesh.Normals)
+            product = phi.outer(N)
             dimprod = np.prod(dimensions)
             product.field = np.reshape(product.field, (mesh.nFaces, dimprod))
-        gradField = loc_internal_sum(product, mesh)
+        gradField = internal_sum(product, mesh, sumOp=sumOp)
         # if grad of vector
         if len(dimensions) == 2:
             gradField = np.reshape(gradField, (mesh.nInternalCells,) + dimensions)
 
-    if ghost:
-        gradPhi = mod('grad({0})'.format(phi.name), gradField, dimensions, ghost=True)
-        return gradPhi
-    else:
-        return Field('grad({0})'.format(phi.name), gradField, dimensions)
-
-
+    return IOField('grad({0})'.format(phi.name), gradField, dimensions, ghost=ghost)
 
 # only defined for ndarray
 def curl(phi):
