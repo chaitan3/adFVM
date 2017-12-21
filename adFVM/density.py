@@ -399,7 +399,7 @@ class RCF(Solver):
             else:
                 outputs = self._boundaryFlux(nFaces, outputs)(U, T, p, gradU, gradT, gradp, *meshArgs)
         meshArgs = _meshArgs(mesh.nLocalFaces)
-        outputs = self._coupledFlux(mesh.nRemoteCells, outputs)(U, T, p, gradU, gradT, gradp, neighbour=False, boundary=False, *meshArgs)
+        outputs = self._coupledFlux(mesh.nRemoteCells, outputs)(U, T, p, gradU, gradT, gradp, characteristic=False, neighbour=False, *meshArgs)
         drho, drhoU, drhoE, dtc = outputs
 
         def _minDtc(dtc):

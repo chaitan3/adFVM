@@ -37,7 +37,7 @@ class Mesh(object):
     BCFields = ['startFace', 'nFaces', 'cellStartFace']
 
     constants = ['nCells', 'nFaces', 'nInternalCells', 'nInternalFaces',
-                 'nLocalCells', 'nRemoteCells', 'nLocalFaces']
+                 'nLocalCells', 'nRemoteCells', 'nLocalFaces', 'nGhostCells']
 
     def __init__(self):
         #for attr in Mesh.constants:
@@ -153,6 +153,7 @@ class Mesh(object):
         self.volumesR = self.volumes[self.neighbour[:self.nInternalFaces]]
         self.nRemoteCells = self.nCells - self.nLocalCells
         self.nLocalFaces = self.nLocalCells - self.nInternalCells + self.nInternalFaces
+        self.nGhostCells = self.nCells - self.nInternalCells
 
         # theano shared variables
         self.symMesh = Mesh()

@@ -10,6 +10,7 @@ logger = config.Logger(__name__)
 
 
 def div(phi, mesh, neighbour):
+    # needs to be already dotted with mesh normals
     wp = mesh.areas/mesh.volumesL
     if neighbour:
         wn = -mesh.areas/mesh.volumesR
@@ -98,13 +99,6 @@ def internal_sum(phi, mesh, sumOp=False, absolute=False):
     # retain pattern broadcasting
     #x = ad.patternbroadcast(x, phi.field.broadcastable)
     return x
-
-def laplacian(phi, DT):
-    logger.info('laplacian of {0}'.format(phi.name))
-    mesh = phi.mesh
-    gradFdotn = snGrad(phi)
-    laplacian2 = internal_sum(gradFdotn*DT, mesh)
-    return Field('laplacian({0})'.format(phi.name), laplacian2, phi.dimensions)
 
 
 def divOld(phi, U=None, ghost=False):
