@@ -62,8 +62,7 @@ class Solver(object):
         pprint('Compiling solver', self.__class__.defaultConfig['timeIntegrator'])
         self.compileInit()
         self.compileSolver()
-        if config.compile:
-            Function.compile(self.mesh.caseDir, init=False, compiler_args=config.get_compiler_args())
+        Function.compile(self.mesh.caseDir, init=False, replace=config.compile, compiler_args=config.get_compiler_args())
         if config.compile_exit:
             exit(0)
         Function.initialize(parallel.localRank, self.mesh)

@@ -4,10 +4,11 @@ import sys
 import shutil
 import glob
 
-from test import *
 from adFVM import config
 from adFVM.mesh import Mesh
 from adFVM.field import IOField
+
+cases_path = '../cases/'
 
 class TestAdjoint(unittest.TestCase):
     def test_adjoint(self):

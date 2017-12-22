@@ -35,7 +35,7 @@ class RCF(Solver):
                              #'boundaryRiemannSolver': 'eulerLaxFriedrichs',
                              'boundaryRiemannSolver': 'eulerRoe',
                              'readConservative': False,
-                             'faceReconstructor': 'SecondOrder',
+                             'faceReconstructor': 'secondOrder',
                         })
 
     def __init__(self, case, **userConfig):

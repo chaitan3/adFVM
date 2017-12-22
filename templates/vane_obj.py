@@ -1,7 +1,7 @@
 import numpy as np
 from adFVM import config
 from adFVM.compat import intersectPlane
-from adFVM import tensor
+from adpy import tensor
 from adFVM.mesh import Mesh
 
 def objectiveHeatTransferWeighting(weight, *mesh):

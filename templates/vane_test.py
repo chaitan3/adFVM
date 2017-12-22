@@ -3,7 +3,7 @@ import numpy as np
 from adFVM import config
 from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
-from adFVM import tensor
+from adpy import tensor
 
 #primal = RCF('/home/talnikar/adFVM/cases/vane_optim/foam/laminar/3d_baseline/par-16/', objective='drag', objectiveDragInfo='pressure')
 #primal = RCF('/master/home/talnikar/adFVM/cases/vane/les/', faceReconstructor='SecondOrder')#, timeIntegrator='euler')

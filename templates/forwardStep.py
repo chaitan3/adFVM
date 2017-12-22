@@ -3,17 +3,27 @@ import numpy as np
 from adFVM import config
 from adFVM.density import RCF 
 
-primal = RCF('cases/forwardStep/', timeIntegrator='SSPRK', CFL=1.2, Cp=2.5, mu=lambda T: config.VSMALL*T)
-#primal = RCF('/home/chaitukca/adFVM/cases/forwardStep/', riemannSolver='eulerRoe', timeIntegrator='SSPRK', 
-#        CFL=1.2, Cp=2.5, mu=0., faceReconstructor='SecondOrder')
+def objectiveTest(U, T, p, *mesh, **options):
+    mesh = Mesh.container(mesh)
+    p0 = p.extract(mesh.neighbour)
+    return (p0*mesh.areas).sum()
 
-def objective(fields, mesh):
-    rho, rhoU, rhoE = fields
-    patchID = 'obstacle'
-    startFace, endFace, cellStartFace, cellEndFace, _ = mesh.getPatchFaceCellRange(patchID)
-    areas = mesh.areas[startFace:endFace]
-    field = rhoE.field[cellStartFace:cellEndFace]
-    return ad.sum(field*areas)
+def objective(fields, solver):
+    U, T, p = fields
+    mesh = solver.mesh.symMesh
+    def _meshArgs(start=0):
+        return [x[start] for x in mesh.getTensor()]
+
+    patch = mesh.boundary['obstacle']
+    startFace, nFaces = patch['startFace'], patch['nFaces']
+    meshArgs = _meshArgs(startFace)
+    test = tensor.Zeros((1,1))
+    (test,) = tensor.Kernel(objectiveTest)(nFaces, (test,))(U, T, p, *meshArgs)
+
+    inputs = (test,)
+    outputs = tuple([tensor.Zeros(x.shape) for x in inputs])
+    (test,) = tensor.ExternalFunctionOp('mpi_allreduce', inputs, outputs).outputs
+    return test
 
 def perturb(fields, mesh, t):
     patchID = 'inlet'
@@ -26,27 +36,8 @@ def perturb(fields, mesh, t):
 
 parameters = 'source'
 
-#def perturb(fields, mesh, t):
-#    if not hasattr(perturb, 'perturbation'):
-#        ## do the perturbation based on param and eps
-#        #perturbMesh.perturbation = mesh.getPerturbation()
-#        points = np.zeros_like(mesh.parent.points)
-#        points[0] = 1e-6
-#        perturb.perturbation = mesh.parent.getPointsPerturbation(points)
-#    return perturb.perturbation
-#parameters = 'mesh'
-#
-#def perturb(fields, mesh, t):
-#    return 1e-3
-#
-#parameters = ('BCs', 'U', 'inlet', 'value')
-
-#nSteps = 4000
-#writeInterval = 100
-#nSteps = 10
-#writeInterval = 5
-nSteps = 10
-writeInterval = 5
+nSteps = 100
+writeInterval = 50
 startTime = 0.0
 dt = 1e-4
 

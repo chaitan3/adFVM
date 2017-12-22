@@ -3,7 +3,7 @@ import numpy as np
 from adFVM import config
 from adFVM.compat import intersectPlane
 from adFVM.density import RCF 
-from adFVM import tensor
+from adpy import tensor
 from adFVM.mesh import Mesh
 
 from vane_obj import objective, getPlane, getWeights

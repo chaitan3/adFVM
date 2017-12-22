@@ -73,7 +73,7 @@ class BoundaryCondition(object):
 
 class calculated(BoundaryCondition):
     def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
+        super(calculated, self).__init__(phi, patchID)
         #if 'value' in self.patch:
         #    self.fixedValue = self.createInput('value', self.phi.dimensions)
         #    self.setValue(self.fixedValue)
@@ -85,7 +85,7 @@ class calculated(BoundaryCondition):
 
 class cyclic(BoundaryCondition):
     def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
+        super(cyclic, self).__init__(phi, patchID)
         neighbourPatch = self.mesh.boundary[patchID]['neighbourPatch']
         neighbourStartFace = self.mesh.symMesh.boundary[neighbourPatch]['startFace']
         self.inputs.append((self.owner[neighbourStartFace], None))
@@ -96,7 +96,7 @@ class cyclic(BoundaryCondition):
 
 class zeroGradient(BoundaryCondition):
     def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
+        super(zeroGradient, self).__init__(phi, patchID)
         self.inputs.append((self.owner[self.startFace], None))
 
     def _update(self, phi, owner):
@@ -108,17 +108,33 @@ class zeroGradient(BoundaryCondition):
         #    R = self.mesh.faceCentres[self.startFace:self.endFace] - self.mesh.cellCentres[self.internalIndices]
         #    boundaryValue = boundaryValue + 0.5*dot(grad, R, self.phi.dimensions[0])
 
-empty = zeroGradient
-inletOutlet = zeroGradient
-
 class fixedValue(BoundaryCondition):
     def __init__(self, phi, patchID):
-        super(self.__class__, self).__init__(phi, patchID)
+        super(fixedValue, self).__init__(phi, patchID)
         self.createInput('value', self.dimensions)
 
     def _update(self, phi, fixedValue):
         logger.debug('fixedValue BC for {0}'.format(self.patchID))
         return fixedValue*1
+
+class symmetryPlane(zeroGradient):
+    def __init__(self, phi, patchID):
+        super(symmetryPlane, self).__init__(phi, patchID)
+        self.inputs.append((self.normals[self.startFace], None))
+
+    def _update(self, phi, owner, normals):
+        logger.debug('symmetryPlane BC for {0}'.format(self.patchID))
+        dims = self.dimensions
+        # if vector
+        phiF = phi.extract(owner)
+        if dims == (3,):
+            #value = self.phi.field[self.cellStartFace:self.cellEndFace]
+            phiF -= phiF.dot(normals)*normals
+        return phiF
+
+slip = symmetryPlane
+empty = zeroGradient
+inletOutlet = zeroGradient
 
     
 class CharacteristicBoundaryCondition(BoundaryCondition):
