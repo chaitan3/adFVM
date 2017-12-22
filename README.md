@@ -56,11 +56,43 @@ cd ../..
 To run unit tests for adFVM
 ```
 cd tests
+./setup_tests.sh
 ./run_tests.sh
 cd ..
 ```
 
 ## Usage
+To use adFVM on a flow problem, a python case
+file needs to be defined that contains information about
+the details of the problem, like case folder, thermodynamic constants,
+design objective, simulation length, etc. Many example case files
+can be found in the templates folder. For a short explanation
+of the various options read the templates/vane.py file.
+To run the primal flow solver, use the following
+```
+./apps/problem.py templates/vane.py -c
+```
+To run the adjoint flow solver,
+```
+./apps/adjoint.py templates/vane.py -c
+```
+The sensitivities obtained using the adjoint solver can be found
+in the "objective.txt" file in the case folder. The "-c" option
+is not needed if running a flow solver multiple times.
+
+In order to run the flow solver on multiple cores, first
+the mesh needs to be decomposed. Edit the "system/decomposeParDict"
+file in the case folder to set the number of processors, for example 4. Then,
+execute
+```
+decomposePar
+```
+To run the flow solver on 4 cores,
+```
+mpirun -np 4 ./apps/problem.py templates/vane.py 
+```
+The "objective.txt" for parallel runs is in the "processor0"
+directory in the case folder.
 
 ## Contributors
 

@@ -7,4 +7,4 @@ blockMesh -case $CASES/convection
 #blockMesh -case $CASES/shockTube
 
 blockMesh -case $CASES/forwardStep
-cd $CASES/cylinder && ./create_mesh.sh
+#cd $CASES/cylinder && ./create_mesh.sh
