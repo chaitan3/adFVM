@@ -70,9 +70,6 @@ class Solver(object):
         Function.initialize(parallel.localRank, self.mesh)
         return
         
-    def function(self, inputs, outputs, name, **kwargs):
-        return SolverFunction(inputs, outputs, self, name, **kwargs)
-
     def getFields(self, fields, mod, refFields=None):
         cellFields = []
         if refFields is None:
@@ -178,13 +175,11 @@ class Solver(object):
         fields, rest = fields[:n], fields[n:]
         oldFields = fields
         fields = self.initFields(fields)
-        #print(x[0].field.max())
         for phi, phiN in zip(self.fields, fields):
             phi.field = phiN.field
         with IOField.handle(t):
             for phi in self.fields + rest:
                 phi.write(**kwargs)
-        #print(x[0].field.max())
         return 
 
     def readStatusFile(self):
@@ -218,7 +213,6 @@ class Solver(object):
         logger.info('running solver for {0}'.format(nSteps))
         mesh = self.mesh
         mesh.reset = True
-        # TODO: re-read optimization
         #initialize
         fields = self.readFields(startTime)
         pprint()
@@ -331,13 +325,11 @@ class Solver(object):
             newFields, dtc, objective = outputs[:3], outputs[3], outputs[4]
             objective = objective[0,0]
             dtc = dtc[0,0]
-            #exit(1)
             fields = self.getFields(newFields, IOField, refFields=fields)
 
             if report:
                 #print local.shape, local.dtype, (local).max(), (local).min(), np.isnan(local).any()
                 #print remote.shape, remote.dtype, (remote).max(), (remote).min(), np.isnan(remote).any()
-                #pprint('Percent shock capturing: {0:.2f}%'.format(float(parallel.max(local))*100))
                 #diff = local-remote
                 #print diff.min(), diff.max()
 
@@ -346,15 +338,12 @@ class Solver(object):
                 #    local.write()
                 #exit(1)
 
-                #parallel.mpi.Barrier()
                 for index in range(0, len(fields)):
                     fields[index].info()
 
-                #parallel.mpi.Barrier()
                 end = time.time()
                 pprint('Time for iteration:', end-start)
                 pprint('Time since beginning:', end-config.runtime)
-                #pprint('Running average objective: ', parallel.sum(result)/(timeIndex + 1))
 
                 if self.localTimeStep:
                     pprint('Simulation Time:', t, 'Time step: min', parallel.min(dt), 'max', parallel.max(dt))
@@ -399,8 +388,8 @@ class Solver(object):
                     #dtc = IOField.internalField('dtc', dtc, (1,))
                     # how do i do value BC patches?
                     #self.writeFields(fields + [dtc], t)
-                    self.writeFields(fields, t)
                     #self.writeFields(fields + [dtc, local], t)
+                    self.writeFields(fields, t)
 
                 # write timeSeries if in orig mode (problem.py)
                 if parallel.rank == 0:
@@ -414,141 +403,10 @@ class Solver(object):
                 timeSteps = []
                 self.writeStatusFile([timeIndex, t, dt, result])
 
-            #if perturbation:
-            #    doPerturb(revert=True)
-            #    pprint()
-
         if perturbation:
             doPerturb(revert=True)
 
         if mode == 'forward':
             return solutions
         return result
-
-
-class SolverFunction(object):
-    counter = 0
-    def __init__(self, inputs, outputs, solver, name, BCs=True, source=True, postpro=True):
-        logger.info('compiling function')
-        self.symbolic = []
-        self.values = []
-        self.name = name
-        mesh = solver.mesh
-        # values require inplace substitution
-        #self.populate_mesh(self.symbolic, mesh, mesh)
-        #self.populate_mesh(self.values, mesh.origMesh, mesh)
-        #if BCs:
-        #    self.populate_BCs(self.symbolic, solver, 0)
-        #    self.populate_BCs(self.values, solver, 1)
-        ## source terms
-        #if source and len(solver.sourceTerms) > 0:
-        #    symbolic, values = zip(*solver.sourceTerms)
-        #    self.symbolic.extend(symbolic)
-        #    self.values.extend(values)
-        ## postpro variables
-        #if postpro and len(solver.postpro) > 0:
-        #    symbolic, values = zip(*solver.postpro)
-        #    self.symbolic.extend(symbolic)
-        #    self.values.extend(values)
-
-        self.generate(inputs, outputs, solver.mesh.case)
-
-    def populate_mesh(self, inputs, mesh, solverMesh):
-        attrs = Mesh.fields + Mesh.constants
-        for attr in attrs:
-            val = getattr(mesh, attr)
-            if attr == 'sumOp' or attr == 'gradOp':
-                inputs.extend([val.indices, val.values, val.dense_shape])
-            else:
-                inputs.append(val)
-        for patchID in solverMesh.sortedPatches:
-            for attr in solverMesh.getBoundaryTensor(patchID):
-                inputs.append(mesh.boundary[patchID][attr[0]])
-
-    def populate_BCs(self, inputs, solver, index):
-        fields = solver.getBCFields()
-        for phi in fields:
-            if hasattr(phi, 'BC'):
-                for patchID in solver.mesh.sortedPatches:
-                    inputs.extend([value[index] for value in phi.BC[patchID].inputs])
-
-    def generate(self, inputs, outputs, caseDir):
-        SolverFunction.counter += 1
-        pklFile = caseDir + '{0}_func_{1}.pkl'.format(config.device, self.name)
-        inputs = inputs + self.symbolic
-
-        fn = None
-        pklData = None
-        start = time.time()
-        if 0:#os.path.exists(pklFile) and config.unpickleFunction:
-            pprint('Loading pickled file', pklFile)
-            pklData = open(pklFile).read()
-        else:
-            #fn = ad.function(inputs, outputs, on_unused_input='ignore', mode=config.compile_mode)#, allow_input_downcast=True)
-            fn = (inputs, outputs)
-            #T.printing.pydotprint(fn, outfile=name + '_graph.png')
-            #if config.pickleFunction or (parallel.nProcessors > 1):
-            #pklData = pkl.dumps(fn)
-            #if config.pickleFunction:
-            #    pprint('Saving pickle file', pklFile)
-            #    open(pklFile, 'w').write(pklData)
-            #    pprint('Module size: {0:.2f}'.format(float(len(pklData))/(1024*1024)))
-        end = time.time()
-        pprint('Compilation time for {}: {:.2f}'.format(self.name, end-start))
-
-        #if not config.compile:
-        #    start = time.time()
-        #    pklData = parallel.mpi.bcast(pklData, root=0)
-        #    #if parallel.mpi.bcast(fn is not None, root=0) and parallel.nProcessors > 1:
-        #    #    T.gof.cc.get_module_cache().refresh(cleanup=False)
-        #    end = time.time()
-        #    pprint('Transfer time: {0:.2f}'.format(end-start))
-
-        #    start = time.time()
-        #    unloadingStages = config.user.unloadingStages
-        #    coresPerNode = config.user.coresPerNode
-        #    coresPerStage = coresPerNode/unloadingStages
-        #    nodeStage = (parallel.rank % coresPerNode)/coresPerStage
-        #    for stage in range(unloadingStages):
-        #        printMemUsage()
-        #        if (nodeStage == stage) and (fn is None):
-        #            fn = pkl.loads(pklData)
-        #        parallel.mpi.Barrier()
-        #    end = time.time()
-        #    pprint('Loading time: {0:.2f}'.format(end-start))
-        #    printMemUsage()
-
-        self.fn = fn
-        #init = ad.global_variables_initializer()
-        #self.sess.run(init)
-        #nThreads = config.user.coresPerNode
-        #tf_config = ad.ConfigProto(intra_op_parallelism_threads=nThreads, inter_op_parallelism_threads=nThreads, allow_soft_placement=True)
-        #self.sess = ad.Session(config=tf_config)
-        #with ad.Session(config=config) as sess: 
-
-    def __call__(self, *inputs):
-        logger.info('running function')
-        #pprint('running function', self.name)
-        inputs = list(inputs)
-        for index, inp in enumerate(inputs):
-            if isinstance(inp, Field):
-                inputs[index] = inp.field
-                
-        inputs = inputs + self.values
-        #print 'get', id(self.values[29].data)
-        
-        #run_options = ad.RunOptions(trace_level=ad.RunOptions.FULL_TRACE)
-        #run_metadata = ad.RunMetadata()
-
-        inp, out = self.fn
-        feed_dict = {inp[i]:inputs[i] for i in range(0, len(inp))}
-        outputs = self.sess.run(out, feed_dict=feed_dict)#, options=run_options, run_metadata=run_metadata)
-        #from tensorflow.python.client import timeline
-        #tl = timeline.Timeline(run_metadata.step_stats)
-        #ctf = tl.generate_chrome_trace_format()
-        #with open('timeline.json', 'w') as f:
-        #    f.write(ctf)
-        if isinstance(outputs, tuple):
-            outputs = list(outputs)
-        return outputs
 

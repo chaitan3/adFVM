@@ -5,6 +5,7 @@
 *.txt
 *.pkl
 *.png
+*.pdf
 *.csv
 
 *.o

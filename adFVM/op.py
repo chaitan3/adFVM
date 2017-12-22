@@ -74,9 +74,9 @@ def snGradCorr(phiL, phiR, gradPhiF, mesh):
     else:
         explicit = gradPhiF.tensordot(mesh.normals-mesh.deltasUnit/cost)
     return implicit/cost + explicit
-# code gen ends heere
    
 
+# code gen ends heere
 def internal_sum(phi, mesh, sumOp=False, absolute=False):
     if sumOp:
         if not absolute:
@@ -141,22 +141,4 @@ def gradOld(phi, op=False, sumOp=False, ghost=False):
             gradField = np.reshape(gradField, (mesh.nInternalCells,) + dimensions)
 
     return IOField('grad({0})'.format(phi.name), gradField, dimensions, ghost=ghost)
-
-# only defined for ndarray
-def curl(phi):
-    assert phi.dimensions == (3,)
-    assert isinstance(phi.field, np.ndarray)
-    logger.info('vorticity of {0}'.format(phi.name))
-    mesh = phi.mesh
-    vort = Field('N', mesh.normals, (3,)).cross(phi)
-    vort.name = 'curl({0})'.format(phi.name)
-    return vort
-
-def ddt(phi, dt):
-    logger.info('ddt of {0}'.format(phi.name))
-    raise Exception("Deprecated")
-    #return Field('ddt' + phi.name, (phi.getInternalField()-phi.getInternalField())/dt, phi.dimensions)
-    return Field('ddt' + phi.name, phi.getInternalField()*0, phi.dimensions)
-    #return Field('ddt' + phi.name, (phi.getInternalField()-phi.old.getInternalField())/dt, phi.dimensions)
-
 

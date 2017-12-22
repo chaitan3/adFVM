@@ -214,13 +214,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
                         np.dstack((np.hstack((Z,Z,Z)).reshape(-1,3,1), gradU, (a*gradp/(2*p)).reshape(-1, 3, 1))),
                         np.hstack((Z, 2*grada/g1, g1*divU/2)).reshape(-1,1,5)),
                         axis=1)
-        #T = np.stack((
-        #        np.hstack((b/rho, Z, Z, Z, Z)),
-        #        np.hstack((-U[:,[0]]/rho, 1/rho, Z, Z, Z)),
-        #        np.hstack((-U[:,[1]]/rho, Z, 1/rho, Z, Z)),
-        #        np.hstack((-U[:,[2]]/rho, Z, Z, 1/rho, Z)),
-        #        np.hstack(((-2*c*c+g*g1*(U*U).sum(axis=1,keepdims=1))/(2*c*sge*rho), -sge*U[:,[0]]/(c*rho), -sge*U[:,[1]]/(c*rho), -sge*U[:,[2]]/(c*rho), sge/(c*rho))),
-        #    ), axis=2)
+        
         Ti = np.stack((
                 np.hstack((rho/b, Z, Z, Z, Z)),
                 np.hstack((rho*U1/b, rho, Z, Z, Z)),
@@ -307,13 +301,6 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
                         axis=1)
         M = M1/2-M2
 
-        #T = np.stack((
-        #        np.hstack((g1*U2/(2*c*rho*Uref), -g1*U/(c*rho*Uref), g1/(c*rho*Uref))),
-        #        np.hstack((-U[:,[0]]/(rho*Uref), 1/(rho*Uref), Z, Z, Z)),
-        #        np.hstack((-U[:,[1]]/(rho*Uref), Z, 1/(rho*Uref), Z, Z)),
-        #        np.hstack((-U[:,[2]]/(rho*Uref), Z, Z, 1/(rho*Uref), Z)),
-        #        np.hstack(((-2*g*p+g1*rho*U2)/(2*pref*rho), -g1*U/pref, (g-1)/pref*np.ones_like(Z))),
-        #    ), axis=2)
         Ti = np.stack((
             np.hstack((rho*Uref/c, Z, Z, Z, -pref/c2)),
             np.hstack((rho*U1*Uref/c, rho*Uref, Z, Z, -pref*U1/c2)),                                    #suffix += '_factor'
@@ -329,19 +316,11 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     def dot(a, b):
         return np.sum(a*b.reshape(-1,1,5), axis=-1)
 
-    #X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref]).reshape(1,5,5)
-    #TiX = np.matmul(Ti, X)
-    #Mc = np.matmul(TiX.transpose(0, 2, 1), np.matmul(M, TiX))
     Mc = M
     MS = (Mc + Mc.transpose((0, 2, 1)))/2
     M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
-    #print MS.sum()
 
     M_2norm = scale(M_2norm)
-
-    #print parallel.min(M_2norm)
-    #parallel.pprint(parallel.max(M_2norm))
-    #parallel.pprint(parallel.min(M_2norm))
 
     def inner(F, G):
         if not hasattr(getAdjointMatrixNorm, 'Vs'):
@@ -350,8 +329,6 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         return parallel.sum(F*G*mesh.volumes)/Vs
     l2_norm = lambda F: np.sqrt(inner(F, F))
 
-    #parallel.pprint(parallel.max(M_2norm))
-    #parallel.pprint(parallel.min(M_2norm))
     if visc == "uniform":
         M_2norm = np.ones_like(M_2norm)
     if report:
@@ -401,9 +378,7 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True, **kwa
     U, T, p = solver.primitive(rho, rhoU, rhoE)
     if not outputs:
         outputs = computeGradients(solver, U, T, p)
-    #parallel.pprint(time.time()-start)
     M_2norm = getAdjointMatrixNorm(None, None, None, rho, rhoU, rhoE, U, T, p, *outputs, **kwargs)[0]
-    #parallel.pprint(time.time()-start)
     viscosity = M_2norm*float(scaling)
     viscosity.name = 'mua'
     viscosity.boundary = mesh.defaultBoundary
