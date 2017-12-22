@@ -9,10 +9,11 @@ from adpy.variable import Variable, Function, Zeros
 from adpy.tensor import Kernel
 
 import numpy as np
+import pytest
 
+@pytest.mark.skip
 def relative_error(U, Ur):
     return np.max(np.abs(U-Ur))/np.max(np.abs(Ur))
-
 
 def test_grad_scalar():
     case = '../cases/convection'

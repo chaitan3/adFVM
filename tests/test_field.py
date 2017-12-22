@@ -6,6 +6,7 @@ import os
 import sys
 import numpy as np
 import subprocess
+import pytest
 
 from adFVM import config
 from adFVM.field import Field, CellField, IOField
@@ -28,6 +29,8 @@ def test_field():
     W = (U + V/U)*V**0.5
     assert np.allclose(W.field, Wr)
 
+
+@pytest.mark.skip
 def test_field_io(case, hdf5):
     config.hdf5 = hdf5
     mesh = Mesh.create(case)
@@ -69,6 +72,7 @@ def test_field_io(case, hdf5):
     np.allclose(Tn.field, T.field)
     np.allclose(Un.field, U.field)
 
+@pytest.mark.skip
 def test_field_io_mpi(case):
     mesh = Mesh.create(case)
     Field.setMesh(mesh)

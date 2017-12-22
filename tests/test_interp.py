@@ -8,7 +8,9 @@ from adpy.variable import Variable, Function, Zeros
 from adpy.tensor import Kernel
 
 import numpy as np
+import pytest
 
+@pytest.mark.skip
 def relative_error(U, Ur):
     return np.max(np.abs(U-Ur))/np.max(np.abs(Ur))
 
@@ -52,7 +54,7 @@ def test_central():
     X, Y = mesh.cellCentres[:, [0]], mesh.cellCentres[:,[1]]
     Uc = Field('U', 2*X + X*Y, (1,))
     Xf, Yf = mesh.faceCentres[:, [0]], mesh.faceCentres[:,[1]]
-    Ur = 2*Xf + XF*Yf
+    Ur = 2*Xf + Xf*Yf
     Uf = centralOld(Uc, mesh).field
     assert relative_error(Uf, Ur) < thres
 

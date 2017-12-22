@@ -1,75 +1,54 @@
 import numpy as np
 
 from adFVM import config
-from adFVM.config import ad
-from adFVM.compat import norm, intersectPlane
 from adFVM.density import RCF 
-
-primal = RCF('../cases/cylinder/',
-             timeIntegrator='SSPRK', 
-             CFL=1.2, 
-             mu=lambda T: T/T*2.5e-5,
-             faceReconstructor='SecondOrder'
-)
-
-def dot(a, b):
-    return ad.sum(a*b, axis=1, keepdims=True)
+from adFVM.mesh import Mesh
+from adpy import tensor
 
 # drag over cylinder surface
-def objectiveDrag(fields, mesh):
-    rho, rhoU, rhoE = fields
-    patchID = 'cylinder'
-    patch = mesh.boundary[patchID]
-    start, end, nF = mesh.getPatchFaceRange(patchID)
-    areas = mesh.areas[start:end]
-    nx = mesh.normals[start:end, 0].reshape((-1, 1))
-    cellStartFace = mesh.nInternalCells + start - mesh.nInternalFaces 
-    cellEndFace = mesh.nInternalCells + end - mesh.nInternalFaces
-    internalIndices = mesh.owner[start:end]
-    start, end = cellStartFace, cellEndFace
-    p = rhoE.field[start:end]*(primal.gamma-1)
-    #deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1, keepdims=True)
-    deltas = (mesh.cellCentres[start:end]-mesh.cellCentres[internalIndices]).norm(2, axis=1).reshape((nF,1))
-    T = rhoE/(rho*primal.Cv)
-    #mungUx = (rhoU.field[start:end, [0]]/rho.field[start:end]-rhoU.field[internalIndices, [0]]/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
-    mungUx = (rhoU.field[start:end, 0].reshape((nF,1))/rho.field[start:end]-rhoU.field[internalIndices, 0].reshape((nF,1))/rho.field[internalIndices])*primal.mu(T).field[start:end]/deltas
-    return ad.sum((p*nx-mungUx)*areas)
+def objectiveDrag(U, T, p, *mesh, **options):
+    solver = options['solver']
+    mesh = Mesh.container(mesh)
+    U0 = U.extract(mesh.neighbour)[0]
+    U0i = U.extract(mesh.owner)[0]
+    p0 = p.extract(mesh.neighbour)
+    T0 = T.extract(mesh.neighbour)
+    nx = mesh.normals[0]
+    mungUx = solver.mu(T0)*(U0-U0i)/mesh.deltas
+    drag = (p0*nx-mungUx)*mesh.areas
+    return drag.sum()
 
-def getPlane(solver):
-    point = np.array([0.0032,0.0,0.0], config.precision)
-    normal = np.array([1.,0.,0.], config.precision)
-    interCells, interArea = intersectPlane(solver.mesh, point, normal)
-    #print interCells.shape, interArea.sum()
-    solver.postpro.extend([(ad.ivector(), interCells), (ad.bcmatrix(), interArea)])
-    return solver.postpro[-2][0], solver.postpro[-1][0], normal
-    
-def objectivePressureLoss(fields, mesh):
-    #if not hasattr(objectivePressureLoss, interArea):
-    #    objectivePressureLoss.cells, objectivePressureLoss.area = getPlane(primal)
-    #cells, area = objectivePressureLoss.cells, objectivePressureLoss.area
-    ptin = 104190.
-    cells, area, normal = getPlane(primal)
-    rho, rhoU, rhoE = fields
-    solver = rhoE.solver
-    g = solver.gamma
-    U, T, p = solver.primitive(rho, rhoU, rhoE)
-    pi, rhoi, Ui = p.field[cells], rho.field[cells], U.field[cells]
-    rhoUi, ci = rhoi*Ui, ad.sqrt(g*pi/rhoi)
-    rhoUni, Umagi = dot(rhoUi, normal), ad.sqrt(dot(Ui, Ui))
-    Mi = Umagi/ci
-    pti = pi*(1 + 0.5*(g-1)*Mi*Mi)**(g/(g-1))
-    #res = ad.sum((ptin-pti)*rhoUni*area)/(ad.sum(rhoUni*area) + config.VSMALL)
-    res = ad.sum((ptin-pti)*rhoUni*area)#/(ad.sum(rhoUni*area) + config.VSMALL)
-    return res 
+def objective(fields, solver):
+    U, T, p = fields
+    mesh = solver.mesh.symMesh
+    def _meshArgs(start=0):
+        return [x[start] for x in mesh.getTensor()]
 
-#objective = objectiveDrag
-objective = objectivePressureLoss
+    patch = mesh.boundary['cylinder']
+    startFace, nFaces = patch['startFace'], patch['nFaces']
+    meshArgs = _meshArgs(startFace)
+    drag = tensor.Zeros((1,1))
+    (drag,) = tensor.Kernel(objectiveDrag)(nFaces, (drag,))(U, T, p, *meshArgs, solver=solver)
+
+    inputs = (drag,)
+    outputs = tuple([tensor.Zeros(x.shape) for x in inputs])
+    (drag,) = tensor.ExternalFunctionOp('mpi_allreduce', inputs, outputs).outputs
+
+    return drag
+   
+primal = RCF('../cases/cylinder/',
+#primal = RCF('cases/cylinder/',
+             mu=lambda T: 2.5e-5,
+             boundaryRiemannSolver='eulerLaxFriedrichs',
+             objective = objective,
+             fixedTimeStep = True,
+)
 
 def perturb(fields, mesh, t):
     #mid = np.array([-0.012, 0.0, 0.])
     #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     mid = np.array([-0.001, 0.0, 0.])
-    G = 1e3*np.exp(-1e5*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
+    G = 1e3*np.exp(-1e5*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1, keepdims=1)**2)
     rho = G
     rhoU = np.zeros((mesh.nInternalCells, 3))
     rhoU[:, 0] += G.flatten()*100
@@ -78,7 +57,7 @@ def perturb(fields, mesh, t):
 
 parameters = 'source'
 
-nSteps = 100
-writeInterval = 20
+nSteps = 20
+writeInterval = 10
 startTime = 1.0
 dt = 8e-9

@@ -1,39 +1,41 @@
-from adFVM.matop_petsc import laplacian, ddt
+#from adFVM.matop_petsc import laplacian, ddt
 from adFVM.mesh import Mesh
 from adFVM.interp import central
 from adFVM.field import IOField, Field
 from adFVM.parallel import pprint
 
-case = '../cases/cylinder/'
-time = 3.0
-field = 'mua'
-case = '../cases/naca0012/test_laplacian/'
-time = 0.0
-field = 'T'
 
-DT = 0.01
-dt = 1e-8
-nSteps = 1000
+def test_matop():
+    case = '../cases/cylinder/'
+    time = 3.0
+    field = 'mua'
+    case = '../cases/naca0012/test_laplacian/'
+    time = 0.0
+    field = 'T'
 
-mesh = Mesh.create(case)
-Field.setMesh(mesh)
+    DT = 0.01
+    dt = 1e-8
+    nSteps = 1000
 
-with IOField.handle(time):
-    T = IOField.read(field)
-    T.partialComplete()
-weight = central(T, mesh.origMesh)
-weight.field[:] = DT
-#op = laplacian(T, weight)
-#op.eigenvalues()
+    mesh = Mesh.create(case)
+    Field.setMesh(mesh)
 
-for index in range(0, nSteps):
-    pprint(index)
-    T.old = T.field
-    equation = ddt(T, dt) - laplacian(T, weight)
-    T.field = equation.solve()
-    T.defaultComplete()
-    time += dt
+    with IOField.handle(time):
+        T = IOField.read(field)
+        T.partialComplete()
+    weight = central(T, mesh.origMesh)
+    weight.field[:] = DT
+    #op = laplacian(T, weight)
+    #op.eigenvalues()
 
-with IOField.handle(time):
-    T.write()
+    for index in range(0, nSteps):
+        pprint(index)
+        T.old = T.field
+        equation = ddt(T, dt) - laplacian(T, weight)
+        T.field = equation.solve()
+        T.defaultComplete()
+        time += dt
+
+    with IOField.handle(time):
+        T.write()
 
