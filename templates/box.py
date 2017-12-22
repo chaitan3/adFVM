@@ -13,7 +13,7 @@ def objective(fields, solver):
     # then elemwise
     def _combine(T):
         return (T*1).sum()
-    return tensor.Kernel(_combine)(mesh.nInternalCells)(T)[0]
+    return tensor.Kernel(_combine)(mesh.nInternalCells)(T)
 
 #primal = RCF('./', objective=objective, fixedTimeStep=True)
 primal = RCF('/home/talnikar/adFVM/cases/box/box_4/', objective=objective, fixedTimeStep=True)

@@ -407,7 +407,7 @@ class RCF(Solver):
             #return dtc.reduce_min()
             return dtc.reduce_max()
         minDtc = Zeros((1, 1))
-        minDtc = Kernel(_minDtc)(mesh.nInternalCells, (minDtc,))(dtc)[0]
+        minDtc = Kernel(_minDtc)(mesh.nInternalCells, (minDtc,))(dtc)
 
         if self.stage == 1:
             self.dtc, self.obj = minDtc, obj

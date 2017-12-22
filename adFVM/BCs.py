@@ -62,7 +62,7 @@ class BoundaryCondition(object):
     def update(self, phi):
         inputs = tuple([phi] + [x[0] for x in self.inputs])
         outputs = (phi[self.cellStartFace],)
-        phi = self._tensorUpdate(self.nFaces, outputs)(*inputs)[0]
+        phi = self._tensorUpdate(self.nFaces, outputs)(*inputs)
         patch = self.mesh.boundary[self.patchID]
         info = [self.__class__, self.patchID, patch['startFace'], patch['nFaces'], patch['cellStartFace']]
         patch = self.mesh.symMesh.boundary[self.patchID]

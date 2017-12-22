@@ -34,7 +34,7 @@ def test_second_order():
         return secondOrder(U, gradU, mesh, 0)
     Uf = Zeros((mesh.symMesh.nFaces, 1))
     meshArgs = mesh.symMesh.getTensor()
-    Uf = Kernel(interpolate)(mesh.symMesh.nFaces, (Uf,))(U, gradU, *meshArgs)[0]
+    Uf = Kernel(interpolate)(mesh.symMesh.nFaces, (Uf,))(U, gradU, *meshArgs)
     meshArgs = mesh.symMesh.getTensor() + mesh.symMesh.getScalar()
     func = Function('second_order', [U, gradU] + meshArgs, (Uf,))
 
@@ -64,7 +64,7 @@ def test_central():
         return central(U, mesh)
     Uf = Zeros((mesh.symMesh.nFaces, 1))
     meshArgs = mesh.symMesh.getTensor()
-    Uf = Kernel(interpolate)(mesh.symMesh.nFaces, (Uf,))(U, *meshArgs)[0]
+    Uf = Kernel(interpolate)(mesh.symMesh.nFaces, (Uf,))(U, *meshArgs)
     meshArgs = mesh.symMesh.getTensor() + mesh.symMesh.getScalar()
     func = Function('central', [U] + meshArgs, (Uf,))
 

@@ -523,16 +523,16 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
 
     M_2norm = Zeros((mesh.nInternalCells, 1))
     if viscosityType == 'uniform':
-        (M_2norm,) = Kernel(constant)(mesh.nInternalCells)(M_2norm)
+        M_2norm = Kernel(constant)(mesh.nInternalCells)(M_2norm)
     else:
         MS = Zeros((mesh.nInternalCells, 5, 5))
-        (MS,) = Kernel(getMaxEigenvalue)(mesh.nInternalCells, (MS,))(U, T, p, gradU, divU, gradp, gradc)
+        MS = Kernel(getMaxEigenvalue)(mesh.nInternalCells, (MS,))(U, T, p, gradU, divU, gradp, gradc)
         (M_2norm,) = ExternalFunctionOp('get_max_eigenvalue', (MS,), (M_2norm,)).outputs
 
     def computeVolume(volumes):
         return volumes.sum()
     V = Zeros((1,1))
-    (V,) = Kernel(computeVolume)(mesh.nInternalCells, (V,))(mesh.volumes)
+    V = Kernel(computeVolume)(mesh.nInternalCells, (V,))(mesh.volumes)
     (V,) = ExternalFunctionOp('mpi_allreduce', (V,), (Zeros((1,1)),)).outputs
 
     def computeNorm(M_2norm, volumes, V):
@@ -540,14 +540,14 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
         N = (M_2norm*M_2norm*volumes/V).sum()
         return N
     N = Zeros((1,1))
-    (N,) = Kernel(computeNorm)(mesh.nInternalCells, (N,))(M_2norm, mesh.volumes, V)
+    N = Kernel(computeNorm)(mesh.nInternalCells, (N,))(M_2norm, mesh.volumes, V)
     (N,) = ExternalFunctionOp('mpi_allreduce', (N,), (Zeros((1,1)),)).outputs
 
     def scaleM(M_2norm, N, scaling):
         N, scaling = N.scalar(), scaling.scalar()
         return M_2norm*scaling/N.sqrt()
     M_2norm_out = Zeros((mesh.nCells, 1))
-    (M_2norm,) = Kernel(scaleM)(mesh.nInternalCells, (M_2norm_out,))(M_2norm, N, scaling)
+    M_2norm = Kernel(scaleM)(mesh.nInternalCells, (M_2norm_out,))(M_2norm, N, scaling)
 
     (phi,) = solver.boundaryInit(M_2norm)
     phi = CellField('M_2norm', None, (1,)).updateGhostCells(phi)
@@ -561,7 +561,7 @@ def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
         return M_2norm
     meshArgs = _meshArgs()
     DT = Zeros((mesh.nFaces, 1))
-    (DT,) = Kernel(interpolate)(mesh.nFaces, (DT,))(M_2norm, *meshArgs)
+    DT = Kernel(interpolate)(mesh.nFaces, (DT,))(M_2norm, *meshArgs)
     return M_2norm, DT
 
 def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
@@ -573,7 +573,7 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
     if config.matop:
         def getFaceData(DT, areas, deltas):
             return areas*DT/deltas
-        (DTF,) = Kernel(getFaceData)(mesh.nFaces)(DT, mesh.areas, mesh.deltas)
+        DTF = Kernel(getFaceData)(mesh.nFaces)(DT, mesh.areas, mesh.deltas)
 
         inputs = fields + (DTF, solver.dt)
         outputs = tuple([Zeros(x.shape) for x in fields])
@@ -635,7 +635,7 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
         for j in range(0, len(fields)):
             phi = fields[j]
             phiN = Zeros((mesh.nCells, 1))
-            (phiN,) = _copy(mesh.nInternalCells, (phiN,))(phi)
+            phiN = _copy(mesh.nInternalCells, (phiN,))(phi)
             #phiN = Zeros(shape)
             for i in range (0, iterations):
                 (phiN,) = solver.boundaryInit(phiN)
@@ -655,7 +655,7 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
                     phiN = Zeros((mesh.nInternalCells, 1))
                 else:
                     phiN = Zeros((mesh.nCells, 1))
-                (phiN,) = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData)
+                phiN = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData)
                 #(phiN,) = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData, res)
             fields[j] = phiN
         fields = tuple(fields)

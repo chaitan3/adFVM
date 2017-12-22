@@ -30,7 +30,7 @@ def objective(fields, solver):
     startFace, nFaces = patch['startFace'], patch['nFaces']
     meshArgs = _meshArgs(startFace)
     drag = tensor.Zeros((1,1))
-    (drag,) = tensor.Kernel(objectiveDrag)(nFaces, (drag,))(U, T, p, *meshArgs, solver=solver)
+    drag = tensor.Kernel(objectiveDrag)(nFaces, (drag,))(U, T, p, *meshArgs, solver=solver)
 
     inputs = (drag,)
     outputs = tuple([tensor.Zeros(x.shape) for x in inputs])

@@ -90,7 +90,7 @@ def objective(fields, solver):
 
     nPlaneCells, cells, areas = [x[0] for x in solver.extraArgs[:3]]
     w = tensor.Zeros((1, 1))
-    (w,) = tensor.Kernel(objectivePressureLossWeighting)(nPlaneCells, (w,))(U, T, p, cells, areas, solver=solver)
+    w = tensor.Kernel(objectivePressureLossWeighting)(nPlaneCells, (w,))(U, T, p, cells, areas, solver=solver)
 
     weights = [x[0] for x in solver.extraArgs[3:]]
     w2 = tensor.Zeros((1, 1))
@@ -100,14 +100,14 @@ def objective(fields, solver):
         startFace, nFaces = patch['startFace'], patch['nFaces']
         meshArgs = _meshArgs(startFace)
         weight = weights[index]
-        (w2,) = _heatTransferWeighting(nFaces, (w2,))(weight, *meshArgs)
+        w2 = _heatTransferWeighting(nFaces, (w2,))(weight, *meshArgs)
 
     inputs = (w, w2)
     outputs = tuple([tensor.Zeros(x.shape) for x in inputs])
     w, w2 = tensor.ExternalFunctionOp('mpi_allreduce', inputs, outputs).outputs
 
     pl = tensor.Zeros((1, 1))
-    (pl,) = tensor.Kernel(objectivePressureLoss)(nPlaneCells, (pl,))(U, T, p, cells, areas, w, solver=solver)
+    pl = tensor.Kernel(objectivePressureLoss)(nPlaneCells, (pl,))(U, T, p, cells, areas, w, solver=solver)
 
     _heatTransfer = tensor.Kernel(objectiveHeatTransfer)
     ht = tensor.Zeros((1, 1))
@@ -116,7 +116,7 @@ def objective(fields, solver):
         startFace, nFaces = patch['startFace'], patch['nFaces']
         meshArgs = _meshArgs(startFace)
         weight = weights[index]
-        (ht,) = _heatTransfer(nFaces, (ht,))(U, T, p, weight, w2, *meshArgs, solver=solver)
+        ht = _heatTransfer(nFaces, (ht,))(U, T, p, weight, w2, *meshArgs, solver=solver)
 
     k = solver.mu(300)*solver.Cp/solver.Pr
     a = 0.4
@@ -138,6 +138,6 @@ def objective(fields, solver):
         obj = pl
         obj2 = ht
         return a*obj + b*obj2
-    return tensor.Kernel(_combine)(1)(pl, ht)[0]
+    return tensor.Kernel(_combine)(1)(pl, ht)
 
 

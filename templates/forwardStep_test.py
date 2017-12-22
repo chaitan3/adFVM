@@ -20,7 +20,7 @@ def objective(fields, solver):
     startFace, nFaces = patch['startFace'], patch['nFaces']
     meshArgs = _meshArgs(startFace)
     test = tensor.Zeros((1,1))
-    (test,) = tensor.Kernel(objectiveTest)(nFaces, (test,))(U, T, p, *meshArgs)
+    test = tensor.Kernel(objectiveTest)(nFaces, (test,))(U, T, p, *meshArgs)
 
     inputs = (test,)
     outputs = tuple([tensor.Zeros(x.shape) for x in inputs])

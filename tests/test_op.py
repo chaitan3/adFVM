@@ -38,7 +38,7 @@ def test_grad_scalar():
         return gradCell(U, mesh)
     gradU = Zeros((mesh.symMesh.nInternalCells, 1, 3))
     meshArgs = mesh.symMesh.getTensor()
-    gradU = Kernel(_grad)(mesh.symMesh.nInternalCells, (gradU,))(U, *meshArgs)[0]
+    gradU = Kernel(_grad)(mesh.symMesh.nInternalCells, (gradU,))(U, *meshArgs)
     meshArgs = mesh.symMesh.getTensor() + mesh.symMesh.getScalar()
     func = Function('grad_scalar', [U] + meshArgs, (gradU,))
 
@@ -76,7 +76,7 @@ def test_grad_vector():
         return gradCell(U, mesh)
     gradU = Zeros((mesh.symMesh.nInternalCells, 3, 3))
     meshArgs = mesh.symMesh.getTensor()
-    gradU = Kernel(_grad)(mesh.symMesh.nInternalCells, (gradU,))(U, *meshArgs)[0]
+    gradU = Kernel(_grad)(mesh.symMesh.nInternalCells, (gradU,))(U, *meshArgs)
     meshArgs = mesh.symMesh.getTensor() + mesh.symMesh.getScalar()
     func = Function('grad_vector', [U] + meshArgs, (gradU,))
 
@@ -115,9 +115,9 @@ def test_div():
         return div(U, mesh, neighbour)
     divU = Zeros((mesh.symMesh.nInternalCells, 1))
     meshArgs = _meshArgs()
-    divU = Kernel(_div)(mesh.symMesh.nInternalFaces, (divU,))(U, neighbour=True, *meshArgs)[0]
+    divU = Kernel(_div)(mesh.symMesh.nInternalFaces, (divU,))(U, neighbour=True, *meshArgs)
     meshArgs = _meshArgs(mesh.symMesh.nInternalFaces)
-    divU = Kernel(_div)(mesh.symMesh.nGhostCells, (divU,))(U[mesh.symMesh.nInternalFaces], *meshArgs, neighbour=False)[0]
+    divU = Kernel(_div)(mesh.symMesh.nGhostCells, (divU,))(U[mesh.symMesh.nInternalFaces], *meshArgs, neighbour=False)
     meshArgs = mesh.symMesh.getTensor() + mesh.symMesh.getScalar()
     func = Function('div', [U] + meshArgs, (divU,))
 
@@ -148,7 +148,7 @@ def test_snGrad():
         return snGrad(U.extract(mesh.owner), U.extract(mesh.neighbour), mesh)
     snGradU = Zeros((mesh.symMesh.nFaces, 1))
     meshArgs = _meshArgs()
-    snGradU = Kernel(_snGrad)(mesh.symMesh.nFaces, (snGradU,))(U, *meshArgs)[0]
+    snGradU = Kernel(_snGrad)(mesh.symMesh.nFaces, (snGradU,))(U, *meshArgs)
     meshArgs = mesh.symMesh.getTensor() + mesh.symMesh.getScalar()
     func = Function('snGrad', [U] + meshArgs, (snGradU,))
 
