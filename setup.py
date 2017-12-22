@@ -57,7 +57,7 @@ for module, c_args in [[cppDir + 'cmesh', []], [cppDir + 'cmesh_gpu', ['-DCPU_FL
     modules.append(mod)
 
 setup(name='adFVM',
-      version='0.1.1',
+      version='0.2',
       description='finite volume method flow solver',
       author='Chaitanya Talnikar',
       author_email='talnikar@mit.edu',
@@ -74,8 +74,7 @@ setup(name='adFVM',
           'scipy >= 0.13.3',
           'mpi4py >= 0.13.1',
           'cython >= 0.24',
-          #'h5py >= 2.6.0',
-          #'matplotlib >= 1.3.1'
+          'matplotlib >= 1.3.1'
       ],
       cmdclass={
         'clean': CleanCommand,

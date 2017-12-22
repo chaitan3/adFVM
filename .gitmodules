@@ -1,6 +1,3 @@
-[submodule "io"]
-	path = io
-	url = git@adjoint.mit.edu:adFVM-io.git
 [submodule "adpy"]
 	path = adpy
-	url = git@adjoint:adpy.git
+	url = git@kolmogorov.mit.edu:adpy.git
