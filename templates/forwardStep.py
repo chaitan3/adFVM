@@ -2,6 +2,8 @@ import numpy as np
 
 from adFVM import config
 from adFVM.density import RCF 
+from adFVM.mesh import Mesh
+from adpy import tensor
 
 def objectiveTest(U, T, p, *mesh, **options):
     mesh = Mesh.container(mesh)
@@ -24,6 +26,8 @@ def objective(fields, solver):
     outputs = tuple([tensor.Zeros(x.shape) for x in inputs])
     (test,) = tensor.ExternalFunctionOp('mpi_allreduce', inputs, outputs).outputs
     return test
+
+primal = RCF('cases/forwardStep/', timeIntegrator='SSPRK', CFL=1.2, Cp=2.5, mu=lambda T: 0., objective=objective, fixedTimeStep=True)
 
 def perturb(fields, mesh, t):
     patchID = 'inlet'
