@@ -103,7 +103,7 @@ class Adjoint(Solver):
             raise NotImplementedError
         paramGradient = gradInputs[start:end]
 
-        args = primal.map._inputs + gradOutputs + [scaling]
+        args = list(primal.map._inputs) + gradOutputs + [scaling]
         outputs = list(fields) + paramGradient
         self.map = Function('primal_grad', args, outputs)
         if self.viscosityType and not matop_python:

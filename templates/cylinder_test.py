@@ -48,7 +48,7 @@ def perturb(fields, mesh, t):
     #mid = np.array([-0.012, 0.0, 0.])
     #G = 100*np.exp(-3e4*norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1)**2)
     mid = np.array([-0.001, 0.0, 0.])
-    G = 1e3*np.exp(-1e5*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1, keepdims=1)**2)
+    G = 1e5*np.exp(-1e5*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1, keepdims=1)**2)
     rho = G
     rhoU = np.zeros((mesh.nInternalCells, 3))
     rhoU[:, 0] += G.flatten()*100

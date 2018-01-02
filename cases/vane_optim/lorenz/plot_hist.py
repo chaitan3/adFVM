@@ -12,8 +12,9 @@ plt.rcParams.update({'figure.figsize':(7, 6)})
 
 #fs = sys.argv[1:]
 for beta in [0.0, 1.0, 2.0, 3.0, 10.0]:
+#for beta in [0.0]:
     #f = 'beta_{}/optim_nd2_lorenz.pkl'.format(beta)
-    f = 'beta_{}/optim_nd2_rosenbrock.pkl'.format(beta)
+    f = 'beta_{}/optim_nd2_rosenbrock2.pkl'.format(beta)
     try:
         a = pkl.load(open(f))
     except:

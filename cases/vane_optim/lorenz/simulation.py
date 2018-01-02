@@ -8,9 +8,12 @@ from scipy.optimize import rosen, rosen_der
 #from clorenz import lorenz
 import lorenz
 import gp as GP
+import sys
+
+GP.beta = float(sys.argv[1])
 #optime = 'optim_nd2_lorenz'
 #optime = 'optim_nd1_lorenz'
-optime = 'beta_{}/optim_nd2_rosenbrock2'.format(GP.beta)
+optime = 'beta_{}/optim_nd2_rosenbrock3'.format(GP.beta)
 #import gp_noder as GP
 #optim = 'optim_noder'
 
@@ -66,7 +69,7 @@ def optim():
     values = []
     evals = []
     gps = []
-    nj = 100
+    nj = 1500
     for j in range(0, nj):
         evals.append([])
         gps.append([])
@@ -98,9 +101,9 @@ def optim():
         # * noise: using EI with std for now
         # * batch
         # * finite budget
-        print
+        #print
 
-        for i in range(0, 1000):
+        for i in range(0, 35):
             #x = ei.optimize()
             try:
                 x = ei.optimize()
@@ -109,7 +112,7 @@ def optim():
                 break
             evals[-1].append(gp.data_min())
             gps[-1].append(gp.posterior_min())
-            print 'ei choice:', i, x
+            #print 'ei choice:', i, x
 
             #eix = ei.evaluate(xs)
             #plt.plot(x1, eix.reshape(x1.shape))
@@ -137,7 +140,7 @@ def optim():
             y, yd, yn, ydn = objective_single(x)
             #y, yd, yn, ydn = test_func(x)
             gp.train(x, y, yd, yn, ydn)
-            print
+            #print
         if not fail:
             values.append(gp.y)
         else:

@@ -7,7 +7,7 @@ import nlopt
 from pyDOE import *
 import gp_noder
 
-beta = 0.
+beta = 1.0
 
 def _sanitize(x):
     if isinstance(x, list):
