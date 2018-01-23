@@ -20,6 +20,7 @@ def _optimize(fun, bounds, cons=None):
     #res = differential_evolution(fun, bounds)
     #return res.x, res.fun[0]
     def nlopt_fun(x, grads):
+        #print x, fun(x)
         if grads.size > 0:
             raise Exception("!")
         else:
@@ -38,21 +39,22 @@ def _optimize(fun, bounds, cons=None):
     opt.set_min_objective(nlopt_fun)
     opt.set_lower_bounds(bounds[:,0])
     opt.set_upper_bounds(bounds[:,1])
-    opt.set_maxeval(1000)
+    #opt.set_maxeval(1000)
+    opt.set_maxeval(2000)
     #if cons:
     #    opt.add_inequality_constraint(nlopt_constraint)
     x = (bounds[:,0] + bounds[:,1])/2
     res = opt.optimize(x)
 
-    opt = nlopt.opt(nlopt.LN_SBPLX, bounds.shape[0])
-    #opt = nlopt.opt(nlopt.LN_COBYLA, bounds.shape[0])
-    opt.set_min_objective(nlopt_fun)
-    opt.set_lower_bounds(bounds[:,0])
-    opt.set_upper_bounds(bounds[:,1])
+    #opt = nlopt.opt(nlopt.LN_SBPLX, bounds.shape[0])
+    ##opt = nlopt.opt(nlopt.LN_COBYLA, bounds.shape[0])
+    #opt.set_min_objective(nlopt_fun)
+    #opt.set_lower_bounds(bounds[:,0])
+    #opt.set_upper_bounds(bounds[:,1])
     #if cons:
     #    opt.add_inequality_constraint(nlopt_constraint)
-    opt.set_maxeval(100)
-    res = opt.optimize(res)
+    #opt.set_maxeval(100)
+    #res = opt.optimize(res)
 
     return res, opt.last_optimum_value()
 
@@ -247,10 +249,14 @@ class ExpectedImprovement(AcquisitionFunction):
         std = np.diag(cov)**0.5
         delta = fmin-mu
         Z = delta/std
-        return (delta*norm.cdf(Z) + std*norm.pdf(Z))
+        ei = (delta*norm.cdf(Z) + std*norm.pdf(Z))
+        #print(xs, ei)
+        return ei
+
 
     def optimize(self):
-        res = self.gp.posterior_min()
+        #res = self.gp.posterior_min()
+        res = self.gp.data_min()
         self.fmin = res[1] + beta*self.gp.evaluate(res[0])[1][0][0]**0.5
         res = _optimize(lambda x: -self.evaluate(x)[0], self.gp.bounds, cons=self.gp.cons)
         return res[0]

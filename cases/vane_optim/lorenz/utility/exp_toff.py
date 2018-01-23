@@ -129,6 +129,8 @@ def optim():
     plt.locator_params(axis='x', numticks=4)
     plt.locator_params(axis='y', numticks=4)
     sc = plt.scatter(varis, mus, c=z, s=100)
+    for i, x in enumerate(z):
+        plt.annotate(x, (varis[i] + 1e-5, mus[i]), fontsize=16)
     plt.colorbar(sc, ticks=z+1)
     d = 0.0001
     plt.xlim([varis.min()-d, varis.max()+d])

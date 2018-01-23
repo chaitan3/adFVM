@@ -194,3 +194,4 @@ cyclicPatches = ['cyclic', 'slidingPeriodic1D']
 coupledPatches = cyclicPatches + processorPatches
 defaultPatches = coupledPatches + ['symmetryPlane', 'empty']
 #defaultPatches = coupledPatches + ['empty']
+

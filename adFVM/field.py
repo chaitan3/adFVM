@@ -61,7 +61,29 @@ class Field(object):
     def magSqr(self):
         assert self.dimensions == (3,)
         return self.__class__('magSqr({0})'.format(self.name), np.reshape(np.sum(self.field*self.field, axis=1), (-1,1)), (1,))
-    
+
+
+    def sqrt(self):
+        return self.__class__('-{0}'.format(self.name), np.sqrt(self.field), self.dimensions)
+
+    def outer(self, phi):
+        return self.__class__('outer({0},{1})'.format(self.name, phi.name), self.field[:,:,np.newaxis] * phi.field[:,np.newaxis,:], (3,3))
+
+    def dot(self, phi):
+        assert phi.dimensions == (3,)
+        # if tensor
+        if len(self.dimensions) == 2:
+            assert self.dimensions[1] == 3
+            phi = self.__class__(phi.name, phi.field[:,np.newaxis,:], (1,3))
+            dimensions = (self.dimensions[0],)
+        else:
+            assert self.dimensions == (3,)
+            dimensions = (1,)
+        product = np.sum(self.field * phi.field, axis=-1)
+        if len(self.dimensions) == 1:
+            product = np.reshape(product,(-1,1))
+        return self.__class__('dot({0},{1})'.format(self.name, phi.name), product, dimensions)
+
     def __neg__(self):
         return self.__class__('-{0}'.format(self.name), -self.field, self.dimensions)
 

@@ -2,7 +2,7 @@
 import time as timer
 import argparse
 
-from adFVM import config
+import adFVM
 from adFVM.parallel import pprint
 from adFVM.postpro import *
 from adFVM.density import RCF
@@ -11,7 +11,7 @@ from adFVM.field import IOField
 parser = argparse.ArgumentParser()
 parser.add_argument('case')
 parser.add_argument('-t', '--times', nargs='+', type=float)
-user = parser.parse_args(config.args)
+user = parser.parse_args(adFVM.config.args)
 times = user.times
 
 names = ['gradT', 'gradrho', 'gradU', 'gradp', 'gradc', 'divU', 'enstrophy', 'Q']
@@ -84,7 +84,7 @@ for index, time in enumerate(times):
 
         ###scale = lambda x: 1/(1+np.exp(-10*(x/parallel.max(x)-1)))
         scale = None
-        for visc in ["abarbanel"]:#, "entropy_jameson", "uniform", "entropy_hughes"]:
+        for visc in ["abarbanel", "entropy_jameson", "uniform", "entropy_hughes"]:
         #for visc in ["abarbanel", "entropy_jameson", "entropy_hughes"]:
             adjNorm, energy, diss = getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs, visc=visc, scale=scale)
             adjNorm.write()

@@ -51,7 +51,8 @@ e1 = V2*V5
 e2 = V3*V5
 e3 = V4*V5
 s=g-V1+k1
-re = pref*exp(-s/g1)*(g1/(-V5*pref)**g)**(1/g1)
+#re = pref*exp(-s/g1)*(g1/(-V5*pref)**g)**(1/g1)
+re = (1/pref)**(1/g1)*exp(-s/g1)*(g1/(-V5*pref)**g)**(1/g1)
 print 'here'
 
 A = Array([[[e1*V5, c1*V5,d1*V5, d2*V5, k2*e1],
@@ -87,12 +88,12 @@ A0I = -1/(re*V5)*A0I
 A0I = simplify(A0I)
 print 'here2'
 
-rho = symbols('rho')
-u1 = symbols('u1')
-u2 = symbols('u2')
-u3 = symbols('u3')
-p = symbols('p')
-q2 = u1*u1 + u2*u2 + u3*u3
+#rho = symbols('rho')
+#u1 = symbols('u1')
+#u2 = symbols('u2')
+#u3 = symbols('u3')
+#p = symbols('p')
+#q2 = u1*u1 + u2*u2 + u3*u3
 #TwqI = Array([[1,0,0,0,0],[-u1/rho,1/rho,0,0,0], [-u2/rho, 0, 1/rho, 0,0],[-u3/rho,0,0,1/rho,0],[g1*q2/2, -g1*u1,-g1*u2,-g1*u3,g1]])
 #Twv = A0
 #Tqv = tensordot(TwqI, Twv)

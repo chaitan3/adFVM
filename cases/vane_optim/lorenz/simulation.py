@@ -1,5 +1,5 @@
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from multiprocessing import Pool
 import cPickle as pkl
 from functools import partial
@@ -13,27 +13,54 @@ import sys
 GP.beta = float(sys.argv[1])
 #optime = 'optim_nd2_lorenz'
 #optime = 'optim_nd1_lorenz'
-optime = 'beta_{}/optim_nd2_rosenbrock3'.format(GP.beta)
+#optime = 'beta_{}/optim_nd2_rosenbrock7'.format(GP.beta)
+optime = 'beta_{}/optim_nd2_rastigrin3'.format(GP.beta)
 #import gp_noder as GP
 #optim = 'optim_noder'
 
-orig_bounds = np.array([[-3., 3], [-3, 3.]])
-#orig_bounds = lorenz.orig_bounds
-#orig_bounds = lorenz.orig_bounds[:1]
 # if threshold is negative constraint passes all points
-sig = 20.
+
+sig = 0.25
+#sig = 1.
+#sig = 4.
+
+# rosenbrock
+#def objective_single(x):
+#    x = GP._sanitize(x)
+#    y = []
+#    yd = []
+#    for i in range(0, x.shape[0]):
+#        y.append(rosen(x[i]))
+#        yd.append(rosen_der(x[i]))
+#    return np.array(y) + sig*np.random.randn(x.shape[0]),\
+#           np.array(yd) + sig*np.random.randn(*x.shape),\
+#           sig**2, \
+#           sig**2
+
+# rastigrin
+#orig_bounds = np.array([[-3., 3], [-3, 3.]])
+orig_bounds = np.array([[-10., 10.], [-10., 10.]])
 def objective_single(x):
     x = GP._sanitize(x)
     y = []
     yd = []
+    fac = 1.5
     for i in range(0, x.shape[0]):
-        y.append(rosen(x[i]))
-        yd.append(rosen_der(x[i]))
+        f = 20 - 50 + x[i,0]**2 - 10*np.cos(fac*np.pi*x[i,0]) \
+                    + x[i,1]**2 - 10*np.cos(fac*np.pi*x[i,1])
+        fd = np.array([
+              2*x[i,0] + 10*fac*np.pi*np.sin(fac*np.pi*x[i,0]),
+              2*x[i,1] + 10*fac*np.pi*np.sin(fac*np.pi*x[i,1])
+            ])
+        y.append(f)
+        yd.append(fd)
     return np.array(y) + sig*np.random.randn(x.shape[0]),\
            np.array(yd) + sig*np.random.randn(*x.shape),\
            sig**2, \
            sig**2
 
+
+#orig_bounds = np.array([[-5.12, 5.12], [-5.12, 5.12]])
 def minimum():
     #print objective_single([58.,1.24])
     #print objective_single([51.8,1.8])
@@ -69,7 +96,10 @@ def optim():
     values = []
     evals = []
     gps = []
-    nj = 1500
+    #nj = 1500
+    #ne = 35
+    nj = 1000
+    ne = 50
     for j in range(0, nj):
         evals.append([])
         gps.append([])
@@ -85,15 +115,18 @@ def optim():
         #    return sum(x) - 30.6
         #gp = GP.GaussianProcess(kernel, orig_bounds, noise=[1e-4, [1e-5, 1e-3]], noiseGP=True, cons=constraint)
         #gp.explore(4, objective)
-        kernel = GP.SquaredExponentialKernel([1., 1.], sig)#, [1e-2, 1e-2])
+        #kernel = GP.SquaredExponentialKernel([1., 1.], 100)#, [1e-2, 1e-2])
+        kernel = GP.SquaredExponentialKernel([1., 1.], 50.)#, [1e-2, 1e-2])
         gp = GP.GaussianProcess(kernel, orig_bounds, noise=[sig**2, [sig**2, sig**2]], noiseGP=True)
+        #gp = GP.GaussianProcess(kernel, orig_bounds, noise=[sig**2, sig**2], noiseGP=False)
         gp.explore(4, objective_single)
+        #gp.explore(100, objective_single)
 
         x1 = np.linspace(gp.bounds[0,0], gp.bounds[0,1], 40)
         xs = x1.reshape(-1,1)
-        #x2 = np.linspace(gp.bounds[1,0], gp.bounds[1,1], 40)
-        #x1, x2 = np.meshgrid(x1, x2)
-        #xs = np.vstack((x1.flatten(), x2.flatten())).T
+        x2 = np.linspace(gp.bounds[1,0], gp.bounds[1,1], 40)
+        x1, x2 = np.meshgrid(x1, x2)
+        xs = np.vstack((x1.flatten(), x2.flatten())).T
 
         ei = GP.ExpectedImprovement(gp)
 
@@ -103,39 +136,34 @@ def optim():
         # * finite budget
         #print
 
-        for i in range(0, 35):
+        for i in range(0, ne):
+            print j, i
+            x = ei.optimize()
+            #try:
+            #    x = ei.optimize()
+            #except:
+            #    fail = True
+            #    break
             #x = ei.optimize()
-            try:
-                x = ei.optimize()
-            except:
-                fail = True
-                break
             evals[-1].append(gp.data_min())
             gps[-1].append(gp.posterior_min())
             #print 'ei choice:', i, x
+            #print 'data min', evals[-1][-1]
+            #print 'posterior min', gps[-1][-1]
 
             #eix = ei.evaluate(xs)
-            #plt.plot(x1, eix.reshape(x1.shape))
             #plt.contourf(x1, x2, eix.reshape(x1.shape), 100)
             #plt.colorbar()
-            ##plt.savefig('ei_{}.pdf'.format(i))
-            ##plt.clf()
+            #plt.savefig('debug/ei_{}.pdf'.format(i))
+            #plt.clf()
             #plt.show()
 
             #mu, cov = gp.evaluate(xs)
-            ##mu, cov = gp.noiseGP[1].exponential(xs)
-            ##plt.plot(x1, mu*gp.noise[0])
-            ##plt.show()
-            ##std = np.diag(cov)**0.5
             #plt.contourf(x1, x2, mu.reshape(x1.shape), 100)
             #plt.colorbar()
-            ###plt.savefig('mu_{}.pdf'.format(i))
-            ###plt.clf()
-            #plt.show()
-            #plt.contourf(x1, x2, std.reshape(x1.shape), 1000)
-            #plt.colorbar()
-            #plt.savefig('cov_{}.pdf'.format(i))
+            #plt.savefig('debug/mu_{}.pdf'.format(i))
             #plt.clf()
+            #plt.show()
 
             y, yd, yn, ydn = objective_single(x)
             #y, yd, yn, ydn = test_func(x)
