@@ -181,8 +181,10 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     U = U.getInternal()
     T = T.getInternal()
     p = p.getInternal()
-    rho, _, _ = solver.conservative(U, T, p)
+    rho, rhoU, rhoE = solver.conservative(U, T, p)
     rho = rho.field
+    rhoU = rhoU.field
+    rhoE = rhoE.field
     p = p.field
     U = U.field
     U1 = U[:,[0]]
@@ -225,6 +227,36 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         M = M1/2-M2
 
     # Entropy
+    elif visc == 'entropy_barth':
+        rho = rho[:,0]
+        rhou1 = rhoU[:,0]
+        rhou2 = rhoU[:,1]
+        rhou3 = rhoU[:,2]
+        rhoE = rhoE[:,0]
+        u1 = U[:,0]
+        u2 = U[:,1]
+        u3 = U[:,2]
+        q2 = u1*u1 + u2*u2 + u3*u3
+        from .symmetrizations.entropy_barth_numerical import expression
+        one = np.ones_like(rho)
+        zero = np.zeros_like(rho)
+        A0U, AU, A0, A = expression(rho,rhou1,rhou2,rhou3,rhoE, g*one, one, zero)
+        A0U = np.array(A0U).transpose(1, 0).reshape((-1, 5, 5, 5))
+        AU = np.array(AU).transpose(1, 0).reshape((-1, 5, 3, 5, 5))
+        A = np.array(A).transpose(1, 0).reshape((-1, 5, 3, 5))
+        A0 = np.array(A0).transpose(1, 0).reshape((-1, 5, 5))
+        Twq = np.array([[one,zero,zero,zero,zero],
+                        [u1,rho,zero,zero,zero],
+                        [u2,zero,rho,zero,zero],
+                        [u3,zero,zero,rho,zero],
+                        [q2/2,rho*u1,rho*u2,rho*u3,one/g1]]).transpose((2, 0, 1))
+        G = np.concatenate((gradrho.reshape(-1,1,3), gradU, gradp.reshape(-1,1,3)), axis=1)
+        Gw = np.matmul(Twq, G)
+        AtU = np.einsum('pijkm,pkl->pijlm', AU, A0) + np.einsum('pijk,pklm->pijlm', A, A0U)
+        M1 = np.einsum('pkjil,plj->pki', AtU, Gw)
+        M2 = np.einsum('pijk,pklm,pml->pij', A0U, A, Gw)
+        M = -M1 + M2
+
     elif visc == 'entropy_hughes':
         #pref = 1.
         rho = rho[:,0]
