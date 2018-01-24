@@ -6,7 +6,7 @@ from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
 from adFVM import interp
 from adFVM.memory import printMemUsage
-from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, getAdjointViscosityCpp, viscositySolver
+from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, getSymmetrizedAdjointEnergy, getAdjointViscosityCpp, viscositySolver
 from adFVM.solver import Solver
 from adpy.variable import Variable, Function, Zeros
 from adFVM.mesh import cmesh, Mesh
@@ -198,7 +198,9 @@ class Adjoint(Solver):
             pprint('Time step', writeInterval)
             for phi in fields:
                 phi.info()
-            energyTimeSeries.append(getAdjointEnergy(primal, *fields))
+            #energyTimeSeries.append(getAdjointEnergy(primal, *fields))
+            inputs = fields + solutions[-1]
+            energyTimeSeries.append(getSymmetrizedAdjointEnergy(primal, *inputs))
             pprint()
 
             for step in range(0, writeInterval):
@@ -306,7 +308,9 @@ class Adjoint(Solver):
                 if report:
                     for phi in fields:
                         phi.info()
-                    energyTimeSeries.append(getAdjointEnergy(primal, *fields))
+                    #energyTimeSeries.append(getAdjointEnergy(primal, *fields))
+                    inputs = fields + previousSolution
+                    energyTimeSeries.append(getSymmetrizedAdjointEnergy(primal, *inputs))
                     end = time.time()
                     pprint('Time for adjoint iteration: {0}'.format(end-start))
                     pprint('Time since beginning:', end-config.runtime)

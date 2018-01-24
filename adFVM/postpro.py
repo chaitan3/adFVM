@@ -156,6 +156,35 @@ def getAdjointEnergy(solver, rhoa, rhoUa, rhoEa):
     adjEnergy = (parallel.sum(adjEnergy)**0.5)/(solver.Jref*solver.tref)
     return adjEnergy
 
+def getSymmetrizedAdjointEnergy(solver, rhoa, rhoUa, rhoEa, rho, rhoU, rhoE):
+    # optimize this function
+    U, T, p = solver.primitive(rho, rhoU, rhoE)
+    U, rho, p = U.field, rho.field.flatten(), p.field.flatten()
+    g = solver.gamma
+    u1, u2, u3 = U.T
+    q2 = (u1*u1+u2*u2+u3*u3)
+    H = g*p/(rho*(g-1)) + q2/2
+    rE = p/(g-1) + 0.5*rho*q2
+    A = np.array([[rho, rho*u1, rho*u2, rho*u3, rE],
+                  [rho*u1, rho*u1*u1 + p, rho*u1*u2, rho*u1*u3, rho*H*u1],
+                  [rho*u2, rho*u2*u1, rho*u2*u2 + p, rho*u2*u3, rho*H*u2],
+                  [rho*u3, rho*u3*u1, rho*u3*u2, rho*u3*u3 + p, rho*H*u3],
+                  [rE, rho*H*u1, rho*H*u2, rho*H*u3, rho*H*H-g*p*p/(rho*(g-1))]]
+                  ).transpose(2, 0, 1)
+    # already divided by volumes
+    # not divided by volumes
+    mesh = solver.mesh
+    rhoa = rhoa.getInternalField()/mesh.volumes
+    rhoUa = rhoUa.getInternalField()/mesh.volumes
+    rhoEa = rhoEa.getInternalField()/mesh.volumes
+
+    w = np.concatenate((rhoa, rhoUa, rhoEa), axis=1)
+    l2norm = np.matmul(w.reshape(-1,1,5), np.matmul(A, w.reshape(-1,5, 1)))
+    adjEnergy = parallel.sum(l2norm*mesh.volumes)**0.5
+    return adjEnergy
+
+
+
 def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs, **kwargs):
     mesh = rho.mesh
     solver = rho.solver
@@ -229,33 +258,39 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     # Entropy
     elif visc == 'entropy_barth':
         rho = rho[:,0]
-        rhou1 = rhoU[:,0]
-        rhou2 = rhoU[:,1]
-        rhou3 = rhoU[:,2]
-        rhoE = rhoE[:,0]
         u1 = U[:,0]
         u2 = U[:,1]
         u3 = U[:,2]
-        q2 = u1*u1 + u2*u2 + u3*u3
-        from .symmetrizations.entropy_barth_numerical import expression
-        one = np.ones_like(rho)
+        p = p[:,0]
         zero = np.zeros_like(rho)
-        A0U, AU, A0, A = expression(rho,rhou1,rhou2,rhou3,rhoE, g*one, one, zero)
-        A0U = np.array(A0U).transpose(1, 0).reshape((-1, 5, 5, 5))
-        AU = np.array(AU).transpose(1, 0).reshape((-1, 5, 3, 5, 5))
-        A = np.array(A).transpose(1, 0).reshape((-1, 5, 3, 5))
-        A0 = np.array(A0).transpose(1, 0).reshape((-1, 5, 5))
-        Twq = np.array([[one,zero,zero,zero,zero],
-                        [u1,rho,zero,zero,zero],
-                        [u2,zero,rho,zero,zero],
-                        [u3,zero,zero,rho,zero],
-                        [q2/2,rho*u1,rho*u2,rho*u3,one/g1]]).transpose((2, 0, 1))
-        G = np.concatenate((gradrho.reshape(-1,1,3), gradU, gradp.reshape(-1,1,3)), axis=1)
-        Gw = np.matmul(Twq, G)
-        AtU = np.einsum('pijkm,pkl->pijlm', AU, A0) + np.einsum('pijk,pklm->pijlm', A, A0U)
-        M1 = np.einsum('pkjil,plj->pki', AtU, Gw)
-        M2 = np.einsum('pijk,pklm,pml->pij', A0U, A, Gw)
-        M = -M1 + M2
+
+        #rhou1 = rhoU[:,0]
+        #rhou2 = rhoU[:,1]
+        #rhou3 = rhoU[:,2]
+        #rhoE = rhoE[:,0]
+        #q2 = u1*u1 + u2*u2 + u3*u3
+        #from .symmetrizations.entropy_barth_numerical import expression
+        #one = np.ones_like(rho)
+        #A0U, AU, A0, A = expression(rho,rhou1,rhou2,rhou3,rhoE, g*one, one, zero)
+        #A0U = np.array(A0U).transpose(1, 0).reshape((-1, 5, 5, 5))
+        #AU = np.array(AU).transpose(1, 0).reshape((-1, 5, 3, 5, 5))
+        #A = np.array(A).transpose(1, 0).reshape((-1, 5, 3, 5))
+        #A0 = np.array(A0).transpose(1, 0).reshape((-1, 5, 5))
+        #Twq = np.array([[one,zero,zero,zero,zero],
+        #                [u1,rho,zero,zero,zero],
+        #                [u2,zero,rho,zero,zero],
+        #                [u3,zero,zero,rho,zero],
+        #                [q2/2,rho*u1,rho*u2,rho*u3,one/g1]]).transpose((2, 0, 1))
+        #G = np.concatenate((gradrho.reshape(-1,1,3), gradU, gradp.reshape(-1,1,3)), axis=1)
+        #Gw = np.matmul(Twq, G)
+        #AtU = np.einsum('pijkm,pkl->pijlm', AU, A0) + np.einsum('pijk,pklm->pijlm', A, A0U)
+        #M1 = np.einsum('pkjil,plj->pki', AtU, Gw)
+        #M2 = np.einsum('pijk,pklm,pml->pij', A0U, A, Gw)
+        #M = -M1 + M2
+
+        from .symmetrizations.entropy_barth_mathematica import expression
+        M = expression(rho,u1,u2,u3,p,gradrho,gradU[:,0,:],gradU[:,1,:],gradU[:,2,:],gradp,g,zero)
+        M = np.array(M).transpose((2, 0, 1))
 
     elif visc == 'entropy_hughes':
         #pref = 1.

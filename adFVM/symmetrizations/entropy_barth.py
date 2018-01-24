@@ -61,9 +61,9 @@ F = Array([[ru1, ru2, ru3],
 A = simplify(diff(F, U))
 
 A0 = Array([[r, ru1, ru2, ru3, rE],
-      [ru1, ru1*u1, ru1*u2, ru1*u3, ru1*H],
-      [ru2, ru2*u1, ru2*u2, ru2*u3, ru2*H],
-      [ru3, ru3*u1, ru3*u2, ru3*u3, ru3*H],
+      [ru1, ru1*u1 + p, ru1*u2, ru1*u3, ru1*H],
+      [ru2, ru2*u1, ru2*u2 + p, ru2*u3, ru2*H],
+      [ru3, ru3*u1, ru3*u2, ru3*u3 + p, ru3*H],
       [rE, ru1*H, ru2*H, ru3*H, r*H*H - a2*p/g1]])
 A0 = simplify(A0)
 
