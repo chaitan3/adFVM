@@ -109,11 +109,15 @@ class Adjoint(Solver):
         if self.viscosityType and not matop_python:
             primalFields = primal.map._inputs[:n]
             M_2norm, DT = getAdjointViscosityCpp(*([primal, self.viscosityType] + primalFields + [scaling]))
-            fields = viscositySolver(*([primal] + fields + [DT]))
-            outputs = list(fields) + paramGradient
+            outputs = list(viscositySolver(*([primal] + fields + [DT]))) + paramGradient
             if write_M_2norm:
                 outputs = outputs + [M_2norm]
             self.viscousMap = Function('primal_grad_viscous', args, outputs)
+
+        args = list(fields) + list(primal.map._inputs)
+        outputs = computeSymmetrizedAdjointEnergy(solver, *args)
+        self.computeEnergy = Function('compute_energy', args, outputs)
+
             #exit(0)
         #self.map self.map.getAdjoint()
 
@@ -200,7 +204,8 @@ class Adjoint(Solver):
                 phi.info()
             #energyTimeSeries.append(getAdjointEnergy(primal, *fields))
             inputs = fields + solutions[-1]
-            energyTimeSeries.append(getSymmetrizedAdjointEnergy(primal, *inputs))
+            #energyTimeSeries.append(getSymmetrizedAdjointEnergy(primal, *inputs))
+            energyTimeSeries.append(self.computeEnergy([phi.field for phi in inputs])
             pprint()
 
             for step in range(0, writeInterval):
@@ -310,7 +315,8 @@ class Adjoint(Solver):
                         phi.info()
                     #energyTimeSeries.append(getAdjointEnergy(primal, *fields))
                     inputs = fields + previousSolution
-                    energyTimeSeries.append(getSymmetrizedAdjointEnergy(primal, *inputs))
+                    #energyTimeSeries.append(getSymmetrizedAdjointEnergy(primal, *inputs))
+                    energyTimeSeries.append(self.computeEnergy([phi.field for phi in inputs])
                     end = time.time()
                     pprint('Time for adjoint iteration: {0}'.format(end-start))
                     pprint('Time since beginning:', end-config.runtime)

@@ -183,7 +183,35 @@ def getSymmetrizedAdjointEnergy(solver, rhoa, rhoUa, rhoEa, rho, rhoU, rhoE):
     adjEnergy = parallel.sum(l2norm*mesh.volumes)**0.5
     return adjEnergy
 
+def computeSymmetrizedAdjointEnergy(solver, rhoa, rhoUa, rhoEa, rho, rhoU, rhoE):
+    # optimize this function
+    def computeEnergy(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE)
+        U, T, p = solver.primitive(rho, rhoU, rhoE)
+        g = solver.gamma
+        u1, u2, u3 = U[0], U[1], U[2]
+        q2 = (u1*u1+u2*u2+u3*u3)
+        H = g*p/(rho*(g-1)) + q2/2
+        rE = p/(g-1) + 0.5*rho*q2
+        A = Tensor((5,5), [rho, rho*u1, rho*u2, rho*u3, rE,
+                      rho*u1, rho*u1*u1 + p, rho*u1*u2, rho*u1*u3, rho*H*u1,
+                      rho*u2, rho*u2*u1, rho*u2*u2 + p, rho*u2*u3, rho*H*u2,
+                      rho*u3, rho*u3*u1, rho*u3*u2, rho*u3*u3 + p, rho*H*u3,
+                      rE, rho*H*u1, rho*H*u2, rho*H*u3, rho*H*H-g*p*p/(rho*(g-1))]
+        # already divided by volumes
+        # not divided by volumes
+        mesh = solver.mesh
+        rhoa = rhoa/mesh.volumes
+        rhoUa = rhoUa/mesh.volumes
+        rhoEa = rhoEa/mesh.volumes
+        w = Tensor((5,), [rhoa, rhoUa[0], rhoUa[1], rhoUa[2], rhoEa])
 
+        l2norm = w.dot(A.tensordot(w))
+        return (l2norm*mesh.volumes).sum()
+
+    adjEnergy = Zeros((1, 1))
+    adjEnergy = Kernel(computeEnergy)(mesh.nInternalCels, (adjEnergy,))(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE)
+    (adjEnergy,) = ExternalFunctionOp('mpi_allreduce', (adjEnergy,), (Zeros((1,1)),)).outputs
+    return adjEnergy
 
 def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs, **kwargs):
     mesh = rho.mesh
