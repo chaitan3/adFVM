@@ -6,7 +6,7 @@ from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
 from adFVM import interp
 from adFVM.memory import printMemUsage
-from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, getSymmetrizedAdjointEnergy, getAdjointViscosityCpp, viscositySolver
+from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, getSymmetrizedAdjointEnergy, computeSymmetrizedAdjointEnergy, computeAdjointViscosity, viscositySolver
 from adFVM.solver import Solver
 from adpy.variable import Variable, Function, Zeros
 from adFVM.mesh import cmesh, Mesh
@@ -114,9 +114,12 @@ class Adjoint(Solver):
                 outputs = outputs + [M_2norm]
             self.viscousMap = Function('primal_grad_viscous', args, outputs)
 
-        args = list(fields) + list(primal.map._inputs)
-        outputs = computeSymmetrizedAdjointEnergy(solver, *args)
-        self.computeEnergy = Function('compute_energy', args, outputs)
+        fields = [Variable(out.shape, out.dtype) for out in fields]
+        primalFields = [Variable(out.shape, out.dtype) for out in fields]
+        meshArgs = mesh.symMesh.getTensor() + mesh.symMesh.getScalar()
+        args = fields + primalFields
+        outputs = computeSymmetrizedAdjointEnergy(primal, *args)
+        self.computeEnergy = Function('compute_energy', args + meshArgs, outputs)
 
             #exit(0)
         #self.map self.map.getAdjoint()
@@ -203,9 +206,8 @@ class Adjoint(Solver):
             for phi in fields:
                 phi.info()
             #energyTimeSeries.append(getAdjointEnergy(primal, *fields))
-            inputs = fields + solutions[-1]
-            #energyTimeSeries.append(getSymmetrizedAdjointEnergy(primal, *inputs))
-            energyTimeSeries.append(self.computeEnergy([phi.field for phi in inputs])
+            inputs = [phi.field for phi in fields + solutions[-1]] + mesh.getTensor() + mesh.getScalar()
+            energyTimeSeries.append(self.computeEnergy(*inputs))
             pprint()
 
             for step in range(0, writeInterval):
@@ -314,9 +316,8 @@ class Adjoint(Solver):
                     for phi in fields:
                         phi.info()
                     #energyTimeSeries.append(getAdjointEnergy(primal, *fields))
-                    inputs = fields + previousSolution
-                    #energyTimeSeries.append(getSymmetrizedAdjointEnergy(primal, *inputs))
-                    energyTimeSeries.append(self.computeEnergy([phi.field for phi in inputs])
+                    inputs = [phi.field for phi in fields + previousSolution] + mesh.getTensor() + mesh.getScalar()
+                    energyTimeSeries.append(self.computeEnergy(*inputs))
                     end = time.time()
                     pprint('Time for adjoint iteration: {0}'.format(end-start))
                     pprint('Time since beginning:', end-config.runtime)

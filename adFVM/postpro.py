@@ -7,6 +7,7 @@ from .compat import intersectPlane
 import time
 from .mesh import Mesh
 from .parallel import pprint
+from adpy.tensor import *
 
 def computeGradients(solver, U, T, p):
     mesh = solver.mesh
@@ -185,31 +186,31 @@ def getSymmetrizedAdjointEnergy(solver, rhoa, rhoUa, rhoEa, rho, rhoU, rhoE):
 
 def computeSymmetrizedAdjointEnergy(solver, rhoa, rhoUa, rhoEa, rho, rhoU, rhoE):
     # optimize this function
-    def computeEnergy(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE)
-        U, T, p = solver.primitive(rho, rhoU, rhoE)
-        g = solver.gamma
+    mesh = solver.mesh.symMesh
+    def computeEnergy(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, volumes):
+        U = rhoU/rho
         u1, u2, u3 = U[0], U[1], U[2]
         q2 = (u1*u1+u2*u2+u3*u3)
+        g = solver.gamma
+        p = (rhoE - rho*q2/2)*(g-1)
         H = g*p/(rho*(g-1)) + q2/2
-        rE = p/(g-1) + 0.5*rho*q2
-        A = Tensor((5,5), [rho, rho*u1, rho*u2, rho*u3, rE,
+        A = Tensor((5,5), [rho, rho*u1, rho*u2, rho*u3, rhoE,
                       rho*u1, rho*u1*u1 + p, rho*u1*u2, rho*u1*u3, rho*H*u1,
                       rho*u2, rho*u2*u1, rho*u2*u2 + p, rho*u2*u3, rho*H*u2,
                       rho*u3, rho*u3*u1, rho*u3*u2, rho*u3*u3 + p, rho*H*u3,
-                      rE, rho*H*u1, rho*H*u2, rho*H*u3, rho*H*H-g*p*p/(rho*(g-1))]
+                      rhoE, rho*H*u1, rho*H*u2, rho*H*u3, rho*H*H-g*p*p/(rho*(g-1))])
         # already divided by volumes
         # not divided by volumes
-        mesh = solver.mesh
-        rhoa = rhoa/mesh.volumes
-        rhoUa = rhoUa/mesh.volumes
-        rhoEa = rhoEa/mesh.volumes
+        rhoa = rhoa/volumes
+        rhoUa = rhoUa/volumes
+        rhoEa = rhoEa/volumes
         w = Tensor((5,), [rhoa, rhoUa[0], rhoUa[1], rhoUa[2], rhoEa])
 
         l2norm = w.dot(A.tensordot(w))
-        return (l2norm*mesh.volumes).sum()
+        return (l2norm*volumes).sum()
 
     adjEnergy = Zeros((1, 1))
-    adjEnergy = Kernel(computeEnergy)(mesh.nInternalCels, (adjEnergy,))(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE)
+    adjEnergy = Kernel(computeEnergy)(mesh.nInternalCells, (adjEnergy,))(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, mesh.volumes)
     (adjEnergy,) = ExternalFunctionOp('mpi_allreduce', (adjEnergy,), (Zeros((1,1)),)).outputs
     return adjEnergy
 
@@ -453,8 +454,7 @@ def getAdjointViscosity(rho, rhoU, rhoE, scaling, outputs=None, init=True, **kwa
     viscosity.boundary = mesh.defaultBoundary
     return viscosity
 
-from adpy.tensor import *
-def getAdjointViscosityCpp(solver, viscosityType, rho, rhoU, rhoE, scaling):
+def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
     g = solver.gamma
     mesh = solver.mesh.symMesh
 

@@ -16,7 +16,6 @@ ctypedef fused dtype:
     cython.double
     cython.float
 
-
 @cython.boundscheck(False)
 def intersectPlane(object mesh, np.ndarray[dtype] point, np.ndarray[dtype] normal):
     # face points lie to left or right of plane
