@@ -20,6 +20,7 @@ import argparse
 
 #matop_python = True
 matop_python = False
+#write_M_2norm = True
 write_M_2norm = False
 if matop_python:
     from adFVM import matop_petsc
@@ -37,6 +38,7 @@ class Adjoint(Solver):
         self.energyTimeSeriesFile = self.mesh.case + 'energyTimeSeries.txt'
         self.firstRun = True
         self.extraArgs = []
+        self.nParams = 0
         return
 
     def initFields(self, fields):
@@ -102,6 +104,7 @@ class Adjoint(Solver):
         else:
             raise NotImplementedError
         paramGradient = gradInputs[start:end]
+        self.nParams = end-start
 
         args = list(primal.map._inputs) + gradOutputs + [scaling]
         outputs = list(fields) + paramGradient
@@ -293,7 +296,7 @@ class Adjoint(Solver):
 
                 #print([type(x) for x in outputs])
                 if sample:
-                    paramGradient = list(outputs[n:])
+                    paramGradient = list(outputs[n:n + self.nParams])
 
                     # compute sensitivity using adjoint solution
                     sensitivities = []

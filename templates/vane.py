@@ -68,6 +68,11 @@ startTime = 3.0
 # initial time step for the simulation
 dt = 1e-8
 
+#nSteps = 10
+#writeInterval = 5
+#sampleInterval = 1
+#reportInterval = 1
+
 # interval for how frequently viscosity should be added
 viscousInterval = 1
 # number of checkpoints to run in a single simulation
@@ -77,4 +82,4 @@ runCheckpoints = 3
 # first argument: viscosity scaling factor
 # second argument: type of viscosity 
 # third argument: not used
-#adjParams = [1e-3, 'entropy_jameson', None]
+#adjParams = [1e-3, 'entropy_barth', None]
