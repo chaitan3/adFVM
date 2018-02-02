@@ -3,6 +3,7 @@
 
 #include "mesh.hpp"
 #include "parallel.hpp"
+#include "scaling.hpp"
 
 void external_init(PyObject*);
 void external_exit();

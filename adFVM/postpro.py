@@ -7,7 +7,8 @@ from .compat import intersectPlane
 import time
 from .mesh import Mesh
 from .parallel import pprint
-from adpy.tensor import *
+from adpy.tensor import Tensor, Kernel, ConstantOp, ExternalFunctionOp
+from adpy.variable import Variable, Zeros
 
 def computeGradients(solver, U, T, p):
     mesh = solver.mesh
@@ -552,6 +553,7 @@ def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
                                  Z, gradU[1,0], gradU[1,1], gradU[1,2], tmp2[1],
                                  Z, gradU[2,0], gradU[2,1], gradU[2,2], tmp2[2],
                                  Z, tmp3[0], tmp3[1], tmp3[2], g1*divU/2])
+            M = M1/2-M2
         elif viscosityType == 'entropy_jameson':
             M1 = Tensor((5, 5), [divU, gradc[0], gradc[1], gradc[2], Z,
                                  gradc[0], divU, Z, Z, Z,
@@ -568,12 +570,19 @@ def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
                                  tmp2[1], gradU[1,0], gradU[1,1], gradU[1,2], tmp3[1],
                                  tmp2[2], gradU[2,0], gradU[2,1], gradU[2,2], tmp3[2],
                                  Z, tmp4[0], tmp4[1], tmp4[2], g1*divU/2])
-        elif viscosityType == 'entropy_hughes':
-            from .symmetrizations.entropy_hughes_gen_code import expression
-            M1, M2 = expression(g, rho, U, p, gradrho, gradU, gradp)
-            M1 = Tensor((5,5), M1)
-            M2 = Tensor((5,5), M2)
-            M = -(M1 + M2)
+            M = M1/2-M2
+        #elif viscosityType == 'entropy_hughes':
+        #    from .symmetrizations.entropy_hughes_gen_code import expression
+        #    M1, M2 = expression(rho, U, p, gradrho, gradU, gradp, g, Z)
+        #    M1 = Tensor((5,5), M1)
+        #    M2 = Tensor((5,5), M2)
+        #    M = -(M1 + M2)
+
+        elif viscosityType == 'entropy_barth':
+            from .symmetrizations.entropy_barth_mathematica import expression_code
+            M = expression_code(rho, U, p, gradrho, gradU, gradp, g, Z)
+            M = [item for sublist in M for item in sublist]
+            M = Tensor((5,5), M)
 
         else:
             raise Exception('symmetrizer not recognized')
@@ -588,7 +597,6 @@ def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
         #X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref])
         #TiX = Ti.matmul(X)
 
-        M = M1/2-M2
         #Mc = TiX.transpose().matmul(M.matmul(TiX))
         Mc = M
         MS = (Mc + Mc.transpose())/2
@@ -720,9 +728,9 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
 
                 lapPhi = Zeros((mesh.nInternalCells, 1))
                 meshArgs = _meshArgs()
-                (lapPhi,) = _laplacianInternal(mesh.nInternalFaces, (lapPhi,))(phiN, cP, cN, *meshArgs)
+                lapPhi = _laplacianInternal(mesh.nInternalFaces, (lapPhi,))(phiN, cP, cN, *meshArgs)
                 meshArgs = _meshArgs(mesh.nLocalFaces)
-                (lapPhi,) = _laplacianRemote(mesh.nRemoteCells, (lapPhi,))(phiN, cP[mesh.nLocalFaces], cN[mesh.nLocalFaces], *meshArgs)
+                lapPhi = _laplacianRemote(mesh.nRemoteCells, (lapPhi,))(phiN, cP[mesh.nLocalFaces], cN[mesh.nLocalFaces], *meshArgs)
                 #res = Zeros((1,1))
                 #(res,) = _residual(mesh.nInternalCells, (res,))(phi, phiN, lapPhi, cellData)
                 #(res,) = ExternalFunctionOp('print_info', (res,), (res,)).outputs

@@ -72,6 +72,7 @@ def get_compiler_args():
     incdirs = []
     libdirs = []
     sources = []
+    extra_compile_args = []
 
     cppDir = os.path.join(os.path.realpath(os.path.dirname(__file__)), 'cpp')
     incdirs += [os.path.join(cppDir, 'include')]
@@ -87,15 +88,14 @@ def get_compiler_args():
         libs += ['lapack']
     if matop:
         sources += [os.path.join(cppDir, 'matop.cpp')]
-        compile_args += ['-DMATOP']
+        extra_compile_args += ['-DMATOP']
         if gpu and not gpu_double:
-            compile_args += ['-DPETSC_USE_REAL_SINGLE']
+            extra_compile_args += ['-DPETSC_USE_REAL_SINGLE']
             home = os.path.expanduser('~') + '/sources/petsc_single/'
         else:
             home = os.path.expanduser('~') + '/sources/petsc/'
         build = 'arch-linux2-c-debug'
         incdirs += ['{}/{}/include'.format(home, build), home + '/include', os.path.expanduser('~') + '/sources/cusp/']
-        #incdirs += [home + '/linux-gnu-c-opt/include']
         libdirs += ['{}/{}/lib'.format(home, build)]
         libs += ['petsc']
 
@@ -104,7 +104,8 @@ def get_compiler_args():
             'libs': libs,
             'incdirs': incdirs,
             'libdirs': libdirs,
-            'sources': sources}
+            'sources': sources,
+            'extra_compile_args': extra_compile_args}
 
 import adpy.config
 adpy.config.set_config(sys.modules[__name__])

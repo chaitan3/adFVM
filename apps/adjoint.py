@@ -107,8 +107,8 @@ class Adjoint(Solver):
         outputs = list(fields) + paramGradient
         self.map = Function('primal_grad', args, outputs)
         if self.viscosityType and not matop_python:
-            primalFields = primal.map._inputs[:n]
-            M_2norm, DT = getAdjointViscosityCpp(*([primal, self.viscosityType] + primalFields + [scaling]))
+            primalFields = list(primal.map._inputs[:n])
+            M_2norm, DT = computeAdjointViscosity(*([primal, self.viscosityType] + primalFields + [scaling]))
             outputs = list(viscositySolver(*([primal] + fields + [DT]))) + paramGradient
             if write_M_2norm:
                 outputs = outputs + [M_2norm]
