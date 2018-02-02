@@ -14,15 +14,15 @@ GP.beta = float(sys.argv[1])
 #optime = 'optim_nd2_lorenz'
 #optime = 'optim_nd1_lorenz'
 #optime = 'beta_{}/optim_nd2_rosenbrock7'.format(GP.beta)
-optime = 'beta_{}/optim_nd2_rastigrin3'.format(GP.beta)
+optime = 'beta_{}/optim_nd2_rastigrin8'.format(GP.beta)
 #import gp_noder as GP
 #optim = 'optim_noder'
 
 # if threshold is negative constraint passes all points
 
-sig = 0.25
+#sig = 0.25
 #sig = 1.
-#sig = 4.
+sig = 4.
 
 # rosenbrock
 #def objective_single(x):
@@ -44,7 +44,7 @@ def objective_single(x):
     x = GP._sanitize(x)
     y = []
     yd = []
-    fac = 1.5
+    fac = 0.5
     for i in range(0, x.shape[0]):
         f = 20 - 50 + x[i,0]**2 - 10*np.cos(fac*np.pi*x[i,0]) \
                     + x[i,1]**2 - 10*np.cos(fac*np.pi*x[i,1])

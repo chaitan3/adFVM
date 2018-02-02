@@ -229,6 +229,8 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
             
     visc = getArg('visc', 'entropy')
     suffix = '_' + visc
+    #suffix = '_' + visc + '_max_2'
+    #suffix = '_' + visc + '_min'
     scale = getArg('scale', lambda x: x)
     report = getArg('report', 1)
     if 'scale' in kwargs:
@@ -388,7 +390,12 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
 
     Mc = M
     MS = (Mc + Mc.transpose((0, 2, 1)))/2
+    # max eigenvalue
     M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
+    # second max eigenvalue
+    #M_2norm = np.linalg.eigvalsh(MS)[:,[-2]]
+    # min eigenvalue
+    #M_2norm = np.linalg.eigvalsh(MS)[:,[0]]
 
     M_2norm = scale(M_2norm)
 
