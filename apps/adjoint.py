@@ -27,18 +27,25 @@ if matop_python:
 
 class Adjoint(Solver):
     def __init__(self, primal):
+        self.mesh = primal.mesh
+        self.names = [name + 'a' for name in primal.names]
+        self.dimensions = primal.dimensions
+        self.extraArgs = []
+
+        self.statusFile = primal.statusFile
+        self.sensTimeSeriesFile = self.mesh.case + 'sensTimeSeries.txt'
+        self.energyTimeSeriesFile = self.mesh.case + 'energyTimeSeries.txt'
+
+        self.nParams = 0
+        self.forceReadFields = False
         self.scaling = adjParams[0]
         self.viscosityType = adjParams[1]
         self.viscosityScaler = adjParams[2]
-        self.mesh = primal.mesh
-        self.statusFile = primal.statusFile
-        self.names = [name + 'a' for name in primal.names]
-        self.dimensions = primal.dimensions
-        self.sensTimeSeriesFile = self.mesh.case + 'sensTimeSeries.txt'
-        self.energyTimeSeriesFile = self.mesh.case + 'energyTimeSeries.txt'
-        self.firstRun = True
-        self.extraArgs = []
-        self.nParams = 0
+
+        self.fields = None
+        self.map = None
+        self.viscousMap = None
+        self.computeEnergy = None
         return
 
     def initFields(self, fields):
@@ -129,31 +136,32 @@ class Adjoint(Solver):
 
     def initPrimalData(self):
         if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
-            self.firstCheckpoint, self.result  = primal.readStatusFile()
+            firstCheckpoint, result  = primal.readStatusFile()
             pprint('Read status file, checkpoint =', self.firstCheckpoint)
         else:
-            self.firstCheckpoint = 0
-            self.result = [0.]*nPerturb
+            firstCheckpoint = 0
+            result = [0.]*nPerturb
         if parallel.rank == 0:
-            self.timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
-            assert self.timeSteps.shape == (nSteps, 2)
-            self.timeSteps = np.concatenate((self.timeSteps, np.array([[np.sum(self.timeSteps[-1]).round(12), 0]])))
+            timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
+            assert timeSteps.shape == (nSteps, 2)
+            timeSteps = np.concatenate((self.timeSteps, np.array([[np.sum(self.timeSteps[-1]).round(12), 0]])))
         else:
-            self.timeSteps = np.zeros((nSteps + 1, 2))
-        #print(self.timeSteps.shape)
-        parallel.mpi.Bcast(self.timeSteps, root=0)
-        return
+            timeSteps = np.zeros((nSteps + 1, 2))
+        parallel.mpi.Bcast(timeSteps, root=0)
+        checkPointData = (result, firstCheckpoint)
+        primalData = (timeSteps,)
+        return checkpointData, primalData
     
-    def run(self, readFields=False):
+    def run(self, checkpointData, primalData):
 
         mesh = self.mesh
-        result, firstCheckpoint = self.result, self.firstCheckpoint
-        timeSteps = self.timeSteps
+        result, firstCheckpoint = checkpointData
+        (timeSteps,) = primalData
         sensTimeSeries = []
         energyTimeSeries = []
 
         startTime = timeSteps[nSteps - firstCheckpoint*writeInterval][0]
-        if (firstCheckpoint > 0) or readFields:
+        if (firstCheckpoint > 0) or self.forceReadFields:
             fields = self.readFields(startTime)
             for phi in fields:
                 phi.field *= mesh.volumes
@@ -377,9 +385,10 @@ def main():
     adjoint.createFields()
     adjoint.compile()
 
-    adjoint.initPrimalData()
+    data = adjoint.initPrimalData()
+    adjoint.forceReadFields = user.readFields
 
-    adjoint.run(user.readFields)
+    adjoint.run(*data)
 
 if __name__ == '__main__':
     main()
