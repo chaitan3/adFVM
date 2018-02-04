@@ -11,7 +11,7 @@ from adFVM.mesh import Mesh
 from adFVM.objectives.vane import objective, getPlane, getWeights
 
 # base folder for flow problem
-case = os.path.expanduser('~') + '/adFVM/cases/vane/laminar/'
+case = './'
 
 # create and initialize the folder (read mesh and setup boundary conditions)
 primal = RCF(case, objective=objective, fixedTimeStep=True)
@@ -53,7 +53,7 @@ parameters = 'source'
 #parameters = 'mesh'
 
 # number of time steps for which to run the simulation
-nSteps = 20000
+nSteps = NSTEPS
 # checkpointing interval for the simulation
 # has to be a factor of nSteps
 writeInterval = 50
@@ -64,7 +64,7 @@ sampleInterval = 50
 # has to be a factor of nSteps and writeInterval
 reportInterval = 50
 # starting time for the simulation
-startTime = 3.0
+startTime = STARTTIME
 # initial time step for the simulation
 dt = 1e-8
 

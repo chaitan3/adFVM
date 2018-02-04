@@ -128,7 +128,7 @@ class Mesh(object):
         return 
 
     @classmethod
-    def getTimeString(time):
+    def getTimeString(cls, time):
         if time.is_integer():
             time = int(time)
             timeString = '{0}'.format(time)

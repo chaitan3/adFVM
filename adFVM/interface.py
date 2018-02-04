@@ -6,6 +6,7 @@ import shutil
 import glob
 
 from .mesh import Mesh
+import h5py
 
 def isfloat(s):
     try:
@@ -17,19 +18,21 @@ def isfloat(s):
 class Runner(object):
     fieldNames = ['rho', 'rhoU', 'rhoE']
     reference = [1., 200., 2e5]
-    program = source + 'apps/problem.py'
+    program = os.path.expanduser('~') + '/adFVM/apps/problem.py'
 
     def __init__(self):
         pass
 
-    def copyCase(case):
-        if not os.path.exists(case):
-            os.makedirs(case)
+    def copyCase(self, case):
+        os.makedirs(case)
         shutil.copy(self.base + 'mesh.hdf5', case)
-        shutil.copytree(self.base + 'gencode', case)
+        shutil.copytree(self.base + 'gencode', case + 'gencode')
         return
 
-    def spawnJob(args, **kwargs):
+    def randomFields(self):
+        return np.random.randn(self.fieldsShape)
+
+    def spawnJob(self, args, **kwargs):
         return subprocess.call(['mpirun', '-np', str(self.nProcs)] + args, **kwargs)
 
     def spawnSlurmJob(exe, args, **kwargs):
@@ -50,10 +53,12 @@ class SerialRunner(Runner):
         self.time = time
         self.problem = problem
         self.stime = Mesh.getTimeString(time)
-        self.internalCells = self.getInternalCells(base)
         self.nProcs = nProcs
+        self.internalCells = self.getInternalCells(base)
+        self.fieldsShape = len(self.internalCells)*5
 
     def getInternalCells(self, case):
+        internalCells = []
         with h5py.File(case + 'mesh.hdf5', 'r') as mesh:
             nCount = mesh['parallel/end'][:]-mesh['parallel/start'][:]
             nInternalCells = nCount[:,4]
@@ -65,7 +70,7 @@ class SerialRunner(Runner):
                 start += n + nGhostCells[i]
         return np.concatenate(internalCells)
 
-    def readFields(case, time):
+    def readFields(self, case, time):
         fields = []
         with h5py.File(case + Mesh.getTimeString(time) + '.hdf5', 'r') as phi:
             for name in Runner.fieldNames:
@@ -73,7 +78,7 @@ class SerialRunner(Runner):
         fields = [x/y for x, y in zip(fields, Runner.reference)]
         return np.hstack(fields).ravel()
 
-    def writeFields(fields, case, time):
+    def writeFields(self, fields, case, time):
         fields = fields.reshape((fields.shape[0]/5, 5))
         fields = fields[:,[0]], fields[:,1:4], fields[:,[4]]
         fields = [x*y for x, y in zip(fields, Runner.reference)]
@@ -86,21 +91,18 @@ class SerialRunner(Runner):
                 phi[name + '/field'][:] = field
         return
 
-    def runCase(initFields, (parameter, nSteps), case):
-        # generate case folders
-        mesh.case = case
-        
+    def runCase(self, initFields, (parameter, nSteps), case):
         # write initial field
         self.writeFields(initFields, case, self.time)
 
         # modify problem file
-        problemFile = case + self.problem
-        with open(self.base + self.problem, 'r') as f:
+        problemFile = case + os.path.basename(self.problem)
+        with open(self.problem, 'r') as f:
             lines = f.readlines()
         with open(problemFile, 'w') as f:
             for line in lines:
                 writeLine = line.replace('NSTEPS', str(nSteps))
-                writeLine = writeLine.replace('STARTTIME', str(time))
+                writeLine = writeLine.replace('STARTTIME', str(self.time))
                 writeLine = writeLine.replace('PARAMETER', str(parameter))
                 f.write(writeLine)
 
@@ -110,7 +112,6 @@ class SerialRunner(Runner):
         if returncode:
             raise Exception('Execution failed, check error log in :', case)
         objectiveSeries = np.loadtxt(case + 'timeSeries.txt')
-        break 
 
         # read final fields
         times = [float(x[:-5]) for x in os.listdir(case) if isfloat(x[:-5]) and x.endswith('.hdf5')]
@@ -147,7 +148,7 @@ class ParallelRunner(Runner):
         size = mpi.bcast(end, root=nProcessors-1)
         return cellStart, cellEnd, start, end, size, mpi
 
-    def readFields(case, time, fieldFile):
+    def readFields(self, case, time, fieldFile):
         import h5py
         time = float(time)
         cellStart, cellEnd, start, end, size, mpi = getParallelInfo()
@@ -162,7 +163,7 @@ class ParallelRunner(Runner):
             fieldData[start:end] = field
         return
 
-    def writeFields(fieldFile, caseDir, ntime):
+    def writeFields(self, fieldFile, caseDir, ntime):
         import h5py
         ntime = float(ntime)
         cellStart, cellEnd, start, end, size, mpi = getParallelInfo()

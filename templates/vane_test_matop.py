@@ -7,7 +7,7 @@ from adpy import tensor
 from adFVM.mesh import Mesh
 
 
-from vane_obj import objective, getPlane, getWeights
+from adFVM.objectives.vane import objective, getPlane, getWeights
 
 primal = RCF('/home/talnikar/adFVM/cases/vane/laminar/test_matop/', objective=objective, fixedTimeStep=True)
 #primal = RCF('/home/talnikar/adFVM/cases/vane/3d_10/', objective=objective, fixedTimeStep=True)
