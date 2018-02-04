@@ -108,7 +108,7 @@ class SerialRunner(Runner):
 
         outputFile = case  + 'output.log'
         with open(outputFile, 'w') as f:
-            returncode = self.spawnJob([Runner.program, problemFile], stdout=f, stderr=f)
+            returncode = self.spawnJob([Runner.program, problemFile], stdout=f, stderr=f, cwd=case)
         if returncode:
             raise Exception('Execution failed, check error log in :', case)
         objectiveSeries = np.loadtxt(case + 'timeSeries.txt')

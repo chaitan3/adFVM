@@ -12,6 +12,7 @@ from adFVM.objectives.vane import objective, getPlane, getWeights
 
 # base folder for flow problem
 case = './'
+config.hdf5 = True
 
 # create and initialize the folder (read mesh and setup boundary conditions)
 primal = RCF(case, objective=objective, fixedTimeStep=True)
@@ -56,13 +57,13 @@ parameters = 'source'
 nSteps = NSTEPS
 # checkpointing interval for the simulation
 # has to be a factor of nSteps
-writeInterval = 50
+writeInterval = NSTEPS
 # sampling interval for the long-time averaged statistics
 # has to be a factor of nSteps and writeInterval
-sampleInterval = 50
+sampleInterval = 1
 # interval for reporting information about the flow fields
 # has to be a factor of nSteps and writeInterval
-reportInterval = 50
+reportInterval = 1
 # starting time for the simulation
 startTime = STARTTIME
 # initial time step for the simulation
