@@ -1,10 +1,11 @@
-#!/usr/bin/python2 -u
 import os
 import sys
 import subprocess
 import numpy as np
 import shutil
 import glob
+
+from .mesh import Mesh
 
 def isfloat(s):
     try:
@@ -13,17 +14,25 @@ def isfloat(s):
     except ValueError:
         return False
 
-python = sys.executable
-
-fieldNames = ['rho', 'rhoU', 'rhoE']
-program = source + 'adFVM/apps/problem.py'
-reference = [1., 200., 2e5]
-
 class Runner(object):
-    def getHostDir(run_id):
-        return '{}/temp/{}/'.format(case, run_id)
+    fieldNames = ['rho', 'rhoU', 'rhoE']
+    reference = [1., 200., 2e5]
+    program = source + 'apps/problem.py'
 
-    def spawnJob(exe, args, **kwargs):
+    def __init__(self):
+        pass
+
+    def copyCase(case):
+        if not os.path.exists(case):
+            os.makedirs(case)
+        shutil.copy(self.base + 'mesh.hdf5', case)
+        shutil.copytree(self.base + 'gencode', case)
+        return
+
+    def spawnJob(args, **kwargs):
+        return subprocess.call(['mpirun', '-np', str(self.nProcs)] + args, **kwargs)
+
+    def spawnSlurmJob(exe, args, **kwargs):
         from fds.slurm import grab_from_SLURM_NODELIST
         interprocess = kwargs['interprocess']
         del kwargs['interprocess']
@@ -36,96 +45,84 @@ class Runner(object):
         return returncode
 
 class SerialRunner(Runner):
-    internalCells = []
-    with h5py.File(case + 'mesh.hdf5', 'r') as mesh:
-        nCount = mesh['parallel/end'][:]-mesh['parallel/start'][:]
-        nInternalCells = nCount[:,4]
-        nGhostCells = nCount[:,2]-nCount[:,3]
-        start = 0
-        for i in range(0, nProcessors):
-            n = nInternalCells[i] 
-            internalCells.append(np.arange(start, start + n))
-            start += n + nGhostCells[i]
-    internalCells = np.concatenate(internalCells)
+    def __init__(self, base, time, problem, nProcs=1):
+        self.base = base
+        self.time = time
+        self.problem = problem
+        self.stime = Mesh.getTimeString(time)
+        self.internalCells = self.getInternalCells(base)
+        self.nProcs = nProcs
 
-    fieldNames = ['rho', 'rhoU', 'rhoE']
-    program = source + 'apps/problem.py'
+    def getInternalCells(self, case):
+        with h5py.File(case + 'mesh.hdf5', 'r') as mesh:
+            nCount = mesh['parallel/end'][:]-mesh['parallel/start'][:]
+            nInternalCells = nCount[:,4]
+            nGhostCells = nCount[:,2]-nCount[:,3]
+            start = 0
+            for i in range(0, self.nProcs):
+                n = nInternalCells[i] 
+                internalCells.append(np.arange(start, start + n))
+                start += n + nGhostCells[i]
+        return np.concatenate(internalCells)
 
-    reference = [1., 200., 2e5]
-    def getInternalFields(case, time):
+    def readFields(case, time):
         fields = []
-        with h5py.File(case + getTime(time) + '.hdf5', 'r') as phi:
-            for name in fieldNames:
-                fields.append(phi[name + '/field'][:][internalCells])
-        fields = [x/y for x, y in zip(fields, reference)]
+        with h5py.File(case + Mesh.getTimeString(time) + '.hdf5', 'r') as phi:
+            for name in Runner.fieldNames:
+                fields.append(phi[name + '/field'][:][self.internalCells])
+        fields = [x/y for x, y in zip(fields, Runner.reference)]
         return np.hstack(fields).ravel()
 
-    def writeFields(fields, caseDir, ntime):
+    def writeFields(fields, case, time):
         fields = fields.reshape((fields.shape[0]/5, 5))
         fields = fields[:,[0]], fields[:,1:4], fields[:,[4]]
-        fields = [x*y for x, y in zip(fields, reference)]
-        timeFile = caseDir + getTime(ntime) + '.hdf5' 
-        shutil.copy(case + stime + '.hdf5', timeFile)
+        fields = [x*y for x, y in zip(fields, Runner.reference)]
+        timeFile = case + Mesh.getTimeString(time) + '.hdf5' 
+        shutil.copy(self.base + self.stime + '.hdf5', timeFile)
         with h5py.File(timeFile, 'r+') as phi:
-            for index, name in enumerate(fieldNames):
+            for index, name in enumerate(Runner.fieldNames):
                 field = phi[name + '/field'][:]
-                field[internalCells] = fields[index]
+                field[self.internalCells] = fields[index]
                 phi[name + '/field'][:] = field
+        return
 
-    def runCase(initFields, parameters, nSteps, run_id):
-
+    def runCase(initFields, (parameter, nSteps), case):
         # generate case folders
-        caseDir = '{}/temp/{}/'.format(case, run_id)
-        mesh.case = caseDir
-        if not os.path.exists(caseDir):
-            os.makedirs(caseDir)
-        shutil.copy(case + problem, caseDir)
-        shutil.copy(case + 'mesh.hdf5', caseDir)
-        for pkl in glob.glob(case + '*.pkl'):
-            shutil.copy(pkl, caseDir)
-
+        mesh.case = case
+        
         # write initial field
-        writeFields(initFields, caseDir, time)
+        self.writeFields(initFields, case, self.time)
 
         # modify problem file
-        problemFile = caseDir + problem
-        with open(problemFile, 'r') as f:
+        problemFile = case + self.problem
+        with open(self.base + self.problem, 'r') as f:
             lines = f.readlines()
         with open(problemFile, 'w') as f:
             for line in lines:
                 writeLine = line.replace('NSTEPS', str(nSteps))
                 writeLine = writeLine.replace('STARTTIME', str(time))
-                writeLine = writeLine.replace('CASEDIR', '\'{}\''.format(caseDir))
                 writeLine = writeLine.replace('PARAMETER', str(parameter))
                 f.write(writeLine)
 
-        outputFile = caseDir  + 'output.log'
-        for rep in range(0, 5):
-            try:
-                with open(outputFile, 'w') as f:
-                    returncode = subprocess.call(['srun', '--exclusive', '-n', str(nProcessors),
-                                      '-N', '1', '--resv-ports',
-                                      program, problemFile, '--voyager'],
-                                      stdout=f, stderr=f)
-                if returncode:
-                    raise Exception('Execution failed, check error log:', outputFile)
-                objectiveSeries = np.loadtxt(caseDir + 'timeSeries.txt')
-                break 
-            except Exception as e:
-                print caseDir, 'rep', rep, str(e)
-                import time as timer
-                timer.sleep(2)
+        outputFile = case  + 'output.log'
+        with open(outputFile, 'w') as f:
+            returncode = self.spawnJob([Runner.program, problemFile], stdout=f, stderr=f)
+        if returncode:
+            raise Exception('Execution failed, check error log in :', case)
+        objectiveSeries = np.loadtxt(case + 'timeSeries.txt')
+        break 
 
         # read final fields
-        times = [float(x[:-5]) for x in os.listdir(caseDir) if isfloat(x[:-5]) and x.endswith('.hdf5')]
+        times = [float(x[:-5]) for x in os.listdir(case) if isfloat(x[:-5]) and x.endswith('.hdf5')]
         lastTime = sorted(times)[-1]
-        finalFields = getInternalFields(caseDir, lastTime)
+        finalFields = self.readFields(case, lastTime)
         # read objective values
-        print caseDir
-
         return finalFields, objectiveSeries 
 
 class ParallelRunner(Runner):
+    def __init__(self):
+        raise NotImplemented
+
     def getParallelInfo():
         import h5py
         from mpi4py import MPI

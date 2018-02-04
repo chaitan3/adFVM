@@ -127,14 +127,19 @@ class Mesh(object):
         printMemUsage()
         return 
 
+    @classmethod
+    def getTimeString(time):
+        if time.is_integer():
+            time = int(time)
+            timeString = '{0}'.format(time)
+        else:
+            timeString = '{0:.11f}'.format(time)
+        return timeString
+
     def getTimeDir(self, time, case=None):
         if case is None:
             case = self.case
-        if time.is_integer():
-            time = int(time)
-            timeDir = '{0}/{1}'.format(case, time)
-        else:
-            timeDir = '{0}/{1:.11f}'.format(case, time)
+        timeDir = '{0}/{1}'.format(case, self.getTimeString(time))
         return timeDir
 
     def getTimes(self):
