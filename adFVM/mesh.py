@@ -207,30 +207,30 @@ class Mesh(object):
     def readFoamFile(self, foamFile, dtype):
         logger.info('read {0}'.format(foamFile))
         try: 
-            #content = str(open(foamFile, 'rb').read())
-            content = open(foamFile, 'r').read()
-            foamFileDict = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
-            assert re.search('format[\s\t]+(.*?);', foamFileDict).group(1) == config.fileFormat
-            start = content.find('(') + 1
-            end = content.rfind(')')
+            content = open(foamFile, 'rb').read()
+            #content = open(foamFile, 'r').read()
+            foamFileDict = re.search(re.compile(b'FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
+            assert re.search(b'format[\s\t]+(.*?);', foamFileDict).group(1).decode('utf-8') == config.fileFormat
+            start = content.find(b'(') + 1
+            end = content.rfind(b')')
             if config.fileFormat == 'binary':
                 if foamFile[-5:] == 'faces':
-                    nFaces1 = int(re.search('[0-9]+', content[start-2:0:-1]).group(0)[::-1])
+                    nFaces1 = int(re.search(b'[0-9]+', content[start-2:0:-1]).group(0)[::-1])
                     endIndices = start + nFaces1*4
                     faceIndices = np.fromstring(content[start:endIndices], dtype)
                     faceIndices = faceIndices[1:] - faceIndices[:-1]
-                    startData = content.find('(', endIndices) + 1
+                    startData = content.find(b'(', endIndices) + 1
                     #print content[endIndices:startData+1]
                     data = np.fromstring(content[startData:end], dtype)
                     nFacePoints = faceIndices[0] 
-                    return np.hstack((faceIndices.reshape(-1, 1), data.reshape(len(data)/nFacePoints, nFacePoints)))
+                    return np.hstack((faceIndices.reshape(-1, 1), data.reshape(len(data)//nFacePoints, nFacePoints)))
                 else:
                     data = np.fromstring(content[start:end], dtype)
                     if foamFile[-6:] == 'points':
-                        data = data.reshape(len(data)/3, 3)
+                        data = data.reshape(len(data)//3, 3)
                     return data
             else:
-                f = lambda x: list(filter(None, re.split('[ ()\n]+', x)))
+                f = lambda x: list(filter(None, re.split(b'[ ()\n]+', x)))
                 return np.array(list(map(f, filter(None, re.split('\n', content[start:end])))), dtype)
         except Exception as e: 
             config.exceptInfo(e, foamFile)
@@ -1014,10 +1014,10 @@ def removeCruft(content):
     return content
 
 def extractScalar(data):
-    return re.findall('[0-9\.Ee\-]+', data)
+    return re.findall(b'[0-9\.Ee\-]+', data)
 
 def extractVector(data):
-    return list(map(extractScalar, re.findall('\(([0-9\.Ee\-\r\n\s\t]+)\)', data)))
+    return list(map(extractScalar, re.findall(b'\(([0-9\.Ee\-\r\n\s\t]+)\)', data)))
 
 def extractField(data, size, dimensions):
     if isinstance(data, np.ndarray):
@@ -1029,11 +1029,11 @@ def extractField(data, size, dimensions):
         extractor = extractVector
     else:
         extractor = extractScalar
-    nonUniform = re.search('nonuniform', data)
-    data = re.search(re.compile('[A-Za-z<>\s\r\n]+(.*)', re.DOTALL), data).group(1)
+    nonUniform = re.search(b'nonuniform', data)
+    data = re.search(re.compile(b'[A-Za-z<>\s\r\n]+(.*)', re.DOTALL), data).group(1)
     if nonUniform is not None:
-        start = data.find('(') + 1
-        end = data.rfind(')')
+        start = data.find(b'(') + 1
+        end = data.rfind(b')')
         if start == end:
             internalField = np.zeros((size, ) + dimensions, dtype=np.float64)
         elif config.fileFormat == 'binary':
@@ -1046,18 +1046,18 @@ def extractField(data, size, dimensions):
     return internalField.astype(config.precision)
 
 def writeField(handle, field, dtype, initial):
-    handle.write(initial + ' nonuniform List<'+ dtype +'>\n')
-    handle.write('{0}\n('.format(len(field)))
+    handle.write((initial + ' nonuniform List<'+ dtype +'>\n').encode())
+    handle.write(('{0}\n('.format(len(field))).encode())
     if config.fileFormat == 'binary':
         handle.write(field.astype(np.float64).tostring())
     else:
-        handle.write('\n')
+        handle.write('\n'.encode())
         for value in field:
             if dtype == 'scalar':
-                handle.write(str(value[0]) + '\n')
+                handle.write((str(value[0]) + '\n').encode())
             else:
-                handle.write('(' + ' '.join(np.char.mod('%.30f', value)) + ')\n')
-    handle.write(')\n;\n')
+                handle.write(('(' + ' '.join(np.char.mod('%.30f', value)) + ')\n').encode())
+    handle.write(')\n;\n'.encode())
 
 
 

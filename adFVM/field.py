@@ -202,15 +202,15 @@ class IOField(Field):
         timeDir = self._handle
         mesh = self.mesh
         try: 
-            content = open(timeDir + name).read()
-            foamFile = re.search(re.compile('FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
-            assert re.search('format[\s\t]+(.*?);', foamFile).group(1) == config.fileFormat
-            vector = re.search('class[\s\t]+(.*?);', foamFile).group(1) == 'volVectorField'
+            content = open(timeDir + name, 'rb').read()
+            foamFile = re.search(re.compile(b'FoamFile\n{(.*?)}\n', re.DOTALL), content).group(1)
+            assert re.search(b'format[\s\t]+(.*?);', foamFile).group(1).decode('utf-8') == config.fileFormat
+            vector = (re.search(b'class[\s\t]+(.*?);', foamFile).group(1).decode('utf-8') == 'volVectorField')
             dimensions = 1 + vector*2
             bytesPerField = 8*(1 + 2*vector)
-            startBoundary = content.find('boundaryField')
+            startBoundary = content.find(b'boundaryField')
             if not skipField:
-                data = re.search(re.compile('internalField[\s\r\n]+(.*)', re.DOTALL), content[:startBoundary]).group(1)
+                data = re.search(re.compile(b'internalField[\s\r\n]+(.*)', re.DOTALL), content[:startBoundary]).group(1)
                 internalField = extractField(data, mesh.nInternalCells, (dimensions,))
             else:
                 internalField = np.zeros((0,) + (dimensions,), config.precision)
@@ -220,11 +220,11 @@ class IOField(Field):
         content = content[startBoundary:]
         boundary = {}
         def getToken(x): 
-            token = re.match('[\s\r\n\t]+([a-zA-Z0-9_\.\-\+<>\{\\/}]+)', x)
-            return token.group(1), token.end()
+            token = re.match(b'[\s\r\n\t]+([a-zA-Z0-9_\.\-\+<>\{\\/}]+)', x)
+            return token.group(1).decode('utf-8'), token.end()
         for patchID in mesh.boundary:
             try:
-                patch = re.search(re.compile('[\s\r\n\t]+' + patchID + '[\s\r\n]+{', re.DOTALL), content)
+                patch = re.search(re.compile(b'[\s\r\n\t]+' + patchID.encode() + b'[\s\r\n]+{', re.DOTALL), content)
                 boundary[patchID] = {}
                 start = patch.end()
                 while 1:
@@ -235,19 +235,21 @@ class IOField(Field):
                     # skip non binary, non value, uniform or empty patches
                     elif key == 'value' and config.fileFormat == 'binary' and getToken(content[start:])[0] != 'uniform' and mesh.boundary[patchID]['nFaces'] != 0:
 
-                        match = re.search(re.compile('[ ]+(nonuniform[ ]+List<[a-z]+>[\s\r\n\t0-9]*\()', re.DOTALL), content[start:])
+                        match = re.search(re.compile(b'[ ]+(nonuniform[ ]+List<[a-z]+>[\s\r\n\t0-9]*\()', re.DOTALL), content[start:])
                         nBytes = bytesPerField * mesh.boundary[patchID]['nFaces']
                         start += match.end()
                         prefix = match.group(1)
                         boundary[patchID][key] = prefix + content[start:start+nBytes]
                         start += nBytes
-                        match = re.search('\)[\s\r\n\t]*;', content[start:])
+                        match = re.search(b'\)[\s\r\n\t]*;', content[start:])
                         boundary[patchID][key] += match.group(0)[:-1]
                         start += match.end()
                     else:
-                        match = re.search(re.compile('[ ]+(.*?);', re.DOTALL), content[start:])
+                        match = re.search(re.compile(b'[ ]+(.*?);', re.DOTALL), content[start:])
                         start += match.end() 
                         boundary[patchID][key] = match.group(1)
+                        if key == 'type':
+                            boundary[patchID][key] = boundary[patchID][key].decode('utf-8')
                 if boundary[patchID]['type'] == 'cyclicAMI':
                     boundary[patchID]['type'] = 'cyclic'
             except Exception as e:
@@ -434,9 +436,9 @@ class IOField(Field):
             timeDir = self._handle
         if not os.path.exists(timeDir):
             os.makedirs(timeDir)
-        handle = open(timeDir + name, 'w')
-        handle.write(config.foamHeader)
-        handle.write('FoamFile\n{\n')
+        handle = open(timeDir + name, 'wb')
+        handle.write(config.foamHeader.encode())
+        handle.write('FoamFile\n{\n'.encode())
         foamFile = config.foamFile.copy()
         foamFile['object'] = name
         if internalField.shape[1] == 3:
@@ -446,14 +448,14 @@ class IOField(Field):
             dtype = 'scalar'
             foamFile['class'] = 'volScalarField'
         for key in foamFile:
-            handle.write('\t' + key + ' ' + foamFile[key] + ';\n')
-        handle.write('}\n')
-        handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n')
-        handle.write('dimensions      [0 1 -1 0 0 0 0];\n')
+            handle.write(('\t' + key + ' ' + foamFile[key] + ';\n').encode())
+        handle.write('}\n'.encode())
+        handle.write('// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n'.encode())
+        handle.write('dimensions      [0 1 -1 0 0 0 0];\n'.encode())
         writeField(handle, internalField, dtype, 'internalField')
-        handle.write('boundaryField\n{\n')
+        handle.write('boundaryField\n{\n'.encode())
         for patchID in boundary:
-            handle.write('\t' + patchID + '\n\t{\n')
+            handle.write(('\t' + patchID + '\n\t{\n').encode())
             patch = boundary[patchID]
             for attr in patch:
                 # look into skipProcessor
@@ -462,9 +464,12 @@ class IOField(Field):
                 if attr == 'value' and patch['type'] in BCs.valuePatches:
                     writeField(handle, patch[attr], dtype, 'value')
                 else:
-                    handle.write('\t\t' + attr + ' ' + patch[attr] + ';\n')
-            handle.write('\t}\n')
-        handle.write('}\n')
+                    data = patch[attr]
+                    if not isinstance(data, str):
+                        data = data.decode('utf-8')
+                    handle.write(('\t\t' + attr + ' ' + data + ';\n').encode())
+            handle.write('\t}\n'.encode())
+        handle.write('}\n'.encode())
         handle.close()
 
     # nonuniform non-value inputs not supported (and fixedValue value)
