@@ -117,7 +117,7 @@ class Solver(object):
         mesh = self.mesh.symMesh
         symbolics = [StaticVariable((mesh.nInternalCells,) + dims) for dims in self.dimensions]
         values = [np.zeros((self.mesh.nInternalCells, dims[0]), config.precision) for dims in self.dimensions]
-        self.sourceTerms = zip(symbolics, values)
+        self.sourceTerms = list(zip(symbolics, values))
         return
 
     def updateSource(self, source, perturb=False):
