@@ -12,6 +12,8 @@ import pytest
 
 @pytest.mark.skip
 def relative_error(U, Ur):
+    if isinstance(Ur, np.ndarray):
+        assert U.shape == Ur.shape
     return np.max(np.abs(U-Ur))/np.max(np.abs(Ur))
 
 def test_second_order():
@@ -42,7 +44,7 @@ def test_second_order():
     Function.initialize(0, mesh)
 
     meshArgs = mesh.getTensor() + mesh.getScalar()
-    Uf = func(Uc.field, gradUc.field, *meshArgs)[0]
+    Uf = func(Uc.field, gradUc.field, *meshArgs)
     assert relative_error(Uf, Ur) < thres
 
 def test_central():
@@ -58,20 +60,20 @@ def test_central():
     Uf = centralOld(Uc, mesh).field
     assert relative_error(Uf, Ur) < thres
 
-    U = Variable((mesh.symMesh.nInternalCells, 1))
+    sym = mesh.symMesh
+    U = Variable((sym.nCells, 1))
     def interpolate(U, *meshArgs):
         mesh = Mesh.container(meshArgs)
         return central(U, mesh)
-    Uf = Zeros((mesh.symMesh.nFaces, 1))
-    meshArgs = mesh.symMesh.getTensor()
-    Uf = Kernel(interpolate)(mesh.symMesh.nFaces, (Uf,))(U, *meshArgs)
-    meshArgs = mesh.symMesh.getTensor() + mesh.symMesh.getScalar()
-    func = Function('central', [U] + meshArgs, (Uf,))
+    Uf2 = Zeros((sym.nFaces, 1))
+    meshArgs = sym.getTensor()
+    Uf2 = Kernel(interpolate)(sym.nFaces, (Uf2,))(U, *meshArgs)
+    func = Function('central', [U] + sym.getTensor() + sym.getScalar(), (Uf2,))
 
     Function.compile()
     meshArgs = mesh.getTensor() + mesh.getScalar()
-    Uf = func(Uc.field, *meshArgs)[0]
-    assert relative_error(Uf, Ur) < thres
+    Uf2 = func(Uc.field, *meshArgs)
+    assert relative_error(Uf2, Ur) < thres
 
 if __name__ == "__main__":
     #test_central()

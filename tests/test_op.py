@@ -13,6 +13,8 @@ import pytest
 
 @pytest.mark.skip
 def relative_error(U, Ur):
+    if isinstance(Ur, np.ndarray):
+        assert U.shape == Ur.shape
     return np.max(np.abs(U-Ur))/np.max(np.abs(Ur))
 
 def test_grad_scalar():
@@ -47,7 +49,7 @@ def test_grad_scalar():
 
     meshArgs = mesh.getTensor() + mesh.getScalar()
     #gradU = func(Uf, *meshArgs)[0]
-    gradU = func(Uc, *meshArgs)[0]
+    gradU = func(Uc, *meshArgs)
     assert relative_error(gradU, gradUr[:mesh.nInternalCells]) < thres
 
 def test_grad_vector():
@@ -85,7 +87,7 @@ def test_grad_vector():
 
     meshArgs = mesh.getTensor() + mesh.getScalar()
     #gradU = func(Uf, *meshArgs)[0]
-    gradU = func(Uc, *meshArgs)[0]
+    gradU = func(Uc, *meshArgs)
     assert relative_error(gradU, gradUr[:mesh.nInternalCells]) < thres
 
 def test_div():
@@ -125,7 +127,7 @@ def test_div():
     Function.initialize(0, mesh)
 
     meshArgs = mesh.getTensor() + mesh.getScalar()
-    divU = func(Uf, *meshArgs)[0]
+    divU = func(Uf, *meshArgs)
     assert relative_error(divU, divUr[:mesh.nInternalCells]) < thres
 
 def test_snGrad():
@@ -156,12 +158,12 @@ def test_snGrad():
     Function.initialize(0, mesh)
 
     meshArgs = mesh.getTensor() + mesh.getScalar()
-    snGradU = func(Uc, *meshArgs)[0]
+    snGradU = func(Uc, *meshArgs)
     assert relative_error(snGradU, snGradUr) < thres
 
 
 if __name__ == "__main__":
     #test_grad_scalar()
     #test_grad_vector()
-    #test_div()
-    test_snGrad()
+    test_div()
+    #test_snGrad()
