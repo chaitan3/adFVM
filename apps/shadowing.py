@@ -15,13 +15,20 @@ class Shadowing(SerialRunner):
         return data
 
 def main():
-    base = 'cases/vane/laminar/'
-    time = 3.0
-    template = 'templates/vane_runner.py'
+    base = 'cases/3d_cylinder/'
+    time = 2.0
+    template = 'templates/3d_cylinder_fds.py'
 
     runner = Shadowing(base, time, template)
-    fds.shadowing(runner.solve)
 
+    nSegments = 2
+    nSteps = 10
+    nExponents = 2
+    runUpSteps = 5
+    parameter = 0.0
+
+    fields = runner.readFields(base, time)
+    fds.shadowing(runner.solve, fields, parameter, nExponents, nSegments, nSteps, runUpSteps, checkpoint_path=base + 'checkpoint/')
 
 if __name__ == '__main__':
     main()
