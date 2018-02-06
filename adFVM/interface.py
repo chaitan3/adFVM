@@ -20,7 +20,7 @@ class Runner(object):
     reference = [1., 200., 2e5]
     program = os.path.expanduser('~') + '/adFVM/apps/problem.py'
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         pass
 
     def copyCase(self, case):
