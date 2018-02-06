@@ -38,6 +38,7 @@ class Adjoint(Solver):
 
         self.nParams = 0
         self.forceReadFields = False
+        self.firstRun = True
         self.scaling = adjParams[0]
         self.viscosityType = adjParams[1]
         self.viscosityScaler = adjParams[2]
@@ -137,18 +138,18 @@ class Adjoint(Solver):
     def initPrimalData(self):
         if parallel.mpi.bcast(os.path.exists(primal.statusFile), root=0):
             firstCheckpoint, result  = primal.readStatusFile()
-            pprint('Read status file, checkpoint =', self.firstCheckpoint)
+            pprint('Read status file, checkpoint =', firstCheckpoint)
         else:
             firstCheckpoint = 0
             result = [0.]*nPerturb
         if parallel.rank == 0:
             timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
             assert timeSteps.shape == (nSteps, 2)
-            timeSteps = np.concatenate((self.timeSteps, np.array([[np.sum(self.timeSteps[-1]).round(12), 0]])))
+            timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(12), 0]])))
         else:
             timeSteps = np.zeros((nSteps + 1, 2))
         parallel.mpi.Bcast(timeSteps, root=0)
-        checkPointData = (result, firstCheckpoint)
+        checkpointData = (result, firstCheckpoint)
         primalData = (timeSteps,)
         return checkpointData, primalData
     

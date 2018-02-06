@@ -87,6 +87,6 @@ dt = 1e-8
 #runCheckpoints = 3
 
 #adjParams = [1e-3, 'abarbanel', None]
-#adjParams = [1e-3, 'entropy_jameson', None]
+#adjParams = [1e-3, 'turkel', None]
 #adjParams = [1e-3, 'entropy_hughes', None]
 #adjParams = [1e-3, 'uniform', None]

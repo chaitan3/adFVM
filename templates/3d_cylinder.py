@@ -101,5 +101,5 @@ dt = 6e-9
 runCheckpoints = 1
 
 #viscousInterval = 10
-#adjParams = [1e-2, 'entropy_jameson', None]
+#adjParams = [1e-2, 'turkel', None]
 #runCheckpoints = 3

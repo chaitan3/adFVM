@@ -38,6 +38,6 @@ startTime = 4.0
 dt = 1e-8
 
 #adjParams = [1e-3, 'abarbanel', None]
-adjParams = [1e2, 'entropy_jameson', None]
-#adjParams = [1e-2, 'entropy_jameson', None]
+adjParams = [1e2, 'turkel', None]
+#adjParams = [1e-2, 'turkel', None]
 #adjParams = [1e-3, 'uniform', None]

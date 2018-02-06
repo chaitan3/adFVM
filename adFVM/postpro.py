@@ -360,7 +360,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         #test = IOField('test' + suffix, Gv[:,1,:], (3,), boundary=mesh.calculatedBoundary)
         #test.write()
 
-    elif visc == 'entropy_jameson' or visc == 'uniform':
+    elif visc == 'turkel' or visc == 'uniform':
         M1 = np.stack((np.hstack((divU, gradc, Z)),
                    np.hstack((gradc[:,[0]], divU, Z, Z, Z)),
                    np.hstack((gradc[:,[1]], Z, divU, Z, Z)),
@@ -554,7 +554,7 @@ def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
                                  Z, gradU[2,0], gradU[2,1], gradU[2,2], tmp2[2],
                                  Z, tmp3[0], tmp3[1], tmp3[2], g1*divU/2])
             M = M1/2-M2
-        elif viscosityType == 'entropy_jameson':
+        elif viscosityType == 'turkel':
             M1 = Tensor((5, 5), [divU, gradc[0], gradc[1], gradc[2], Z,
                                  gradc[0], divU, Z, Z, Z,
                                  gradc[1], Z, divU, Z, Z,

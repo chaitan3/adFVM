@@ -39,7 +39,7 @@ viscousInterval = 10
 #avgStart = 3000
 startTime = 3.001
 dt = 2e-8
-adjParams = [1e-3, 'entropy_jameson', None]
+adjParams = [1e-3, 'turkel', None]
 runCheckpoints = 1
 
 # definition of 1 flow through time

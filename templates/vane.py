@@ -11,7 +11,7 @@ from adFVM.mesh import Mesh
 from adFVM.objectives.vane import objective, getPlane, getWeights
 
 # base folder for flow problem
-case = os.path.expanduser('~') + '/adFVM/cases/vane/laminar/'
+case = os.path.expanduser('~') + '/adFVM/cases/vane/3d_20/'
 
 # create and initialize the folder (read mesh and setup boundary conditions)
 primal = RCF(case, objective=objective, fixedTimeStep=True)
@@ -53,10 +53,10 @@ parameters = 'source'
 #parameters = 'mesh'
 
 # number of time steps for which to run the simulation
-nSteps = 20000
+nSteps = 100000
 # checkpointing interval for the simulation
 # has to be a factor of nSteps
-writeInterval = 50
+writeInterval = 5000
 # sampling interval for the long-time averaged statistics
 # has to be a factor of nSteps and writeInterval
 sampleInterval = 50
@@ -66,20 +66,15 @@ reportInterval = 50
 # starting time for the simulation
 startTime = 3.0
 # initial time step for the simulation
-dt = 1e-8
-
-#nSteps = 10
-#writeInterval = 5
-#sampleInterval = 1
-#reportInterval = 1
+dt = 2e-8
 
 # interval for how frequently viscosity should be added
-viscousInterval = 1
+#viscousInterval = 1
 # number of checkpoints to run in a single simulation
 # has to be less than nSteps/writeInterval
-runCheckpoints = 3
+runCheckpoints = 1
 # viscosity stabilized adjoint parameters
 # first argument: viscosity scaling factor
 # second argument: type of viscosity 
 # third argument: not used
-#adjParams = [1e-3, 'entropy_barth', None]
+#adjParams = [1e-3, 'turkel', None]
