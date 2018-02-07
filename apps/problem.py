@@ -82,6 +82,7 @@ if __name__ == "__main__":
     if user.option == 'orig' or user.option == 'source':
         dts = dt
         nSims = 1
+        mode = 'orig'
 
     elif user.option == 'perturb':
         if parallel.rank == 0:
@@ -91,6 +92,7 @@ if __name__ == "__main__":
             timeSteps = np.zeros((nSteps+1, 2))
         parallel.mpi.Bcast(timeSteps, root=0)
         dts = timeSteps[:,1]
+        mode = 'perturb'
 
         nSims = nPerturb
     else:
@@ -114,7 +116,7 @@ if __name__ == "__main__":
             perturbation = None
         result = primal.run(result=initResult, startTime=startTime, dt=dts, nSteps=nSteps, 
                             writeInterval=writeInterval, reportInterval=reportInterval, 
-                            mode=user.option, startIndex=startIndex, source=source, perturbation=perturbation, avgStart=avgStart)
+                            mode=mode, startIndex=startIndex, source=source, perturbation=perturbation, avgStart=avgStart)
         writeResult(user.option, [result], '{}'.format(sim), primal.timeSeriesFile)
         primal.removeStatusFile()
         # if running multiple sims reset starting index and result

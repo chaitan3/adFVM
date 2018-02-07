@@ -21,7 +21,7 @@ class Runner(object):
     program = os.path.expanduser('~') + '/adFVM/apps/problem.py'
 
     def __init__(self, *args, **kwargs):
-        pass
+        return
 
     def copyCase(self, case):
         os.makedirs(case)
