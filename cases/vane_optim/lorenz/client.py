@@ -22,6 +22,7 @@ def get_mesh(param, work_dir, work_dir_base, procs, fields=True):
     try:
         #ret = check_output('ssh {} \"python {}/vane_profile.py gen_mesh_param {}\"'.format(server, base, case + 'params.pkl'), shell=True, stderr=STDOUT)
         ret = check_call('ssh {} \"python {}/vane_profile.py gen_mesh_param {}\"'.format(server, base, case + 'params.pkl'), shell=True)
+	#test=1
         #write_log(mesh_log, ret)
     except:
         raise Exception('Could not run mesh generator')

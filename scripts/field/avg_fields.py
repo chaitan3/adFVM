@@ -24,12 +24,14 @@ nLayers = 200
 for field in fields:
     # time avg: no dt
     avg = 0.
+    not_nan_times = 0.
     for time in times:
         with IOField.handle(time):
             phi = IOField.read(field)
         phi.partialComplete()
-        avg += phi.field
-    avg /= len(times)
+        not_nan_times += 1.-np.isnan(phi.field)
+        avg += np.nan_to_num(phi.field)
+    avg /= not_nan_times
 
     # spanwise avg: structured
     nDims = avg.shape[1]

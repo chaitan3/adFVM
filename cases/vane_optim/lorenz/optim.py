@@ -53,11 +53,14 @@ def readObjectiveFile(objectiveFile, gradEps):
     gradient = []
     gradientNoise = []
     index = 0
+    objIndex = 0
     with open(objectiveFile, 'r') as f:
         for line in f.readlines(): 
             words = line.split(' ')
             if words[0] == 'orig':
-                objective = [float(words[-2]), float(words[-1])]
+                objIndex += 1
+                if objIndex == 2:
+                    objective = [float(words[-2]), float(words[-1])]
             elif words[0] == 'adjoint':
                 per = gradEps[index]
                 gradient.append(float(words[-2])/per)
@@ -69,6 +72,9 @@ def readObjectiveFile(objectiveFile, gradEps):
 
 def get_mesh(args):
     client.get_mesh(*args)
+
+def send_mail(msg):
+    subprocess.check_call('ssh kolmogorov adFVM/scripts/jobmail.sh echo "{}"'.format(msg), shell=True)
 
 def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
 #def evaluate(param, state, genAdjoint=True, runSimulation=False): 
@@ -120,7 +126,7 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
     paramCodeDir = paramDir + 'par-64/gencode'
     codeDir = workDir + 'voyager/gencode/'
     if not os.path.exists(paramCodeDir):
-        shutil.copytree(codeDir, paramDir + 'gencode')
+        shutil.copytree(codeDir, paramCodeDir)
     shutil.copy(initCaseFile, paramDir)
     initFile = paramDir + os.path.basename(initCaseFile)
     shutil.copy(primCaseFile, paramDir)
@@ -139,6 +145,7 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
                 ret = p1.wait()
                 assert ret == 0
             update_state(state, 'PRIMAL1', currIndex)
+	    send_mail('PRIMAL1 done, start adjoint run')
         if stateIndex <= 2:
             with open(paramDir + 'primal_output.log', 'w') as f, open(paramDir + 'primal_error.log', 'w') as fe, \
                     open(paramDir + 'adjoint_output.log', 'w') as f2, open(paramDir + 'adjoint_error.log', 'w') as fe2:
@@ -149,6 +156,7 @@ def evaluate(param, state, currIndex=-1, genAdjoint=True, runSimulation=True):
                 #assert p2.wait() == 0
                 assert p1.wait() == 0
             update_state(state, 'PRIMADJ', currIndex)
+	    send_mail('PRIMADJ done, monitor adjoint run')
             exit(0)
         
         return readObjectiveFile(os.path.join(paramDir, 'processor0', 'objective.txt'), gradEps)
@@ -195,7 +203,6 @@ def optim():
     
     orig_bounds = np.array([[0.,1.], [0,1], [0,1], [0,1]])
     L, sigma = 0.5, 0.001
-    #L, sigma = 0.3, 0.003
     mean = 0.0092
     kernel = GP.SquaredExponentialKernel([L, L, L, L], sigma)
     gp = GP.GaussianProcess(kernel, orig_bounds, noise=[5e-9, [1e-9, 1e-7, 1e-8, 1e-7]], noiseGP=True, cons=constraint)

@@ -32,8 +32,12 @@ class Runner(object):
     def randomFields(self):
         return np.random.randn(self.fieldsShape)
 
-    def spawnJob(self, args, **kwargs):
-        return subprocess.call(['mpirun', '-np', str(self.nProcs)] + args, **kwargs)
+    def spawnJob(self, args, **kwargs):  
+        print args, kwargs
+        if self.nProcs == 1:
+            return subprocess.call(args, **kwargs)
+	else:
+            return subprocess.call(['mpirun', '-np', str(self.nProcs)] + args, **kwargs)
 
     def spawnSlurmJob(exe, args, **kwargs):
         from fds.slurm import grab_from_SLURM_NODELIST
@@ -48,12 +52,13 @@ class Runner(object):
         return returncode
 
 class SerialRunner(Runner):
-    def __init__(self, base, time, problem, nProcs=1):
+    def __init__(self, base, time, problem, nProcs=1, gpu=False):
         self.base = base
         self.time = time
         self.problem = problem
         self.stime = Mesh.getTimeString(time)
         self.nProcs = nProcs
+        self.gpu = gpu
         self.internalCells = self.getInternalCells(base)
         self.fieldsShape = len(self.internalCells)*5
 
@@ -106,9 +111,11 @@ class SerialRunner(Runner):
                 writeLine = writeLine.replace('PARAMETER', str(parameter))
                 f.write(writeLine)
 
-        outputFile = case  + 'output.log'
-        with open(outputFile, 'w') as f:
-            returncode = self.spawnJob([Runner.program, problemFile, 'source'], stdout=f, stderr=f, cwd=case)
+        extraArgs = []
+        if self.gpu:
+            extraArgs.append('-g')
+        with open(case + 'output.log', 'w') as f, open(case + 'error.log', 'w') as fe:
+            returncode = self.spawnJob([Runner.program, problemFile, 'source'] + extraArgs, stdout=f, stderr=fe, cwd=case)
         if returncode:
             raise Exception('Execution failed, check error log in :', case)
         objectiveSeries = np.loadtxt(case + 'timeSeries_0.txt').reshape(-1,1).flatten()

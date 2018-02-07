@@ -23,6 +23,7 @@ adjParams = [0.0, None, None]
 avgStart = 0
 runCheckpoints = 2**30
 
+sys.path.append(os.getcwd())
 config.importModule(locals(), user.caseFile)
 #print(locals().keys())
 #assert all(key in locals() for key in ['primal', 'objective', 'perturb', 'nSteps', 'writeInterval', 'reportInterval', 'startTime', 'dt', 'paramters'])

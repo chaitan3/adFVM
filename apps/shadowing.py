@@ -19,9 +19,9 @@ def main():
     base = 'cases/3d_cylinder/'
     time = 2.0
     template = 'templates/3d_cylinder_fds.py'
-    nProcs = 16
+    nProcs = 1
 
-    runner = Shadowing(base, time, template, nProcs=nProcs)
+    runner = Shadowing(base, time, template, nProcs=nProcs, gpu=True)
 
     nSegments = 20
     nSteps = 1000
