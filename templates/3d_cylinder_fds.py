@@ -5,6 +5,7 @@ from adFVM.density import RCF
 from adFVM.mesh import Mesh
 
 from adpy import tensor
+config.hdf5 = True
 
 # drag over cylinder surface
 def objectiveDrag(U, T, p, *mesh, **options):
@@ -38,7 +39,7 @@ def objective(fields, solver):
     return drag
    
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('/home/talnikar/adFVM/cases/3d_cylinder/',
+primal = RCF('./',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              #mu=lambda T: 2.5e-5*T/T,

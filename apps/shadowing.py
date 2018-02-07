@@ -1,5 +1,6 @@
 #!/usr/bin/python2
 import numpy as np
+import os
 
 import fds
 from adFVM.interface import SerialRunner
@@ -8,8 +9,8 @@ class Shadowing(SerialRunner):
     def __init__(self, *args):
         super(Shadowing, self).__init__(*args)
 
-    def solve(self, initFields, parameter, nSteps, runID):
-        case = self.base + 'temp/' + runID
+    def solve(self, initFields, parameter, nSteps, run_id):
+        case = self.base + 'temp/' + run_id + "/"
         self.copyCase(case)
         data = self.runCase(initFields, (parameter, nSteps), case)
         return data
@@ -26,9 +27,14 @@ def main():
     nExponents = 2
     runUpSteps = 5
     parameter = 0.0
+    checkpointPath = base + 'checkpoint/'
+    if not os.path.exists(checkpointPath):
+        os.makedirs(checkpointPath)
 
     fields = runner.readFields(base, time)
-    fds.shadowing(runner.solve, fields, parameter, nExponents, nSegments, nSteps, runUpSteps, checkpoint_path=base + 'checkpoint/')
+    fds.shadowing(runner.solve, fields, parameter, nExponents, nSegments, nSteps, runUpSteps, checkpoint_path=checkpointPath)
+    
+    # adjoint?
 
 if __name__ == '__main__':
     main()
