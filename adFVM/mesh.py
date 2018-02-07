@@ -291,7 +291,7 @@ class Mesh(object):
         parallelStart = meshFile['parallel/start'][rank]
         parallelEnd = meshFile['parallel/end'][rank]
         faces = np.array(meshFile['faces'][parallelStart[0]:parallelEnd[0]])
-        points = np.array(meshFile['points'][parallelStart[1]:parallelEnd[1]])
+        points = np.array(meshFile['points'][parallelStart[1]:parallelEnd[1]]).astype(config.precision)
         owner = np.array(meshFile['owner'][parallelStart[2]:parallelEnd[2]])
         neighbour = np.array(meshFile['neighbour'][parallelStart[3]:parallelEnd[3]])
         addressing = []
