@@ -48,6 +48,7 @@ primal = RCF('./',
              #boundaryRiemannSolver='eulerLaxFriedrichs',
              objective = objective,
              fixedTimeStep = True,
+             readConservative=True
 )
 
 #def makePerturb(param, eps=1e-4):

@@ -79,7 +79,7 @@ if __name__ == "__main__":
         startIndex = 0
         initResult = 0.
     
-    if user.option == 'orig':
+    if user.option == 'orig' or user.option == 'source':
         dts = dt
         nSims = 1
 
@@ -102,7 +102,7 @@ if __name__ == "__main__":
 
     # restarting perturb not fully supported
     for sim in range(0, nSims):
-        if user.option == 'perturb':
+        if user.option == 'perturb' or user.option == 'source':
             if config.gpu:
                 pprint('On GPU for multiple perturbations will give wrong results')
             # single set of parameters, but can have multiple sets of perturbation
