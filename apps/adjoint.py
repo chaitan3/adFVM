@@ -12,6 +12,7 @@ from adpy.variable import Variable, Function, Zeros
 from adFVM.mesh import cmesh, Mesh
 
 from problem import primal, nSteps, writeInterval, sampleInterval, reportInterval, viscousInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints, startTime
+from problem import dt as Dt
 
 import numpy as np
 import time
@@ -143,7 +144,12 @@ class Adjoint(Solver):
             firstCheckpoint = 0
             result = [0.]*nPerturb
         if parallel.rank == 0:
-            timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
+            if not os.path.exists(primal.timeStepFile):
+                assert primal.fixedTimeStep
+                timeSteps = (startTime + np.arange(0, nSteps)*Dt).reshape(-1,1)
+                timeSteps = np.hstack(timeSteps, np.ones((nSteps, 1)*Dt)
+            else:
+                timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
             assert timeSteps.shape == (nSteps, 2)
             timeSteps = np.concatenate((timeSteps, np.array([[np.sum(timeSteps[-1]).round(12), 0]])))
         else:

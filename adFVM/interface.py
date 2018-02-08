@@ -18,7 +18,8 @@ def isfloat(s):
 class Runner(object):
     fieldNames = ['rho', 'rhoU', 'rhoE']
     reference = [1., 200., 2e5]
-    program = os.path.expanduser('~') + '/adFVM/apps/problem.py'
+    primalSolver = os.path.expanduser('~') + '/adFVM/apps/problem.py'
+    adjointSolver = os.path.expanduser('~') + '/adFVM/apps/adjoint.py'
 
     def __init__(self, *args, **kwargs):
         return
@@ -52,9 +53,10 @@ class Runner(object):
         return returncode
 
 class SerialRunner(Runner):
-    def __init__(self, base, time, problem, nProcs=1, gpu=False):
+    def __init__(self, base, time, dt, problem, nProcs=1, gpu=False):
         self.base = base
         self.time = time
+        self.dt = dt
         self.problem = problem
         self.stime = Mesh.getTimeString(time)
         self.nProcs = nProcs
@@ -75,28 +77,38 @@ class SerialRunner(Runner):
                 start += n + nGhostCells[i]
         return np.concatenate(internalCells)
 
-    def readFields(self, case, time):
+    def readFields(self, case, time, adjoint=False):
         fields = []
         with h5py.File(case + Mesh.getTimeString(time) + '.hdf5', 'r') as phi:
             for name in Runner.fieldNames:
+                if adjoint:
+                    name = name + 'a'
                 fields.append(phi[name + '/field'][:][self.internalCells])
-        fields = [x/y for x, y in zip(fields, Runner.reference)]
+        if adjoint:
+            fields = [x*y for x, y in zip(fields, Runner.reference)]
+        else:
+            fields = [x/y for x, y in zip(fields, Runner.reference)]
         return np.hstack(fields).ravel()
 
-    def writeFields(self, fields, case, time):
+    def writeFields(self, fields, case, time, adjoint=False):
         fields = fields.reshape((fields.shape[0]/5, 5))
         fields = fields[:,[0]], fields[:,1:4], fields[:,[4]]
-        fields = [x*y for x, y in zip(fields, Runner.reference)]
+        if adjoint:
+            fields = [x/y for x, y in zip(fields, Runner.reference)]
+        else:
+            fields = [x*y for x, y in zip(fields, Runner.reference)]
         timeFile = case + Mesh.getTimeString(time) + '.hdf5' 
         shutil.copy(self.base + self.stime + '.hdf5', timeFile)
         with h5py.File(timeFile, 'r+') as phi:
             for index, name in enumerate(Runner.fieldNames):
+                if adjoint:
+                    name = name + 'a'
                 field = phi[name + '/field'][:]
                 field[self.internalCells] = fields[index]
                 phi[name + '/field'][:] = field
         return
 
-    def runCase(self, initFields, (parameter, nSteps), case):
+    def setupPrimal(initFields, primalData, case):
         # write initial field
         self.writeFields(initFields, case, self.time)
 
@@ -108,25 +120,59 @@ class SerialRunner(Runner):
             for line in lines:
                 writeLine = line.replace('NSTEPS', str(nSteps))
                 writeLine = writeLine.replace('STARTTIME', str(self.time))
+                writeLine = writeLine.replace('DT', str(self.dt))
                 writeLine = writeLine.replace('PARAMETER', str(parameter))
                 f.write(writeLine)
+        return
+
+    def getFinalTime(self, case):
+        return sorted([float(x[:-5]) for x in os.listdir(case) if isfloat(x[:-5]) and x.endswith('.hdf5')])[-1]
+
+    def runPrimal(self, initFields, primalData, case):
+        self.setupPrimal(initFields, primalData, case) 
 
         extraArgs = []
         if self.gpu:
             extraArgs.append('-g')
         with open(case + 'output.log', 'w') as f, open(case + 'error.log', 'w') as fe:
-            returncode = self.spawnJob([Runner.program, problemFile, 'source'] + extraArgs, stdout=f, stderr=fe, cwd=case)
+            returncode = self.spawnJob([Runner.primalSolver, problemFile, 'source'] + extraArgs, stdout=f, stderr=fe, cwd=case)
         if returncode:
             raise Exception('Execution failed, check error log in :', case)
         objectiveSeries = np.loadtxt(case + 'timeSeries_0.txt').reshape(-1,1).flatten()
         objectiveSeries = np.concatenate((objectiveSeries, [objectiveSeries[-1]]))
 
         # read final fields
-        times = [float(x[:-5]) for x in os.listdir(case) if isfloat(x[:-5]) and x.endswith('.hdf5')]
-        lastTime = sorted(times)[-1]
-        finalFields = self.readFields(case, lastTime)
+        finalFields = self.readFields(case, self.getFinalTime(case))
         # read objective values
         return finalFields, objectiveSeries 
+
+
+    def runAdjoint(self, initPrimalFields, (parameter, nSteps), initAdjointFields, case):
+        # default parameter is always zero
+        assert parameter == 0.0
+        # perturbation in parameter for computing gradient
+        parameter = 1.0
+        self.setupPrimal(initPrimalFields, (parameter, nSteps), case) 
+
+        finalTime = self.time + self.dt*nSteps
+        # correct reference handling?
+        self.writeFields(initAdjointFields, case, finalTime, adjoint=True)
+
+        extraArgs = []
+        if self.gpu:
+            extraArgs.append('-g')
+        with open(case + 'output.log', 'w') as f, open(case + 'error.log', 'w') as fe:
+            returncode = self.spawnJob([Runner.adjointSolver, problemFile] + extraArgs, stdout=f, stderr=fe, cwd=case)
+        if returncode:
+            raise Exception('Execution failed, check error log in :', case)
+
+        finalFields = self.readFields(case, self.time, adjoint=True)
+        # sensitivity time series or just sensitivity?
+        dJds = np.loadtxt(case + 'sensTimeSeries.txt').reshape(-1,1).flatten()
+        #with open(case + 'objective.txt') as f:
+        #    dJds = float(f.readline().split(' ')[3])
+
+        return finalFields, dJds
 
 #class ParallelRunner(Runner):
     #def __init__(self):

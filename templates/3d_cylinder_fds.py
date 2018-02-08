@@ -100,7 +100,7 @@ writeInterval = NSTEPS
 reportInterval = 1
 sampleInterval = 1
 startTime = STARTTIME
-dt = 6e-9
+dt = DT
 #runCheckpoints = 1
 
 #viscousInterval = 10

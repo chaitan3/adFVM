@@ -12,16 +12,23 @@ class Shadowing(SerialRunner):
     def solve(self, initFields, parameter, nSteps, run_id):
         case = self.base + 'temp/' + run_id + "/"
         self.copyCase(case)
-        data = self.runCase(initFields, (parameter, nSteps), case)
+        data = self.runPrimal(initFields, (parameter, nSteps), case)
         return data
+
+    def adjoint(self, initPrimalFields, paramter, nSteps, initAdjointFields, run_id)
+        case = self.base + 'temp/' + run_id + "/"
+        self.copyCase(case)
+        data = self.runAdjoint(initPrimalFields, (parameter, nSteps), initAdjointFields, case)
+        return 
 
 def main():
     base = 'cases/3d_cylinder/'
     time = 2.0
+    dt = 6e-9
     template = 'templates/3d_cylinder_fds.py'
     nProcs = 1
 
-    runner = Shadowing(base, time, template, nProcs=nProcs, gpu=True)
+    runner = Shadowing(base, time, dt, template, nProcs=nProcs, gpu=True)
 
     nSegments = 20
     nSteps = 1000
@@ -34,8 +41,8 @@ def main():
         os.makedirs(checkpointPath)
 
     fields = runner.readFields(base, time)
-    fds.shadowing(runner.solve, fields, parameter, nExponents, nSegments, nSteps, runUpSteps, checkpoint_path=checkpointPath)
-    
+    J, dJds_tan = fds.shadowing(runner.solve, fields, parameter, nExponents, nSegments, nSteps, runUpSteps, checkpoint_path=checkpointPath)
+    dJds_adj = fds.adjoint_shadowing(runner.solve, runner.adjoint, parameter, nExponents, checkpointPath)
     # adjoint?
 
 if __name__ == '__main__':
