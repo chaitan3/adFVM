@@ -8,16 +8,22 @@ from adpy import tensor
 config.hdf5 = True
 
 # drag over cylinder surface
+diameter = 2.5e-4
 def objectiveDrag(U, T, p, *mesh, **options):
     solver = options['solver']
     mesh = Mesh.container(mesh)
-    U0 = U.extract(mesh.neighbour)[0]
-    U0i = U.extract(mesh.owner)[0]
+    U0 = U.extract(mesh.neighbour)
+    Ui = U.extract(mesh.owner)
     p0 = p.extract(mesh.neighbour)
     T0 = T.extract(mesh.neighbour)
     nx = mesh.normals[0]
-    mungUx = solver.mu(T0)*(U0-U0i)/mesh.deltas
+    mungUx = solver.mu(T0)*(U0[0]-Ui[0])/mesh.deltas
     drag = (p0*nx-mungUx)*mesh.areas
+    # rescaled version
+    rho0 = p0/(solver.R*T0)
+    D = diameter
+    z = 2*D
+    drag = drag * 2./(rho0*(U0.dot(U0)*z*D))
     return drag.sum()
 
 def objective(fields, solver):

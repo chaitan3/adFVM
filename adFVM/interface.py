@@ -155,8 +155,6 @@ class SerialRunner(Runner):
         problemFile = self.setupPrimal(initPrimalFields, (parameter, nSteps), case) 
 
         finalTime = self.time + self.dt*nSteps
-        # correct reference handling?
-        # how to rescale?
         self.writeFields(initAdjointFields, case, finalTime, adjoint=True)
 
         extraArgs = []
