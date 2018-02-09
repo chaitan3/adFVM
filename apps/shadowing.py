@@ -17,7 +17,7 @@ class Shadowing(SerialRunner):
 	shutil.rmtree(case)
         return data
 
-    def adjoint(self, initPrimalFields, paramter, nSteps, initAdjointFields, run_id)
+    def adjoint(self, initPrimalFields, paramter, nSteps, initAdjointFields, run_id):
         case = self.base + 'temp/' + run_id + "/"
         self.copyCase(case)
         data = self.runAdjoint(initPrimalFields, (parameter, nSteps), initAdjointFields, case)
@@ -30,7 +30,7 @@ def main():
     template = 'templates/3d_cylinder_fds.py'
     nProcs = 1
 
-    runner = Shadowing(base, time, template, nProcs=nProcs, flags=['-g', '--gpu_double'])
+    runner = Shadowing(base, time, dt, template, nProcs=nProcs, flags=['-g', '--gpu_double'])
 
     nSegments = 400
     nSteps = 500
