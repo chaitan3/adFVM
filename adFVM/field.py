@@ -429,6 +429,8 @@ class IOField(Field):
                 patch['value'] = field[cellStartFace:cellEndFace]
                 
         self.writeFoamField(internalField, boundary)
+        # HACK: protect from segfaults
+        parallel.mpi.Barrier()
 
     def writeFoamField(self, internalField, boundary, timeDir=None):
         name = self.name

@@ -156,6 +156,7 @@ class SerialRunner(Runner):
 
         finalTime = self.time + self.dt*nSteps
         # correct reference handling?
+        # how to rescale?
         self.writeFields(initAdjointFields, case, finalTime, adjoint=True)
 
         extraArgs = []
