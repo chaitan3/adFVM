@@ -34,7 +34,7 @@ class Runner(object):
         return np.random.randn(self.fieldsShape)
 
     def spawnJob(self, args, **kwargs):  
-        print args, kwargs
+        #print args, kwargs
         if self.nProcs == 1:
             return subprocess.call(args, **kwargs)
 	else:
@@ -53,14 +53,14 @@ class Runner(object):
         return returncode
 
 class SerialRunner(Runner):
-    def __init__(self, base, time, dt, problem, nProcs=1, gpu=False):
+    def __init__(self, base, time, problem, nProcs=1, flags=None):
         self.base = base
         self.time = time
         self.dt = dt
         self.problem = problem
         self.stime = Mesh.getTimeString(time)
         self.nProcs = nProcs
-        self.gpu = gpu
+        self.flags = flags
         self.internalCells = self.getInternalCells(base)
         self.fieldsShape = len(self.internalCells)*5
 
@@ -132,8 +132,8 @@ class SerialRunner(Runner):
         self.setupPrimal(initFields, primalData, case) 
 
         extraArgs = []
-        if self.gpu:
-            extraArgs.append('-g')
+        if self.flags:
+            extraArgs.extend(self.flags)
         with open(case + 'output.log', 'w') as f, open(case + 'error.log', 'w') as fe:
             returncode = self.spawnJob([Runner.primalSolver, problemFile, 'source'] + extraArgs, stdout=f, stderr=fe, cwd=case)
         if returncode:

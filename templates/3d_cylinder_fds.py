@@ -96,8 +96,8 @@ perturb = [makePerturb(np.array([[param, 0, 0]], config.precision))]
 parameters = ('BCs', 'p', 'left', 'U0')
 
 nSteps = NSTEPS
-writeInterval = NSTEPS
-reportInterval = 1
+writeInterval = nSteps
+reportInterval = max(1, nSteps//10)
 sampleInterval = 1
 startTime = STARTTIME
 dt = DT
