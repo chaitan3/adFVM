@@ -34,13 +34,13 @@ class Runner(object):
         return np.random.randn(self.fieldsShape)
 
     def spawnJob(self, args, **kwargs):  
-        print args, kwargs
+        #print args, kwargs
         if self.nProcs == 1:
             return subprocess.call(args, **kwargs)
 	else:
             return subprocess.call(['mpirun', '-np', str(self.nProcs)] + args, **kwargs)
 
-    def spawnSlurmJob(exe, args, **kwargs):
+    def spawnSlurmJob(self, exe, args, **kwargs):
         from fds.slurm import grab_from_SLURM_NODELIST
         interprocess = kwargs['interprocess']
         del kwargs['interprocess']
@@ -53,14 +53,14 @@ class Runner(object):
         return returncode
 
 class SerialRunner(Runner):
-    def __init__(self, base, time, dt, problem, nProcs=1, gpu=False):
+    def __init__(self, base, time, dt, problem, nProcs=1, flags=None):
         self.base = base
         self.time = time
         self.dt = dt
         self.problem = problem
         self.stime = Mesh.getTimeString(time)
         self.nProcs = nProcs
-        self.gpu = gpu
+        self.flags = flags
         self.internalCells = self.getInternalCells(base)
         self.fieldsShape = len(self.internalCells)*5
 
@@ -108,7 +108,7 @@ class SerialRunner(Runner):
                 phi[name + '/field'][:] = field
         return
 
-    def setupPrimal(initFields, primalData, case):
+    def setupPrimal(self, initFields, (parameter, nSteps), case):
         # write initial field
         self.writeFields(initFields, case, self.time)
 
@@ -123,17 +123,17 @@ class SerialRunner(Runner):
                 writeLine = writeLine.replace('DT', str(self.dt))
                 writeLine = writeLine.replace('PARAMETER', str(parameter))
                 f.write(writeLine)
-        return
+        return problemFile
 
     def getFinalTime(self, case):
         return sorted([float(x[:-5]) for x in os.listdir(case) if isfloat(x[:-5]) and x.endswith('.hdf5')])[-1]
 
     def runPrimal(self, initFields, primalData, case):
-        self.setupPrimal(initFields, primalData, case) 
+        problemFile = self.setupPrimal(initFields, primalData, case) 
 
         extraArgs = []
-        if self.gpu:
-            extraArgs.append('-g')
+        if self.flags:
+            extraArgs.extend(self.flags)
         with open(case + 'output.log', 'w') as f, open(case + 'error.log', 'w') as fe:
             returncode = self.spawnJob([Runner.primalSolver, problemFile, 'source'] + extraArgs, stdout=f, stderr=fe, cwd=case)
         if returncode:
@@ -152,11 +152,9 @@ class SerialRunner(Runner):
         assert parameter == 0.0
         # perturbation in parameter for computing gradient
         parameter = 1.0
-        self.setupPrimal(initPrimalFields, (parameter, nSteps), case) 
+        problemFile = self.setupPrimal(initPrimalFields, (parameter, nSteps), case) 
 
         finalTime = self.time + self.dt*nSteps
-        # correct reference handling?
-        # how to rescale?
         self.writeFields(initAdjointFields, case, finalTime, adjoint=True)
 
         extraArgs = []
