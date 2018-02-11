@@ -147,7 +147,7 @@ class Adjoint(Solver):
             if not os.path.exists(primal.timeStepFile):
                 assert primal.fixedTimeStep
                 timeSteps = (startTime + np.arange(0, nSteps)*Dt).reshape(-1,1)
-                timeSteps = np.hstack(timeSteps, np.ones((nSteps, 1)*Dt)
+                timeSteps = np.hstack(timeSteps, np.ones((nSteps, 1)*Dt))
             else:
                 timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
             assert timeSteps.shape == (nSteps, 2)
@@ -193,7 +193,8 @@ class Adjoint(Solver):
 
         totalCheckpoints = nSteps//writeInterval
         nCheckpoints = min(firstCheckpoint + runCheckpoints, totalCheckpoints)
-        for checkpoint in range(firstCheckpoint, nCheckpoints):
+        checkpoint = firstCheckpoint
+        while checkpoint < nCheckpoints:
             pprint('PRIMAL FORWARD RUN {0}/{1}: {2} Steps\n'.format(checkpoint, totalCheckpoints, writeInterval))
             primalIndex = nSteps - (checkpoint + 1)*writeInterval
             t = timeSteps[primalIndex, 0]
@@ -372,6 +373,7 @@ class Adjoint(Solver):
                     np.savetxt(f, energyTimeSeries)
             sensTimeSeries = []
             energyTimeSeries = []
+            checkpoint += 1
         #pprint(checkpoint, totalCheckpoints)
 
         if checkpoint + 1 == totalCheckpoints:

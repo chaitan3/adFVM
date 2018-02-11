@@ -96,7 +96,7 @@ def get_compiler_args():
             home = os.path.expanduser('~') + '/sources/petsc_single/'
         else:
             home = os.path.expanduser('~') + '/sources/petsc/'
-        build = 'arch-linux2-c-debug'
+        build = 'arch-linux2-c-opt'
         incdirs += ['{}/{}/include'.format(home, build), home + '/include', os.path.expanduser('~') + '/sources/cusp/']
         libdirs += ['{}/{}/lib'.format(home, build)]
         libs += ['petsc']
