@@ -320,9 +320,15 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         #M2 = np.einsum('pijk,pklm,pml->pij', A0U, A, Gw)
         #M = -M1 + M2
 
+        #suffix += '_test3'
+        #gradp = 0*gradp
+        #gradrho = 0*gradrho
+        #gradU = 0*gradU
         from .symmetrizations.entropy_barth_mathematica import expression
         M = expression(rho,u1,u2,u3,p,gradrho,gradU[:,0,:],gradU[:,1,:],gradU[:,2,:],gradp,g,zero)
         M = np.array(M).transpose((2, 0, 1))
+        X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref])
+        M = np.matmul(np.matmul(X, M), X)
 
     elif visc == 'entropy_hughes':
         #pref = 1.
@@ -581,7 +587,9 @@ def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
         elif viscosityType == 'entropy_barth':
             from .symmetrizations.entropy_barth_mathematica import expression_code
             M = expression_code(rho, U, p, gradrho, gradU, gradp, g, Z)
-            M = [item for sublist in M for item in sublist]
+            #M = [item for sublist in M for item in sublist]
+            X = [1., 1./Uref, 1./Uref, 1./Uref, 1/pref]
+            M = [item*X[i]*X[j] for i, sublist in enumerate(M) for j, item in enumerate(sublist)]
             M = Tensor((5,5), M)
 
         else:
