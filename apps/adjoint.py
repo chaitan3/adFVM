@@ -344,6 +344,17 @@ class Adjoint(Solver):
                 pprint()
                 #parallel.mpi.Barrier()
 
+            self.writeStatusFile([checkpoint + 1, result])
+            #energyTimeSeries = mpi.gather(timeSeries, root=0)
+            if parallel.rank == 0:
+                with open(self.sensTimeSeriesFile, 'ab') as f:
+                    np.savetxt(f, sensTimeSeries)
+                with open(self.energyTimeSeriesFile, 'ab') as f:
+                    np.savetxt(f, energyTimeSeries)
+            sensTimeSeries = []
+            energyTimeSeries = []
+            checkpoint += 1
+
             #exit(1)
             #print(fields[0].field.max())
             fieldsCopy = [phi.copy() for phi in fields]
@@ -364,19 +375,10 @@ class Adjoint(Solver):
             #    phi.field *= mesh.volumes
 
             #print(fields[0].field.max())
-            self.writeStatusFile([checkpoint + 1, result])
-            #energyTimeSeries = mpi.gather(timeSeries, root=0)
-            if parallel.rank == 0:
-                with open(self.sensTimeSeriesFile, 'ab') as f:
-                    np.savetxt(f, sensTimeSeries)
-                with open(self.energyTimeSeriesFile, 'ab') as f:
-                    np.savetxt(f, energyTimeSeries)
-            sensTimeSeries = []
-            energyTimeSeries = []
-            checkpoint += 1
+            
         #pprint(checkpoint, totalCheckpoints)
 
-        if checkpoint + 1 == totalCheckpoints:
+        if checkpoint + 1 >= totalCheckpoints:
             writeResult('adjoint', result, str(self.scaling), self.sensTimeSeriesFile)
             #for index in range(0, nPerturb):
             #    writeResult('adjoint', result[index], '{} {}'.format(index, self.scaling))
