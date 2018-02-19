@@ -6,6 +6,14 @@ import pickle
 
 from adFVM.interface import SerialRunner
 
+def compute_dxdt_of_order(u, order):
+    assert order >= 1
+    A = np.array([np.arange(order + 1) ** i for i in range(order + 1)])
+    b = np.zeros(order + 1)
+    b[1] = 1
+    c = np.linalg.solve(A, b)
+    return sum([c[i]*u[i] for i in range(0, order+1)])
+
 class NILSAS:
     def __init__(self, (nExponents, nSteps, nSegments), (base, time, dt, templates), nProcs, flags=None):
         self.nExponents = nExponents
@@ -25,10 +33,7 @@ class NILSAS:
         return W, w
 
     def orthogonalize(self, segment, W, w):
-        #case = base + 'segment_{}_speed'.format(segment)
-        #self.runner.copyCase(case)
-        #f = self.runner.runPrimal(self.primalFields[segment + 1], (parameter, 0), case)
-	#shutil.rmtree(case)
+        f = self.getNeutralDirection(segment)
         # remove f component
         W = W-np.dot(W, np.dot(W, f))
         w = w-f*np.dot(w, f)
@@ -41,6 +46,18 @@ class NILSAS:
         self.gradientInfo.append((R, b))
         self.adjointFields.append((W, w))
         return W, w
+
+    def getNeutralDirection(self, segment):
+        orderOfAccuracy = 3
+        res = [self.primalFields[segment + 1]]
+        for nSteps in range(1, orderOfAccuracy + 1):
+            case = base + 'neutral_{}_{}_nsteps'.format(segment, nSteps)
+            self.runner.copyCase(case)
+            res.append(self.runner.runPrimal(res[0], (parameter, nSteps))[0])
+            shutil.rmtree(case)
+        neutral = compute_dxdt_of_order(res, orderOfAccuracy)
+        neutralDirection /= np.linalg.norm(neutral, axis=0)
+        return neutralDirection
 
     def runPrimal(self):
         for segment in range(len(self.primalFields)-1, self.nSegments):
