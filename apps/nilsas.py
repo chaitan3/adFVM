@@ -12,15 +12,16 @@ class NILSAS:
         self.nSteps = nSteps
         self.nSegments = nSegments
         self.runner = SerialRunner(base, time, dt, template, nProcs=nProcs, flags=flags)
-        self.primalFields = [self.runner.readFields(base, time)]
         self.nDOF = self.runner.internalCells.shape[0]
-        self.homogeneous = []
-        self.inhomogeneous = []
+        self.primalFields = [self.runner.readFields(base, time)]
+        self.adjointFields = []
+        self.gradientInfo = []
         return
 
     def initRandom(self):
         W = np.random.rand(self.nExponents, self.nDOF)
         w = np.zeros(self.nDOF)
+        self.adjointFields.append((W, w)) 
         return W, w
 
     def orthogonalNeutral(self, segment, W, w):
@@ -28,18 +29,24 @@ class NILSAS:
         #self.runner.copyCase(case)
         #f = self.runner.runPrimal(self.primalFields[segment + 1], (parameter, 0), case)
 	#shutil.rmtree(case)
+        # remove f component
         W = W-np.dot(W, np.dot(W, f))
         w = w-f*np.dot(w, f)
+
+        # QR factorization
         Q, R = np.linalg.qr(W.T)
         W = Q.T
         b = np.dot(W, w)
         w = (w - np.dot(Q, b)).flatten()
+        self.gradientInfo.append((R, b))
+        self.adjointFields.append((W, w))
         return W, w
 
     def runPrimal(self):
-        for i in range(0, self.nSegments):
-            res = self.runner.runPrimal(self.primalFields[i], (parameter, self.nSteps))
+        for segment in range(len(self.primalFields)-1, self.nSegments):
+            res = self.runner.runPrimal(self.primalFields[segment], (parameter, self.nSteps))
             self.primalFields.append(res[0])
+            self.saveCheckpoint()
         return
 
     def runSegment(self, segment, W, w):
@@ -65,19 +72,23 @@ class NILSAS:
         return
 
     def saveCheckpoint(self):
-        with open(base + 'checkpoint.pkl') as f:
-            checkpoint = (self.primalFields, self.homogeneous, self.inhomogeneous)
+        with open(base + 'checkpoint.pkl', 'w') as f:
+            checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo)
             pickle.dump(f, checkpoint)
+
+    def loadCheckpoint(self):
+        with open(base + 'checkpoint.pkl', 'r') as f:
+            checkpoint = pickle.load(f)
+            self.primalFields, self.adjointFields, self.gradientInfo = checkpoint
 
     def run(self):
         self.runPrimal()
-        W, w = self.initRandom()
-        self.homogeneous.append(W) 
-        self.inhomogeneous.append(w)
-        for i in range(0, self.nSegments):
-            W, w = self.runSegment(i, W, w)
-            self.homogeneous.append(W) 
-            self.inhomogeneous.append(w)
+        if len(self.adjointFields) == 0:
+            W, w = self.initRandom()
+            self.saveCheckpoint()
+        for segment in range(len(self.adjointFields)-1, self.nSegments):
+            W, w = self.runSegment(segment, W, w)
+            self.saveCheckpoint()
         return 'booya'
 
 def main():
