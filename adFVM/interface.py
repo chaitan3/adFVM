@@ -147,7 +147,7 @@ class SerialRunner(Runner):
         return finalFields, objectiveSeries 
 
 
-    def runAdjoint(self, initPrimalFields, (parameter, nSteps), initAdjointFields, case):
+    def runAdjoint(self, initPrimalFields, (parameter, nSteps), initAdjointFields, case, homogeneous=False):
         # default parameter is always zero
         assert parameter == 0.0
         # perturbation in parameter for computing gradient
@@ -157,9 +157,11 @@ class SerialRunner(Runner):
         finalTime = self.time + self.dt*nSteps
         self.writeFields(initAdjointFields, case, finalTime, adjoint=True)
 
-        extraArgs = []
-        if self.gpu:
-            extraArgs.append('-g')
+        extraArgs = ['--readFields']
+        if self.flags:
+            extraArgs.extend(self.flags)
+        if homogeneous:
+            extraArgs.append('--homogeneous')
         with open(case + 'output.log', 'w') as f, open(case + 'error.log', 'w') as fe:
             returncode = self.spawnJob([Runner.adjointSolver, problemFile] + extraArgs, stdout=f, stderr=fe, cwd=case)
         if returncode:

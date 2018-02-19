@@ -58,13 +58,13 @@ class NILSAS:
             # homogeneous/inhomogeneous
             case = base + 'segment_{}_homogeneous_{}'.format(segment, i)
             self.runner.copyCase(case)
-            res = self.runner.runAdjoint(W[i], (parameter, self.nSteps), p)
+            res = self.runner.runAdjoint(W[i], (parameter, self.nSteps), p, homogeneous=True)
             shutil.rmtree(case)
             Wn.append(res[0])
-            JW.append(res[1])
+            Jw.append(res[1])
         Wn = np.array(Wn)
         case = base + 'segment_{}_inhomogeneous'.format(segment)
-        wn, Jw = self.runner.runAdjoint(w, (parameter, nSteps), p)
+        wn, _ = self.runner.runAdjoint(w, (parameter, nSteps), p)
         shutil.rmtree(case)
         return Wn, wn
 

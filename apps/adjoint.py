@@ -39,6 +39,7 @@ class Adjoint(Solver):
 
         self.nParams = 0
         self.forceReadFields = False
+        self.homoegeneousAdjoint = False
         self.firstRun = True
         self.scaling = adjParams[0]
         self.viscosityType = adjParams[1]
@@ -252,6 +253,8 @@ class Adjoint(Solver):
 
                 dtca = np.zeros((1, 1)).astype(config.precision)
                 obja = np.ones((1, 1)).astype(config.precision)
+                if self.homogeneousAdjoint:
+                    obja *= 0.
                 inputs = [phi.field for phi in previousSolution] + \
                      [np.array([[dt]], config.precision)] + \
                      mesh.getTensor() + mesh.getScalar() + \
@@ -388,6 +391,7 @@ class Adjoint(Solver):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--readFields', action='store_true')
+    parser.add_argument('--homogeneous', action='store_true')
     user, args = parser.parse_known_args()
 
     adjoint = Adjoint(primal)
@@ -398,6 +402,7 @@ def main():
 
     data = adjoint.initPrimalData()
     adjoint.forceReadFields = user.readFields
+    adjoint.homogeneousAdjoint = user.homogeneous
 
     adjoint.run(*data)
 
