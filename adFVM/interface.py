@@ -30,6 +30,10 @@ class Runner(object):
         shutil.copytree(self.base + 'gencode', case + 'gencode')
         return
 
+    def removeCase(self, case):
+        shutil.rmtree(case)
+        return
+
     def randomFields(self):
         return np.random.randn(self.fieldsShape)
 
@@ -147,7 +151,7 @@ class SerialRunner(Runner):
         return finalFields, objectiveSeries 
 
 
-    def runAdjoint(self, initPrimalFields, (parameter, nSteps), initAdjointFields, case, homogeneous=False):
+    def runAdjoint(self, initAdjointFields, (parameter, nSteps), initPrimalFields, case, homogeneous=False):
         # default parameter is always zero
         assert parameter == 0.0
         # perturbation in parameter for computing gradient
