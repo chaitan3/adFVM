@@ -24,7 +24,7 @@ class NILSAS:
         self.adjointFields.append((W, w)) 
         return W, w
 
-    def orthogonalNeutral(self, segment, W, w):
+    def orthogonalize(self, segment, W, w):
         #case = base + 'segment_{}_speed'.format(segment)
         #self.runner.copyCase(case)
         #f = self.runner.runPrimal(self.primalFields[segment + 1], (parameter, 0), case)
@@ -51,7 +51,7 @@ class NILSAS:
 
     def runSegment(self, segment, W, w):
         p = self.primalFields[segment]
-        W, w = self.orthogonalNeutral(segment, W, w)
+        W, w = self.orthogonalize(segment, W, w)
         Wn = []
         Jw = []
         for i in range(0, self.nExponents):
