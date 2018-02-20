@@ -69,6 +69,7 @@ class Adjoint(Solver):
         self.fields = fields
         for phi in self.fields:
             phi.completeField()
+        self.firstRun = False
         return fields
 
     def compileInit(self):
