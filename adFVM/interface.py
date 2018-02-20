@@ -49,7 +49,6 @@ class Runner(object):
         interprocess = kwargs['interprocess']
         del kwargs['interprocess']
         nodes = grab_from_SLURM_NODELIST(1, interprocess)
-        print('spawnJob', nodes, exe, args)
         returncode = subprocess.call(['mpirun', '--host', ','.join(nodes.grabbed_nodes), '-np', str(self.nProcs)] + args, **kwargs)
         nodes.release()
         #returncode = subprocess.call(['mpirun', '-np', str(nProcessors), exe] + args, **kwargs)

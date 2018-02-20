@@ -3,7 +3,8 @@ import numpy as np
 import os
 import shutil
 import pickle
-from pathos.multiprocessing import Pool, Manager
+from pathos.multiprocessing import Pool
+from pathos.helpers import mp
 
 from adFVM.interface import SerialRunner
 #class SerialRunner(object):
@@ -127,8 +128,9 @@ class NILSAS:
         Wn = []
         Jw = []
         pool = Pool(self.nRuns)
-        manager = Manager()
+        manager = mp.Manager()
         interprocess = (manager.Lock(), manager.dict())
+        #interprocess = None
         segments = []
         def runCase(fields, case, homogeneous, interprocess):
             self.runner.copyCase(case)
@@ -136,7 +138,6 @@ class NILSAS:
             self.runner.removeCase(case)
             return res
         for i in range(0, self.nExponents):
-            # homogeneous/inhomogeneous
             case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
             segments.append(pool.apply_async(runCase, (W[i], case, True)))
         case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
@@ -169,7 +170,10 @@ class NILSAS:
             pickle.dump(checkpoint, f)
 
     def loadCheckpoint(self):
-        with open(self.runner.base + 'checkpoint.pkl', 'r') as f:
+        checkpointFile = self.runner.base + 'checkpoint.pkl'
+        if not os.path.exists(checkpointFile):
+            return
+        with open(checkpointFile, 'r') as f:
             checkpoint = pickle.load(f)
             self.primalFields, self.adjointFields, self.gradientInfo = checkpoint
 
@@ -193,6 +197,7 @@ def main():
     nSegments = 100
     nSteps = 500
     nExponents = 20
+    nRuns = 4
 
     # lorenz
     #time = 10.
@@ -205,9 +210,9 @@ def main():
     #nRuns = 2
 
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
+    runner.loadCheckpoint()
     runner.run()
-    #runner.loadCheckpoint()
-    #runner.getExponents()
+    runner.getExponents()
 
 if __name__ == '__main__':
     main()
