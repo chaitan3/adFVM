@@ -123,7 +123,7 @@ class NILSAS:
         return
 
     def runSegment(self, segment, W, w):
-        p = self.primalFields[segment]
+        primalFields = self.primalFields[segment]
         W, w = self.orthogonalize(segment, W, w)
         Wn = []
         Jw = []
@@ -132,16 +132,16 @@ class NILSAS:
         interprocess = (manager.Lock(), manager.dict())
         #interprocess = None
         segments = []
-        def runCase(fields, case, homogeneous, interprocess):
-            self.runner.copyCase(case)
-            res = self.runner.runAdjoint(fields, (self.parameter, self.nSteps), p, case, homogeneous=homogeneous, interprocess=interprocess)
-            #self.runner.removeCase(case)
+        def runCase(runner, fields, primalData, primalFields, case, homogeneous, interprocess):
+            runner.copyCase(case)
+            res = runner.runAdjoint(fields, primalData, primalFields, case, homogeneous=homogeneous, interprocess=interprocess)
+            #runner.removeCase(case)
             return res
         for i in range(0, self.nExponents):
             case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
-            segments.append(pool.apply_async(runCase, (W[i], case, True, interprocess)))
+            segments.append(pool.apply_async(runCase, (self.runner, W[i], (self.parameter, self.nSteps), primalFields, case, True, interprocess)))
         case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
-        segments.append(pool.apply_async(runCase, (w, case, False, interprocess)))
+        segments.append(pool.apply_async(runCase, (self.runner, w, (self.parameter, self.nSteps), primalFields, case, False, interprocess)))
 
         wn, _ = segments[-1].get()
         for i in range(0, self.nExponents):
@@ -166,8 +166,11 @@ class NILSAS:
 
     def saveCheckpoint(self):
         with open(self.runner.base + 'checkpoint.pkl', 'w') as f:
-            adjointFields = [None]*len(self.adjointFields)
-            adjointFields[-1] = self.adjointFields[-1]
+            if len(self.adjointFields) > 0:
+                adjointFields = [None]*len(self.adjointFields)
+                adjointFields[-1] = self.adjointFields[-1]
+            else:
+                adjointFields = []
             checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo)
             pickle.dump(checkpoint, f)
 
