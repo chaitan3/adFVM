@@ -194,7 +194,7 @@ def main():
     time = 2.0
     dt = 6e-9
     template = 'templates/3d_cylinder_fds.py'
-    nProcs = 1
+    nProcs = 16
 
     nSegments = 100
     nSteps = 500
@@ -205,6 +205,8 @@ def main():
     #base = '/home/talnikar/adFVM/cases/3d_cylinder/'
     #time = 10.
     #dt = 0.001
+    #nProcs = 1
+
     #nSegments = 50
     #nSteps = 2000
     ##nSteps = 200
