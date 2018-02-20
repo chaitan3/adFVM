@@ -70,8 +70,8 @@ class NILSAS:
         self.nSegments = nSegments
         self.nRuns = nRuns
         self.runner = SerialRunner(base, time, dt, templates, nProcs=nProcs, flags=flags)
-        self.nDOF = self.runner.internalCells.shape[0]
         self.primalFields = [self.runner.readFields(base, time)]
+        self.nDOF = self.primalFields[0].shape[0]
         self.adjointFields = []
         self.gradientInfo = []
         self.parameter = 0.0
