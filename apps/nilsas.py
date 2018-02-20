@@ -166,6 +166,8 @@ class NILSAS:
 
     def saveCheckpoint(self):
         with open(self.runner.base + 'checkpoint.pkl', 'w') as f:
+            adjointFields = [None]*len(self.adjointFields)
+            adjointFields[-1] = self.adjointFields[-1]
             checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo)
             pickle.dump(checkpoint, f)
 
