@@ -3,6 +3,7 @@ import numpy as np
 import os
 import shutil
 import pickle
+from pathos.multiprocessing import Pool
 
 #from adFVM.interface import SerialRunner
 
@@ -64,10 +65,11 @@ def compute_dxdt_of_order(u, order):
     return sum([c[i]*u[i] for i in range(0, order+1)])
 
 class NILSAS:
-    def __init__(self, (nExponents, nSteps, nSegments), (base, time, dt, templates), nProcs, flags=None):
+    def __init__(self, (nExponents, nSteps, nSegments, nRuns), (base, time, dt, templates), nProcs, flags=None):
         self.nExponents = nExponents
         self.nSteps = nSteps
         self.nSegments = nSegments
+        self.nRuns = nRuns
         self.runner = SerialRunner(base, time, dt, templates, nProcs=nProcs, flags=flags)
         self.nDOF = self.runner.internalCells.shape[0]
         self.primalFields = [self.runner.readFields(base, time)]
@@ -110,6 +112,7 @@ class NILSAS:
         return neutralDirection
 
     def runPrimal(self):
+        # serial process
         for segment in range(len(self.primalFields)-1, self.nSegments):
             case = self.runner.base + 'segment_{}_primal'.format(segment)
             self.runner.copyCase(case)
@@ -124,18 +127,26 @@ class NILSAS:
         W, w = self.orthogonalize(segment, W, w)
         Wn = []
         Jw = []
+        pool = Pool(self.nRuns)
+        segments = []
+        def runCase(fields, case, homogeneous):
+            self.runner.copyCase(case)
+            res = self.runner.runAdjoint(fields, (self.parameter, self.nSteps), p, case, homogeneous=homogeneous)
+            self.runner.removeCase(case)
+            return res
         for i in range(0, self.nExponents):
             # homogeneous/inhomogeneous
             case = self.runner.base + 'segment_{}_homogeneous_{}'.format(segment, i)
-            self.runner.copyCase(case)
-            res = self.runner.runAdjoint(W[i], (self.parameter, self.nSteps), p, case, homogeneous=True)
-            self.runner.removeCase(case)
+            segments.append(pool.apply_async(runCase, (W[i], case, True)))
+        case = self.runner.base + 'segment_{}_inhomogeneous'.format(segment)
+        segments.append(pool.apply_async(runCase, (w, case, False)))
+
+        wn, _ = segments[-1].get()
+        for i in range(0, self.nExponents):
+            res = segments[i].get() 
             Wn.append(res[0])
             Jw.append(res[1])
         Wn = np.array(Wn)
-        case = self.runner.base + 'segment_{}_inhomogeneous'.format(segment)
-        wn, _ = self.runner.runAdjoint(w, (self.parameter, self.nSteps), p, case)
-        self.runner.removeCase(case)
         return Wn, wn
 
     def computeGradient(self):
@@ -189,9 +200,10 @@ def main():
     nSteps = 2000
     #nSteps = 200
     nExponents = 2
-    #nExponents = 3
+    nExponents = 3
+    nRuns = 2
 
-    runner = NILSAS((nExponents, nSteps, nSegments), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
+    runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
     runner.run()
     runner.loadCheckpoint()
     runner.getExponents()
