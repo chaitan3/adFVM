@@ -149,7 +149,7 @@ class Adjoint(Solver):
             if not os.path.exists(primal.timeStepFile):
                 assert primal.fixedTimeStep
                 timeSteps = (startTime + np.arange(0, nSteps)*Dt).reshape(-1,1)
-                timeSteps = np.hstack(timeSteps, np.ones((nSteps, 1)*Dt))
+                timeSteps = np.hstack(timeSteps, np.ones((nSteps, 1))*Dt)
             else:
                 timeSteps = np.loadtxt(primal.timeStepFile, ndmin=2)
             assert timeSteps.shape == (nSteps, 2)
