@@ -183,7 +183,7 @@ class NILSAS:
             W, w = self.initRandom()
             self.saveCheckpoint()
         for segment in range(len(self.adjointFields)-1, self.nSegments):
-            W, w = self.runSegment(segment, W, w)
+            W, w = self.runSegment(self.nSegments-segment-1, W, w)
             self.saveCheckpoint()
         return 
 
