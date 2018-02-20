@@ -44,14 +44,13 @@ class Runner(object):
 	else:
             return subprocess.call(['mpirun', '-np', str(self.nProcs)] + args, **kwargs)
 
-    def spawnSlurmJob(self, exe, args, **kwargs):
+    def spawnSlurmJob(self, args, **kwargs):
         from fds.slurm import grab_from_SLURM_NODELIST
         interprocess = kwargs['interprocess']
         del kwargs['interprocess']
         nodes = grab_from_SLURM_NODELIST(1, interprocess)
         print('spawnJob', nodes, exe, args)
-        returncode = subprocess.call(['mpirun', '--host', ','.join(nodes.grabbed_nodes)
-                           , exe] + args, **kwargs)
+        returncode = subprocess.call(['mpirun', '--host', ','.join(nodes.grabbed_nodes), '-np', str(self.nProcs)] + args, **kwargs)
         nodes.release()
         #returncode = subprocess.call(['mpirun', '-np', str(nProcessors), exe] + args, **kwargs)
         return returncode
@@ -152,7 +151,7 @@ class SerialRunner(Runner):
         return finalFields, objectiveSeries 
 
 
-    def runAdjoint(self, initAdjointFields, (parameter, nSteps), initPrimalFields, case, homogeneous=False):
+    def runAdjoint(self, initAdjointFields, (parameter, nSteps), initPrimalFields, case, homogeneous=False, interprocess=None):
         print(case)
         # default parameter is always zero
         assert parameter == 0.0
@@ -169,7 +168,10 @@ class SerialRunner(Runner):
         if homogeneous:
             extraArgs.append('--homogeneous')
         with open(case + 'output.log', 'w') as f, open(case + 'error.log', 'w') as fe:
-            returncode = self.spawnJob([Runner.adjointSolver, problemFile] + extraArgs, stdout=f, stderr=fe, cwd=case)
+            if interprocess:
+                returncode = self.spawnSlurmJob([Runner.adjointSolver, problemFile] + extraArgs, stdout=f, stderr=fe, cwd=case, interprocess=interprocess)
+            else:
+                returncode = self.spawnJob([Runner.adjointSolver, problemFile] + extraArgs, stdout=f, stderr=fe, cwd=case)
         if returncode:
             raise Exception('Execution failed, check error log in :', case)
 

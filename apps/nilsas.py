@@ -3,7 +3,7 @@ import numpy as np
 import os
 import shutil
 import pickle
-from pathos.multiprocessing import Pool
+from pathos.multiprocessing import Pool, Manager
 
 from adFVM.interface import SerialRunner
 #class SerialRunner(object):
@@ -127,10 +127,12 @@ class NILSAS:
         Wn = []
         Jw = []
         pool = Pool(self.nRuns)
+        manager = Manager()
+        interprocess = (manager.Lock(), manager.dict())
         segments = []
-        def runCase(fields, case, homogeneous):
+        def runCase(fields, case, homogeneous, interprocess):
             self.runner.copyCase(case)
-            res = self.runner.runAdjoint(fields, (self.parameter, self.nSteps), p, case, homogeneous=homogeneous)
+            res = self.runner.runAdjoint(fields, (self.parameter, self.nSteps), p, case, homogeneous=homogeneous, interprocess=interprocess)
             self.runner.removeCase(case)
             return res
         for i in range(0, self.nExponents):
@@ -138,7 +140,7 @@ class NILSAS:
             case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
             segments.append(pool.apply_async(runCase, (W[i], case, True)))
         case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
-        segments.append(pool.apply_async(runCase, (w, case, False)))
+        segments.append(pool.apply_async(runCase, (w, case, False, interprocess)))
 
         wn, _ = segments[-1].get()
         for i in range(0, self.nExponents):
