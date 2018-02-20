@@ -182,6 +182,8 @@ class NILSAS:
         if len(self.adjointFields) == 0:
             W, w = self.initRandom()
             self.saveCheckpoint()
+        else:
+            W, w = self.adjointFields[-1]
         for segment in range(len(self.adjointFields)-1, self.nSegments):
             W, w = self.runSegment(self.nSegments-segment-1, W, w)
             self.saveCheckpoint()
