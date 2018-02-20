@@ -37,7 +37,7 @@ class SerialRunnerLorenz(object):
                 ])
         return fields, 0.
 
-    def runAdjoint(self, fields, (parameter, nSteps), primalFields, case, homogeneous=False):
+    def runAdjoint(self, fields, (parameter, nSteps), primalFields, case, homogeneous=False, interprocess=None):
         print case
         rho, beta, sigma = 28. + parameter, 8./3, 10.
         primalFields = [primalFields]
@@ -130,7 +130,7 @@ class NILSAS:
         pool = Pool(self.nRuns)
         manager = mp.Manager()
         interprocess = (manager.Lock(), manager.dict())
-        #interprocess = None
+        interprocess = None
         segments = []
         def runCase(fields, case, homogeneous, interprocess):
             self.runner.copyCase(case)
@@ -139,7 +139,7 @@ class NILSAS:
             return res
         for i in range(0, self.nExponents):
             case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
-            segments.append(pool.apply_async(runCase, (W[i], case, True)))
+            segments.append(pool.apply_async(runCase, (W[i], case, True, interprocess)))
         case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
         segments.append(pool.apply_async(runCase, (w, case, False, interprocess)))
 
@@ -200,13 +200,14 @@ def main():
     nRuns = 4
 
     # lorenz
+    #base = '/home/talnikar/adFVM/cases/3d_cylinder/'
     #time = 10.
     #dt = 0.001
     #nSegments = 50
     #nSteps = 2000
     ##nSteps = 200
     #nExponents = 2
-    #nExponents = 3
+    ##nExponents = 3
     #nRuns = 2
 
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
