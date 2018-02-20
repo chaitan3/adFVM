@@ -143,9 +143,9 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     PC pc;
     CHKERRQ(KSPCreate(PETSC_COMM_WORLD, &(ksp)));
     CHKERRQ(KSPSetOperators(ksp, A, A));
-    //CHKERRQ(KSPSetType(ksp, KSPGMRES));
+    CHKERRQ(KSPSetType(ksp, KSPGMRES));
     //CHKERRQ(KSPSetType(ksp, KSPGCR));
-    CHKERRQ(KSPSetType(ksp, KSPBCGS));
+    //CHKERRQ(KSPSetType(ksp, KSPBCGS));
     //CHKERRQ(KSPSetType(ksp, KSPTFQMR));
     //CHKERRQ(KSPSetType(ksp, KSPPREONLY));
 
@@ -157,10 +157,10 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     KSPSetInitialGuessNonzero(ksp, PETSC_TRUE);
 
     CHKERRQ(KSPGetPC(ksp, &(pc)));
-    CHKERRQ(PCSetType(pc, PCJACOBI));
+    //CHKERRQ(PCSetType(pc, PCJACOBI));
     //CHKERRQ(PCSetType(pc, PCASM));
     //CHKERRQ(PCSetType(pc, PCMG));
-    //CHKERRQ(PCSetType(pc, PCGAMG));
+    CHKERRQ(PCSetType(pc, PCGAMG));
     //CHKERRQ(PCSetType(pc, PCHYPRE));
 
     //CHKERRQ(PCSetType(pc, PCLU));

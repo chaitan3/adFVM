@@ -5,10 +5,9 @@ import shutil
 import pickle
 from pathos.multiprocessing import Pool
 
-#from adFVM.interface import SerialRunner
-
-# Lorenz serial runner
-class SerialRunner(object):
+from adFVM.interface import SerialRunner
+#class SerialRunner(object):
+class SerialRunnerLorenz(object):
     def __init__(self, base, time, dt, templates, **kwargs):
         self.base = base
         self.time = time
@@ -103,7 +102,7 @@ class NILSAS:
         orderOfAccuracy = 3
         res = [self.primalFields[segment + 1]]
         for nSteps in range(1, orderOfAccuracy + 1):
-            case = self.runner.base + 'segment_{}_neutral_{}_nsteps'.format(segment, nSteps)
+            case = self.runner.base + 'segment_{}_neutral_{}_nsteps/'.format(segment, nSteps)
             self.runner.copyCase(case)
             res.append(self.runner.runPrimal(res[0], (self.parameter, nSteps), case)[0])
             self.runner.removeCase(case)
@@ -114,7 +113,7 @@ class NILSAS:
     def runPrimal(self):
         # serial process
         for segment in range(len(self.primalFields)-1, self.nSegments):
-            case = self.runner.base + 'segment_{}_primal'.format(segment)
+            case = self.runner.base + 'segment_{}_primal/'.format(segment)
             self.runner.copyCase(case)
             res = self.runner.runPrimal(self.primalFields[segment], (self.parameter, self.nSteps), case)
             self.runner.removeCase(case)
@@ -136,9 +135,9 @@ class NILSAS:
             return res
         for i in range(0, self.nExponents):
             # homogeneous/inhomogeneous
-            case = self.runner.base + 'segment_{}_homogeneous_{}'.format(segment, i)
+            case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
             segments.append(pool.apply_async(runCase, (W[i], case, True)))
-        case = self.runner.base + 'segment_{}_inhomogeneous'.format(segment)
+        case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
         segments.append(pool.apply_async(runCase, (w, case, False)))
 
         wn, _ = segments[-1].get()
@@ -183,30 +182,30 @@ class NILSAS:
         return 
 
 def main():
-    base = 'cases/3d_cylinder/'
+    base = '/scratch/talnikar/3d_cylinder/3d_cylinder_adjoint/'
     time = 2.0
     dt = 6e-9
     template = 'templates/3d_cylinder_fds.py'
     nProcs = 1
 
-    nSegments = 400
+    nSegments = 100
     nSteps = 500
     nExponents = 20
 
     # lorenz
-    time = 10.
-    dt = 0.001
-    nSegments = 50
-    nSteps = 2000
-    #nSteps = 200
-    nExponents = 2
-    nExponents = 3
-    nRuns = 2
+    #time = 10.
+    #dt = 0.001
+    #nSegments = 50
+    #nSteps = 2000
+    ##nSteps = 200
+    #nExponents = 2
+    #nExponents = 3
+    #nRuns = 2
 
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
     runner.run()
-    runner.loadCheckpoint()
-    runner.getExponents()
+    #runner.loadCheckpoint()
+    #runner.getExponents()
 
 if __name__ == '__main__':
     main()

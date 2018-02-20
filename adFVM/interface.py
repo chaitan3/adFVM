@@ -133,6 +133,7 @@ class SerialRunner(Runner):
         return sorted([float(x[:-5]) for x in os.listdir(case) if isfloat(x[:-5]) and x.endswith('.hdf5')])[-1]
 
     def runPrimal(self, initFields, primalData, case):
+        print(case)
         problemFile = self.setupPrimal(initFields, primalData, case) 
 
         extraArgs = []
@@ -152,6 +153,7 @@ class SerialRunner(Runner):
 
 
     def runAdjoint(self, initAdjointFields, (parameter, nSteps), initPrimalFields, case, homogeneous=False):
+        print(case)
         # default parameter is always zero
         assert parameter == 0.0
         # perturbation in parameter for computing gradient
