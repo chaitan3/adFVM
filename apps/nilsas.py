@@ -130,12 +130,12 @@ class NILSAS:
         pool = Pool(self.nRuns)
         manager = mp.Manager()
         interprocess = (manager.Lock(), manager.dict())
-        interprocess = None
+        #interprocess = None
         segments = []
         def runCase(fields, case, homogeneous, interprocess):
             self.runner.copyCase(case)
             res = self.runner.runAdjoint(fields, (self.parameter, self.nSteps), p, case, homogeneous=homogeneous, interprocess=interprocess)
-            self.runner.removeCase(case)
+            #self.runner.removeCase(case)
             return res
         for i in range(0, self.nExponents):
             case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
