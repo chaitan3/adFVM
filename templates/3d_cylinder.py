@@ -38,7 +38,7 @@ def objective(fields, solver):
     return drag
    
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('/master/home/talnikar/adFVM/cases/3d_cylinder/',
+primal = RCF('/home/talnikar/adFVM/cases/3d_cylinder/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              #mu=lambda T: 2.5e-5*T/T,
@@ -92,10 +92,10 @@ def makePerturb(U0_per):
 perturb = [makePerturb(np.array([[1., 0, 0]], config.precision))]
 parameters = ('BCs', 'p', 'left', 'U0')
 
-nSteps = 100000
-writeInterval = 1000
-reportInterval = 100
-sampleInterval = 50
+nSteps = 10
+writeInterval = 5
+reportInterval = 1
+sampleInterval = 1
 startTime = 2.0
 dt = 6e-9
 runCheckpoints = 1

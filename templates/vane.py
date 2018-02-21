@@ -11,7 +11,7 @@ from adFVM.mesh import Mesh
 from adFVM.objectives.vane import objective, getPlane, getWeights
 
 # base folder for flow problem
-case = os.path.expanduser('~') + '/adFVM/cases/vane/3d_20/'
+case = os.path.expanduser('~') + '/adFVM/cases/vane/laminar/'
 
 # create and initialize the folder (read mesh and setup boundary conditions)
 primal = RCF(case, objective=objective, fixedTimeStep=True)
@@ -78,3 +78,9 @@ runCheckpoints = 1
 # second argument: type of viscosity 
 # third argument: not used
 #adjParams = [1e-3, 'turkel', None]
+
+nSteps = 10
+writeInterval = 5
+sampleInterval = 1
+reportInterval = 1
+runCheckpoints = 2
