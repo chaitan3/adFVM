@@ -134,7 +134,7 @@ class NILSAS:
         def runCase(runner, fields, primalData, primalFields, case, homogeneous, interprocess):
             runner.copyCase(case)
             res = runner.runAdjoint(fields, primalData, primalFields, case, homogeneous=homogeneous, interprocess=interprocess)
-            #runner.removeCase(case)
+            runner.removeCase(case)
             return res
         for i in range(0, self.nExponents):
             case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
@@ -216,7 +216,7 @@ def main():
     ##nExponents = 3
     #nRuns = 2
 
-    runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
+    runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs)#, flags=['-g', '--gpu_double'])
     runner.loadCheckpoint()
     runner.run()
     runner.getExponents()
