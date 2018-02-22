@@ -164,9 +164,11 @@ class NILSAS:
         print np.mean(exps[len(exps)/2:], axis=0)
 
     def saveCheckpoint(self):
-        with open(self.runner.base + 'checkpoint.pkl', 'w') as f:
+        checkopintFile = self.runner.base + 'checkpoint_temp.pkl'
+        with open(checkpointFile, 'w') as f:
             checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo)
             pickle.dump(checkpoint, f)
+        shutil.move(checkpointFile, self.runner.base + 'checkpoint.pkl')
 
     def loadCheckpoint(self):
         checkpointFile = self.runner.base + 'checkpoint.pkl'
