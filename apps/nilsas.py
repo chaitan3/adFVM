@@ -94,7 +94,6 @@ class NILSAS:
         W = Q.T
         b = np.dot(W, w)
         w = (w - np.dot(Q, b)).flatten()
-        print(R.shape, b.shape)
         self.gradientInfo.append((R, b))
         return W, w
 
@@ -164,7 +163,7 @@ class NILSAS:
         print np.mean(exps[len(exps)/2:], axis=0)
 
     def saveCheckpoint(self):
-        checkopintFile = self.runner.base + 'checkpoint_temp.pkl'
+        checkpointFile = self.runner.base + 'checkpoint_temp.pkl'
         with open(checkpointFile, 'w') as f:
             checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo)
             pickle.dump(checkpoint, f)
