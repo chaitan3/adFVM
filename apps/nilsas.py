@@ -81,7 +81,6 @@ class NILSAS:
     def initRandom(self):
         W = np.random.randn(self.nExponents, self.nDOF)
         w = np.zeros(self.nDOF)
-        self.adjointFields.append((W, w)) 
         return W, w
 
     def orthogonalize(self, segment, W, w):
@@ -95,8 +94,8 @@ class NILSAS:
         W = Q.T
         b = np.dot(W, w)
         w = (w - np.dot(Q, b)).flatten()
+        print(R.shape, b.shape)
         self.gradientInfo.append((R, b))
-        self.adjointFields.append((W, w))
         return W, w
 
     def getNeutralDirection(self, segment):
@@ -166,11 +165,6 @@ class NILSAS:
 
     def saveCheckpoint(self):
         with open(self.runner.base + 'checkpoint.pkl', 'w') as f:
-            if len(self.adjointFields) > 0:
-                adjointFields = [None]*len(self.adjointFields)
-                adjointFields[-1] = self.adjointFields[-1]
-            else:
-                adjointFields = []
             checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo)
             pickle.dump(checkpoint, f)
 
@@ -186,11 +180,14 @@ class NILSAS:
         self.runPrimal()
         if len(self.adjointFields) == 0:
             W, w = self.initRandom()
+            self.adjointFields.append((W, w))
             self.saveCheckpoint()
         else:
             W, w = self.adjointFields[-1]
         for segment in range(len(self.adjointFields)-1, self.nSegments):
             W, w = self.runSegment(self.nSegments-segment-1, W, w)
+            self.adjointFields[-1] = None
+            self.adjointFields.append((W, w))
             self.saveCheckpoint()
         return 
 
