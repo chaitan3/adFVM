@@ -49,10 +49,16 @@ extern "C"{
 void ssyev_( char* jobz, char* uplo, int* n, float* a, int* lda,
     float* w, float* work, int* lwork, int* info );
 #define eigenvalue_solver ssyev_
+void ssygv_( int* itype, char* jobz, char* uplo, int* n, float* a, int* lda, float* b, int* ldb,
+    float* w, float* work, int* lwork, int* info );
+#define generalized_eigenvalue_solver ssygv_
 #else
 void dsyev_( char* jobz, char* uplo, int* n, double* a, int* lda,
     double* w, double* work, int* lwork, int* info );
 #define eigenvalue_solver dsyev_
+void dsygv_( int* itype, char* jobz, char* uplo, int* n, double* a, int* lda, double* b, int* ldb,
+    double* w, double* work, int* lwork, int* info );
+#define generalized_eigenvalue_solver dsygv_
 #endif
 }
 
@@ -70,6 +76,30 @@ void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
 
     for (int i = 0; i < phi.shape; i++) {
         eigenvalue_solver(&jobz, &uplo, &n, &phi(i), &lda, w, work, &lwork, &info);
+        assert(info == 0);
+        eigPhi(i) = w[4];
+        assert(std::isfinite(w[4]));
+    }
+    //eigPhi.info();
+}
+
+void Function_get_max_generalized_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
+    extArrType<scalar, 5, 5>& A = *phiP[0];
+    extArrType<scalar, 5, 5>& B = *phiP[1];
+    ext_vec& eigPhi = *((ext_vec*) phiP[2]);
+    int itype = 1;
+    char jobz = 'N';
+    char uplo = 'U';
+    int n = 5;
+    int lda = 5;
+    int ldb = 5;
+    int lwork = 3*n-1;
+    scalar work[lwork];
+    int info;
+    scalar w[5];
+
+    for (int i = 0; i < A.shape; i++) {
+        generalized_eigenvalue_solver(&itype, &jobz, &uplo, &n, &A(i), &lda, &B(i), &ldb, w, work, &lwork, &info);
         assert(info == 0);
         eigPhi(i) = w[4];
         assert(std::isfinite(w[4]));

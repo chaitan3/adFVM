@@ -19,10 +19,10 @@ import time
 import os
 import argparse
 
-#matop_python = True
-matop_python = False
-#write_M_2norm = True
-write_M_2norm = False
+matop_python = True
+#matop_python = False
+write_M_2norm = True
+#write_M_2norm = False
 if matop_python:
     from adFVM import matop_petsc
 

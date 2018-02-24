@@ -265,6 +265,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     Z = np.zeros_like(divU)
     c2 = c*c
     Us = (U*U).sum(axis=1,keepdims=1)
+    B = None
     
     if visc == 'abarbanel':
         M1 = np.stack((np.hstack((divU, gradb, Z)),
@@ -294,6 +295,9 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         u2 = U[:,1]
         u3 = U[:,2]
         p = p[:,0]
+        q2 = (u1*u1+u2*u2+u3*u3)
+        H = g*p/(rho*(g-1)) + q2/2
+        rE = p/(g-1) + 0.5*rho*q2
         zero = np.zeros_like(rho)
 
         #rhou1 = rhoU[:,0]
@@ -320,15 +324,23 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         #M2 = np.einsum('pijk,pklm,pml->pij', A0U, A, Gw)
         #M = -M1 + M2
 
-        #suffix += '_test3'
+        suffix += '_test'
         #gradp = 0*gradp
         #gradrho = 0*gradrho
         #gradU = 0*gradU
         from .symmetrizations.entropy_barth_mathematica import expression
         M = expression(rho,u1,u2,u3,p,gradrho,gradU[:,0,:],gradU[:,1,:],gradU[:,2,:],gradp,g,zero)
         M = np.array(M).transpose((2, 0, 1))
-        X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref])
-        M = np.matmul(np.matmul(X, M), X)
+        # non dimensionalizer
+        #X = np.diag([1, 1./Uref, 1./Uref, 1./Uref, 1/pref])
+        #M = np.matmul(np.matmul(X, M), X)
+        # A0 weighted norm
+        B = np.array([[rho, rho*u1, rho*u2, rho*u3, rE],
+                  [rho*u1, rho*u1*u1 + p, rho*u1*u2, rho*u1*u3, rho*H*u1],
+                  [rho*u2, rho*u2*u1, rho*u2*u2 + p, rho*u2*u3, rho*H*u2],
+                  [rho*u3, rho*u3*u1, rho*u3*u2, rho*u3*u3 + p, rho*H*u3],
+                  [rE, rho*H*u1, rho*H*u2, rho*H*u3, rho*H*H-g*p*p/(rho*(g-1))]]
+                  ).transpose(2, 0, 1)
 
     elif visc == 'entropy_hughes':
         #pref = 1.
@@ -398,7 +410,11 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     Mc = M
     MS = (Mc + Mc.transpose((0, 2, 1)))/2
     # max eigenvalue
-    M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
+    if B is None:
+        M_2norm = np.linalg.eigvalsh(MS)[:,[-1]]
+    else:
+        eig = np.linalg.eigvals(np.matmul(np.linalg.inv(B),MS))
+        M_2norm = np.sort(eig,axis=1)[:,[-1]]
     # second max eigenvalue
     #M_2norm = np.linalg.eigvalsh(MS)[:,[-2]]
     # min eigenvalue
@@ -543,6 +559,11 @@ def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
         U1, U2, U3 = U[0], U[1], U[2]
         Us = U.magSqr()
         c2 = c*c
+        B = Tensor((5,5), [rho, rho, rho, rho, rho,
+                           rho, rho, rho, rho, rho,
+                           rho, rho, rho, rho, rho,
+                           rho, rho, rho, rho, rho,
+                           rho, rho, rho, rho, rho])
 
         if viscosityType == 'abarbanel' or viscosityType == 'uniform':
             M1 = Tensor((5, 5), [divU, gradb[0], gradb[1], gradb[2], Z,
@@ -587,10 +608,21 @@ def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
         elif viscosityType == 'entropy_barth':
             from .symmetrizations.entropy_barth_mathematica import expression_code
             M = expression_code(rho, U, p, gradrho, gradU, gradp, g, Z)
-            #M = [item for sublist in M for item in sublist]
-            X = [1., 1./Uref, 1./Uref, 1./Uref, 1/pref]
-            M = [item*X[i]*X[j] for i, sublist in enumerate(M) for j, item in enumerate(sublist)]
+
+            M = [item for sublist in M for item in sublist]
+            #X = [1., 1./Uref, 1./Uref, 1./Uref, 1/pref]
+            #M = [item*X[i]*X[j] for i, sublist in enumerate(M) for j, item in enumerate(sublist)]
             M = Tensor((5,5), M)
+
+            u1, u2, u3 = U[0], U[1], U[2]
+            q2 = (u1*u1+u2*u2+u3*u3)
+            H = g*p/(rho*(g-1)) + q2/2
+            rE = p/(g-1) + 0.5*rho*q2
+            B = Tensor((5,5), [rho, rho*u1, rho*u2, rho*u3, rE,
+                          rho*u1, rho*u1*u1 + p, rho*u1*u2, rho*u1*u3, rho*H*u1,
+                          rho*u2, rho*u2*u1, rho*u2*u2 + p, rho*u2*u3, rho*H*u2,
+                          rho*u3, rho*u3*u1, rho*u3*u2, rho*u3*u3 + p, rho*H*u3,
+                          rE, rho*H*u1, rho*H*u2, rho*H*u3, rho*H*H-g*p*p/(rho*(g-1))])
 
         else:
             raise Exception('symmetrizer not recognized')
@@ -608,7 +640,7 @@ def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
         #Mc = TiX.transpose().matmul(M.matmul(TiX))
         Mc = M
         MS = (Mc + Mc.transpose())/2
-        return MS
+        return MS, B
 
     def constant(M_2norm):
         return M_2norm + 1
@@ -618,8 +650,12 @@ def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
         M_2norm = Kernel(constant)(mesh.nInternalCells)(M_2norm)
     else:
         MS = Zeros((mesh.nInternalCells, 5, 5))
-        MS = Kernel(getMaxEigenvalue)(mesh.nInternalCells, (MS,))(U, T, p, gradU, divU, gradp, gradc)
-        (M_2norm,) = ExternalFunctionOp('get_max_eigenvalue', (MS,), (M_2norm,)).outputs
+        B = Zeros((mesh.nInternalCells, 5, 5))
+        MS, B = Kernel(getMaxEigenvalue)(mesh.nInternalCells, (MS, B))(U, T, p, gradU, divU, gradp, gradc)
+        if viscosityType != 'entropy_barth':
+            (M_2norm,) = ExternalFunctionOp('get_max_eigenvalue', (MS,), (M_2norm,)).outputs
+        else:
+            (M_2norm,) = ExternalFunctionOp('get_max_generalized_eigenvalue', (MS, B), (M_2norm,)).outputs
 
     def computeVolume(volumes):
         return volumes.sum()
