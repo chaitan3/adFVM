@@ -7,8 +7,8 @@ from pathos.multiprocessing import Pool
 from pathos.helpers import mp
 
 from adFVM.interface import SerialRunner
-#class SerialRunner(object):
-class SerialRunnerLorenz(object):
+class SerialRunner(object):
+#class SerialRunnerLorenz(object):
     def __init__(self, base, time, dt, templates, **kwargs):
         self.base = base
         self.time = time
@@ -48,13 +48,15 @@ class SerialRunnerLorenz(object):
                     x*(rho-z)-y,
                     x*y - beta*z
                 ]))
+        fs = []
         for i in range(0, nSteps):
             x, y, z = primalFields[nSteps-i]
             ft = np.dot(np.array([[-sigma, sigma, 0],[rho-z,-1,-x],[y,x,-beta]]).T, fields)
             if not homogeneous:
                 ft += np.array([0.,0.,1.])
+            fs.append(np.dot(fields, np.array([0., x, 0.])))
             fields += self.dt*ft
-        return fields, 0.
+        return fields, np.array(fs)
 
 def compute_dxdt_of_order(u, order):
     assert order >= 1
@@ -75,6 +77,7 @@ class NILSAS:
         self.nDOF = self.primalFields[0].shape[0]
         self.adjointFields = []
         self.gradientInfo = []
+        self.sensitivities = []
         self.parameter = 0.0
         return
 
@@ -124,7 +127,6 @@ class NILSAS:
         primalFields = self.primalFields[segment]
         W, w = self.orthogonalize(segment, W, w)
         Wn = []
-        Jw = []
         pool = Pool(self.nRuns)
         manager = mp.Manager()
         interprocess = (manager.Lock(), manager.dict())
@@ -141,16 +143,23 @@ class NILSAS:
         case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
         segments.append(pool.apply_async(runCase, (self.runner, w, (self.parameter, self.nSteps), primalFields, case, False, interprocess)))
 
-        wn, _ = segments[-1].get()
+        wn, Jw = segments[-1].get()
+        JW = []
         for i in range(0, self.nExponents):
             res = segments[i].get() 
             Wn.append(res[0])
-            Jw.append(res[1])
+            JW.append(res[1])
+        JW = np.array(JW)
+        self.sensitivities.append((JW, Jw))
         Wn = np.array(Wn)
         return Wn, wn
 
-    def computeGradient(self):
-        return
+    def computeGradient(self, coeff):
+        N = len(self.sensitivities)
+        assert len(coeff) == N
+        ws = sum([x[1].sum()/self.nSteps for x in self.sensitivities])/N
+        Ws = sum([np.dot(x[0].T, coeff[i]).sum()/self.nSteps for i, x in enumerate(self.sensitivities)])/N
+        return ws + Ws
 
     def getExponents(self):
         ii = np.arange(0, self.nExponents)
@@ -170,7 +179,7 @@ class NILSAS:
     def saveCheckpoint(self):
         checkpointFile = self.runner.base + 'checkpoint_temp.pkl'
         with open(checkpointFile, 'w') as f:
-            checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo)
+            checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo, self.sensitivities)
             pickle.dump(checkpoint, f)
         shutil.move(checkpointFile, self.runner.base + 'checkpoint.pkl')
 
@@ -180,7 +189,7 @@ class NILSAS:
             return
         with open(checkpointFile, 'r') as f:
             checkpoint = pickle.load(f)
-            self.primalFields, self.adjointFields, self.gradientInfo = checkpoint
+            self.primalFields, self.adjointFields, self.gradientInfo, self.sensitivities = checkpoint
 
     def run(self):
         self.runPrimal()
@@ -210,23 +219,24 @@ def main():
     nRuns = 4
 
     # lorenz
-    #base = '/home/talnikar/adFVM/cases/3d_cylinder/'
-    #time = 10.
-    #dt = 0.001
-    #nProcs = 1
+    base = '/home/talnikar/adFVM/cases/3d_cylinder/'
+    time = 10.
+    dt = 0.001
+    nProcs = 1
 
-    #nSegments = 50
+    nSegments = 50
     #nSteps = 2000
-    ##nSteps = 200
-    #nExponents = 2
-    ##nExponents = 3
-    #nRuns = 2
+    nSteps = 200
+    nExponents = 2
+    #nExponents = 3
+    nRuns = 2
 
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs)#, flags=['-g', '--gpu_double'])
-    runner.loadCheckpoint()
-    #runner.run()
+    #runner.loadCheckpoint()
+    runner.run()
+    print runner.computeGradient(np.ones((nSegments, nExponents)))
     runner.getExponents()
-    runner.saveVectors()
+    #runner.saveVectors()
 
 if __name__ == '__main__':
     main()
