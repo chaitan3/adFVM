@@ -18,7 +18,10 @@ for name, ref in zip(fields, fieldsRef):
         phi = IOField.read(name)
         phi.partialComplete()
     with IOField.handle(float(time2)):
-        phi.field[:mesh.nInternalCells] += 1e-6*np.random.randn(mesh.nInternalCells, phi.field.shape[1])*ref
+        mid = np.array([-0.02, 0.01, 0.005])
+        G = 1e0*np.exp(-3e3*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1, keepdims=1)**2)
+        phi.field[:mesh.nInternalCells] = G*ref
+
         phi = IOField(name, phi.field, phi.dimensions, phi.boundary)
         phi.write()
 

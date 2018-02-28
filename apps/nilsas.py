@@ -155,12 +155,17 @@ class NILSAS:
     def getExponents(self):
         ii = np.arange(0, self.nExponents)
         exps = []
-        for segment in range(0, self.nSegments):
+        for segment in range(0, len(self.gradientInfo)):
             exp = np.log(np.abs(self.gradientInfo[segment][0][ii,ii]))
             exp /= self.nSteps*self.runner.dt
             exps.append(exp)
             #print exp
         print np.mean(exps[len(exps)/2:], axis=0)
+
+    def saveVectors(self):
+        for i in range(0, self.nExponents):
+            self.runner.writeFields(self.adjointFields[-1][0][i], self.runner.base, 10.0 + i, adjoint=True)
+        return
 
     def saveCheckpoint(self):
         checkpointFile = self.runner.base + 'checkpoint_temp.pkl'
@@ -193,7 +198,7 @@ class NILSAS:
         return 
 
 def main():
-    base = '/scratch/talnikar/3d_cylinder/3d_cylinder_adjoint/'
+    base = '/home/talnikar/adFVM/cases/3d_cylinder/hypersonic/'
     time = 2.0
     dt = 6e-9
     template = 'templates/3d_cylinder_fds.py'
@@ -219,8 +224,9 @@ def main():
 
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs)#, flags=['-g', '--gpu_double'])
     runner.loadCheckpoint()
-    runner.run()
+    #runner.run()
     runner.getExponents()
+    runner.saveVectors()
 
 if __name__ == '__main__':
     main()
