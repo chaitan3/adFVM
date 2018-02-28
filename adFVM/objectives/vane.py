@@ -56,7 +56,7 @@ def objectivePressureLoss(U, T, p, cells, areas, w, **options):
     pi = p.extract(cells)
     Ti = T.extract(cells)
     Ui = U.extract(cells)
-    rhoi = pi/(solver.Cv*Ti*(g- 1))
+    rhoi = pi/(solver.Cv*Ti*(g-1))
     ci = (g*pi/rhoi).sqrt()
 
     rhoUni = sum([rhoi*Ui[i]*normal[i] for i in range(0, 3)])
@@ -65,8 +65,6 @@ def objectivePressureLoss(U, T, p, cells, areas, w, **options):
     pti = pi*pow(1 + 0.5*(g-1)*Mi*Mi, g/(g-1))
     pl = (ptin-pti)*rhoUni*areas/ptin
     return (pl/w).sum()
-
-
 
 patches = ['pressure', 'suction']
 def getWeights(solver):
@@ -120,7 +118,8 @@ def objective(fields, solver):
 
     k = solver.mu(300)*solver.Cp/solver.Pr
     a = 0.4
-    b = -0.71e-3/(120*k)/2000.
+    #b = -0.71e-3/(120*k)/2000.
+    b = 0.
 
     # MPI ALLREDUCE
     #if not config.gpu:

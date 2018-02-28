@@ -11,7 +11,7 @@ from adFVM.mesh import Mesh
 from adFVM.objectives.vane import objective, getPlane, getWeights
 
 # base folder for flow problem
-case = os.path.expanduser('~') + '/adFVM/cases/vane/laminar/'
+case = os.path.expanduser('~') + '/adFVM/cases/vane/3d_20/per_1e-1/'
 
 # create and initialize the folder (read mesh and setup boundary conditions)
 primal = RCF(case, objective=objective, fixedTimeStep=True)
@@ -19,18 +19,19 @@ getPlane(primal)
 getWeights(primal)
 
 # define perturbations for computing sensitivities of the design objective
-def makePerturb(mid):
+def makePerturb(mid, eps):
     def perturb(fields, mesh, t):
-        G = 1e0*np.exp(-1e2*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1, keepdims=1)**2)
+        G = eps*np.exp(-3e3*np.linalg.norm(mid-mesh.cellCentres[:mesh.nInternalCells], axis=1, keepdims=1)**2)
         #rho
+	Uref = 100.
+	pref = 101325.
         rho = G
         rhoU = np.zeros((mesh.nInternalCells, 3), config.precision)
-        rhoU[:, 0] = G.flatten()*100
-        rhoE = G*2e5
+        rhoU[:, 0] = G.flatten()*Uref
+        rhoE = G*(Uref*Uref/2 + pref/(primal.gamma-1))
         return rho, rhoU, rhoE
     return perturb
-perturb = [makePerturb(np.array([-0.02, 0.01, 0.005], config.precision)),
-           makePerturb(np.array([-0.08, -0.01, 0.005], config.precision))]
+perturb = [makePerturb(np.array([-0.02, 0.01, 0.005], config.precision), 1e-1)]
 # perturbation type: source terms for the compressible Navier-Stokes equations
 parameters = 'source'
 
@@ -79,8 +80,8 @@ runCheckpoints = 1
 # third argument: not used
 #adjParams = [1e-3, 'turkel', None]
 
-nSteps = 10
-writeInterval = 5
-sampleInterval = 1
-reportInterval = 1
+nSteps = 1000000
+writeInterval = 100000
+sampleInterval = 100
+reportInterval = 100
 runCheckpoints = 2
