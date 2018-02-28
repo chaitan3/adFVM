@@ -27,10 +27,10 @@ class SerialRunner(object):
 
     def runPrimal(self, fields, (parameter, nSteps), case):
         print case
-        rho, beta, sigma = 28. + parameter, 2./3, 10.
+        rho, beta, sigma = 28. + parameter, 8./3, 10.
         for i in range(0, nSteps):
             x, y, z = fields
-            fields += self.dt*np.array([
+            fields = fields + self.dt*np.array([
                     sigma*(y-x),
                     x*(rho-z)-y,
                     x*y - beta*z
@@ -48,15 +48,17 @@ class SerialRunner(object):
                     x*(rho-z)-y,
                     x*y - beta*z
                 ]))
-        fs = []
+        vfs = []
         for i in range(0, nSteps):
             x, y, z = primalFields[nSteps-i]
             ft = np.dot(np.array([[-sigma, sigma, 0],[rho-z,-1,-x],[y,x,-beta]]).T, fields)
             if not homogeneous:
-                ft += np.array([0.,0.,1.])
-            fs.append(np.dot(fields, np.array([0., x, 0.])))
-            fields += self.dt*ft
-        return fields, np.array(fs)
+                ft = ft + np.array([0.,0.,1.])
+            fs = np.array([0., x, 0.])
+
+            vfs.append(np.dot(fields, fs))
+            fields = fields + self.dt*ft
+        return fields, np.array(vfs)
 
 def compute_dxdt_of_order(u, order):
     assert order >= 1
@@ -88,15 +90,17 @@ class NILSAS:
 
     def orthogonalize(self, segment, W, w):
         # remove f component
-        f = self.getNeutralDirection(segment)
-        W = W-np.outer(np.dot(W, f), f)
-        w = w-np.dot(w, f)*f
+        #if len(self.gradientInfo) == 0:
+        if 1:
+            f = self.getNeutralDirection(segment)
+            W = W-np.outer(np.dot(W, f), f)
+            w = w-np.dot(w, f)*f
 
         # QR factorization
         Q, R = np.linalg.qr(W.T)
         W = Q.T
         b = np.dot(W, w)
-        w = (w - np.dot(Q, b)).flatten()
+        w = w - np.dot(Q, b)
         self.gradientInfo.append((R, b))
         return W, w
 
@@ -221,20 +225,21 @@ def main():
     # lorenz
     base = '/home/talnikar/adFVM/cases/3d_cylinder/'
     time = 10.
-    dt = 0.001
+    dt = 0.0001
     nProcs = 1
 
-    nSegments = 50
-    #nSteps = 2000
-    nSteps = 200
+    nSegments = 100
+    nSteps = 4000
+    #nSteps = 200
+    #nExponents = 2
     nExponents = 2
-    #nExponents = 3
     nRuns = 2
 
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs)#, flags=['-g', '--gpu_double'])
     #runner.loadCheckpoint()
     runner.run()
-    print runner.computeGradient(np.ones((nSegments, nExponents)))
+    #coeff = np.ones((nSegments, nExponents))
+    #print runner.computeGradient()
     runner.getExponents()
     #runner.saveVectors()
 
