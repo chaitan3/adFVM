@@ -175,10 +175,7 @@ class SerialRunner(Runner):
         #    raise Exception('Execution failed, check error log in :', case)
 
         finalFields = self.readFields(case, self.time, adjoint=True)
-        # sensitivity time series or just sensitivity?
         dJds = np.loadtxt(case + 'sensTimeSeries.txt').reshape(-1,1).flatten()
-        #with open(case + 'objective.txt') as f:
-        #    dJds = float(f.readline().split(' ')[3])
 
         return finalFields, dJds
 

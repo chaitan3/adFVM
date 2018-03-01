@@ -1,5 +1,7 @@
 #!/usr/bin/python2
 import numpy as np
+from scipy import sparse
+import scipy.sparse.linalg as splinalg
 import os
 import shutil
 import pickle
@@ -79,6 +81,7 @@ class NILSAS:
         self.nDOF = self.primalFields[0].shape[0]
         self.adjointFields = []
         self.gradientInfo = []
+        self.lssInfo = []
         self.sensitivities = []
         self.parameter = 0.0
         return
@@ -156,10 +159,32 @@ class NILSAS:
         JW = np.array(JW)
         self.sensitivities.append((JW, Jw))
         Wn = np.array(Wn)
+
+        #self.lssInfo.append((np.dot(Wn, Wn.T), np.dot(Wn, wn)))
         return Wn, wn
+
+    def solveLSS(self):
+        Rs = [x[0] for x in self.gradientInfo[::-1]]
+        bs = [x[1] for x in self.gradientInfo[::-1]]
+        R, b = np.array(Rs), np.array(bs)
+        assert R.ndim == 3 and b.ndim == 2
+        assert R.shape[0] == b.shape[0]
+        assert R.shape[1] == R.shape[2] == b.shape[1]
+        nseg, subdim = b.shape
+        eyes = np.eye(subdim, subdim) * np.ones([nseg, 1, 1])
+        matrix_shape = (subdim * nseg, subdim * (nseg+1))
+        I = sparse.bsr_matrix((eyes, np.r_[1:nseg+1], np.r_[:nseg+1]))
+        D = sparse.bsr_matrix((R, np.r_[:nseg], np.r_[:nseg+1]), shape=matrix_shape)
+        B = (D - I).tocsr()
+        Schur = B * B.T #+ 1E-5 * sparse.eye(B.shape[0])
+        alpha = -(B.T * splinalg.spsolve(Schur, np.ravel(b)))
+        # alpha1 = splinalg.lsqr(B, ravel(bs), iter_lim=10000)
+        coeff = alpha.reshape([nseg+1,-1])[:-1]
+        return coeff[::-1]
 
     def computeGradient(self, coeff):
         N = len(self.sensitivities)
+        assert coeff.shape == (N, self.nExponents)
         assert len(coeff) == N
         ws = sum([x[1].sum()/self.nSteps for x in self.sensitivities])/N
         Ws = sum([np.dot(x[0].T, coeff[i]).sum()/self.nSteps for i, x in enumerate(self.sensitivities)])/N
@@ -173,7 +198,7 @@ class NILSAS:
             exp /= self.nSteps*self.runner.dt
             exps.append(exp)
             #print exp
-        print np.mean(exps[len(exps)/2:], axis=0)
+        return np.mean(exps[len(exps)/2:], axis=0)
 
     def saveVectors(self):
         for i in range(0, self.nExponents):
@@ -183,7 +208,7 @@ class NILSAS:
     def saveCheckpoint(self):
         checkpointFile = self.runner.base + 'checkpoint_temp.pkl'
         with open(checkpointFile, 'w') as f:
-            checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo, self.sensitivities)
+            checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo, self.lssInfo, self.sensitivities)
             pickle.dump(checkpoint, f)
         shutil.move(checkpointFile, self.runner.base + 'checkpoint.pkl')
 
@@ -193,7 +218,7 @@ class NILSAS:
             return
         with open(checkpointFile, 'r') as f:
             checkpoint = pickle.load(f)
-            self.primalFields, self.adjointFields, self.gradientInfo, self.sensitivities = checkpoint
+            self.primalFields, self.adjointFields, self.gradientInfo, self.lssInfo, self.sensitivities = checkpoint
 
     def run(self):
         self.runPrimal()
@@ -228,7 +253,7 @@ def main():
     dt = 0.0001
     nProcs = 1
 
-    nSegments = 100
+    nSegments = 200
     nSteps = 4000
     #nSteps = 200
     #nExponents = 2
@@ -238,9 +263,10 @@ def main():
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs)#, flags=['-g', '--gpu_double'])
     #runner.loadCheckpoint()
     runner.run()
+    print 'exponents', runner.getExponents()
     #coeff = np.ones((nSegments, nExponents))
-    #print runner.computeGradient()
-    runner.getExponents()
+    coeff = runner.solveLSS()
+    print 'gradient', runner.computeGradient(coeff)
     #runner.saveVectors()
 
 if __name__ == '__main__':
