@@ -18,7 +18,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-g', '--gpu', action='store_true', dest='use_gpu')
 parser.add_argument('--gpu_double', action='store_true', dest='use_gpu_double')
 parser.add_argument('-m', '--omp', action='store_true', dest='use_openmp')
-parser.add_argument('-p', '--matop', action='store_true', dest='use_matop')
+parser.add_argument('-p', '--matop_petsc', action='store_true', dest='use_matop_petsc')
+parser.add_argument('--matop_cuda', action='store_true', dest='use_matop_cuda')
 parser.add_argument('-d', '--hdf5', action='store_true')
 parser.add_argument('-o', '--profile', action='store_true', dest='profile')
 parser.add_argument('-k', '--gc', action='store_true', dest='use_gc')
@@ -88,18 +89,22 @@ def get_compiler_args():
         libs += ['mpi', 'cublas', 'cusolver']
     else:
         libs += ['lapack']
-    if matop:
-        sources += [os.path.join(cppDir, 'matop.cpp')]
-        extra_compile_args += ['-DMATOP']
+    if matop_petsc:
+        sources += [os.path.join(cppDir, 'matop_petsc.cpp')]
+        extra_compile_args += ['-DMATOP_PETSC']
         if gpu and not gpu_double:
             extra_compile_args += ['-DPETSC_USE_REAL_SINGLE']
             home = os.path.expanduser('~') + '/sources/petsc_single/'
         else:
             home = os.path.expanduser('~') + '/sources/petsc/'
-        build = 'arch-linux2-c-opt'
+        build = 'arch-linux2-c-debug'
         incdirs += ['{}/{}/include'.format(home, build), home + '/include', os.path.expanduser('~') + '/sources/cusp/']
         libdirs += ['{}/{}/lib'.format(home, build)]
         libs += ['petsc']
+    if matop_cuda:
+        sources += [os.path.join(cppDir, 'matop_cuda.cpp')]
+        extra_compile_args += ['-DMATOP_CUDA']
+        libs += ['cusparse']
 
     return {'compiler': compiler,
             'linker': linker,
@@ -112,7 +117,8 @@ def get_compiler_args():
 import adpy.config
 adpy.config.set_config(sys.modules[__name__])
 
-matop = user.use_matop
+matop_petsc = user.use_matop_petsc
+matop_cuda = user.use_matop_cuda
 hdf5 = user.hdf5
 compile_exit = user.compile_exit
 

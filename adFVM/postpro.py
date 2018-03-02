@@ -698,7 +698,7 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
         return rhoa/volumes, rhoUa[0]/volumes, rhoUa[1]/volumes, rhoUa[2]/volumes, rhoEa/volumes
     fields = Kernel(divideFields)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes)
 
-    if config.matop:
+    if config.matop_petsc or config.matop_cuda:
         def getFaceData(DT, areas, deltas):
             return areas*DT/deltas
         DTF = Kernel(getFaceData)(mesh.nFaces)(DT, mesh.areas, mesh.deltas)

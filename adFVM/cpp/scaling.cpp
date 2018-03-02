@@ -1,7 +1,10 @@
 #define NO_IMPORT_ARRAY
 #include "scaling.hpp"
-#ifdef MATOP
-    #include "matop.hpp"
+#ifdef MATOP_PETSC
+    #include "matop_petsc.hpp"
+#endif
+#ifdef MATOP_CUDA
+    #include "matop_cuda.hpp"
 #endif
 
 #ifdef GPU
@@ -119,7 +122,7 @@ void Function_apply_adjoint_viscosity(vector<ext_vec*> phiP) {
     ext_vec& DT = *phiP[5];
     ext_vec& dt_vec = *phiP[6];
 
-    #ifdef MATOP
+    #ifdef defined(MATOP_CUDA) || defined(MATOP_PETSC)
         int error = matop->heat_equation(u, DT, dt_vec, un);
         if (error) {
             cout << "petsc error " << error << endl;

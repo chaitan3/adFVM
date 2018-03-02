@@ -9,8 +9,7 @@ Mesh *meshp = NULL;
     cusolverDnHandle_t cusolver_handle;
     cublasHandle_t cublas_handle;
 #endif
-#ifdef MATOP
-    #include "matop.hpp"
+#ifdef defined(MATOP_PETSC) || defined(MATOP_CUDA)
     Matop *matop;
 #endif
 
@@ -32,7 +31,7 @@ void external_init (PyObject* args) {
         assert(status2 == CUBLAS_STATUS_SUCCESS);
     #endif
 
-    #ifdef MATOP
+    #ifdef defined(MATOP_PETSC) || defined(MATOP_CUDA)
         matop = new Matop();
     #endif
 }
@@ -40,7 +39,7 @@ void external_init (PyObject* args) {
 void external_exit () {
     parallel_exit();
     delete meshp;
-    #ifdef MATOP
+    #ifdef defined(MATOP_PETSC) || defined(MATOP_CUDA)
         delete matop;
     #endif
 }

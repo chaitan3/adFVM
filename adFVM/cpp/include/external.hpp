@@ -13,10 +13,5 @@ extern Mesh *meshp;
     extern cusolverDnHandle_t cusolver_handle;
     extern cublasHandle_t cublas_handle;
 #endif
-#ifdef MATOP
-    #include "matop.hpp"
-    extern Matop *matop;
-#endif
-
 
 #endif
