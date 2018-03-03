@@ -86,7 +86,7 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     CHKERRQ(MatGetOwnershipRange(A, &il, &ih));
     CHKERRQ(MatGetOwnershipRangeColumn(A, &jl, &jh));
     long long start4 = current_timestamp();
-    if (mesh.rank == 0) cout << start4-start << endl;
+    if (mesh.rank == 0) cout << "matop init: " << start4-start << endl;
 
     for (PetscInt j = il; j < ih; j++) {
         PetscInt index = j-il;
@@ -136,7 +136,7 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
 
     CHKERRQ(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY)); CHKERRQ(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
     long long start2 = current_timestamp();
-    if (mesh.rank == 0) cout << start2-start << endl;
+    if (mesh.rank == 0) cout << "matop_assembly: " << start2-start << endl;
         
     
     KSP ksp;
@@ -157,11 +157,11 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     KSPSetInitialGuessNonzero(ksp, PETSC_TRUE);
 
     CHKERRQ(KSPGetPC(ksp, &(pc)));
-    CHKERRQ(PCSetType(pc, PCJACOBI));
+    //CHKERRQ(PCSetType(pc, PCJACOBI));
     //CHKERRQ(PCSetType(pc, PCASM));
     //CHKERRQ(PCSetType(pc, PCMG));
     //CHKERRQ(PCSetType(pc, PCGAMG));
-    //CHKERRQ(PCSetType(pc, PCHYPRE));
+    CHKERRQ(PCSetType(pc, PCHYPRE));
 
     //CHKERRQ(PCSetType(pc, PCLU));
     //CHKERRQ(PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST));
@@ -201,7 +201,7 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
         CHKERRQ(VecResetType(b));
         CHKERRQ(VecResetType(x));
         long long start3 = current_timestamp();
-        if (mesh.rank == 0) cout << start3-start << endl;
+        if (mesh.rank == 0) cout << "ksp: " << start3-start << endl;
     }
     //VecResetArray(b);
     //delete[] data1;

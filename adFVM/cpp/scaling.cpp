@@ -28,22 +28,31 @@ void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     int lwork = 0;
     int size = sizeof(scalar);
     scalar* W, *work;
-    gpuErrorCheck(cudaMalloc(&W, size*5*n));
-    gpuErrorCheck(cudaMalloc(&info, sizeof(int)*n));
+
+    extArrType<scalar, 1> Wv(5*n, true, true, 0L);
+    W = &Wv(0);
+    extArrType<int, 1> infov(n, true, true, 0L);
+    info = &infov(0);
+    //gpuErrorCheck(cudaMalloc(&W, size*5*n));
+    //gpuErrorCheck(cudaMalloc(&info, sizeof(int)*n));
 
     cusolverStatus_t status;
     status = cusolverDnCreateSyevjInfo(&params);
     assert(status == CUSOLVER_STATUS_SUCCESS);
     status = gpu_eigenvalue_solver_buffer(cusolver_handle, CUSOLVER_EIG_MODE_NOVECTOR, CUBLAS_FILL_MODE_UPPER, 5, phi.data, 5, W, &lwork, params, n);
-    gpuErrorCheck(cudaMalloc(&work, size*lwork));
+
+    extArrType<scalar, 1> workv(lwork, true, true, 0L);
+    work = &workv(0);
+    //gpuErrorCheck(cudaMalloc(&work, size*lwork));
+    
     status = gpu_eigenvalue_solver(cusolver_handle, CUSOLVER_EIG_MODE_NOVECTOR, CUBLAS_FILL_MODE_UPPER, 5, phi.data, 5, W, work, lwork, info, params, n);
     gpuErrorCheck(cudaDeviceSynchronize());
     assert(status == CUSOLVER_STATUS_SUCCESS);
 
     gpuErrorCheck(cudaMemcpy2D(eigPhi.data, size, W + 4, 5*size, size, n, cudaMemcpyDeviceToDevice));
-    gpuErrorCheck(cudaFree(work));
-    gpuErrorCheck(cudaFree(W));
-    gpuErrorCheck(cudaFree(info));
+    //gpuErrorCheck(cudaFree(work));
+    //gpuErrorCheck(cudaFree(W));
+    //gpuErrorCheck(cudaFree(info));
     long long start2 = current_timestamp();
     if (mesh.rank == 0) cout << start2-start << endl;
     //eigPhi.info();
