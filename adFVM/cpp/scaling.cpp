@@ -54,7 +54,7 @@ void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     //gpuErrorCheck(cudaFree(W));
     //gpuErrorCheck(cudaFree(info));
     long long start2 = current_timestamp();
-    if (mesh.rank == 0) cout << start2-start << endl;
+    if (mesh.rank == 0) cout << "eigenvalue: " << start2-start << endl;
     //eigPhi.info();
 }
 
@@ -100,7 +100,7 @@ void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
     }
     //eigPhi.info();
     long long start2 = current_timestamp();
-    if (mesh.rank == 0) cout << start2-start << endl;
+    if (mesh.rank == 0) cout << "eigenvalue: " << start2-start << endl;
 }
 
 void Function_get_max_generalized_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
