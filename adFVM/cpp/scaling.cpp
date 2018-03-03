@@ -122,7 +122,7 @@ void Function_apply_adjoint_viscosity(vector<ext_vec*> phiP) {
     ext_vec& DT = *phiP[5];
     ext_vec& dt_vec = *phiP[6];
 
-    #ifdef defined(MATOP_CUDA) || defined(MATOP_PETSC)
+    #if defined(MATOP_CUDA) || defined(MATOP_PETSC)
         int error = matop->heat_equation(u, DT, dt_vec, un);
         if (error) {
             cout << "petsc error " << error << endl;

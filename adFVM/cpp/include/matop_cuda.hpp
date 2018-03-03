@@ -7,13 +7,14 @@
 #include "mesh.hpp"
 
 class Matop {
-    cusolverSpHandle_t handle = NULL;
-    cusparseHandle_t cusparseHandle = NULL;
+    //cusolverSpHandle_t handle = NULL;
+    //cusparseHandle_t cusparseHandle = NULL;
     extArrType<int, 1> indptr;
     extArrType<int, 1> indices;
     extArrType<scalar, 1> volumes;
     extArrType<scalar, 1> data;
-    extArrType<scalar, 6> cellFaces;
+    extArrType<integer, 6> cellFaces;
+    extArrType<integer, 6> cellNeighbours;
     int nnz;
 
     public:
