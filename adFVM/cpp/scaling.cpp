@@ -18,6 +18,7 @@
 #endif
 
 void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
+    const Mesh& mesh = *meshp;
     long long start = current_timestamp();
     gpuArrType<scalar, 5, 5>& phi = *phiP[0];
     gvec& eigPhi = *((gvec*) phiP[1]);
@@ -69,6 +70,7 @@ void dsygv_( int* itype, char* jobz, char* uplo, int* n, double* a, int* lda, do
 }
 
 void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
+    const Mesh& mesh = *meshp;
     long long start = current_timestamp();
     extArrType<scalar, 5, 5>& phi = *phiP[0];
     ext_vec& eigPhi = *((ext_vec*) phiP[1]);
