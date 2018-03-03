@@ -18,6 +18,7 @@
 #endif
 
 void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
+    long long start = current_timestamp();
     gpuArrType<scalar, 5, 5>& phi = *phiP[0];
     gvec& eigPhi = *((gvec*) phiP[1]);
     syevjInfo_t params;
@@ -42,6 +43,8 @@ void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     gpuErrorCheck(cudaFree(work));
     gpuErrorCheck(cudaFree(W));
     gpuErrorCheck(cudaFree(info));
+    long long start2 = current_timestamp();
+    if (mesh.rank == 0) cout << start2-start << endl;
     //eigPhi.info();
 }
 
@@ -66,6 +69,7 @@ void dsygv_( int* itype, char* jobz, char* uplo, int* n, double* a, int* lda, do
 }
 
 void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
+    long long start = current_timestamp();
     extArrType<scalar, 5, 5>& phi = *phiP[0];
     ext_vec& eigPhi = *((ext_vec*) phiP[1]);
     char jobz = 'N';
@@ -84,6 +88,8 @@ void Function_get_max_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {
         assert(std::isfinite(w[4]));
     }
     //eigPhi.info();
+    long long start2 = current_timestamp();
+    if (mesh.rank == 0) cout << start2-start << endl;
 }
 
 void Function_get_max_generalized_eigenvalue(vector<extArrType<scalar, 5, 5>*> phiP) {

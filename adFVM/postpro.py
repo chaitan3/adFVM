@@ -698,95 +698,13 @@ def viscositySolver(solver, rhoa, rhoUa, rhoEa, DT):
         return rhoa/volumes, rhoUa[0]/volumes, rhoUa[1]/volumes, rhoUa[2]/volumes, rhoEa/volumes
     fields = Kernel(divideFields)(mesh.nInternalCells)(rhoa, rhoUa, rhoEa, mesh.volumes)
 
-    if config.matop_petsc or config.matop_cuda:
-        def getFaceData(DT, areas, deltas):
-            return areas*DT/deltas
-        DTF = Kernel(getFaceData)(mesh.nFaces)(DT, mesh.areas, mesh.deltas)
+    def getFaceData(DT, areas, deltas):
+        return areas*DT/deltas
+    DTF = Kernel(getFaceData)(mesh.nFaces)(DT, mesh.areas, mesh.deltas)
 
-        inputs = fields + (DTF, solver.dt)
-        outputs = tuple([Zeros(x.shape) for x in fields])
-        fields = ExternalFunctionOp('apply_adjoint_viscosity', inputs, outputs).outputs
-    else:
-        def getData(DT, dt, volumes, *meshArgs, **options):
-            neighbour = options.pop('neighbour', True)
-            mesh = Mesh.container(meshArgs) 
-            dt = dt.scalar()
-            data = -mesh.areas*DT*dt/mesh.deltas
-            VP = volumes.extract(mesh.owner)
-            cP = data/VP
-            if neighbour:
-                VN = volumes.extract(mesh.neighbour)
-                cN = data/VN
-                cellData = Tensor.collate(-cP, mesh.owner, -cN, mesh.neighbour)
-                return cellData, cP, cN
-            else:
-                cellData = Tensor.collate(-cP, mesh.owner)
-                return cellData, cP
-
-        def laplacian(phi, cP, cN, *meshArgs, **options):
-            neighbour = options.pop('neighbour', True)
-            mesh = Mesh.container(meshArgs) 
-            if neighbour:
-                lapPhi = Tensor.collate(phi.extract(mesh.neighbour)*cP, mesh.owner, phi.extract(mesh.owner)*cN, mesh.neighbour)
-            else:
-                lapPhi = Tensor.collate(phi.extract(mesh.neighbour)*cP, mesh.owner)
-            return lapPhi
-
-        def jacobi(phi, lapPhi, cellData, *args):
-            return (phi - lapPhi)/(cellData + 1.)
-
-        def residual(phi, phiN, lapPhi, cellData):
-            res = phi - lapPhi - (cellData + 1.)*phiN
-            return (res**2).sum()
-
-        def copy(phi):
-            return phi*1
-                
-        def _meshArgs(start=0):
-            return [x[start] for x in mesh.getTensor()]
-        shape = fields[0].shape
-
-        _laplacianInternal = Kernel(laplacian)
-        _laplacianRemote = Kernel(laplacian)
-        _jacobi = Kernel(jacobi)
-        _residual = Kernel(residual)
-        _copy = Kernel(copy)
-        fields = list(fields)
-
-        cellData = Zeros((mesh.nInternalCells, 1))
-        cP, cN = Zeros((mesh.nFaces, 1)), Zeros((mesh.nFaces, 1))
-        meshArgs = _meshArgs()
-        cellData, cP, cN = Kernel(getData)(mesh.nInternalFaces, (cellData, cP, cN))(DT, solver.dt, mesh.volumes, *meshArgs)
-        meshArgs = _meshArgs(mesh.nLocalFaces)
-        cellData, cP = Kernel(getData)(mesh.nRemoteCells, (cellData, cP[mesh.nLocalFaces]))(DT[mesh.nLocalFaces], solver.dt, mesh.volumes, *meshArgs, neighbour=False)
-        iterations = 100
-        for j in range(0, len(fields)):
-            phi = fields[j]
-            phiN = Zeros((mesh.nCells, 1))
-            phiN = _copy(mesh.nInternalCells, (phiN,))(phi)
-            #phiN = Zeros(shape)
-            for i in range (0, iterations):
-                (phiN,) = solver.boundaryInit(phiN)
-                (phiN,) = super(solver.__class__, solver).boundary(phiN, boundary=None)
-                (phiN,) = solver.boundaryEnd(phiN)
-
-                lapPhi = Zeros((mesh.nInternalCells, 1))
-                meshArgs = _meshArgs()
-                lapPhi = _laplacianInternal(mesh.nInternalFaces, (lapPhi,))(phiN, cP, cN, *meshArgs)
-                meshArgs = _meshArgs(mesh.nLocalFaces)
-                lapPhi = _laplacianRemote(mesh.nRemoteCells, (lapPhi,))(phiN, cP[mesh.nLocalFaces], cN[mesh.nLocalFaces], *meshArgs)
-                #res = Zeros((1,1))
-                #(res,) = _residual(mesh.nInternalCells, (res,))(phi, phiN, lapPhi, cellData)
-                #(res,) = ExternalFunctionOp('print_info', (res,), (res,)).outputs
-
-                if i + 1 == iterations:
-                    phiN = Zeros((mesh.nInternalCells, 1))
-                else:
-                    phiN = Zeros((mesh.nCells, 1))
-                phiN = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData)
-                #(phiN,) = _jacobi(mesh.nInternalCells, (phiN,))(phi, lapPhi, cellData, res)
-            fields[j] = phiN
-        fields = tuple(fields)
+    inputs = fields + (DTF, solver.dt)
+    outputs = tuple([Zeros(x.shape) for x in fields])
+    fields = ExternalFunctionOp('apply_adjoint_viscosity', inputs, outputs).outputs
 
     def multiplyFields(phi1, phi2, phi3, phi4, phi5, volumes):
         rhoa = phi1*volumes
