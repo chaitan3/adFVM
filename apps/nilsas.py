@@ -9,8 +9,8 @@ from pathos.multiprocessing import Pool
 from pathos.helpers import mp
 
 from adFVM.interface import SerialRunner
-class SerialRunner(object):
-#class SerialRunnerLorenz(object):
+#class SerialRunner(object):
+class SerialRunnerLorenz(object):
     def __init__(self, base, time, dt, templates, **kwargs):
         self.base = base
         self.time = time
@@ -84,6 +84,7 @@ class NILSAS:
         self.lssInfo = []
         self.sensitivities = []
         self.parameter = 0.0
+        self.checkpointInterval = 10
         return
 
     def initRandom(self):
@@ -127,7 +128,8 @@ class NILSAS:
             res = self.runner.runPrimal(self.primalFields[segment], (self.parameter, self.nSteps), case)
             self.runner.removeCase(case)
             self.primalFields.append(res[0])
-            self.saveCheckpoint()
+            if (segment + 1) % self.checkpointInterval == 0:
+                self.saveCheckpoint()
         return
 
     def runSegment(self, segment, W, w):
@@ -137,26 +139,38 @@ class NILSAS:
         pool = Pool(self.nRuns)
         manager = mp.Manager()
         interprocess = (manager.Lock(), manager.dict())
-        #interprocess = None
-        segments = []
+        interprocess = None
         def runCase(runner, fields, primalData, primalFields, case, homogeneous, interprocess):
             runner.copyCase(case)
             res = runner.runAdjoint(fields, primalData, primalFields, case, homogeneous=homogeneous, interprocess=interprocess)
             runner.removeCase(case)
             return res
-        for i in range(0, self.nExponents):
-            case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
-            segments.append(pool.apply_async(runCase, (self.runner, W[i], (self.parameter, self.nSteps), primalFields, case, True, interprocess)))
-        case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
-        segments.append(pool.apply_async(runCase, (self.runner, w, (self.parameter, self.nSteps), primalFields, case, False, interprocess)))
 
-        wn, Jw = segments[-1].get()
+        #segments = []
+        #for i in range(0, self.nExponents):
+        #    case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
+        #    segments.append(pool.apply_async(runCase, (self.runner, W[i], (self.parameter, self.nSteps), primalFields, case, True, interprocess)))
+        #case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
+        #segments.append(pool.apply_async(runCase, (self.runner, w, (self.parameter, self.nSteps), primalFields, case, False, interprocess)))
+
+        #JW = []
+        #for i in range(0, self.nExponents):
+        #    res = segments[i].get() 
+        #    Wn.append(res[0])
+        #    JW.append(res[1])
+        #JW = np.array(JW)
+        #wn, Jw = segments[-1].get()
+
         JW = []
-        for i in range(0, self.nExponents):
-            res = segments[i].get() 
+	for i in range(0, self.nExponents):
+            case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
+            res = runCase(self.runner, W[i], (self.parameter, self.nSteps), primalFields, case, True, interprocess)
             Wn.append(res[0])
             JW.append(res[1])
         JW = np.array(JW)
+        case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
+        wn, Jw = runCase(self.runner, w, (self.parameter, self.nSteps), primalFields, case, False, interprocess)
+
         self.sensitivities.append((JW, Jw))
         Wn = np.array(Wn)
 
@@ -232,41 +246,42 @@ class NILSAS:
             W, w = self.runSegment(self.nSegments-segment-1, W, w)
             self.adjointFields[-1] = None
             self.adjointFields.append((W, w))
-            self.saveCheckpoint()
+            if (segment + 1) % self.checkpointInterval == 0:
+                self.saveCheckpoint()
         return 
 
 def main():
-    base = '/home/talnikar/adFVM/cases/3d_cylinder/hypersonic/'
+    base = '/home/talnikar/adFVM/cases/3d_cylinder/'
     time = 2.0
     dt = 6e-9
     template = 'templates/3d_cylinder_fds.py'
-    nProcs = 16
+    nProcs = 1
 
     nSegments = 100
     nSteps = 500
     nExponents = 20
-    nRuns = 4
+    nRuns = 1
 
     # lorenz
-    base = '/home/talnikar/adFVM/cases/3d_cylinder/'
-    time = 10.
-    dt = 0.0001
-    nProcs = 1
+    #base = '/home/talnikar/adFVM/cases/3d_cylinder/'
+    #time = 10.
+    #dt = 0.0001
+    #nProcs = 1
 
-    nSegments = 200
-    nSteps = 4000
-    #nSteps = 200
+    #nSegments = 200
+    #nSteps = 4000
+    ##nSteps = 200
+    ##nExponents = 2
     #nExponents = 2
-    nExponents = 2
-    nRuns = 2
+    #nRuns = 2
 
-    runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs)#, flags=['-g', '--gpu_double'])
-    #runner.loadCheckpoint()
+    runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
+    runner.loadCheckpoint()
     runner.run()
-    print 'exponents', runner.getExponents()
+    #print 'exponents', runner.getExponents()
     #coeff = np.ones((nSegments, nExponents))
-    coeff = runner.solveLSS()
-    print 'gradient', runner.computeGradient(coeff)
+    #coeff = runner.solveLSS()
+    #print 'gradient', runner.computeGradient(coeff)
     #runner.saveVectors()
 
 if __name__ == '__main__':

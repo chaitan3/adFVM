@@ -25,7 +25,7 @@ $(tail -n 10 $OUTPUT)
 Error last 10 lines:
 $(tail -n 10 $ERROR)
 
-" | mail -s "$SUBJECT" $EMAIL
+" | ssh kolmogorov mail -s "$SUBJECT" $EMAIL
 
 echo
 echo "Done"

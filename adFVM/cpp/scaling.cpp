@@ -38,8 +38,10 @@ void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
 
     cusolverStatus_t status;
     status = cusolverDnCreateSyevjInfo(&params);
+    if (mesh.rank == 0) cout << "eigenvalue init: " << current_timestamp()-start << endl;
     assert(status == CUSOLVER_STATUS_SUCCESS);
     status = gpu_eigenvalue_solver_buffer(cusolver_handle, CUSOLVER_EIG_MODE_NOVECTOR, CUBLAS_FILL_MODE_UPPER, 5, phi.data, 5, W, &lwork, params, n);
+    if (mesh.rank == 0) cout << "eigenvalue buffer: " << current_timestamp()-start << endl;
 
     extArrType<scalar, 1> workv(lwork, true, true, 0L);
     work = &workv(0);
@@ -48,6 +50,7 @@ void Function_get_max_eigenvalue(vector<gpuArrType<scalar, 5, 5>*> phiP) {
     status = gpu_eigenvalue_solver(cusolver_handle, CUSOLVER_EIG_MODE_NOVECTOR, CUBLAS_FILL_MODE_UPPER, 5, phi.data, 5, W, work, lwork, info, params, n);
     gpuErrorCheck(cudaDeviceSynchronize());
     assert(status == CUSOLVER_STATUS_SUCCESS);
+    if (mesh.rank == 0) cout << "eigenvalue solver: " << current_timestamp()-start << endl;
 
     gpuErrorCheck(cudaMemcpy2D(eigPhi.data, size, W + 4, 5*size, size, n, cudaMemcpyDeviceToDevice));
     //gpuErrorCheck(cudaFree(work));
