@@ -2,6 +2,8 @@
 #include "matop_cuda.hpp"
 #define nrhs 5
 
+#define COMPUTE_RESIDUAL 0
+//#define COMPUTE_RESIDUAL 1
 
 //Matop::Matop() {
 //    const Mesh& mesh = *meshp;
@@ -103,7 +105,7 @@ Matop::Matop() {
 Matop::~Matop () {
 }
 
-__global__ void jacobiIteration(const integer nInternalCells, const scalar* phi, const integer* cellNeighbours, const scalar* neighbourData, const scalar* cellData, scalar* phiN) {
+__global__ void jacobiIteration(const integer nInternalCells, const scalar* phix, const scalar* phib, const integer* cellNeighbours, const scalar* neighbourData, const scalar* cellData, scalar* phiN) {
     int i = threadIdx.x + blockDim.x*blockIdx.x;
     for (; i < nInternalCells; i += blockDim.x*gridDim.x) {
         scalar lapPhi = 0.;
@@ -111,14 +113,35 @@ __global__ void jacobiIteration(const integer nInternalCells, const scalar* phi,
             integer k = i*6+j;
             integer neighbour = cellNeighbours[k];
             if (neighbour > -1) {
-                lapPhi += neighbourData[k]*phi[neighbour];
+                lapPhi += neighbourData[k]*phix[neighbour];
             }
         }
-        phiN[i] = (phi[i]-lapPhi)/(cellData[i] + 1.);
+        phiN[i] = (phib[i]-lapPhi)/(cellData[i] + 1.);
+        //scalar omega = 1.05;
+        //phiN[i] = (1-omega)*phix[i] + omega*(phib[i]-lapPhi)/(cellData[i] + 1.);
     }
 }
 
-__global__ void residual(const integer nInternalCells, const scalar* phi, const integer* cellNeighbours, const scalar* neighbourData, const scalar* cellData, scalar* res) {
+__global__ void gaussSeidelIteration(const integer iteration, const integer nInternalCells, const scalar* phix, const scalar* phib, const integer* cellNeighbours, const scalar* neighbourData, const scalar* cellData, scalar* phiN) {
+    int i = threadIdx.x + blockDim.x*blockIdx.x;
+    for (; i < nInternalCells; i += blockDim.x*gridDim.x) {
+        if ((i + iteration) % 2 == 0) {
+            scalar lapPhi = 0.;
+            for (int j = 0; j < 6; j++) {
+                integer k = i*6+j;
+                integer neighbour = cellNeighbours[k];
+                if (neighbour > -1) {
+                    lapPhi += neighbourData[k]*phix[neighbour];
+                }
+            }
+            phiN[i] = (phib[i]-lapPhi)/(cellData[i] + 1.);
+        } else {
+            phiN[i] = phix[i];
+        }
+    }
+}
+
+__global__ void residual(const integer nInternalCells, const scalar* phix, const scalar* phib, const integer* cellNeighbours, const scalar* neighbourData, const scalar* cellData, scalar* res) {
     int i = threadIdx.x + blockDim.x*blockIdx.x;
     for (; i < nInternalCells; i += blockDim.x*gridDim.x) {
         scalar lapPhi = 0.;
@@ -126,10 +149,10 @@ __global__ void residual(const integer nInternalCells, const scalar* phi, const 
             integer k = i*6+j;
             integer neighbour = cellNeighbours[k];
             if (neighbour > -1) {
-                lapPhi += neighbourData[k]*phi[neighbour];
+                lapPhi += neighbourData[k]*phix[neighbour];
             }
         }
-        scalar tmp = (phi[i]-lapPhi) - (cellData[i] + 1.)*phi[i];
+        scalar tmp = (phib[i]-lapPhi) - (cellData[i] + 1.)*phix[i];
         atomicAdd(res, tmp*tmp);
     }
 }
@@ -162,11 +185,24 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     extArrType<scalar, 6> neighbourData(n, false, true, 0);
     extArrType<scalar, 1> cellData(n, false, true, 0);
     computeCellData<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>(n, &dt_vec(0), &cellFaces(0), &cellNeighbours(0), &volumes(0), &DTF(0), &neighbourData(0), &cellData(0));
+
     scalar* res_g;
-    cudaMalloc(&res_g, sizeof(scalar)*1);
+    extArrType<scalar, 1> zeroSolution;
+    if (COMPUTE_RESIDUAL) {
+        zeroSolution = extArrType<scalar, 1>(n, true, true, 0);
+        cudaMalloc(&res_g, sizeof(scalar)*1);
+    }
+
     extArrType<scalar, 1> tmp(n, false, true, 0);
     for (int i = 0; i < nrhs; i++) {
-        scalar res0, resf;
+        scalar res0 = 0;
+        scalar res;
+        if (COMPUTE_RESIDUAL) {
+            cudaMemcpy(res_g, &res0, sizeof(scalar)*1, cudaMemcpyHostToDevice);
+            residual<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>(n, &zeroSolution(0), u[i]->data, &cellNeighbours(0), &neighbourData(0), &cellData(0), res_g);
+            cudaMemcpy(&res0, res_g, sizeof(scalar)*1, cudaMemcpyDeviceToHost);
+        }
+
         cudaMemcpy(un[i]->data, u[i]->data, n*sizeof(scalar), cudaMemcpyDeviceToDevice);
         for (int j = 0; j < 1000; j++) {
             scalar* buff,*buff2;
@@ -177,16 +213,21 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
                 buff = &tmp(0);
                 buff2 = un[i]->data;
             }
-            scalar res = 0.;
-            cudaMemcpy(res_g, &res, sizeof(scalar)*1, cudaMemcpyHostToDevice);
-            residual<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>(n, buff, &cellNeighbours(0), &neighbourData(0), &cellData(0), res_g);
-            cudaMemcpy(&res, res_g, sizeof(scalar)*1, cudaMemcpyDeviceToHost);
-            //printf("res %d %d: %f\n", j, i, sqrt(res/n));
-            if (j == 0) res0 = res;
-            if (j == 999) resf = res;
-            jacobiIteration<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>(n, buff, &cellNeighbours(0), &neighbourData(0), &cellData(0), buff2);
+
+            if (COMPUTE_RESIDUAL) {
+                res = 0.;
+                cudaMemcpy(res_g, &res, sizeof(scalar)*1, cudaMemcpyHostToDevice);
+                residual<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>(n, buff, u[i]->data, &cellNeighbours(0), &neighbourData(0), &cellData(0), res_g);
+                cudaMemcpy(&res, res_g, sizeof(scalar)*1, cudaMemcpyDeviceToHost);
+                //printf("res %d %d: %f\n", j, i, sqrt(res/n));
+            }
+
+            jacobiIteration<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>(n, buff, u[i]->data, &cellNeighbours(0), &neighbourData(0), &cellData(0), buff2);
+            //gaussSeidelIteration<<<GPU_BLOCKS_PER_GRID, GPU_THREADS_PER_BLOCK>>>(j, n, buff, u[i]->data, &cellNeighbours(0), &neighbourData(0), &cellData(0), buff2);
         }
-        printf("res ratio %d: %f\n", i, sqrt(res0/resf));
+        if (COMPUTE_RESIDUAL) {
+            printf("res ratio %d: %f\n", i, sqrt(res0/res));
+        }
     }
     cudaFree(res_g);
 

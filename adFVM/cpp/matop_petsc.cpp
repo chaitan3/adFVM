@@ -1,5 +1,5 @@
 #define NO_IMPORT_ARRAY
-#include "matop.hpp"
+#include "matop_petsc.hpp"
 #define nrhs 5
 
 #define CHKERRQ(ans) { petscAssert((ans), __FILE__, __LINE__); }
@@ -157,10 +157,10 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     KSPSetInitialGuessNonzero(ksp, PETSC_TRUE);
 
     CHKERRQ(KSPGetPC(ksp, &(pc)));
-    //CHKERRQ(PCSetType(pc, PCJACOBI));
+    CHKERRQ(PCSetType(pc, PCJACOBI));
     //CHKERRQ(PCSetType(pc, PCASM));
     //CHKERRQ(PCSetType(pc, PCMG));
-    CHKERRQ(PCSetType(pc, PCGAMG));
+    //CHKERRQ(PCSetType(pc, PCGAMG));
     //CHKERRQ(PCSetType(pc, PCHYPRE));
 
     //CHKERRQ(PCSetType(pc, PCLU));
