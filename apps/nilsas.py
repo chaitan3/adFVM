@@ -9,8 +9,8 @@ from pathos.multiprocessing import Pool
 from pathos.helpers import mp
 
 from adFVM.interface import SerialRunner
-#class SerialRunner(object):
-class SerialRunnerLorenz(object):
+class SerialRunner(object):
+#class SerialRunnerLorenz(object):
     def __init__(self, base, time, dt, templates, **kwargs):
         self.base = base
         self.time = time
@@ -84,7 +84,7 @@ class NILSAS:
         self.lssInfo = []
         self.sensitivities = []
         self.parameter = 0.0
-        self.checkpointInterval = 10
+        self.checkpointInterval = 1000
         return
 
     def initRandom(self):
@@ -92,10 +92,11 @@ class NILSAS:
         w = np.zeros(self.nDOF)
         return W, w
 
-    def orthogonalize(self, segment, W, w):
+    # forward index
+    def orthogonalize(self, segment, W, w, neutral=True):
         # remove f component
-        #if len(self.gradientInfo) == 0:
-        if 1:
+        #if neutral:
+        if len(self.gradientInfo) == 0:
             f = self.getNeutralDirection(segment)
             W = W-np.outer(np.dot(W, f), f)
             w = w-np.dot(w, f)*f
@@ -108,6 +109,7 @@ class NILSAS:
         self.gradientInfo.append((R, b))
         return W, w
 
+    # forward index
     def getNeutralDirection(self, segment):
         orderOfAccuracy = 3
         res = [self.primalFields[segment + 1]]
@@ -120,6 +122,7 @@ class NILSAS:
         neutralDirection = neutral/np.linalg.norm(neutral)
         return neutralDirection
 
+    # forward index
     def runPrimal(self):
         # serial process
         for segment in range(len(self.primalFields)-1, self.nSegments):
@@ -132,20 +135,22 @@ class NILSAS:
                 self.saveCheckpoint()
         return
 
+    # forward index
     def runSegment(self, segment, W, w):
         primalFields = self.primalFields[segment]
         W, w = self.orthogonalize(segment, W, w)
         Wn = []
-        pool = Pool(self.nRuns)
-        manager = mp.Manager()
-        interprocess = (manager.Lock(), manager.dict())
-        interprocess = None
         def runCase(runner, fields, primalData, primalFields, case, homogeneous, interprocess):
             runner.copyCase(case)
             res = runner.runAdjoint(fields, primalData, primalFields, case, homogeneous=homogeneous, interprocess=interprocess)
             runner.removeCase(case)
             return res
 
+        interprocess = None
+
+        #pool = Pool(self.nRuns)
+        #manager = mp.Manager()
+        #interprocess = (manager.Lock(), manager.dict())
         #segments = []
         #for i in range(0, self.nExponents):
         #    case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
@@ -178,8 +183,8 @@ class NILSAS:
         return Wn, wn
 
     def solveLSS(self):
-        Rs = [x[0] for x in self.gradientInfo[::-1]]
-        bs = [x[1] for x in self.gradientInfo[::-1]]
+        Rs = [x[0] for x in self.gradientInfo[1:]]
+        bs = [x[1] for x in self.gradientInfo[1:]]
         R, b = np.array(Rs), np.array(bs)
         assert R.ndim == 3 and b.ndim == 2
         assert R.shape[0] == b.shape[0]
@@ -194,7 +199,7 @@ class NILSAS:
         alpha = -(B.T * splinalg.spsolve(Schur, np.ravel(b)))
         # alpha1 = splinalg.lsqr(B, ravel(bs), iter_lim=10000)
         coeff = alpha.reshape([nseg+1,-1])[:-1]
-        return coeff[::-1]
+        return coeff
 
     def computeGradient(self, coeff):
         N = len(self.sensitivities)
@@ -204,15 +209,18 @@ class NILSAS:
         Ws = sum([np.dot(x[0].T, coeff[i]).sum()/self.nSteps for i, x in enumerate(self.sensitivities)])/N
         return ws + Ws
 
-    def getExponents(self):
+    # reverse index
+    def getExponents(self, start=None):
         ii = np.arange(0, self.nExponents)
         exps = []
-        for segment in range(0, len(self.gradientInfo)):
+        for segment in range(1, len(self.gradientInfo)):
             exp = np.log(np.abs(self.gradientInfo[segment][0][ii,ii]))
             exp /= self.nSteps*self.runner.dt
             exps.append(exp)
             #print exp
-        return np.mean(exps[len(exps)/2:], axis=0)
+        if start is None:
+            start = len(exps)/2
+        return np.mean(exps[start:], axis=0), np.std(exps[start:], axis=0)/np.sqrt(len(exps)-start)
 
     def saveVectors(self):
         for i in range(0, self.nExponents):
@@ -234,6 +242,7 @@ class NILSAS:
             checkpoint = pickle.load(f)
             self.primalFields, self.adjointFields, self.gradientInfo, self.lssInfo, self.sensitivities = checkpoint
 
+    # reverse index
     def run(self):
         self.runPrimal()
         if len(self.adjointFields) == 0:
@@ -246,12 +255,14 @@ class NILSAS:
             W, w = self.runSegment(self.nSegments-segment-1, W, w)
             self.adjointFields[-1] = None
             self.adjointFields.append((W, w))
+            if (segment + 1) == self.nSegments:
+                self.orthogonalize(-1, W, w, neutral=False)
             if (segment + 1) % self.checkpointInterval == 0:
                 self.saveCheckpoint()
         return 
 
 def main():
-    base = '/home/talnikar/adFVM/cases/3d_cylinder/'
+    base = '/home/talnikar/adFVM/cases/3d_cylinder/nilsas/endeavour/'
     time = 2.0
     dt = 6e-9
     template = 'templates/3d_cylinder_fds.py'
@@ -263,26 +274,27 @@ def main():
     nRuns = 1
 
     # lorenz
-    #base = '/home/talnikar/adFVM/cases/3d_cylinder/'
-    #time = 10.
-    #dt = 0.0001
-    #nProcs = 1
+    base = '/home/talnikar/adFVM/cases/3d_cylinder/'
+    time = 10.
+    dt = 0.0001
+    nProcs = 1
 
-    #nSegments = 200
-    #nSteps = 4000
-    ##nSteps = 200
-    ##nExponents = 2
+    nSegments = 100
+    nSteps = 4000
+    #nSteps = 200
     #nExponents = 2
-    #nRuns = 2
+    nExponents = 2
+    nRuns = 1
 
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
-    runner.loadCheckpoint()
+    #runner.loadCheckpoint()
     runner.run()
-    #print 'exponents', runner.getExponents()
-    #coeff = np.ones((nSegments, nExponents))
+    print 'exponents', runner.getExponents()
+    ###coeff = np.ones((nSegments, nExponents))
     #coeff = runner.solveLSS()
     #print 'gradient', runner.computeGradient(coeff)
     #runner.saveVectors()
+    import pdb;pdb.set_trace()
 
 if __name__ == '__main__':
     main()
