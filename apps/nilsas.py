@@ -96,8 +96,8 @@ class NILSAS:
     def orthogonalize(self, segment, W, w, neutral=True):
         # remove f component
         #if neutral:
+        f = self.getNeutralDirection(segment)
         if len(self.gradientInfo) == 0:
-            f = self.getNeutralDirection(segment)
             W = W-np.outer(np.dot(W, f), f)
             w = w-np.dot(w, f)*f
 
@@ -106,7 +106,10 @@ class NILSAS:
         W = Q.T
         b = np.dot(W, w)
         w = w - np.dot(Q, b)
-        self.gradientInfo.append((R, b))
+        # orthogonalization info
+        dw = np.dot(W, f)
+        dv = np.dot(w, f)
+        self.gradientInfo.append((R, b, dw, dv))
         return W, w
 
     # forward index
@@ -183,23 +186,34 @@ class NILSAS:
         return Wn, wn
 
     def solveLSS(self):
-        Rs = [x[0] for x in self.gradientInfo[1:]]
-        bs = [x[1] for x in self.gradientInfo[1:]]
+        info = self.gradientInfo[:0:-1]
+        Rs = [x[0] for x in info]
+        bs = [x[1] for x in info]
+        dws = [x[2] for x in info]
+        dvs = [x[3] for x in info]
         R, b = np.array(Rs), np.array(bs)
+        dw, dv = np.array(dws), np.array(dvs)
         assert R.ndim == 3 and b.ndim == 2
         assert R.shape[0] == b.shape[0]
         assert R.shape[1] == R.shape[2] == b.shape[1]
+        assert dw.shape == b.shape
+        assert dv.shape == (b.shape[0],)
+
         nseg, subdim = b.shape
         eyes = np.eye(subdim, subdim) * np.ones([nseg, 1, 1])
         matrix_shape = (subdim * nseg, subdim * (nseg+1))
-        I = sparse.bsr_matrix((eyes, np.r_[1:nseg+1], np.r_[:nseg+1]))
-        D = sparse.bsr_matrix((R, np.r_[:nseg], np.r_[:nseg+1]), shape=matrix_shape)
-        B = (D - I).tocsr()
-        Schur = B * B.T #+ 1E-5 * sparse.eye(B.shape[0])
-        alpha = -(B.T * splinalg.spsolve(Schur, np.ravel(b)))
-        # alpha1 = splinalg.lsqr(B, ravel(bs), iter_lim=10000)
-        coeff = alpha.reshape([nseg+1,-1])[:-1]
-        return coeff
+        I = sparse.bsr_matrix((R, np.r_[1:nseg+1], np.r_[:nseg+1]))
+        D = sparse.bsr_matrix((eyes, np.r_[:nseg], np.r_[:nseg+1]), shape=matrix_shape)
+        B = (D - I).toarray()
+        
+        dw = np.concatenate((np.ravel(dw), np.zeros(subdim))).reshape(1,-1)
+        B = np.vstack((B, dw))
+        b = np.concatenate((np.ravel(b), [-dv.sum()]))
+        Schur = np.dot(B, B.T) #+ 1E-5 * sparse.eye(B.shape[0])
+        alpha = np.dot(B.T, np.linalg.solve(Schur, b))
+        
+        coeff = alpha.reshape([nseg+1,-1])
+        return coeff[::-1]
 
     def computeGradient(self, coeff):
         N = len(self.sensitivities)
@@ -255,8 +269,8 @@ class NILSAS:
             W, w = self.runSegment(self.nSegments-segment-1, W, w)
             self.adjointFields[-1] = None
             self.adjointFields.append((W, w))
-            if (segment + 1) == self.nSegments:
-                self.orthogonalize(-1, W, w, neutral=False)
+            #if (segment + 1) == self.nSegments:
+            #    self.orthogonalize(-1, W, w, neutral=False)
             if (segment + 1) % self.checkpointInterval == 0:
                 self.saveCheckpoint()
         return 
@@ -279,11 +293,11 @@ def main():
     dt = 0.0001
     nProcs = 1
 
-    nSegments = 100
-    nSteps = 4000
+    nSegments = 200
+    nSteps = 2000
     #nSteps = 200
     #nExponents = 2
-    nExponents = 2
+    nExponents = 3
     nRuns = 1
 
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
@@ -291,10 +305,9 @@ def main():
     runner.run()
     print 'exponents', runner.getExponents()
     ###coeff = np.ones((nSegments, nExponents))
-    #coeff = runner.solveLSS()
-    #print 'gradient', runner.computeGradient(coeff)
+    coeff = runner.solveLSS()
+    print 'gradient', runner.computeGradient(coeff)
     #runner.saveVectors()
-    import pdb;pdb.set_trace()
 
 if __name__ == '__main__':
     main()
