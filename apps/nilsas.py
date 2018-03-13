@@ -27,8 +27,9 @@ class SerialRunner(object):
     def removeCase(self, case):
         pass
 
-    def runPrimal(self, fields, (parameter, nSteps), case):
-        print case
+    def runPrimal(self, fields, primalData, case):
+        parameter, nSteps = primalData
+        print(case)
         rho, beta, sigma = 28. + parameter, 8./3, 10.
         for i in range(0, nSteps):
             x, y, z = fields
@@ -39,8 +40,9 @@ class SerialRunner(object):
                 ])
         return fields, 0.
 
-    def runAdjoint(self, fields, (parameter, nSteps), primalFields, case, homogeneous=False, interprocess=None):
-        print case
+    def runAdjoint(self, fields, primalData, primalFields, case, homogeneous=False, interprocess=None):
+        parameter, nSteps = primalData
+        print(case)
         rho, beta, sigma = 28. + parameter, 8./3, 10.
         primalFields = [primalFields]
         for i in range(0, nSteps):
@@ -71,7 +73,9 @@ def compute_dxdt_of_order(u, order):
     return sum([c[i]*u[i] for i in range(0, order+1)])
 
 class NILSAS:
-    def __init__(self, (nExponents, nSteps, nSegments, nRuns), (base, time, dt, templates), nProcs, flags=None):
+    def __init__(self, args1, args2, nProcs, flags=None):
+        nExponents, nSteps, nSegments, nRuns = args1
+        base, time, dt, templates = args2
         self.nExponents = nExponents
         self.nSteps = nSteps
         self.nSegments = nSegments
@@ -170,7 +174,7 @@ class NILSAS:
         #wn, Jw = segments[-1].get()
 
         JW = []
-	for i in range(0, self.nExponents):
+        for i in range(0, self.nExponents):
             case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
             res = runCase(self.runner, W[i], (self.parameter, self.nSteps), primalFields, case, True, interprocess)
             Wn.append(res[0])
@@ -233,7 +237,7 @@ class NILSAS:
             exps.append(exp)
             #print exp
         if start is None:
-            start = len(exps)/2
+            start = len(exps)//2
         return np.mean(exps[start:], axis=0), np.std(exps[start:], axis=0)/np.sqrt(len(exps)-start)
 
     def saveVectors(self):
@@ -243,7 +247,7 @@ class NILSAS:
 
     def saveCheckpoint(self):
         checkpointFile = self.runner.base + 'checkpoint_temp.pkl'
-        with open(checkpointFile, 'w') as f:
+        with open(checkpointFile, 'wb') as f:
             checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo, self.lssInfo, self.sensitivities)
             pickle.dump(checkpoint, f)
         shutil.move(checkpointFile, self.runner.base + 'checkpoint.pkl')
@@ -252,7 +256,7 @@ class NILSAS:
         checkpointFile = self.runner.base + 'checkpoint.pkl'
         if not os.path.exists(checkpointFile):
             return
-        with open(checkpointFile, 'r') as f:
+        with open(checkpointFile, 'rb') as f:
             checkpoint = pickle.load(f)
             self.primalFields, self.adjointFields, self.gradientInfo, self.lssInfo, self.sensitivities = checkpoint
 
@@ -303,10 +307,10 @@ def main():
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
     #runner.loadCheckpoint()
     runner.run()
-    print 'exponents', runner.getExponents()
+    print('exponents', runner.getExponents())
     ###coeff = np.ones((nSegments, nExponents))
     coeff = runner.solveLSS()
-    print 'gradient', runner.computeGradient(coeff)
+    print('gradient', runner.computeGradient(coeff))
     #runner.saveVectors()
 
 if __name__ == '__main__':
