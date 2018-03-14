@@ -11,7 +11,7 @@ from adFVM.mesh import Mesh
 from adFVM.objectives.vane import objective, getPlane, getWeights
 
 # base folder for flow problem
-case = os.path.expanduser('~') + '/adFVM/cases/vane/laminar/'
+case = os.path.expanduser('~') + '/adFVM/cases/vane/3d_20/'
 
 # create and initialize the folder (read mesh and setup boundary conditions)
 primal = RCF(case, objective=objective, fixedTimeStep=True)

@@ -9,8 +9,8 @@ from pathos.multiprocessing import Pool
 from pathos.helpers import mp
 
 from adFVM.interface import SerialRunner
-class SerialRunner(object):
-#class SerialRunnerLorenz(object):
+#class SerialRunner(object):
+class SerialRunnerLorenz(object):
     def __init__(self, base, time, dt, templates, **kwargs):
         self.base = base
         self.time = time
@@ -288,21 +288,22 @@ def main():
     nRuns = 1
 
     # lorenz
-    base = '/home/talnikar/adFVM/cases/3d_cylinder/'
-    time = 10.
-    dt = 0.0001
-    nProcs = 1
+    #base = '/home/talnikar/adFVM/cases/3d_cylinder/'
+    #time = 10.
+    #dt = 0.0001
+    #nProcs = 1
 
-    nSegments = 200
-    nSteps = 2000
-    #nSteps = 200
-    #nExponents = 2
-    nExponents = 3
-    nRuns = 1
+    #nSegments = 200
+    #nSteps = 2000
+    ##nSteps = 200
+    ##nExponents = 2
+    #nExponents = 3
+    #nRuns = 1
 
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
-    #runner.loadCheckpoint()
-    runner.run()
+    runner.loadCheckpoint()
+    import pdb;pdb.set_trace()
+    #runner.run()
     print 'exponents', runner.getExponents()
     ###coeff = np.ones((nSegments, nExponents))
     coeff = runner.solveLSS()
