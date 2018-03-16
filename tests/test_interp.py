@@ -76,5 +76,5 @@ def test_central():
     assert relative_error(Uf2, Ur) < thres
 
 if __name__ == "__main__":
-    #test_central()
-    test_second_order()
+    test_central()
+    #test_second_order()

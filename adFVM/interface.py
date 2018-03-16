@@ -41,7 +41,7 @@ class Runner(object):
         #print args, kwargs
         if self.nProcs == 1:
             return subprocess.call(args, **kwargs)
-	else:
+        else:
             return subprocess.call(['mpirun', '-np', str(self.nProcs)] + args, **kwargs)
 
     def spawnSlurmJob(self, args, **kwargs):
@@ -110,7 +110,8 @@ class SerialRunner(Runner):
                 phi[name + '/field'][:] = field
         return
 
-    def setupPrimal(self, initFields, (parameter, nSteps), case):
+    def setupPrimal(self, initFields, primalData, case):
+        parameter, nSteps = primalData
         # write initial field
         self.writeFields(initFields, case, self.time)
 
@@ -150,7 +151,8 @@ class SerialRunner(Runner):
         return finalFields, objectiveSeries 
 
 
-    def runAdjoint(self, initAdjointFields, (parameter, nSteps), initPrimalFields, case, homogeneous=False, interprocess=None):
+    def runAdjoint(self, initAdjointFields, primalData, initPrimalFields, case, homogeneous=False, interprocess=None):
+        parameter, nSteps = primalData
         print(case)
         # default parameter is always zero
         assert parameter == 0.0
