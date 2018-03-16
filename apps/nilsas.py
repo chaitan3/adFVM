@@ -158,41 +158,39 @@ class NILSAS:
         primalFields = self.loadPrimal(segment)
         W, w = self.orthogonalize(segment, W, w)
         Wn = []
-        def runCase(runner, fields, primalData, primalFields, case, homogeneous, interprocess):
+        def runCase(runner, fields, primalData, primalFields, case, homogeneous, interprocess, args):
             runner.copyCase(case)
-            res = runner.runAdjoint(fields, primalData, primalFields, case, homogeneous=homogeneous, interprocess=interprocess)
+            res = runner.runAdjoint(fields, primalData, primalFields, case, homogeneous=homogeneous, interprocess=interprocess, args=args)
             runner.removeCase(case)
             return res
 
         interprocess = None
-
-        #pool = Pool(self.nRuns)
-        #manager = mp.Manager()
-        #interprocess = (manager.Lock(), manager.dict())
-        #segments = []
-        #for i in range(0, self.nExponents):
-        #    case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
-        #    segments.append(pool.apply_async(runCase, (self.runner, W[i], (self.parameter, self.nSteps), primalFields, case, True, interprocess)))
-        #case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
-        #segments.append(pool.apply_async(runCase, (self.runner, w, (self.parameter, self.nSteps), primalFields, case, False, interprocess)))
-
-        #JW = []
-        #for i in range(0, self.nExponents):
-        #    res = segments[i].get() 
-        #    Wn.append(res[0])
-        #    JW.append(res[1])
-        #JW = np.array(JW)
-        #wn, Jw = segments[-1].get()
+        pool = Pool(self.nRuns)
+        segments = []
+        for i in range(0, self.nExponents):
+            case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
+            segments.append(pool.apply_async(runCase, (self.runner, W[i], (self.parameter, self.nSteps), primalFields, case, True, interprocess, ['-g', str(i%2)])))
+        case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
+        segments.append(pool.apply_async(runCase, (self.runner, w, (self.parameter, self.nSteps), primalFields, case, False, interprocess, [])))
 
         JW = []
         for i in range(0, self.nExponents):
-            case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
-            res = runCase(self.runner, W[i], (self.parameter, self.nSteps), primalFields, case, True, interprocess)
+            res = segments[i].get() 
             Wn.append(res[0])
             JW.append(res[1])
         JW = np.array(JW)
-        case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
-        wn, Jw = runCase(self.runner, w, (self.parameter, self.nSteps), primalFields, case, False, interprocess)
+        wn, Jw = segments[-1].get()
+
+        #JW = []
+        #for i in range(0, self.nExponents):
+        #    case = self.runner.base + 'segment_{}_homogeneous_{}/'.format(segment, i)
+        #    res = runCase(self.runner, W[i], (self.parameter, self.nSteps), primalFields, case, True, interprocess)
+        #    Wn.append(res[0])
+        #    JW.append(res[1])
+        #JW = np.array(JW)
+        #case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
+        #wn, Jw = runCase(self.runner, w, (self.parameter, self.nSteps), primalFields, case, False, interprocess)
+
 
         #self.sensitivities.append((JW, Jw))
         self.sensitivities.append((JW.sum(axis=1)/self.nSteps, Jw.sum()/self.nSteps))

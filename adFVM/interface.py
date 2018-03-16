@@ -131,13 +131,15 @@ class SerialRunner(Runner):
     def getFinalTime(self, case):
         return sorted([float(x[:-5]) for x in os.listdir(case) if isfloat(x[:-5]) and x.endswith('.hdf5')])[-1]
 
-    def runPrimal(self, initFields, primalData, case):
+    def runPrimal(self, initFields, primalData, case, args=None):
         print(case)
         problemFile = self.setupPrimal(initFields, primalData, case) 
 
         extraArgs = []
         if self.flags:
             extraArgs.extend(self.flags)
+        if args:
+            extraArgs.append(args)
         with open(case + 'output.log', 'w') as f, open(case + 'error.log', 'w') as fe:
             returncode = self.spawnJob([Runner.primalSolver, problemFile, 'source'] + extraArgs, stdout=f, stderr=fe, cwd=case)
         if returncode:
@@ -151,7 +153,7 @@ class SerialRunner(Runner):
         return finalFields, objectiveSeries 
 
 
-    def runAdjoint(self, initAdjointFields, primalData, initPrimalFields, case, homogeneous=False, interprocess=None):
+    def runAdjoint(self, initAdjointFields, primalData, initPrimalFields, case, homogeneous=False, interprocess=None, args=None):
         parameter, nSteps = primalData
         print(case)
         # default parameter is always zero
@@ -166,6 +168,8 @@ class SerialRunner(Runner):
         extraArgs = ['--readFields']
         if self.flags:
             extraArgs.extend(self.flags)
+        if args:
+            extraArgs.extend(args)
         if homogeneous:
             extraArgs.append('--homogeneous')
         with open(case + 'output.log', 'w') as f, open(case + 'error.log', 'w') as fe:
