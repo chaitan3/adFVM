@@ -3,6 +3,8 @@ import numpy as np
 from scipy import sparse
 import scipy.sparse.linalg as splinalg
 import os
+import re
+import glob
 import shutil
 import pickle
 from pathos.multiprocessing import Pool
@@ -18,7 +20,7 @@ class SerialRunner(object):
         self.internalCells = np.ones(3)
 
     def readFields(self, base, time):
-        np.random.seed(10)
+        np.random.seed(12)
         fields = np.random.rand(3)
         return self.runPrimal(fields, (0.0, int(self.time/self.dt)), '')[0]
 
@@ -82,11 +84,10 @@ class NILSAS:
         self.nSegments = nSegments
         self.nRuns = nRuns
         self.runner = SerialRunner(base, time, dt, templates, nProcs=nProcs, flags=flags)
-        self.primalFields = [self.runner.readFields(base, time)]
-        self.nDOF = self.primalFields[0].shape[0]
+        self.prevFields = self.runner.readFields(base, time)
+        self.nDOF = self.prevFields.shape[0]
         self.adjointFields = []
         self.gradientInfo = []
-        self.lssInfo = []
         self.sensitivities = []
         self.parameter = 0.0
         self.checkpointInterval = 1000
@@ -114,13 +115,14 @@ class NILSAS:
         # orthogonalization info
         dw = np.dot(W, f)
         dv = np.dot(w, f)
-        self.gradientInfo.append((R, b, dw, dv, Q, np.copy(w)))
+        #self.gradientInfo.append((R, b, dw, dv, Q, np.copy(w)))
+        self.gradientInfo.append((R, b, dw, dv))
         return W, w
 
     # forward index
     def getNeutralDirection(self, segment):
         orderOfAccuracy = 3
-        res = [self.primalFields[segment + 1]]
+        res = [self.loadPrimal(segment + 1)]
         for nSteps in range(1, orderOfAccuracy + 1):
             case = self.runner.base + 'segment_{}_neutral_{}_nsteps/'.format(segment, nSteps)
             self.runner.copyCase(case)
@@ -133,19 +135,27 @@ class NILSAS:
     # forward index
     def runPrimal(self):
         # serial process
-        for segment in range(len(self.primalFields)-1, self.nSegments):
+        index = 0
+        files = glob.glob(self.runner.base + 'checkpoint_primal_*.pkl')
+        if len(files) > 0:
+            index = max([int(re.search(r'\d+', os.path.basename(x)).group()) for x in files])
+            self.prevFields = self.loadPrimal(index)
+        else:
+            self.savePrimal(self.prevFields, index)
+        for segment in range(index, self.nSegments):
             case = self.runner.base + 'segment_{}_primal/'.format(segment)
             self.runner.copyCase(case)
-            res = self.runner.runPrimal(self.primalFields[segment], (self.parameter, self.nSteps), case)
+            res = self.runner.runPrimal(self.prevFields, (self.parameter, self.nSteps), case)
             self.runner.removeCase(case)
-            self.primalFields.append(res[0])
+            self.savePrimal(res[0], segment + 1)
+            self.prevFields = res[0]
             if (segment + 1) % self.checkpointInterval == 0:
                 self.saveCheckpoint()
         return
 
     # forward index
     def runSegment(self, segment, W, w):
-        primalFields = self.primalFields[segment]
+        primalFields = self.loadPrimal(segment)
         W, w = self.orthogonalize(segment, W, w)
         Wn = []
         def runCase(runner, fields, primalData, primalFields, case, homogeneous, interprocess):
@@ -184,10 +194,10 @@ class NILSAS:
         case = self.runner.base + 'segment_{}_inhomogeneous/'.format(segment)
         wn, Jw = runCase(self.runner, w, (self.parameter, self.nSteps), primalFields, case, False, interprocess)
 
-        self.sensitivities.append((JW, Jw))
+        #self.sensitivities.append((JW, Jw))
+        self.sensitivities.append((JW.sum(axis=1)/self.nSteps, Jw.sum()/self.nSteps))
         Wn = np.array(Wn)
 
-        #self.lssInfo.append((np.dot(Wn, Wn.T), np.dot(Wn, wn)))
         return Wn, wn
 
     def solveLSS(self):
@@ -233,8 +243,10 @@ class NILSAS:
         N = len(sens)
         assert coeff.shape == (N, self.nExponents)
         assert len(coeff) == N
-        ws = sum([x[1].sum()/self.nSteps for x in sens])/N
-        Ws = sum([np.dot(x[0].T, coeff[i]).sum()/self.nSteps for i, x in enumerate(sens)])/N
+        #ws = sum([x[1].sum()/self.nSteps for x in sens])/N
+        #Ws = sum([np.dot(x[0].T, coeff[i]).sum()/self.nSteps for i, x in enumerate(sens)])/N
+        ws = sum([x[1] for x in sens])/N
+        Ws = sum([np.dot(x[0].T, coeff[i]) for i, x in enumerate(sens)])/N
         return ws + Ws
 
     # reverse index
@@ -255,10 +267,22 @@ class NILSAS:
             self.runner.writeFields(self.adjointFields[-1][0][i], self.runner.base, 10.0 + i, adjoint=True)
         return
 
+    def savePrimal(self, fields, index):
+        checkpointFile = self.runner.base + 'checkpoint_primal_{}.pkl'.format(index)
+        with open(checkpointFile, 'wb') as f:
+            checkpoint = fields
+            pickle.dump(checkpoint, f)
+
+    def loadPrimal(self, index):
+        checkpointFile = self.runner.base + 'checkpoint_primal_{}.pkl'.format(index)
+        with open(checkpointFile, 'rb') as f:
+            fields = pickle.load(f)
+            return fields
+
     def saveCheckpoint(self):
         checkpointFile = self.runner.base + 'checkpoint_temp.pkl'
         with open(checkpointFile, 'wb') as f:
-            checkpoint = (self.primalFields, self.adjointFields, self.gradientInfo, self.lssInfo, self.sensitivities)
+            checkpoint = (self.adjointFields, self.gradientInfo, self.sensitivities)
             pickle.dump(checkpoint, f)
         shutil.move(checkpointFile, self.runner.base + 'checkpoint.pkl')
 
@@ -268,7 +292,7 @@ class NILSAS:
             return
         with open(checkpointFile, 'rb') as f:
             checkpoint = pickle.load(f)
-            self.primalFields, self.adjointFields, self.gradientInfo, self.lssInfo, self.sensitivities = checkpoint
+            self.adjointFields, self.gradientInfo, self.sensitivities = checkpoint
 
     # reverse index
     def run(self):
@@ -321,17 +345,17 @@ def main():
     coeff = runner.solveLSS()
     print('gradient', runner.computeGradient(coeff))
     ###coeff = np.ones((nSegments, nExponents))
-    v = []
-    for i in range(0, nSegments):
-        W = runner.gradientInfo[i][-2]
-        w = runner.gradientInfo[i][-1]
-        v.append(W.dot(coeff[i]) + w)
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-    plt.plot(v)
-    plt.ylim([-4, 4])
-    plt.savefig('{}_lim.png'.format(nExponents))
+    #v = []
+    #for i in range(0, nSegments):
+    #    W = runner.gradientInfo[i][-2]
+    #    w = runner.gradientInfo[i][-1]
+    #    v.append(W.dot(coeff[i]) + w)
+    #import matplotlib
+    #matplotlib.use('Agg')
+    #import matplotlib.pyplot as plt
+    #plt.plot(v)
+    #plt.ylim([-4, 4])
+    #plt.savefig('{}_lim.png'.format(nExponents))
     #runner.saveVectors()
 
 if __name__ == '__main__':
