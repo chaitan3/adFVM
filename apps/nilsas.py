@@ -7,7 +7,6 @@ import shutil
 import pickle
 from pathos.multiprocessing import Pool
 from pathos.helpers import mp
-import matplotlib.pyplot as plt
 
 from adFVM.interface import SerialRunner
 class SerialRunner(object):
@@ -192,7 +191,9 @@ class NILSAS:
         return Wn, wn
 
     def solveLSS(self):
-        info = self.gradientInfo[:0:-1]
+        #import pdb;pdb.set_trace()
+        start = -1
+        info = self.gradientInfo[start:0:-1]
         Rs = [x[0] for x in info]
         bs = [x[1] for x in info]
         dws = [x[2] for x in info]
@@ -216,18 +217,24 @@ class NILSAS:
         b = np.ravel(b)
         B = np.vstack((B, dw))
         b = np.concatenate((b, [-dv.sum()]))
-        Schur = np.dot(B, B.T) #+ 1E-5 * sparse.eye(B.shape[0])
+        Schur = np.dot(B, B.T) 
+        D = np.abs(np.diag(Schur))
+        #eps = 1e-6*np.min(D)
+        eps = 1e-6
+        Schur += eps*np.eye(B.shape[0])
         alpha = np.dot(B.T, np.linalg.solve(Schur, b))
         
-        coeff = alpha.reshape([nseg+1,-1])
+        coeff = alpha.reshape([nseg+1,subdim])
         return coeff[::-1]
 
     def computeGradient(self, coeff):
-        N = len(self.sensitivities)
+        start = 0
+        sens = self.sensitivities[start:]
+        N = len(sens)
         assert coeff.shape == (N, self.nExponents)
         assert len(coeff) == N
-        ws = sum([x[1].sum()/self.nSteps for x in self.sensitivities])/N
-        Ws = sum([np.dot(x[0].T, coeff[i]).sum()/self.nSteps for i, x in enumerate(self.sensitivities)])/N
+        ws = sum([x[1].sum()/self.nSteps for x in sens])/N
+        Ws = sum([np.dot(x[0].T, coeff[i]).sum()/self.nSteps for i, x in enumerate(sens)])/N
         return ws + Ws
 
     # reverse index
@@ -297,11 +304,11 @@ def main():
     # lorenz
     base = '/home/talnikar/adFVM/cases/3d_cylinder/'
     time = 10.
-    dt = 0.0001/5
+    dt = 0.0001
     nProcs = 1
 
-    nSegments = 100
-    nSteps = 2000*5
+    nSegments = 200
+    nSteps = 2000
     #nSteps = 200
     #nExponents = 2
     nExponents = 2
@@ -310,18 +317,21 @@ def main():
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
     #runner.loadCheckpoint()
     runner.run()
-    print 'exponents', runner.getExponents()
-    ###coeff = np.ones((nSegments, nExponents))
+    print('exponents', runner.getExponents())
     coeff = runner.solveLSS()
+    print('gradient', runner.computeGradient(coeff))
+    ###coeff = np.ones((nSegments, nExponents))
     v = []
     for i in range(0, nSegments):
         W = runner.gradientInfo[i][-2]
         w = runner.gradientInfo[i][-1]
         v.append(W.dot(coeff[i]) + w)
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
     plt.plot(v)
-    #plt.ylim([-4, 4])
-    plt.savefig('2.png')
-    print('gradient', runner.computeGradient(coeff))
+    plt.ylim([-4, 4])
+    plt.savefig('{}_lim.png'.format(nExponents))
     #runner.saveVectors()
 
 if __name__ == '__main__':
