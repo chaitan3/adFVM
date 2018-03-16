@@ -43,7 +43,7 @@ class SerialRunner(object):
                 ])
         return fields, 0.
 
-    def runAdjoint(self, fields, primalData, primalFields, case, homogeneous=False, interprocess=None):
+    def runAdjoint(self, fields, primalData, primalFields, case, homogeneous=False, interprocess=None, args=None):
         parameter, nSteps = primalData
         print(case)
         rho, beta, sigma = 28. + parameter, 8./3, 10.
@@ -90,7 +90,7 @@ class NILSAS:
         self.gradientInfo = []
         self.sensitivities = []
         self.parameter = 0.0
-        self.checkpointInterval = 1000
+        self.checkpointInterval = 10
         return
 
     def initRandom(self):
@@ -149,8 +149,6 @@ class NILSAS:
             self.runner.removeCase(case)
             self.savePrimal(res[0], segment + 1)
             self.prevFields = res[0]
-            if (segment + 1) % self.checkpointInterval == 0:
-                self.saveCheckpoint()
         return
 
     # forward index
