@@ -15,7 +15,7 @@ sys.path.insert(0, '/master/home/talnikar/.local/lib/python2.7/site-packages')
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('-g', '--gpu', action='store_true', dest='use_gpu')
+parser.add_argument('-g', '--gpu', nargs='?', const=0, type=int, default=-1, dest='use_gpu')
 parser.add_argument('--gpu_double', action='store_true', dest='use_gpu_double')
 parser.add_argument('-m', '--omp', action='store_true', dest='use_openmp')
 parser.add_argument('-p', '--matop_petsc', action='store_true', dest='use_matop_petsc')
@@ -49,13 +49,15 @@ def stop():
     import pdb; pdb.set_trace()
 
 # compute type
-gpu = user.use_gpu
+gpu = user.use_gpu >= 0
+if gpu:
+    parallel.localRank = user.use_gpu
 gpu_double = user.use_gpu_double
 
-if user.use_gpu:
+if gpu:
     import ctypes
     ctypes.CDLL('libgomp.so.1', mode=ctypes.RTLD_GLOBAL)
-    if user.use_gpu_double:
+    if gpu_double:
         precision = np.float64
     else:
         precision = np.float32
