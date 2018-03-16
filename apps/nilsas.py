@@ -7,10 +7,11 @@ import shutil
 import pickle
 from pathos.multiprocessing import Pool
 from pathos.helpers import mp
+import matplotlib.pyplot as plt
 
 from adFVM.interface import SerialRunner
-#class SerialRunner(object):
-class SerialRunnerLorenz(object):
+class SerialRunner(object):
+#class SerialRunnerLorenz(object):
     def __init__(self, base, time, dt, templates, **kwargs):
         self.base = base
         self.time = time
@@ -18,6 +19,7 @@ class SerialRunnerLorenz(object):
         self.internalCells = np.ones(3)
 
     def readFields(self, base, time):
+        np.random.seed(10)
         fields = np.random.rand(3)
         return self.runPrimal(fields, (0.0, int(self.time/self.dt)), '')[0]
 
@@ -113,7 +115,7 @@ class NILSAS:
         # orthogonalization info
         dw = np.dot(W, f)
         dv = np.dot(w, f)
-        self.gradientInfo.append((R, b, dw, dv))
+        self.gradientInfo.append((R, b, dw, dv, Q, np.copy(w)))
         return W, w
 
     # forward index
@@ -211,8 +213,9 @@ class NILSAS:
         B = (D - I).toarray()
         
         dw = np.concatenate((np.ravel(dw), np.zeros(subdim))).reshape(1,-1)
+        b = np.ravel(b)
         B = np.vstack((B, dw))
-        b = np.concatenate((np.ravel(b), [-dv.sum()]))
+        b = np.concatenate((b, [-dv.sum()]))
         Schur = np.dot(B, B.T) #+ 1E-5 * sparse.eye(B.shape[0])
         alpha = np.dot(B.T, np.linalg.solve(Schur, b))
         
@@ -292,25 +295,32 @@ def main():
     nRuns = 1
 
     # lorenz
-    #base = '/home/talnikar/adFVM/cases/3d_cylinder/'
-    #time = 10.
-    #dt = 0.0001
-    #nProcs = 1
+    base = '/home/talnikar/adFVM/cases/3d_cylinder/'
+    time = 10.
+    dt = 0.0001/5
+    nProcs = 1
 
-    #nSegments = 200
-    #nSteps = 2000
-    ##nSteps = 200
-    ##nExponents = 2
-    #nExponents = 3
-    #nRuns = 1
+    nSegments = 100
+    nSteps = 2000*5
+    #nSteps = 200
+    #nExponents = 2
+    nExponents = 2
+    nRuns = 1
 
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
-    runner.loadCheckpoint()
-    import pdb;pdb.set_trace()
-    #runner.run()
+    #runner.loadCheckpoint()
+    runner.run()
     print 'exponents', runner.getExponents()
     ###coeff = np.ones((nSegments, nExponents))
     coeff = runner.solveLSS()
+    v = []
+    for i in range(0, nSegments):
+        W = runner.gradientInfo[i][-2]
+        w = runner.gradientInfo[i][-1]
+        v.append(W.dot(coeff[i]) + w)
+    plt.plot(v)
+    #plt.ylim([-4, 4])
+    plt.savefig('2.png')
     print('gradient', runner.computeGradient(coeff))
     #runner.saveVectors()
 
