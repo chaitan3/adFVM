@@ -287,9 +287,8 @@ Mesh *meshp = NULL;
 
 PyObject* buildMesh(PyObject *self, PyObject *args) {
 
-    PyObject *meshObject = PyTuple_GetItem(args, 0);
+    //PyObject *meshObject = PyTuple_GetItem(args, 0);
     //Py_INCREF(meshObject);
-
     //meshp = new Mesh(meshObject);
     meshp->build();
     Py_INCREF(Py_None);
@@ -340,10 +339,96 @@ PyObject* computeSensitivity(PyObject* self, PyObject* args) {
     return Py_BuildValue("d", sensitivity);
 }
 
+PyObject* computeEnergy(PyObject* self, PyObject* args) {
+    int i;
+    PyObject* solver;
+    PyObject* rhoaObj,*rhoUaObj,*rhoEaObj;
+    PyObject* rhoObj,*rhoUObj,*rhoEObj;
+    if (!PyArg_ParseTuple(args, "OOOOOOO", &solver, &rhoaObj, &rhoUaObj, &rhoEaObj, &rhoObj, &rhoUObj, &rhoEObj)) {
+        cout << "parsing arguments failed" << endl;
+        return NULL;
+    }
+    scalar energy = 0;
+    scalar g = getScalar(solver, "gamma");
+    
+    PyArrayObject* rhoaArr = (PyArrayObject*) rhoaObj;
+    assert(PyArray_IS_C_CONTIGUOUS(rhoaArr));
+    assert(PyArray_ITEMSIZE(rhoaArr) == sizeof(scalar));
+    int m = PyArray_SIZE(rhoaArr);
+    assert(PyArray_SIZE(rhoaArr) == m);
+    PyArrayObject* rhoUaArr = (PyArrayObject*) rhoUaObj;
+    assert(PyArray_IS_C_CONTIGUOUS(rhoUaArr));
+    assert(PyArray_ITEMSIZE(rhoUaArr) == sizeof(scalar));
+    assert(PyArray_SIZE(rhoUaArr) == m*3);
+    PyArrayObject* rhoEaArr = (PyArrayObject*) rhoEaObj;
+    assert(PyArray_IS_C_CONTIGUOUS(rhoEaArr));
+    assert(PyArray_ITEMSIZE(rhoEaArr) == sizeof(scalar));
+    assert(PyArray_SIZE(rhoEaArr) == m);
+    PyArrayObject* rhoArr = (PyArrayObject*) rhoObj;
+    assert(PyArray_IS_C_CONTIGUOUS(rhoArr));
+    assert(PyArray_ITEMSIZE(rhoArr) == sizeof(scalar));
+    assert(PyArray_SIZE(rhoArr) == m);
+    PyArrayObject* rhoUArr = (PyArrayObject*) rhoUObj;
+    assert(PyArray_IS_C_CONTIGUOUS(rhoUArr));
+    assert(PyArray_ITEMSIZE(rhoUArr) == sizeof(scalar));
+    assert(PyArray_SIZE(rhoUArr) == m*3);
+    PyArrayObject* rhoEArr = (PyArrayObject*) rhoEObj;
+    assert(PyArray_IS_C_CONTIGUOUS(rhoEArr));
+    assert(PyArray_ITEMSIZE(rhoEArr) == sizeof(scalar));
+    assert(PyArray_SIZE(rhoEArr) == m);
+
+    scalar* rhoa = (scalar*)PyArray_DATA(rhoaArr);
+    scalar* rhoUa = (scalar*)PyArray_DATA(rhoUaArr);
+    scalar* rhoEa = (scalar*)PyArray_DATA(rhoEaArr);
+    scalar* rho = (scalar*)PyArray_DATA(rhoArr);
+    scalar* rhoU = (scalar*)PyArray_DATA(rhoUArr);
+    scalar* rhoE = (scalar*)PyArray_DATA(rhoEArr);
+    #pragma omp parallel for private(i) reduction(+: energy)
+    for (i = 0; i < meshp->nInternalCells; i++) {
+        scalar v = meshp->volumes(i);
+        scalar u1 = rhoU[i*3]/rho[i];
+        scalar u2 = rhoU[i*3+1]/rho[i];
+        scalar u3 = rhoU[i*3+2]/rho[i];
+
+        scalar q2 = u1*u1+u2*u2+u3*u3;
+        scalar p = (rhoE[i]-rho[i]*q2/2)*(g-1);
+        scalar H = g*p/(rho[i]*(g-1)) + q2/2;
+        scalar w1 = rhoa[i]/v;
+        scalar w2 = rhoUa[i*3]/v;
+        scalar w3 = rhoUa[i*3+1]/v;
+        scalar w4 = rhoUa[i*3+2]/v;
+        scalar w5 = rhoEa[i]/v;
+        scalar A11 = rho[i];
+        scalar A12 = rho[i]*u1;
+        scalar A13 = rho[i]*u2;
+        scalar A14 = rho[i]*u3;
+        scalar A15 = rhoE[i];
+        scalar A22 = rho[i]*u1*u1+p;
+        scalar A23 = rho[i]*u1*u2;
+        scalar A24 = rho[i]*u1*u3;
+        scalar A25 = rho[i]*H*u1;
+        scalar A33 = rho[i]*u2*u2+p;
+        scalar A34 = rho[i]*u2*u3;
+        scalar A35 = rho[i]*H*u2;
+        scalar A44 = rho[i]*u3*u3+p;
+        scalar A45 = rho[i]*H*u3;
+        scalar A55 = rho[i]*H*H-g*p*p/(rho[i]*(g-1));
+        energy += (A11*w1*w1 + A22*w2*w2 + A33*w3*w3 + A44*w4*w4 + A55*w5*w5 + \
+                  2*(A12*w1*w2 + A13*w1*w3 + A14*w1*w4 + A15*w1*w5 + \
+                     A23*w2*w3 + A24*w2*w4 + A25*w2*w5 + \
+                     A34*w3*w4 + A35*w3*w5 + \
+                     A45*w4*w5
+                    ))*v;
+    }
+    
+    return Py_BuildValue("d", energy);
+}
+
 PyMethodDef Methods[] = {
     {"build",  buildMesh, METH_VARARGS, "Execute a shell command."},
     {"buildBeforeWrite",  buildMeshBeforeWrite, METH_VARARGS, "Execute a shell command."},
     {"computeSensitivity",  computeSensitivity, METH_VARARGS, "Execute a shell command."},
+    {"computeEnergy",  computeEnergy, METH_VARARGS, "Execute a shell command."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 

@@ -159,29 +159,31 @@ def getAdjointEnergy(solver, rhoa, rhoUa, rhoEa):
     return adjEnergy
 
 def getSymmetrizedAdjointEnergy(solver, rhoa, rhoUa, rhoEa, rho, rhoU, rhoE):
+    mesh = solver.mesh
     # optimize this function
-    U, T, p = solver.primitive(rho, rhoU, rhoE)
-    U, rho, p = U.field, rho.field.flatten(), p.field.flatten()
+    U = rhoU/rho
     g = solver.gamma
     u1, u2, u3 = U.T
-    q2 = (u1*u1+u2*u2+u3*u3)
+    q2 = (u1*u1+u2*u2+u3*u3).reshape(-1,1)
+    p = (rhoE-rho*q2/2)*(g-1)
+    q2, rho, p, rhoE = q2.flatten(), rho.flatten(), p.flatten(), rhoE.flatten()
     H = g*p/(rho*(g-1)) + q2/2
-    rE = p/(g-1) + 0.5*rho*q2
-    A = np.array([[rho, rho*u1, rho*u2, rho*u3, rE],
+    #one = np.zeros(mesh.nInternalCells)
+    A = np.array([[rho, rho*u1, rho*u2, rho*u3, rhoE],
                   [rho*u1, rho*u1*u1 + p, rho*u1*u2, rho*u1*u3, rho*H*u1],
                   [rho*u2, rho*u2*u1, rho*u2*u2 + p, rho*u2*u3, rho*H*u2],
                   [rho*u3, rho*u3*u1, rho*u3*u2, rho*u3*u3 + p, rho*H*u3],
-                  [rE, rho*H*u1, rho*H*u2, rho*H*u3, rho*H*H-g*p*p/(rho*(g-1))]]
+                  [rhoE, rho*H*u1, rho*H*u2, rho*H*u3, rho*H*H-g*p*p/(rho*(g-1))]]
                   ).transpose(2, 0, 1)
-    # already divided by volumes
-    # not divided by volumes
-    mesh = solver.mesh
-    rhoa = rhoa.getInternalField()/mesh.volumes
-    rhoUa = rhoUa.getInternalField()/mesh.volumes
-    rhoEa = rhoEa.getInternalField()/mesh.volumes
+    #A = np.ones((mesh.nInternalCells, 5, 5))
+    ## already divided by volumes
+    ## not divided by volumes
+    rhoa = rhoa/mesh.volumes
+    rhoUa = rhoUa/mesh.volumes
+    rhoEa = rhoEa/mesh.volumes
 
     w = np.concatenate((rhoa, rhoUa, rhoEa), axis=1)
-    l2norm = np.matmul(w.reshape(-1,1,5), np.matmul(A, w.reshape(-1,5, 1)))
+    l2norm = np.matmul(w.reshape(-1,1,5), np.matmul(A, w.reshape(-1,5, 1))).reshape(-1,1)
     adjEnergy = parallel.sum(l2norm*mesh.volumes)**0.5
     return adjEnergy
 

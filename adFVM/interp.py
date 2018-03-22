@@ -1,4 +1,4 @@
-from . import config, compat, parallel
+from . import config, parallel
 from .field import Field#, faceExchange
 
 import itertools

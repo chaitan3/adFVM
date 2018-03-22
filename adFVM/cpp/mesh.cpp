@@ -65,6 +65,15 @@ int getInteger(PyObject *mesh, const string attr) {
     return result;
 }
 
+scalar getScalar(PyObject *mesh, const string attr) {
+    PyObject *in = PyObject_GetAttrString(mesh, attr.c_str());
+    assert (in != NULL);
+    double result = PyFloat_AsDouble(in);
+    //cout << attr << " " << result << endl;
+    Py_DECREF(in);
+    return (scalar)result;
+}
+
 map<string, integer> getTags(PyObject *mesh, const string attr) {
     PyObject *dict = PyObject_GetAttrString(mesh, attr.c_str());
     assert (dict != NULL);

@@ -50,6 +50,7 @@ class Mesh {
 };
 
 int getInteger(PyObject*, const string);
+scalar getScalar(PyObject*, const string);
 map<string, integer> getTags(PyObject *mesh, const string attr);
 template <typename dtype, integer shape1, integer shape2>
 void getMeshArray(PyObject *mesh, const string attr, arrType<dtype, shape1, shape2>& tmp) {
