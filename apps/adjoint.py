@@ -6,7 +6,7 @@ from adFVM.parallel import pprint
 from adFVM.field import IOField, Field
 from adFVM import interp
 from adFVM.memory import printMemUsage
-from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, computeSymmetrizedAdjointEnergy, computeAdjointViscosity, viscositySolver
+#from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, computeSymmetrizedAdjointEnergy, computeAdjointViscosity, viscositySolver
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, getSymmetrizedAdjointEnergy, computeAdjointViscosity, viscositySolver
 from adFVM.solver import Solver
 from adpy.variable import Variable, Function, Zeros
