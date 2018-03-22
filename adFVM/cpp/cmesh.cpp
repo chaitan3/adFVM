@@ -288,7 +288,7 @@ Mesh *meshp = NULL;
 PyObject* buildMesh(PyObject *self, PyObject *args) {
 
     PyObject *meshObject = PyTuple_GetItem(args, 0);
-    Py_INCREF(meshObject);
+    //Py_INCREF(meshObject);
 
     //meshp = new Mesh(meshObject);
     meshp->build();

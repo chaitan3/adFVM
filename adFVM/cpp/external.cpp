@@ -43,6 +43,7 @@ void external_init (PyObject* args) {
 
 void external_exit () {
     parallel_exit();
+    Py_DECREF(meshp->mesh);
     delete meshp;
     #if defined(MATOP_PETSC) || defined(MATOP_CUDA)
         delete matop;

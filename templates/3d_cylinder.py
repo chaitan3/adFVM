@@ -38,12 +38,12 @@ def objective(fields, solver):
     return drag
    
 #primal = RCF('cases/cylinder_chaos_test/', CFL=1.2, mu=lambda T: Field('mu', T.field/T.field*2.5e-5, (1,)), boundaryRiemannSolver='eulerLaxFriedrichs')
-primal = RCF('/home/talnikar/adFVM/cases/3d_cylinder/testing/',
+primal = RCF('/home/talnikar/adFVM/cases/3d_cylinder/Re_525/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/Re_500/',
 #primal = RCF('/home/talnikar/adFVM/cases/cylinder/chaotic/testing/', 
              #mu=lambda T: 2.5e-5*T/T,
-             #mu=lambda T: 1.81e-5,
-             mu=lambda T: 0.9e-5,
+             mu=lambda T: 1.81e-5,
+             #mu=lambda T: 0.9e-5,
              #boundaryRiemannSolver='eulerLaxFriedrichs',
              objective = objective,
              fixedTimeStep = True,
@@ -92,14 +92,14 @@ def makePerturb(U0_per):
 perturb = [makePerturb(np.array([[1., 0, 0]], config.precision))]
 parameters = ('BCs', 'p', 'left', 'U0')
 
-nSteps = 10
-writeInterval = 5
+nSteps = 100000
+writeInterval = 10000
 reportInterval = 1
-sampleInterval = 1
+sampleInterval = 100
 startTime = 2.0
 dt = 6e-9
-runCheckpoints = 1
+#runCheckpoints = 1
 
-viscousInterval = 1
-adjParams = [1e-2, 'turkel', None]
-runCheckpoints = 2
+#viscousInterval = 1
+#adjParams = [1e-2, 'turkel', None]
+#runCheckpoints = 2
