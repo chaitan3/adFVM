@@ -228,7 +228,7 @@ class Adjoint(Solver):
                 phi.info()
             #energyTimeSeries.append(getAdjointEnergy(primal, *fields))
             inputs = [phi.field for phi in fields + solutions[-1]] + mesh.getTensor() + mesh.getScalar()
-            energyTimeSeries.append(self.computeEnergy(*inputs))
+            energyTimeSeries.append(self.computeEnergy(*inputs).flatten())
             pprint()
 
             for step in range(0, writeInterval):

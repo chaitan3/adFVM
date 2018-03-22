@@ -73,15 +73,14 @@ dt = 2e-8
 #viscousInterval = 1
 # number of checkpoints to run in a single simulation
 # has to be less than nSteps/writeInterval
-runCheckpoints = 1
+#runCheckpoints = 1
 # viscosity stabilized adjoint parameters
 # first argument: viscosity scaling factor
 # second argument: type of viscosity 
 # third argument: not used
 #adjParams = [1e-3, 'turkel', None]
 
-nSteps = 10
-writeInterval = 5
+nSteps = 50
+writeInterval = 10
 sampleInterval = 1
 reportInterval = 1
-runCheckpoints = 2

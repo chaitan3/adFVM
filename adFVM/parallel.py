@@ -7,6 +7,7 @@ import os
 import multiprocessing
 nProcsPerNode = multiprocessing.cpu_count()
 
+
 def setNumThreads(nRanksPerNode, nProcsPerNode):
     nThreads = nProcsPerNode//nRanksPerNode
     os.environ['OMP_NUM_THREADS'] = str(max(1, nThreads))
