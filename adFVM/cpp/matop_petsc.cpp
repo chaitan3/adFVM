@@ -1,8 +1,5 @@
 #define NO_IMPORT_ARRAY
 #include "matop_petsc.hpp"
-#define nrhs 5
-#define DENSITY_DEFAULT true
-//#define DENSITY_DEFAULT false
 
 #define CHKERRQ(ans) { petscAssert((ans), __FILE__, __LINE__); }
 inline void petscAssert(PetscErrorCode code, const char *file, int line, bool abort=true)
@@ -41,7 +38,7 @@ Matop::~Matop () {
     PetscFinalize();
 }
 
-int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& dt_vec, vector<ext_vec*> un, bool density=DENSITY_DEFAULT) {
+int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& dt_vec, vector<ext_vec*> un, bool density) {
     const Mesh& mesh = *meshp;
     Vec x, b;
     Mat A;
@@ -146,11 +143,11 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
     CHKERRQ(KSPCreate(PETSC_COMM_WORLD, &(ksp)));
     CHKERRQ(KSPSetOperators(ksp, A, A));
     //BEST CPU
-    //CHKERRQ(KSPSetType(ksp, KSPGMRES));
+    CHKERRQ(KSPSetType(ksp, KSPGMRES));
     //CHKERRQ(KSPSetType(ksp, KSPGCR));
     //CHKERRQ(KSPSetType(ksp, KSPBCGS));
     //BEST GPU
-    CHKERRQ(KSPSetType(ksp, KSPTFQMR));
+    //CHKERRQ(KSPSetType(ksp, KSPTFQMR));
     //CHKERRQ(KSPSetType(ksp, KSPPREONLY));
 
     //double rtol, atol, dtol;
@@ -162,12 +159,12 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
 
     CHKERRQ(KSPGetPC(ksp, &(pc)));
     //BEST GPU
-    CHKERRQ(PCSetType(pc, PCJACOBI));
+    //CHKERRQ(PCSetType(pc, PCJACOBI));
     //CHKERRQ(PCSetType(pc, PCASM));
     //CHKERRQ(PCSetType(pc, PCMG));
     //CHKERRQ(PCSetType(pc, PCGAMG));
     //BEST CPU
-    //CHKERRQ(PCSetType(pc, PCHYPRE));
+    CHKERRQ(PCSetType(pc, PCHYPRE));
 
     //CHKERRQ(PCSetType(pc, PCLU));
     //CHKERRQ(PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST));

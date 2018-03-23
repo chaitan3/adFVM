@@ -7,6 +7,9 @@
     #include <petsccuda.h>
 #endif
 #include "mesh.hpp"
+//#define DENSITY_DEFAULT true
+#define DENSITY_DEFAULT false
+#define nrhs 5
 
 class Matop {
     map<string, ivec> boundaryNeighbours;
@@ -17,7 +20,7 @@ class Matop {
 
     Matop();    
     ~Matop();    
-    int heat_equation(vector<ext_vec*> u, const ext_vec& DT, const ext_vec& dt, vector<ext_vec*> un, bool density);
+    int heat_equation(vector<ext_vec*> u, const ext_vec& DT, const ext_vec& dt, vector<ext_vec*> un, bool density=DENSITY_DEFAULT);
 };
 
 extern Matop *matop;
