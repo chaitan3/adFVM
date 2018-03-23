@@ -7,8 +7,8 @@
     #include <petsccuda.h>
 #endif
 #include "mesh.hpp"
-//#define DENSITY_DEFAULT true
-#define DENSITY_DEFAULT false
+#define DENSITY_DEFAULT true
+//#define DENSITY_DEFAULT false
 #define nrhs 5
 
 class Matop {
