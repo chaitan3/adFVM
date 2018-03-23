@@ -177,8 +177,8 @@ class SerialRunner(Runner):
                 returncode = self.spawnSlurmJob([Runner.adjointSolver, problemFile] + extraArgs, stdout=f, stderr=fe, cwd=case, interprocess=interprocess)
             else:
                 returncode = self.spawnJob([Runner.adjointSolver, problemFile] + extraArgs, stdout=f, stderr=fe, cwd=case)
-        #if returncode:
-        #    raise Exception('Execution failed, check error log in :', case)
+        if returncode:
+            raise Exception('Execution failed, check error log in :', case)
 
         finalFields = self.readFields(case, self.time, adjoint=True)
         dJds = np.loadtxt(case + 'sensTimeSeries.txt').reshape(-1,1).flatten()
