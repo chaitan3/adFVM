@@ -1,6 +1,8 @@
 #define NO_IMPORT_ARRAY
 #include "matop_petsc.hpp"
 #define nrhs 5
+#define DENSITY_DEFAULT true
+//#define DENSITY_DEFAULT false
 
 #define CHKERRQ(ans) { petscAssert((ans), __FILE__, __LINE__); }
 inline void petscAssert(PetscErrorCode code, const char *file, int line, bool abort=true)
@@ -39,7 +41,7 @@ Matop::~Matop () {
     PetscFinalize();
 }
 
-int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& dt_vec, vector<ext_vec*> un) {
+int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& dt_vec, vector<ext_vec*> un, bool density=DENSITY_DEFAULT) {
     const Mesh& mesh = *meshp;
     Vec x, b;
     Mat A;
@@ -184,7 +186,12 @@ int Matop::heat_equation(vector<ext_vec*> u, const ext_vec& DTF, const ext_vec& 
         CHKERRQ(VecCreateTypeWithArray(PETSC_COMM_WORLD, 1, n, NULL, &x));
         //CHKERRQ(MatCreateVecs(A, &x, &b));
     }
-    for (integer i = 0; i < nrhs; i++) {
+    integer i = 0;
+    if (!density) {
+        un[i]->copy(0, u[i]->data, n);
+        i = 1;
+    }
+    for (; i < nrhs; i++) {
         un[i]->copy(0, u[i]->data, n);
         CHKERRQ(VecPlaceType(b, u[i]->data));
         CHKERRQ(VecPlaceType(x, un[i]->data));
