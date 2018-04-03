@@ -20,7 +20,7 @@ class Matop {
 
     Matop();    
     ~Matop();    
-    int heat_equation(vector<ext_vec*> u, const ext_vec& DT, const ext_vec& dt, vector<ext_vec*> un, bool density=DENSITY_DEFAULT);
+    int heat_equation(vector<ext_vec*> w, vector<ext_vec*> u, const ext_vec& DT, const ext_vec& dt, vector<ext_vec*> un, bool density=DENSITY_DEFAULT);
 };
 
 extern Matop *matop;

@@ -10,6 +10,7 @@ from adFVM.memory import printMemUsage
 from adFVM.postpro import getAdjointViscosity, getAdjointEnergy, getSymmetrizedAdjointEnergy, computeAdjointViscosity, viscositySolver
 from adFVM.solver import Solver
 from adpy.variable import Variable, Function, Zeros
+from adpy.tensor import Kernel
 from adFVM.mesh import cmesh, Mesh
 
 from problem import primal, nSteps, writeInterval, sampleInterval, reportInterval, viscousInterval, perturb, writeResult, nPerturb, parameters, source, adjParams, avgStart, runCheckpoints, startTime
@@ -126,7 +127,15 @@ class Adjoint(Solver):
         if self.viscosityType and not matop_python:
             primalFields = list(primal.map._inputs[:n])
             M_2norm, DT = computeAdjointViscosity(*([primal, self.viscosityType] + primalFields + [scaling]))
-            outputs = list(viscositySolver(*([primal] + fields + [DT]))) + paramGradient
+            # source damping
+            #def source(w1,w2,w3,M_2norm):
+            #    eta = self.scaling/Dt
+            #    d = M_2norm*eta*Dt
+            #    return w1*(1-d),w2*(1-d),w3*(1-d)
+            #fields = Kernel(source)(mesh.symMesh.nInternalCells)(*(fields + [M_2norm]))
+            #outputs = list(fields) + paramGradient
+            # viscous damping
+            outputs = list(viscositySolver(*([primal] + primalFields + fields + [DT]))) + paramGradient
             if write_M_2norm:
                 outputs = outputs + [M_2norm]
             self.viscousMap = Function('primal_grad_viscous', args, outputs)

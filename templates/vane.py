@@ -78,9 +78,9 @@ dt = 2e-8
 # first argument: viscosity scaling factor
 # second argument: type of viscosity 
 # third argument: not used
-#adjParams = [1e-3, 'turkel', None]
+adjParams = [1e-3, 'turkel', None]
 
-nSteps = 50
-writeInterval = 10
+nSteps = 5
+writeInterval = 1
 sampleInterval = 1
 reportInterval = 1

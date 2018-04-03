@@ -134,16 +134,19 @@ void Function_get_max_generalized_eigenvalue(vector<extArrType<scalar, 5, 5>*> p
 
 void Function_apply_adjoint_viscosity(vector<ext_vec*> phiP) {
     // inputs
-    vector<ext_vec*> u, un;
+    vector<ext_vec*> u, un, w;
     for (int i = 0; i < 5; i++) {
         u.push_back(phiP[i]);
-        un.push_back(phiP[i+7]);
+        un.push_back(phiP[i+10]);
     }
-    ext_vec& DT = *phiP[5];
-    ext_vec& dt_vec = *phiP[6];
+    for (int i = 0; i < 3; i++) {
+        w.push_back(phiP[i+5]);
+    }
+    ext_vec& DT = *phiP[8];
+    ext_vec& dt_vec = *phiP[9];
 
     #if defined(MATOP_CUDA) || defined(MATOP_PETSC)
-        int error = matop->heat_equation(u, DT, dt_vec, un);
+        int error = matop->heat_equation(w, u, DT, dt_vec, un);
         if (error) {
             cout << "petsc error " << error << endl;
             exit(1);

@@ -2,6 +2,7 @@ CFD SOLVER:
     check code numerics: second order interpolator fix (stabilization?)
                          second order boundary?
 PERFORMANCE:
+    register spilling graph cut optimization? switch from shared to l1 cache
     modify adpy to support computing multiple solutions
     better kernel generation on gpu: adjoint flops & bw much lower than primal
     jacobi solver requires too many iterations (while loop?)
