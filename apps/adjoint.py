@@ -387,7 +387,7 @@ class Adjoint(Solver):
             
         #pprint(checkpoint, totalCheckpoints)
 
-        if checkpoint + 1 >= totalCheckpoints:
+        if checkpoint >= totalCheckpoints:
             writeResult('adjoint', result, str(self.scaling), self.sensTimeSeriesFile)
             #for index in range(0, nPerturb):
             #    writeResult('adjoint', result[index], '{} {}'.format(index, self.scaling))

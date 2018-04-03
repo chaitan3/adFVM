@@ -291,7 +291,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         M = M1/2-M2
 
     # Entropy
-    elif visc == 'entropy_barth':
+    elif visc == 'entropy_hughes':
         rho = rho[:,0]
         u1 = U[:,0]
         u2 = U[:,1]
@@ -344,41 +344,41 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
                   [rE, rho*H*u1, rho*H*u2, rho*H*u3, rho*H*H-g*p*p/(rho*(g-1))]]
                   ).transpose(2, 0, 1)
 
-    elif visc == 'entropy_hughes':
-        #pref = 1.
-        rho = rho[:,0]
-        p = p[:,0]
-        u1 = U[:,0]
-        u2 = U[:,1]
-        u3 = U[:,2]
-        re = p/g1
-        q2 = u1*u1 + u2*u2 + u3*u3
-        rE = re + rho*q2/2
-        s = np.log(g1*re/pref/rho**g)
-        V1 = (-rE + re*(g+1-s))/re
-        V2 = rho*u1/re
-        V3 = rho*u2/re
-        V4 = rho*u3/re
-        V5 = -rho/re
+    #elif visc == 'entropy_hughes':
+    #    #pref = 1.
+    #    rho = rho[:,0]
+    #    p = p[:,0]
+    #    u1 = U[:,0]
+    #    u2 = U[:,1]
+    #    u3 = U[:,2]
+    #    re = p/g1
+    #    q2 = u1*u1 + u2*u2 + u3*u3
+    #    rE = re + rho*q2/2
+    #    s = np.log(g1*re/pref/rho**g)
+    #    V1 = (-rE + re*(g+1-s))/re
+    #    V2 = rho*u1/re
+    #    V3 = rho*u2/re
+    #    V4 = rho*u3/re
+    #    V5 = -rho/re
 
-        one = np.ones_like(rho)
-        zero = np.zeros_like(rho)
-        Twq = np.array([[one,zero,zero,zero,zero],
-                        [u1,rho,zero,zero,zero],
-                        [u2,zero,rho,zero,zero],
-                        [u3,zero,zero,rho,zero],
-                        [q2/2,rho*u1,rho*u2,rho*u3,one/g1]]).transpose((2, 0, 1))
-        from .symmetrizations.entropy_hughes_numerical import expression
-        #Twq, B, Y, A0I, A = expression(rho,u1,u2,u3,p,V1,V2,V3,V4,V5, pref, g, re)
-        B, Y, A0I, A = expression(rho,u1,u2,u3,p,V1,V2,V3,V4,V5, pref, g)
-        Tvq = np.matmul(A0I, Twq)
-        G = np.concatenate((gradrho.reshape(-1,1,3), gradU, gradp.reshape(-1,1,3)), axis=1)
-        Gv = np.matmul(Tvq, G)
-        M2 = np.einsum('pikj,pjl,plmn,pnm->pik', Y, A0I, A, Gv)
-        M1 = np.einsum('pkjil,plj->pki', B, Gv)
-        M = -M1 + M2
-        #test = IOField('test' + suffix, Gv[:,1,:], (3,), boundary=mesh.calculatedBoundary)
-        #test.write()
+    #    one = np.ones_like(rho)
+    #    zero = np.zeros_like(rho)
+    #    Twq = np.array([[one,zero,zero,zero,zero],
+    #                    [u1,rho,zero,zero,zero],
+    #                    [u2,zero,rho,zero,zero],
+    #                    [u3,zero,zero,rho,zero],
+    #                    [q2/2,rho*u1,rho*u2,rho*u3,one/g1]]).transpose((2, 0, 1))
+    #    from .symmetrizations.entropy_hughes_numerical import expression
+    #    #Twq, B, Y, A0I, A = expression(rho,u1,u2,u3,p,V1,V2,V3,V4,V5, pref, g, re)
+    #    B, Y, A0I, A = expression(rho,u1,u2,u3,p,V1,V2,V3,V4,V5, pref, g)
+    #    Tvq = np.matmul(A0I, Twq)
+    #    G = np.concatenate((gradrho.reshape(-1,1,3), gradU, gradp.reshape(-1,1,3)), axis=1)
+    #    Gv = np.matmul(Tvq, G)
+    #    M2 = np.einsum('pikj,pjl,plmn,pnm->pik', Y, A0I, A, Gv)
+    #    M1 = np.einsum('pkjil,plj->pki', B, Gv)
+    #    M = -M1 + M2
+    #    #test = IOField('test' + suffix, Gv[:,1,:], (3,), boundary=mesh.calculatedBoundary)
+    #    #test.write()
 
     elif visc == 'turkel' or visc == 'uniform':
         M1 = np.stack((np.hstack((divU, gradc, Z)),
@@ -607,7 +607,7 @@ def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
         #    M2 = Tensor((5,5), M2)
         #    M = -(M1 + M2)
 
-        elif viscosityType == 'entropy_barth':
+        elif viscosityType == 'entropy_hughes':
             from .symmetrizations.entropy_barth_mathematica import expression_code
             M = expression_code(rho, U, p, gradrho, gradU, gradp, g, Z)
 
@@ -654,7 +654,7 @@ def computeAdjointViscosity(solver, viscosityType, rho, rhoU, rhoE, scaling):
         MS = Zeros((mesh.nInternalCells, 5, 5))
         B = Zeros((mesh.nInternalCells, 5, 5))
         MS, B = Kernel(getMaxEigenvalue)(mesh.nInternalCells, (MS, B))(U, T, p, gradU, divU, gradp, gradc)
-        if viscosityType != 'entropy_barth':
+        if viscosityType != 'entropy_hughes':
             (M_2norm,) = ExternalFunctionOp('get_max_eigenvalue', (MS,), (M_2norm,)).outputs
         else:
             (M_2norm,) = ExternalFunctionOp('get_max_generalized_eigenvalue', (MS, B), (M_2norm,)).outputs
