@@ -326,7 +326,7 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
         #M2 = np.einsum('pijk,pklm,pml->pij', A0U, A, Gw)
         #M = -M1 + M2
 
-        suffix += '_test'
+        #suffix += '_test'
         #gradp = 0*gradp
         #gradrho = 0*gradrho
         #gradU = 0*gradU
