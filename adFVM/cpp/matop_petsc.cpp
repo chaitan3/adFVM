@@ -340,17 +340,21 @@ int Matop::heat_equation(vector<ext_vec*> w, vector<ext_vec*> u, const ext_vec& 
         }
         assert(std::isfinite(cellData));
         scalar bs[nrhs] = {0,0,0,0,0};
-        PetscInt indices[nrhs] = {jl,jl+1,jl+2,jl+3,jl+4};
-        for (PetscInt row = j; row < j + nrhs; row++) {
+        PetscInt indices[nrhs] = {j,j+1,j+2,j+3,j+4};
+        for (PetscInt row = 0; row < nrhs; row++) {
+            
             for (PetscInt col = 0; col < nrhs; col++) {
-                if (cols[col] > -1) {
-                    cols[col] += 1;
-                }
-                CHKERRQ(MatSetValue(A, row, col + jl, A0[(row-j)*nrhs + j], INSERT_VALUES));
-                bs[row-j] += A0[(row-j)*nrhs+col]*u[col]->data[index];
+                CHKERRQ(MatSetValue(A, row + j, col + j, A0[row*nrhs + col], INSERT_VALUES));
+                bs[row] += A0[row*nrhs+col]*u[col]->data[index];
             }
-            CHKERRQ(MatSetValue(A, row, row, cellData, ADD_VALUES));
-            CHKERRQ(MatSetValues(A, 1, &row, 6, cols, neighbourData, INSERT_VALUES));
+            CHKERRQ(MatSetValue(A, row + j, row + j, cellData, ADD_VALUES));
+            scalar rowj = row + j;
+            CHKERRQ(MatSetValues(A, 1, &rowj, 6, cols, neighbourData, INSERT_VALUES));
+            for (PetscInt k = 0; k < 6; k++) {
+                if (cols[k] > -1) {
+                    cols[k] += 1;
+                }
+            }
         }
         CHKERRQ(VecSetValues(b, nrhs, indices, bs, INSERT_VALUES));
     }
@@ -379,6 +383,7 @@ int Matop::heat_equation(vector<ext_vec*> w, vector<ext_vec*> u, const ext_vec& 
     } 
 
     CHKERRQ(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY)); CHKERRQ(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
+    CHKERRQ(VecAssemblyBegin(b)); CHKERRQ(MatAssemblyEnd(b));
     long long start2 = current_timestamp();
     if (mesh.rank == 0) cout << "matop_assembly: " << start2-start << endl;
         
