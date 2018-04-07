@@ -233,9 +233,12 @@ class LSS(object):
 
         return S
 
-    def evaluate(self, J):
+    def evaluate(self, J, full=False):
         """Evaluate a time averaged objective function"""
-        return J(self.u, self.s).mean(0)
+        x = J(self.u, self.s)
+        if full:
+            return x
+        return x.mean(0)
 
 
 class Tangent(LSS):

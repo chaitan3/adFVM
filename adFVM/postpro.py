@@ -436,7 +436,9 @@ def getAdjointMatrixNorm(rhoa, rhoUa, rhoEa, rho, rhoU, rhoE, U, T, p, *outputs,
     if report:
         getAdjointMatrixNorm.l2_norm = l2_norm(M_2norm)
         pprint(getAdjointMatrixNorm.l2_norm)
+    linf_norm = parallel.max(M_2norm)
     M_2norm /= getAdjointMatrixNorm.l2_norm
+    pprint(linf_norm/getAdjointMatrixNorm.l2_norm)
     M_2norm = IOField('M_2norm' + suffix, M_2norm, (1,))
     #M_2norm.write()
     
