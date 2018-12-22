@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 from adFVM import parallel, config
 import sys
 import os

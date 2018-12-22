@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 import os
 import numpy as np
 import sys

@@ -23,7 +23,7 @@ compatDir = 'adFVM/compat/'
 compile_args = ['-fopenmp']
 link_args = ['-lgomp']
 modules = cythonize(
-        [Extension(compatDir + 'cfuncs', [compatDir + 'cfuncs.pyx'], 
+        [Extension(compatDir.replace('/','.') + 'cfuncs', [compatDir + 'cfuncs.pyx'], 
         language='c++', extra_compile_args=compile_args, extra_link_args=link_args)])
 
 cppDir = 'adFVM/cpp/'
@@ -74,7 +74,6 @@ setup(name='adFVM',
           'scipy >= 0.13.3',
           'mpi4py >= 0.13.1',
           'cython >= 0.24',
-          'matplotlib >= 1.3.1'
       ],
       cmdclass={
         'clean': CleanCommand,

@@ -52,7 +52,7 @@ def test_mpi_comm():
             U.write()
         time.sleep(1)
         subprocess.check_output(['decomposePar', '-case', case_path, '-time', '1'])
-        subprocess.check_output(['mpirun', '-np', '4', 'python2', __file__, 'RUN', 'test_mpi_comm_method', case_path])
+        subprocess.check_output(['mpirun', '-np', '4', 'python', __file__, 'RUN', 'test_mpi_comm_method', case_path])
         checkFields(case_path, 'U', '1.0', '2.0', relThres=1e-12, nProcs=4)
     finally:
         shutil.rmtree(os.path.join(case_path, '1'))

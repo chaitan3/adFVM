@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 import sys, os
 
 from adFVM.mesh import Mesh

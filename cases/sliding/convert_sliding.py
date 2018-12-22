@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 from adFVM import config
 from adFVM.mesh import Mesh
 from adFVM.field import Field, IOField

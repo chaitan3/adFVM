@@ -11,7 +11,7 @@ import sys
 import subprocess
 sys.setrecursionlimit(100000)
 py3 = not (sys.version_info[0] < 3)
-sys.path.insert(0, '/master/home/talnikar/.local/lib/python2.7/site-packages')
+sys.path.insert(0, '/master/home/talnikar/.local/lib/python.7/site-packages')
 
 import argparse
 parser = argparse.ArgumentParser()

@@ -1,4 +1,4 @@
-#!/usr/bin/python2 -u
+#!/usr/bin/python -u
 from __future__ import print_function
 
 from adFVM import config, parallel

@@ -1,7 +1,8 @@
 ## Introduction
 
-adFVM is an explicit unsteady compressible fluid dynamics package with adjoint capability
-using automatic differentiation provided by the library adpy.
+adFVM is an adjoint capable unsteady compressible fluid dynamics simulation tool
+for CPUs and GPUs. The flow solver uses the finite volume method (FVM) to obtain a discrete flow solution on the user provided fluid problems. The adjoint flow solution is obtained using the discrete adjoint method.
+The adjoint flow solver is derived by applying automatic differentiation (provided by the library adpy) to the flow solver.
 
 ## Installation
 adFVM requires the adpy library. To install it,
@@ -9,36 +10,34 @@ after cloning, execute the following
 ```
 git submodule update --init --recursive
 ```
-Next build and install it using the following (using python2)
+Next build and install adpy using the following commands 
 ```
 cd adpy
 python setup.py build
 python setup.py install --prefix=/path/you/want
 cd ..
 ```
+Both Python 2 and Python 3 should work. Automated builds and testing is planned in the future.
 
-adFVM requires the following python packages, they
-will be automatically installed when you execute the python install script or
-you can install them separately if you want.
-```
+adFVM requires the following python packages: ```
 numpy
 scipy
 mpi4py
 cython
-matplotlib
 ```
+
 Build and install adFVM
 ```
 python setup.py build
 python setup.py install --prefix=/path/you/want
 ```
 
-Additionally for HDF5 capability parallel h5py needs to be
+Additionally, for HDF5 capability parallel h5py needs to be
 installed. For running the adjoint solver using artificial
-viscosity PETSc and lapack need to be installed. For computing
+viscosity, the packages PETSc and lapack need to be installed. For computing
 statistics of long-time averaged quantities in the primal
-and adjoint solvers the library [ar](https://github.com/RhysU/ar) needs to be installed.
-For handling meshes OpenFOAM and Metis need to be installed.
+and adjoint solvers, the library [ar](https://github.com/RhysU/ar) needs to be installed.
+For creating and modifying meshes, OpenFOAM and Metis need to be installed.
 For Ubuntu, the following script can be used to install
 all these packages. 
 ```

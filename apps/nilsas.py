@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 import numpy as np
 from scipy import sparse
 import scipy.sparse.linalg as splinalg
