@@ -19,7 +19,8 @@ cd ..
 ```
 Both Python 2 and Python 3 should work. Automated builds and testing is planned in the future.
 
-adFVM requires the following python packages: ```
+adFVM requires the following python packages
+```
 numpy
 scipy
 mpi4py
