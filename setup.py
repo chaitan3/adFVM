@@ -74,6 +74,7 @@ setup(name='adFVM',
           'scipy >= 0.13.3',
           'mpi4py >= 0.13.1',
           'cython >= 0.24',
+          'pytest',
       ],
       cmdclass={
         'clean': CleanCommand,

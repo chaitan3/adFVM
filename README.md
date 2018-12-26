@@ -6,7 +6,7 @@ The adjoint flow solver is derived by applying automatic differentiation (provid
 
 ## Installation
 adFVM requires the adpy library. To install it,
-after cloning, execute the following
+after cloning the main repo, execute the following
 ```
 git submodule update --init --recursive
 ```
@@ -25,6 +25,7 @@ numpy
 scipy
 mpi4py
 cython
+pytest
 ```
 
 Build and install adFVM
@@ -78,7 +79,13 @@ To run the adjoint flow solver,
 ```
 The sensitivities obtained using the adjoint solver can be found
 in the "objective.txt" file in the case folder. The "-c" option
-is not needed if running a flow solver multiple times.
+is not needed if running a flow solver multiple times. 
+
+To run on GPUs provide the "-g" option to the flow solver scripts mentioned above.
+The GPU functionality is only support for Nvidia hardware and requires
+the installation of the CUDA toolkit. Note that, by default the flow solver
+uses 32-bit floating point precision on GPUs. In order to use 64-bit floating point 
+precision on GPUs, provide the "--gpu_double" option to the flow solver scripts.
 
 In order to run the flow solver on multiple cores, first
 the mesh needs to be decomposed. Edit the "system/decomposeParDict"
