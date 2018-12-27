@@ -5,19 +5,14 @@ for CPUs and GPUs. The flow solver uses the finite volume method (FVM) to obtain
 The adjoint flow solver is derived by applying automatic differentiation (provided by the library adpy) to the flow solver.
 
 ## Installation
+
 adFVM requires the adpy library. To install it,
 after cloning the main repo, execute the following
 ```
 git submodule update --init --recursive
 ```
-Next build and install adpy using the following commands 
-```
-cd adpy
-python setup.py build
-python setup.py install --prefix=/path/you/want
-cd ..
-```
-Both Python 2 and Python 3 should work. Automated builds and testing is planned in the future.
+Next, follow the instructions for installing adpy mentioned
+in the [adpy](https://github.com/chaitan3/adpy) repository.
 
 adFVM requires the following python packages
 ```
