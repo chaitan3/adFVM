@@ -55,12 +55,6 @@ the above packages.
 Edit the variable PYTHONPREFIX to change the python libraries installation location.
 
 ## Testing
-To run unit tests for adpy
-```
-cd adpy/tests
-./run_tests.sh
-cd ../..
-```
 To run unit tests for adFVM
 ```
 cd tests
@@ -68,6 +62,10 @@ cd tests
 ./run_tests.sh
 cd ..
 ```
+
+## Status
+[![Build Status](https://api.travis-ci.org/chaitan3/adFVM.png)](https://travis-ci.org/chaitan3/adFVM)
+
 
 ## Usage
 To use adFVM on a flow problem, a python case
