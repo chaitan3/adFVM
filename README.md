@@ -38,7 +38,8 @@ python setup.py install --prefix=/path/you/want
 
 Optionally, the following packages can be installed to enable
 additional functionality in adFVM
-1: [h5py](https://github.com/h5py/h5py): A parallel version of h5py provides HDF5 read/write
+
+1. [h5py](https://github.com/h5py/h5py): A parallel version of h5py provides HDF5 read/write
 support 
 2. [PETSc](https://www.mcs.anl.gov/petsc/) and [LAPACK](http://www.netlib.org/lapack/): Adds artificial viscosity dissipation support
 for the adjoint flow solver.
