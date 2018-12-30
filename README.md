@@ -23,20 +23,31 @@ cython
 pytest
 ```
 
+On Ubuntu, the following commands should be sufficient to install the above packages along
+with OpenMPI (needed for mpi4py)
+```
+sudo apt-get install libopenmpi-dev openmpi-bin
+pip install numpy scipy mpi4py cython
+```
+
 Build and install adFVM
 ```
-python setup.py build
+make
 python setup.py install --prefix=/path/you/want
 ```
 
-Additionally, for HDF5 capability, parallel h5py needs to be
-installed. For running the adjoint solver using artificial
-viscosity, the packages PETSc and LAPACK need to be installed. For computing
-statistics of long-time averaged quantities in the primal
-and adjoint solvers, the library [ar](https://github.com/RhysU/ar) needs to be installed.
-For creating and modifying meshes, OpenFOAM and Metis need to be installed.
+Optionally, the following packages can be installed to enable
+additional functionality in adFVM
+1: [h5py](https://github.com/h5py/h5py): A parallel version of h5py provides HDF5 read/write
+support 
+2. [PETSc](https://www.mcs.anl.gov/petsc/) and [LAPACK](http://www.netlib.org/lapack/): Adds artificial viscosity dissipation support
+for the adjoint flow solver.
+3. [ar](https://github.com/RhysU/ar): Provides statistics of long-time averaged quantities in the primal
+and adjoint solvers. the library  needs to be installed.
+4. [OpenFOAM](https://www.openfoam.com/) and [Metis](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview): Allows for the creation and modification of meshes. 
+
 For Ubuntu, the following script can be used to install
-all these packages. 
+the above packages. 
 ```
 ./install_deps.sh
 ```

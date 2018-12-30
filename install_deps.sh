@@ -1,19 +1,15 @@
 #!/bin/sh
 set -e
 PWD=`pwd`
-sudo apt-get install -y build-essential gfortran
-sudo apt-get install -y python-numpy python-scipy python-matplotlib python-mpi4py 
-sudo apt-get install -y python-nose python-pip
-sudo apt-get install -y libmetis-dev libopenmpi-dev liblapack-dev
+sudo apt-get install -y petsc-dev liblapack-dev
+sudo apt-get install -y python-h5py
+sudo apt-get install -y libhdf5-openmpi-dev
 
-pip install cython --user
-sudo apt-get install -y ccache autoconf
-exit 0
-
-#sudo apt-get install -y python-h5py
-#sudo apt-get install -y libhdf5-openmpi-dev
-
-#sudo apt-get install -y petsc-dev
+sudo apt-get install -y libmetis-dev
+sudo sh -c "wget -O - http://dl.openfoam.org/gpg.key | apt-key add -"
+sudo add-apt-repository http://dl.openfoam.org/ubuntu
+sudo apt-get -y update
+sudo apt-get -y install openfoam5
 
 mkdir -p ~/sources
 cd ~/sources
