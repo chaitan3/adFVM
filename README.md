@@ -29,9 +29,9 @@ python setup.py build
 python setup.py install --prefix=/path/you/want
 ```
 
-Additionally, for HDF5 capability parallel h5py needs to be
+Additionally, for HDF5 capability, parallel h5py needs to be
 installed. For running the adjoint solver using artificial
-viscosity, the packages PETSc and lapack need to be installed. For computing
+viscosity, the packages PETSc and LAPACK need to be installed. For computing
 statistics of long-time averaged quantities in the primal
 and adjoint solvers, the library [ar](https://github.com/RhysU/ar) needs to be installed.
 For creating and modifying meshes, OpenFOAM and Metis need to be installed.

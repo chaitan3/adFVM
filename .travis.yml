@@ -1,0 +1,18 @@
+language: python
+dist: xenial
+sudo: yes
+python:
+    - "2.7"
+    - "3.6"
+    - "3.7"
+
+install: 
+    - sudo apt-get update
+    - sudo apt-get install ccache
+    - git submodule update --init --recursive
+    - cd adpy && pip install . && cd ..
+    - make
+    - pip install .
+
+script: 
+    - tests/run_tests.sh
