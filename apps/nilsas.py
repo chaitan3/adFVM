@@ -11,8 +11,8 @@ from pathos.multiprocessing import Pool
 from pathos.helpers import mp
 
 from adFVM.interface import SerialRunner
-class SerialRunner(object):
-#class SerialRunnerLorenz(object):
+#class SerialRunner(object):
+class SerialRunnerLorenz(object):
     def __init__(self, base, time, dt, templates, **kwargs):
         self.base = base
         self.time = time
@@ -287,7 +287,7 @@ class NILSAS:
         if not os.path.exists(checkpointFile):
             return
         with open(checkpointFile, 'rb') as f:
-            checkpoint = pickle.load(f)
+            checkpoint = pickle.load(f, encoding='latin1')
             self.adjointFields, self.gradientInfo, self.sensitivities = checkpoint
 
     # reverse index
@@ -310,7 +310,7 @@ class NILSAS:
         return 
 
 def main():
-    base = '/home/talnikar/adFVM/cases/3d_cylinder/nilsas/endeavour/'
+    base = '/mnt/temp/talnikar/backup/adjoint/adFVM/cases/3d_cylinder/nilsas/endeavour/'
     time = 2.0
     dt = 6e-9
     template = 'templates/3d_cylinder_fds.py'
@@ -322,21 +322,21 @@ def main():
     nRuns = 1
 
     # lorenz
-    base = '/home/talnikar/adFVM/cases/3d_cylinder/'
-    time = 10.
-    dt = 0.0001
-    nProcs = 1
+    #base = '/home/talnikar/adFVM/cases/3d_cylinder/'
+    #time = 10.
+    #dt = 0.0001
+    #nProcs = 1
 
-    nSegments = 200
-    nSteps = 2000
-    #nSteps = 200
+    #nSegments = 200
+    #nSteps = 2000
+    ##nSteps = 200
+    ##nExponents = 2
     #nExponents = 2
-    nExponents = 2
-    nRuns = 1
+    #nRuns = 1
 
     runner = NILSAS((nExponents, nSteps, nSegments, nRuns), (base, time, dt, template), nProcs=nProcs, flags=['-g', '--gpu_double'])
-    #runner.loadCheckpoint()
-    runner.run()
+    runner.loadCheckpoint()
+    #runner.run()
     print('exponents', runner.getExponents())
     coeff = runner.solveLSS()
     print('gradient', runner.computeGradient(coeff))

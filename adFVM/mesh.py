@@ -7,7 +7,6 @@ import copy
 import os
 
 from . import config, parallel
-from .compat import decompose
 from .memory import printMemUsage
 from .parallel import pprint, Exchanger
 if config.gpu and not config.gpu_double:
@@ -975,6 +974,7 @@ class Mesh(object):
 
     @config.timeFunction('Time to decompose mesh')
     def decompose(self, nprocs):
+        from .compat import decompose
         assert parallel.nProcessors == 1
         start = time.time()
         pprint('decomposing mesh to', nprocs, 'processors')

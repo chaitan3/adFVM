@@ -1,2 +1,2 @@
 from . import cfuncs
-from .cfuncs import intersectPlane, decompose, reduceAbsMin, selectMultipleRange, reduceSum
+from .cfuncs import intersectPlane, reduceAbsMin, selectMultipleRange, reduceSum #, decompose
