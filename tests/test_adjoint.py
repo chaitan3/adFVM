@@ -3,6 +3,7 @@ import os
 import sys
 import shutil
 import glob
+python = sys.executable
 
 from adFVM import config
 from adFVM.mesh import Mesh
@@ -18,10 +19,10 @@ def test_adjoint():
     adjoint = os.path.join(apps_path, 'adjoint.py')
     
     try:
-        subprocess.check_output([primal, problem, '-c'])
-        subprocess.check_output([primal, problem, 'perturb'])
+        subprocess.check_output([python, primal, problem, '-c'])
+        subprocess.check_output([python, primal, problem, 'perturb'])
 
-        subprocess.check_output([adjoint, problem, '-c'])
+        subprocess.check_output([python, adjoint, problem, '-c'])
 
         with open(os.path.join(case_path, 'objective.txt')) as f:
             data = f.readlines()
@@ -31,9 +32,9 @@ def test_adjoint():
 
         assert diff < 1e-3
     finally:
-        map(shutil.rmtree, glob.glob(os.path.join(case_path, '1.*')))
-        map(os.remove, glob.glob(os.path.join(case_path, '*.txt')))
-        map(os.remove, glob.glob(os.path.join(case_path, '*.pkl')))
+        list(map(shutil.rmtree, glob.glob(os.path.join(case_path, '1.*'))))
+        list(map(os.remove, glob.glob(os.path.join(case_path, '*.txt'))))
+        list(map(os.remove, glob.glob(os.path.join(case_path, '*.pkl'))))
 
 def test_adjoint_mpi():
     case_path = os.path.join(cases_path, 'cylinder')
@@ -43,10 +44,10 @@ def test_adjoint_mpi():
 
     try:
         subprocess.check_output(['decomposePar', '-case', case_path, '-time', '1'])
-        subprocess.check_output(['mpirun', '-np', '4', primal, problem, '-c'])
-        subprocess.check_output(['mpirun', '-np', '4', primal, problem, 'perturb'])
+        subprocess.check_output(['mpirun', '-np', '4', python, primal, problem, '-c'])
+        subprocess.check_output(['mpirun', '-np', '4', python, primal, problem, 'perturb'])
 
-        subprocess.check_output(['mpirun', '-np', '4', adjoint, problem, '-c'])
+        subprocess.check_output(['mpirun', '-np', '4', python, adjoint, problem, '-c'])
 
         with open(os.path.join(case_path, 'processor0', 'objective.txt')) as f:
             data = f.readlines()
@@ -56,9 +57,9 @@ def test_adjoint_mpi():
 
         assert diff < 1e-3
     finally:
-        map(shutil.rmtree, glob.glob(os.path.join(case_path, 'processor*')))
+        list(map(shutil.rmtree, glob.glob(os.path.join(case_path, 'processor*'))))
 
 if __name__ == '__main__':
-    #test_adjoint()
-    test_adjoint_mpi()
+    test_adjoint()
+    #test_adjoint_mpi()
 

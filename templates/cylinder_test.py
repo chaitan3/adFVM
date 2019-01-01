@@ -59,5 +59,5 @@ parameters = 'source'
 
 nSteps = 20
 writeInterval = 10
-startTime = 1.0
+startTime = 0.0
 dt = 8e-9

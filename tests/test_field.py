@@ -7,6 +7,7 @@ import sys
 import numpy as np
 import subprocess
 import pytest
+python = sys.executable
 
 from adFVM import config
 from adFVM.field import Field, CellField, IOField
@@ -102,10 +103,10 @@ def test_foam():
 def test_hdf5():
     case = '../cases/forwardStep/'
     try:
-        subprocess.check_output(['../scripts/conversion/hdf5.py', case])
+        subprocess.check_output([python, '../scripts/conversion/hdf5.py', case])
         test_field_io(case, True)
     finally:
-        map(os.remove, glob.glob(os.path.join(case, '*.hdf5')))
+        list(map(os.remove, glob.glob(os.path.join(case, '*.hdf5'))))
 
 def test_hdf5_mpi():
     case = '../cases/forwardStep/'
@@ -120,15 +121,15 @@ def test_hdf5_mpi():
             U.write()
 
         subprocess.check_output(['decomposePar', '-time', '1', '-case', case])
-        subprocess.check_output(['mpirun', '-np', '4', '../scripts/conversion/hdf5.py', case, str(time)])
-        subprocess.check_output(['mpirun', '-np', '4', sys.executable, __file__, 'RUN', 'test_field_io_mpi', case])
+        subprocess.check_output(['mpirun', '-np', '4', python, '../scripts/conversion/hdf5.py', case, str(time)])
+        subprocess.check_output(['mpirun', '-np', '4', python, __file__, 'RUN', 'test_field_io_mpi', case])
     finally:
         try:
             shutil.rmtree(os.path.join(case, '1'))
         except OSError:
             pass
-        map(os.remove, glob.glob(os.path.join(case, '*.hdf5')))
-        map(shutil.rmtree, glob.glob(os.path.join(case, 'processor*')))
+        list(map(os.remove, glob.glob(os.path.join(case, '*.hdf5'))))
+        list(map(shutil.rmtree, glob.glob(os.path.join(case, 'processor*'))))
 
 
 if __name__ == "__main__":
@@ -138,5 +139,5 @@ if __name__ == "__main__":
     else:
         #test_field()
         #test_foam()
-        #test_hdf5()
-        test_hdf5_mpi()
+        test_hdf5()
+        #test_hdf5_mpi()

@@ -14,19 +14,17 @@ git submodule update --init --recursive
 Next, follow the instructions for installing adpy mentioned
 in the [adpy](https://github.com/chaitan3/adpy) repository.
 
-adFVM requires the following python packages
+adFVM requires the following packages
 ```
-numpy
-scipy
-mpi4py
-cython
-pytest
+MPI: OpenMPI or similar
+Python: numpy, scipy, mpi4py, cython, pytest
+LAPACK
 ```
 
-On Ubuntu, the following commands should be sufficient to install the above packages along
-with OpenMPI (needed for mpi4py)
+On Ubuntu, the following commands should be sufficient to install the above packages.
 ```
-sudo apt-get install libopenmpi-dev openmpi-bin
+sudo apt install libopenmpi-dev openmpi-bin liblapack-dev
+sudo apt install python-pip
 pip install numpy scipy mpi4py cython
 ```
 
@@ -39,13 +37,13 @@ python setup.py install --prefix=/path/you/want
 Optionally, the following packages can be installed to enable
 additional functionality in adFVM
 
-1. [h5py](https://github.com/h5py/h5py): A parallel version of h5py provides HDF5 read/write
+1. [OpenFOAM](https://www.openfoam.com/) and [Metis](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview): Allows for the creation and modification of meshes. 
+2. [h5py](https://github.com/h5py/h5py): A parallel version of h5py provides HDF5 read/write
 support 
-2. [PETSc](https://www.mcs.anl.gov/petsc/) and [LAPACK](http://www.netlib.org/lapack/): Adds artificial viscosity dissipation support
-for the adjoint flow solver.
 3. [ar](https://github.com/RhysU/ar): Provides statistics of long-time averaged quantities in the primal
 and adjoint solvers. the library  needs to be installed.
-4. [OpenFOAM](https://www.openfoam.com/) and [Metis](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview): Allows for the creation and modification of meshes. 
+4. [PETSc](https://www.mcs.anl.gov/petsc/): Adds artificial viscosity dissipation support
+for the adjoint flow solver.
 
 For Ubuntu, the following script can be used to install
 the above packages. 

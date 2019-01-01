@@ -8,13 +8,14 @@ python:
 
 install: 
     - sudo apt-get update
-    - sudo apt-get install ccache
+    - sudo apt-get install ccache gcc
+    - sudo apt-get install libopenmpi-dev openmpi-bin liblapack-dev
+    - pip install numpy scipy mpi4py cython
     - git submodule update --init --recursive
     - cd adpy && pip install . && cd ..
-    - sudo apt-get install libopenmpi-dev openmpi-bin
-    - pip install numpy scipy mpi4py cython
     - make
     - pip install .
+    - ./install_deps.sh
 
 script: 
     - tests/run_tests.sh

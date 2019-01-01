@@ -248,8 +248,9 @@ class IOField(Field):
                         match = re.search(re.compile(b'[ ]+(.*?);', re.DOTALL), content[start:])
                         start += match.end() 
                         boundary[patchID][key] = match.group(1)
-                        if key == 'type':
-                            boundary[patchID][key] = boundary[patchID][key].decode('utf-8')
+                        #if key == 'type':
+                        #    boundary[patchID][key] = boundary[patchID][key].decode('utf-8')
+                        boundary[patchID][key] = boundary[patchID][key].decode('utf-8')
                 if boundary[patchID]['type'] == 'cyclicAMI':
                     boundary[patchID]['type'] = 'cyclic'
             except Exception as e:

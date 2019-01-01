@@ -6,6 +6,8 @@ import glob
 import time
 import numpy as np
 import pytest
+import sys
+python = sys.executable
 
 from adFVM import config
 from adFVM.mesh import Mesh
@@ -30,10 +32,10 @@ def test_mpi_comm_method(case_path):
 def checkFields(case, field, time1, time2, relThres=1e-9, nProcs=1):
     diff = os.path.join(scripts_path, 'field', 'diff_fields.py')
     if nProcs == 1:
-        output = subprocess.check_output([diff, case, field, time1, time2])
+        output = subprocess.check_output([python, diff, case, field, time1, time2])
     else:
-        output = subprocess.check_output(['mpirun', '-np', str(nProcs), diff, case, field, time1, time2])
-    output = output.split('\n')
+        output = subprocess.check_output(['mpirun', '-np', str(nProcs), python, diff, case, field, time1, time2])
+    output = output.decode().split('\n')
     absDiff = float(output[-4].split(' ')[1])
     relDiff = float(output[-3].split(' ')[1])
     assert relDiff < relThres
@@ -52,11 +54,11 @@ def test_mpi_comm():
             U.write()
         time.sleep(1)
         subprocess.check_output(['decomposePar', '-case', case_path, '-time', '1'])
-        subprocess.check_output(['mpirun', '-np', '4', 'python', __file__, 'RUN', 'test_mpi_comm_method', case_path])
+        subprocess.check_output(['mpirun', '-np', '4', python, __file__, 'RUN', 'test_mpi_comm_method', case_path])
         checkFields(case_path, 'U', '1.0', '2.0', relThres=1e-12, nProcs=4)
     finally:
         shutil.rmtree(os.path.join(case_path, '1'))
-        map(shutil.rmtree, glob.glob(os.path.join(case_path, 'processor*')))
+        list(map(shutil.rmtree, glob.glob(os.path.join(case_path, 'processor*'))))
 
 def test_mpi():
     solver = os.path.join(apps_path, 'problem.py')
@@ -66,17 +68,17 @@ def test_mpi():
     endTime = '{0:.11f}'.format(float(endTime))
     
     try:
-        subprocess.check_output([solver, case, '-c'])
+        subprocess.check_output([python, solver, case, '-c'])
         subprocess.check_output(['mv', os.path.join(case_path, endTime), os.path.join(case_path, '10')])
         subprocess.check_output(['decomposePar', '-case', case_path, '-time', '0'])
         #subprocess.check_output([os.path.join(scripts_path, 'decompose.py'), case_path, '4', '0.0'])
-        subprocess.check_output(['mpirun', '-np', '4', solver, case])
+        subprocess.check_output(['mpirun', '-np', '4', python, solver, case])
         subprocess.check_output(['reconstructPar', '-case', case_path, '-time', endTime])
         checkFields(case_path, 'U', endTime, '10.0')
     finally:
         shutil.rmtree(os.path.join(case_path, endTime))
         shutil.rmtree(os.path.join(case_path, '10'))
-        map(shutil.rmtree, glob.glob(os.path.join(case_path, 'processor*')))
+        list(map(shutil.rmtree, glob.glob(os.path.join(case_path, 'processor*'))))
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == 'RUN':
