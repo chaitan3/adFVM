@@ -1,10 +1,12 @@
-#!/bin/sh
+#!/bin/bash
+DIR=$(dirname "${BASH_SOURCE[0]}")
+source /opt/openfoam6/etc/bashrc
 
-CASES=`pwd`/../cases
+CASES=$DIR/../cases
 
-#blockMesh -case $CASES/convection
+blockMesh -case $CASES/convection
+blockMesh -case $CASES/forwardStep
+
 #blockMesh -case $CASES/burgers
 #blockMesh -case $CASES/shockTube
-
-#blockMesh -case $CASES/forwardStep
-cd $CASES/cylinder && ./create_mesh.sh
+#cd $CASES/cylinder && ./create_mesh.sh
